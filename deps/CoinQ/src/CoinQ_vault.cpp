@@ -1253,8 +1253,9 @@ std::shared_ptr<Tx> Vault::newTx(const std::string& account_name, uint32_t tx_ve
 
         odb::core::transaction t(db_->begin());
 
-        odb::result<SigningScript> changescript_result = 
-            db_->query<SigningScript>(odb::query<SigningScript>::status == SigningScript::UNUSED);
+        typedef odb::query<SigningScript> query;
+        odb::result<SigningScript> changescript_result =
+            db_->query<SigningScript>(query::account->name == account_name && query::status == SigningScript::UNUSED);
 
         if (changescript_result.empty()) {
             throw std::runtime_error("Out of change scripts.");
