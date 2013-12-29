@@ -51,8 +51,8 @@ else
 endif
 
 OBJS = \
-    obj/CoinQ_vault.o \
     obj/CoinQ_vault_db-odb.o \
+    obj/CoinQ_vault.o \
     obj/CoinQ_script.o \
     obj/CoinQ_peer_io.o \
     obj/CoinQ_netsync.o \
@@ -70,17 +70,20 @@ all: $(OBJS)
 odb/CoinQ_vault_db-odb.hxx: src/CoinQ_vault_db.hxx
 	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema src/CoinQ_vault_db.hxx $(INCLUDE_PATH)
 
+odb/CoinQ_vault_db-odb.cxx: src/CoinQ_vault_db.hxx
+	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema src/CoinQ_vault_db.hxx $(INCLUDE_PATH)
+
 #
 # vault dependencies
 #
 obj/CoinQ_vault_db-odb.o: odb/CoinQ_vault_db-odb.cxx odb/CoinQ_vault_db-odb.hxx src/CoinQ_vault_db.hxx
-	$(CXX) $(INCLUDE_PATH) $(CXX_FLAGS) -o obj/CoinQ_vault_db-odb.o -c odb/CoinQ_vault_db-odb.cxx
+	$(CXX) $(CXX_FLAGS) -o obj/CoinQ_vault_db-odb.o -c odb/CoinQ_vault_db-odb.cxx $(INCLUDE_PATH)
 
 #
 # vault class
 #
 obj/CoinQ_vault.o: src/CoinQ_vault.cpp src/CoinQ_vault.h odb/CoinQ_vault_db-odb.hxx
-	$(CXX) $(INCLUDE_PATH) $(CXX_FLAGS) -c -o $@ $< $(ODB_DB)
+	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(ODB_DB) $(INCLUDE_PATH)
 
 #
 # the remaining targets
