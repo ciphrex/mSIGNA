@@ -42,11 +42,11 @@ RequestPaymentDialog::RequestPaymentDialog(AccountModel* accountModel, QWidget* 
     accountLayout->addWidget(accountComboBox);
 
     // Sender
-    QLabel* senderLabel = new QLabel(tr("From:"));
+    QLabel* senderLabel = new QLabel(tr("Label:"));
     senderEdit = new QLineEdit();
 
     // Get Script button
-    QPushButton* getScriptButton = new QPushButton(tr("Get Script"));
+    QPushButton* getScriptButton = new QPushButton(tr("New Address"));
     connect(getScriptButton, SIGNAL(clicked()), this, SLOT(getScript()));
 
     QHBoxLayout* senderLayout = new QHBoxLayout();

@@ -249,7 +249,7 @@ void MainWindow::updateVaultStatus(const QString& name)
     // transaction actions
     insertRawTxAction->setEnabled(isOpen);
     createRawTxAction->setEnabled(isOpen);
-    createTxAction->setEnabled(isOpen);
+    //createTxAction->setEnabled(isOpen);
     signRawTxAction->setEnabled(isOpen);
 
     if (isOpen) {
@@ -522,6 +522,7 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
     viewAccountHistoryAction->setEnabled(isSelected);
     viewScriptsAction->setEnabled(isSelected);
     requestPaymentAction->setEnabled(isSelected);
+    sendPaymentAction->setEnabled(isSelected);
     viewUnsignedTxsAction->setEnabled(isSelected);
 }
 
@@ -1278,6 +1279,16 @@ void MainWindow::createActions()
     deleteAccountAction->setEnabled(false);
     connect(deleteAccountAction, SIGNAL(triggered()), this, SLOT(deleteAccount()));
 
+    requestPaymentAction = new QAction(tr("Request Payment..."), this);
+    requestPaymentAction->setStatusTip(tr("Get a new address in order to request a payment"));
+    requestPaymentAction->setEnabled(false);
+    connect(requestPaymentAction, SIGNAL(triggered()), this, SLOT(requestPayment()));
+
+    sendPaymentAction = new QAction(tr("Send Payment..."), this);
+    sendPaymentAction->setStatusTip(tr("Create a new transcation"));
+    sendPaymentAction->setEnabled(false);
+    connect(sendPaymentAction, SIGNAL(triggered()), this, SLOT(createTx()));
+
     viewAccountHistoryAction = new QAction(tr("View Account History"), this);
     viewAccountHistoryAction->setStatusTip(tr("View history for active account"));
     viewAccountHistoryAction->setEnabled(false);
@@ -1287,12 +1298,7 @@ void MainWindow::createActions()
     viewScriptsAction->setStatusTip(tr("View scripts for active account"));
     viewScriptsAction->setEnabled(false);
     connect(viewScriptsAction, SIGNAL(triggered()), this, SLOT(viewScripts()));
-
-    requestPaymentAction = new QAction(tr("Request Payment..."), this);
-    requestPaymentAction->setStatusTip(tr("Get a new address in order to request a payment"));
-    requestPaymentAction->setEnabled(false);
-    connect(requestPaymentAction, SIGNAL(triggered()), this, SLOT(requestPayment()));
-
+    
     viewUnsignedTxsAction = new QAction(tr("View Unsigned Transactions"), this);
     viewUnsignedTxsAction->setStatusTip(tr("View transactions pending signature"));
     viewUnsignedTxsAction->setEnabled(false);
@@ -1466,6 +1472,9 @@ void MainWindow::createMenus()
     keychainMenu->addAction(exportPublicKeychainAction);
 
     accountMenu = menuBar()->addMenu(tr("&Accounts"));
+    accountMenu->addAction(requestPaymentAction);
+    accountMenu->addAction(sendPaymentAction);
+    accountMenu->addSeparator();
     accountMenu->addAction(newAccountAction);
     accountMenu->addAction(deleteAccountAction);
     accountMenu->addSeparator();
@@ -1475,17 +1484,16 @@ void MainWindow::createMenus()
     //accountMenu->addAction(viewAccountHistoryAction);
     accountMenu->addAction(viewScriptsAction);
     accountMenu->addSeparator();
-    accountMenu->addAction(requestPaymentAction);
-    accountMenu->addSeparator();
     accountMenu->addAction(viewUnsignedTxsAction);
 
     txMenu = menuBar()->addMenu(tr("&Transactions"));
     txMenu->addAction(insertRawTxAction);
+    txMenu->addSeparator();
     txMenu->addAction(signRawTxAction);
-    txMenu->addSeparator();
+    //txMenu->addSeparator();
 //    txMenu->addAction(createRawTxAction);
-    txMenu->addAction(createTxAction);
-    txMenu->addSeparator();
+    //txMenu->addAction(createTxAction);
+    //txMenu->addSeparator();
     txMenu->addAction(sendRawTxAction);
 
     networkMenu = menuBar()->addMenu(tr("&Network"));

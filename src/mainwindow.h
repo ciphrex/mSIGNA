@@ -233,6 +233,7 @@ private:
     QAction* viewAccountHistoryAction;
     QAction* viewScriptsAction;
     QAction* requestPaymentAction;
+    QAction* sendPaymentAction;
     QAction* viewUnsignedTxsAction;
 
     // transaction actions
