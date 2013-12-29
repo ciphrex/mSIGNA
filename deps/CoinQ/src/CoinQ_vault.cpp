@@ -13,7 +13,7 @@
 
 #include "CoinQ_database.hxx"
 
-#include "CoinQ_vault_db-odb.hxx"
+#include "../odb/CoinQ_vault_db-odb.hxx"
 
 #include <odb/transaction.hxx>
 #include <odb/session.hxx>
