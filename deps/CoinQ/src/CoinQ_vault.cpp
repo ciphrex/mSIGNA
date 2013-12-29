@@ -1047,9 +1047,10 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
     }
 
     std::set<std::shared_ptr<Tx>> conflicting_txs;
-
     std::set<std::shared_ptr<TxOut>> updated_txouts;
-    bool in_vault = false; // whether we should add to vault
+
+    // Check inputs 
+    bool sent_from_vault = false; // whether any of the inputs belong to vault
     bool have_all_inputs = true; // whether we have all outpoints (for fee calculation)
     uint64_t input_total = 0;
     std::shared_ptr<Account> signing_account;
@@ -1082,7 +1083,7 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
             if (!r.empty()) {
                 // Not only is the transaction in vault - we signed it.
                 std::shared_ptr<SigningScript> signingscript(r.begin().load());
-                in_vault = true;
+                sent_from_vault = true;
                 signing_account = signingscript->account();
                 txouts[outindex]->spent(txin);
                 updated_txouts.insert(txouts[outindex]);
@@ -1090,25 +1091,42 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
         }
     }
 
-    // Now check the outputs
+    // Check outputs
+    bool sent_to_vault = false; // whether any of the outputs belong to vault
     uint64_t output_total = 0;
     std::set<std::shared_ptr<SigningScript>> vault_scripts;
     for (auto& txout: tx->txouts()) {
         output_total += txout->value();
         odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == txout->script()));
         if (!r.empty()) {
-            in_vault = true;
+            sent_to_vault = true;
             std::shared_ptr<SigningScript> vault_script(r.begin().load());
             txout->account_id(vault_script->account()->id());
             switch (vault_script->status()) {
+            case SigningScript::UNUSED:
+                if (sent_from_vault) {
+                    vault_script->status(SigningScript::CHANGE);
+                    txout->type(TxOut::CHANGE);
+                }
+                else {
+                    vault_script->status(SigningScript::RECEIPT);
+                    txout->type(TxOut::CREDIT);
+                }
+                break;
+
             case SigningScript::CHANGE:
                 txout->type(TxOut::CHANGE);
                 break;
+
             case SigningScript::REQUEST:
                 vault_script->status(SigningScript::RECEIPT);
+                txout->type(TxOut::CREDIT);
+                break;
+
             case SigningScript::RECEIPT:
                 txout->type(TxOut::CREDIT);
                 break;
+
             default:
                 break;
             }
@@ -1133,7 +1151,7 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
 
     for (auto& tx: conflicting_txs) { deleteTx_unwrapped(tx->hash()); }
 
-    if (in_vault) {
+    if (sent_from_vault || sent_to_vault) {
         for (auto& txin:   tx->txins())   { db_->persist(*txin); }
         for (auto& txout:  tx->txouts())  { db_->persist(*txout); }
         for (auto& script: vault_scripts) { db_->update(*script); }
