@@ -24,8 +24,6 @@ UI
 
 - Allow account selection from drop down in Create Transaction dialog. Use selected account as default.
 
-- Allow account selection from drop down in Request Payment dialog. Use selected account as default.
-
 - Redesign dialog layouts (Create Transaction and Request Payment in particular).
 
 - Prompt user to select account if more than one account exists when opening a payment url.
