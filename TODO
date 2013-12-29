@@ -1,0 +1,29 @@
+TODO
+====
+
+UI
+--
+
+- Make table data noneditable except for names and labels, update database and views when names and labels are modified.
+
+- Export all script labels for account, including request labels.
+
+- Add account selection drop down in Transactions tab.
+
+- Add option to automatically open whatever vault was open last time application closed. Remember full application state (open tab, selected items) and reload accordingly.
+
+- Remember recently opened vaults, add shortcuts to File menu.
+
+- Add Save As... option to file menu.
+
+- Automatically select first account if one exists when vault is opened unless another one was selected in a previous session.
+
+- Require exactly one account to be selected always, unless no account exists.
+
+- Allow account selection from drop down in Create Transaction dialog. Use selected account as default.
+
+- Allow account selection from drop down in Request Payment dialog. Use selected account as default.
+
+- Redesign dialog layouts (Create Transaction and Request Payment in particular).
+
+- Prompt user to select account if more than one account exists when opening a payment url.
