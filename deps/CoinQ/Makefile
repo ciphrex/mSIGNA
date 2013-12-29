@@ -51,13 +51,15 @@ else
 endif
 
 OBJS = \
-        obj/CoinQ_vault.o \
-        obj/CoinQ_vault_db-odb.o \
-        obj/CoinQ_script.o \
-        obj/CoinQ_peer_io.o \
-        obj/CoinQ_netsync.o \
-        obj/CoinQ_blocks.o \
-        obj/CoinQ_filter.o
+    obj/CoinQ_vault.o \
+    obj/CoinQ_vault_db-odb.o \
+    obj/CoinQ_script.o \
+    obj/CoinQ_peer_io.o \
+    obj/CoinQ_netsync.o \
+    obj/CoinQ_blocks.o \
+    obj/CoinQ_txs.o \
+    obj/CoinQ_keys.o \
+    obj/CoinQ_filter.o
 
 
 all: $(OBJS)

@@ -12,7 +12,7 @@
 //      g++ -o ../build/vault obj/vault.o CoinQ_vault_db-odb.o -lodb-sqlite -lodb -lssl -lcrypto
 //
 
-#include "../deps/cli/cli.hpp"
+#include <cli.hpp>
 #include <CoinKey.h>
 #include <Base58Check.h>
 
