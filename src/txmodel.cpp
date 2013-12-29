@@ -188,8 +188,15 @@ void TxModel::update()
         sorting_info_t a_info = a.first;
         sorting_info_t b_info = b.first;
 
-        // if confirmation counts are equal, sort by descending index
-        if (a_info.second == b_info.second) return (a_info.first > b_info.first);
+        // if confirmation counts are equal
+        if (a_info.second == b_info.second) {
+            // if one value is positive and the other is negative, sort so that running balance remains positive
+            if (a.second.second < 0 && b.second.second > 0) return true;
+            if (a.second.second > 0 && b.second.second < 0) return false;
+
+            // otherwise sort by descending index
+            return (a_info.first > b_info.first);
+        }
 
         // otherwise sort by ascending confirmation count
         return (a_info.second < b_info.second);
