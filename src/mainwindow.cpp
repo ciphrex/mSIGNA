@@ -16,6 +16,8 @@
 #include <QItemSelectionModel>
 
 #include "settings.h"
+#include "versioninfo.h"
+#include "copyrightinfo.h"
 
 #include "mainwindow.h"
 
@@ -1145,9 +1147,8 @@ void MainWindow::networkSettings()
 
 void MainWindow::about()
 {
-   QMessageBox::about(this, tr("About CoinVault(TM)"),
-            tr("<b>CoinVault(TM) v0.0.3</b>\n"
-               "Copyright (c) 2013 Eric Lombrozo"));
+   QMessageBox::about(this, tr("About ") + APPNAME,
+            tr("<b>") + APPNAME + "(TM) " + VERSIONTEXT + "</b><br />" + COPYRIGHTTEXT);
 }
 
 void MainWindow::errorStatus(const QString& message)
@@ -1437,7 +1438,7 @@ void MainWindow::createActions()
 
     // about/help actions
     aboutAction = new QAction(tr("About..."), this);
-    aboutAction->setStatusTip(tr("About CoinVault(TM)"));
+    aboutAction->setStatusTip(tr("About ") + APPNAME);
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(about()));
 
     updateVaultStatus();
