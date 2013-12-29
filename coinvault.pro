@@ -121,7 +121,6 @@ win32 {
         -lboost_log-mt-s \
         -lboost_system-mt-s \
         -lboost_filesystem-mt-s \
-        -lboost_program_options-mt-s \
         -lboost_regex-mt-s \
         -lboost_thread_win32-mt-s \
 } else {
@@ -129,7 +128,6 @@ win32 {
         /usr/local/lib/libboost_log.a \
         -lboost_system \
         -lboost_filesystem \
-        -lboost_program_options \
         -lboost_regex \
         -lboost_thread
 }
