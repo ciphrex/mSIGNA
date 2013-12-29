@@ -348,6 +348,7 @@ void MainWindow::closeVault()
         accountModel->close();
         keychainModel->setVault(NULL);
         txModel->setVault(NULL);
+        txView->update();
 
         updateVaultStatus();
         updateStatusMessage(tr("Closed vault"));

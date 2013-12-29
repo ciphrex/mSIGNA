@@ -47,6 +47,7 @@ void TxModel::setVault(CoinQ::Vault::Vault* vault)
 {
     this->vault = vault;
     accountName.clear();
+    update();
 }
 
 void TxModel::setAccount(const QString& accountName)
@@ -60,6 +61,7 @@ void TxModel::setAccount(const QString& accountName)
     }
 
     this->accountName = accountName;
+    update();
 }
 
 void TxModel::update()
