@@ -1,0 +1,5 @@
+#!/bin/bash
+set -x
+DESC="WIP"
+if [[ $# > 0 ]]; then DESC=$1; fi
+git commit -a -m "$DESC" && git push dendrite VaultMessaging

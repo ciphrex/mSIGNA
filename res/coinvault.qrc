@@ -1,0 +1,12 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>icons/newvault.png</file>
+    <file>icons/openvault.png</file>
+    <file>icons/closevault.png</file>
+    <file>icons/keypair.png</file>
+    <file>images/splash.png</file>
+    <file>icons/vault_status_icons/36x22/nc-icon-36x22.gif</file>
+    <file>icons/vault_status_icons/36x22/synching-icon-animated-36x22.gif</file>
+    <file>icons/vault_status_icons/36x22/synched-icon-36x22.gif</file>
+</qresource>
+</RCC>
