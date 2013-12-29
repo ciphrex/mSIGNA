@@ -135,7 +135,6 @@ win32 {
 }
 
 LIBS += \
-    -lssl \
     -lcrypto \
     -lodb-sqlite \
     -lodb
