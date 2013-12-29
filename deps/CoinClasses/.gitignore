@@ -1,0 +1,4 @@
+*.o
+/examples/keygen/keygen
+/examples/listener/listener
+/examples/rawtx/rawtx
