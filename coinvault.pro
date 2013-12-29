@@ -1,5 +1,5 @@
 #######################################
-# CoinQ_vault.cpp
+# coinvault.pro
 #
 # Copyright (c) 2013 Eric Lombrozo
 #
@@ -13,8 +13,8 @@ CONFIG += c++11 rtti thread
 QMAKE_CXXFLAGS_WARN_ON += -Wno-unknown-pragmas
 
 INCLUDEPATH += \
-    ../../src \
-    ../../deps/CoinClasses/src
+    deps/CoinQ/src \
+    deps/CoinClasses/src
 
 QT += widgets network
 
@@ -89,30 +89,30 @@ INSTALLS += target
 
 # CoinQ objects 
 LIBS += \
-    ../../src/obj/CoinQ_vault.o \
-    ../../src/obj/CoinQ_vault_db-odb.o \
-    ../../src/obj/CoinQ_script.o \
-    ../../src/obj/CoinQ_peer_io.o \
-    ../../src/obj/CoinQ_netsync.o \
-    ../../src/obj/CoinQ_blocks.o \
-    ../../src/obj/CoinQ_filter.o
+    deps/CoinQ/obj/CoinQ_vault.o \
+    deps/CoinQ/obj/CoinQ_vault_db-odb.o \
+    deps/CoinQ/obj/CoinQ_script.o \
+    deps/CoinQ/obj/CoinQ_peer_io.o \
+    deps/CoinQ/obj/CoinQ_netsync.o \
+    deps/CoinQ/obj/CoinQ_blocks.o \
+    deps/CoinQ/obj/CoinQ_filter.o
 
-# Coin objects
+# CoinClasses objects
 LIBS += \
-    ../../deps/CoinClasses/src/obj/CoinKey.o \
-    ../../deps/CoinClasses/src/obj/CoinNodeData.o \
-    ../../deps/CoinClasses/src/obj/MerkleTree.o \
-    ../../deps/CoinClasses/src/obj/BloomFilter.o \
-    ../../deps/CoinClasses/src/obj/IPv6.o
+    deps/CoinClasses/obj/CoinKey.o \
+    deps/CoinClasses/obj/CoinNodeData.o \
+    deps/CoinClasses/obj/MerkleTree.o \
+    deps/CoinClasses/obj/BloomFilter.o \
+    deps/CoinClasses/obj/IPv6.o
 
 # Hash function objects (for QuarkCoin)
-LIBS += \
-    ../../deps/CoinClasses/src/hashfunc/obj/blake.o \
-    ../../deps/CoinClasses/src/hashfunc/obj/bmw.o \
-    ../../deps/CoinClasses/src/hashfunc/obj/groestl.o \
-    ../../deps/CoinClasses/src/hashfunc/obj/jh.o \
-    ../../deps/CoinClasses/src/hashfunc/obj/keccak.o \
-    ../../deps/CoinClasses/src/hashfunc/obj/skein.o
+#LIBS += \
+#    ../../deps/CoinClasses/src/hashfunc/obj/blake.o \
+#    ../../deps/CoinClasses/src/hashfunc/obj/bmw.o \
+#    ../../deps/CoinClasses/src/hashfunc/obj/groestl.o \
+#    ../../deps/CoinClasses/src/hashfunc/obj/jh.o \
+#    ../../deps/CoinClasses/src/hashfunc/obj/keccak.o \
+#    ../../deps/CoinClasses/src/hashfunc/obj/skein.o
 
 win32 {
     LIBS += \
