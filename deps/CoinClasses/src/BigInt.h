@@ -33,9 +33,9 @@
 #include <stdexcept>
 
 
-#ifdef __APPLE__
-#define OPENSSL_free free
-#endif
+//#ifdef __APPLE__
+//#define OPENSSL_free free
+//#endif
 
 class BigInt
 {

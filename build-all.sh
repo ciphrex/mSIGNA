@@ -9,8 +9,12 @@ mingw64)
     SPEC="-spec win32-g++"
 ;;
 
+osx)
+    SPEC=""
+;;
+
 *)
-    echo "You must specify between linux and mingw64."
+    echo "You must specify between linux, mingw64, and osx."
     exit
 esac
 

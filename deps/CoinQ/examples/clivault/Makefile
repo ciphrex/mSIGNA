@@ -73,15 +73,14 @@ else ifeq ($(OS), mingw64)
     EXE_EXT = .exe
 
 else ifeq ($(OS), osx)
-    CXX = clang++
-    CC = clang
-    CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
+    CXX = g++
+    CC = gcc
+    CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++0x -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
 
     GLOBAL_LIB = /opt/local/lib
-    BOOST_LIB = $(BOOST_HOME)/stage/lib
 
-    INCLUDE_PATH += -I$(BOOST_HOME)
-    LIB_PATH += -L$(BOOST_LIB)
+#    INCLUDE_PATH += -I$(BOOST_HOME)
+#    LIB_PATH += -L$(BOOST_LIB)
 
     ifdef DYNAMIC
         LIBS = \
@@ -99,18 +98,18 @@ else ifeq ($(OS), osx)
             -l pthread
     else
         LIBS = \
-            $(BOOST_LIB)/libboost_system.a \
-            $(BOOST_LIB)/libboost_filesystem.a \
-            $(BOOST_LIB)/libboost_program_options.a \
-            $(BOOST_LIB)/libboost_thread.a \
-            $(BOOST_LIB)/libboost_regex.a \
-            $(BOOST_LIB)/libboost_date_time.a \
-            $(SQLITE3)/lib/libsqlite3.a \
+            $(GLOBAL_LIB)/libboost_system.a \
+            $(GLOBAL_LIB)/libboost_filesystem.a \
+            $(GLOBAL_LIB)/libboost_program_options.a \
+            $(GLOBAL_LIB)/libboost_thread.a \
+            $(GLOBAL_LIB)/libboost_regex.a \
+            $(GLOBAL_LIB)/libboost_date_time.a \
             $(GLOBAL_LIB)/libssl.a \
             $(GLOBAL_LIB)/libcrypto.a \
             $(GLOBAL_LIB)/libz.a \
-	    /usr/local/lib/libodb.a \
-	    /usr/local/lib/libodb-sqlite.a \
+	    $(GLOBAL_LIB)/libodb.a \
+	    $(GLOBAL_LIB)/libodb-sqlite.a \
+            $(GLOBAL_LIB)/libsqlite3.a \
             -l stdc++ \
             -l pthread
     endif
