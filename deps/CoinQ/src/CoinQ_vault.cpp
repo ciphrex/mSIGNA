@@ -996,8 +996,9 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
     LOGGER(trace) << "Vault::addTx(" << uchar_vector(tx->hash()).getHex() << ", " << (delete_conflicting_txs ? "true" : "false") << ")" << std::endl;
 
     if (!Vault::isSigned(tx)) {
-        LOGGER(debug) << "Vault::addTx - transaction is still missing signatures." << std::endl;
         tx->status(Tx::UNSIGNED);
+        tx->updateHash();
+        LOGGER(debug) << "Vault::addTx - transaction is still missing signatures - unsigned_hash: " << uchar_vector(tx->hash()).getHex() << std::endl;
     }
 
     using namespace CoinQ::Script;
@@ -1011,7 +1012,7 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
 
     odb::result<Tx> tx_result(db_->query<Tx>(odb::query<Tx>::hash == tx->hash() || odb::query<Tx>::hash == tx->unsigned_hash()));
     if (!tx_result.empty()) {
-        LOGGER(debug) << "Vault::addTx - we have a transaction with the same hash. hash: " << uchar_vector(tx->hash()).getHex() << " unsigned_hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
+        LOGGER(debug) << "Vault::addTx - we have a transaction with the same hash. hash: " << uchar_vector(tx->hash()).getHex() << std::endl;
         // we already have it - check if status has changed.
         std::shared_ptr<Tx> stored_tx(tx_result.begin().load());
         if (stored_tx->status() == Tx::UNSIGNED && stored_tx->txins().size() == tx->txins().size()) {
@@ -1188,6 +1189,8 @@ bool Vault::deleteTx(const bytes_t& txhash)
 
 bool Vault::deleteTx_unwrapped(const bytes_t& txhash)
 {
+    LOGGER(trace) << "Vault::deleteTx_unwrapped(" << uchar_vector(txhash).getHex() << std::endl;
+
     odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
     if (tx_r.empty()) return false;
 
