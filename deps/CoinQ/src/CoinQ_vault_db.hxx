@@ -32,8 +32,7 @@
 #include <memory>
 #include <stdexcept>
 
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
+#include <logger.h>
 
 namespace CoinQ {
 #pragma db namespace session
@@ -488,7 +487,7 @@ inline void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txou
 
 inline void Tx::set(const Coin::Transaction& coin_tx, uint32_t timestamp, status_t status)
 {
-    BOOST_LOG_TRIVIAL(trace) << "Tx::set - fromCoinClasses(coin_tx);";
+    LOGGER(trace) << "Tx::set - fromCoinClasses(coin_tx);" << std::endl;
     fromCoinClasses(coin_tx);
 
     timestamp_ = timestamp;

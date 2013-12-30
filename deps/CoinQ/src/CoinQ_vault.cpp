@@ -25,8 +25,7 @@
 #include <fstream>
 #include <algorithm>
 
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
+#include <logger.h>
 
 const std::size_t MAXSQLCLAUSES = 500;
 
@@ -39,12 +38,12 @@ using namespace CoinQ::Vault;
 Vault::Vault(int argc, char** argv, bool create)
     : db_(open_database(argc, argv, create))
 {
-    BOOST_LOG_TRIVIAL(trace) << "Created Vault instance";
+    LOGGER(trace) << "Created Vault instance" << std::endl;
 }
 
 bool Vault::keychainExists(const std::string& keychain_name) const
 {
-    BOOST_LOG_TRIVIAL(trace) << "Vault::keychainExists(" << keychain_name << ")";
+    LOGGER(trace) << "Vault::keychainExists(" << keychain_name << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
 
@@ -731,7 +730,7 @@ bytes_t Vault::importAccount(const std::string& account_name, const std::string&
                 db_->persist(tag); 
             }
             else {
-                BOOST_LOG_TRIVIAL(error) << "Vault::importAccount - ScriptTag already exists for txoutscript: " << uchar_vector(script->txoutscript()).getHex();
+                LOGGER(error) << "Vault::importAccount - ScriptTag already exists for txoutscript: " << uchar_vector(script->txoutscript()).getHex() << std::endl;
             }
         }
         db_->persist(script);
@@ -994,10 +993,10 @@ std::vector<std::shared_ptr<AccountTxOutView>> Vault::getAccountHistory(const st
 // TODO: greater flexibility in how conflicts are handled.
 bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
 {
-    BOOST_LOG_TRIVIAL(trace) << "Vault::addTx(" << uchar_vector(tx->hash()).getHex() << ", " << (delete_conflicting_txs ? "true" : "false") << ")";
+    LOGGER(trace) << "Vault::addTx(" << uchar_vector(tx->hash()).getHex() << ", " << (delete_conflicting_txs ? "true" : "false") << ")" << std::endl;
 
     if (!Vault::isSigned(tx)) {
-        BOOST_LOG_TRIVIAL(debug) << "Vault::addTx - transaction is still missing signatures.";
+        LOGGER(debug) << "Vault::addTx - transaction is still missing signatures." << std::endl;
         tx->status(Tx::UNSIGNED);
     }
 
@@ -1012,12 +1011,12 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
 
     odb::result<Tx> tx_result(db_->query<Tx>(odb::query<Tx>::hash == tx->hash() || odb::query<Tx>::hash == tx->unsigned_hash()));
     if (!tx_result.empty()) {
-        BOOST_LOG_TRIVIAL(debug) << "Vault::addTx - we have a transaction with the same hash. hash: " << uchar_vector(tx->hash()).getHex() << " unsigned_hash: " << uchar_vector(tx->unsigned_hash()).getHex();
+        LOGGER(debug) << "Vault::addTx - we have a transaction with the same hash. hash: " << uchar_vector(tx->hash()).getHex() << " unsigned_hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
         // we already have it - check if status has changed.
         std::shared_ptr<Tx> stored_tx(tx_result.begin().load());
         if (stored_tx->status() == Tx::UNSIGNED && stored_tx->txins().size() == tx->txins().size()) {
             // we have an unsigned version - replace the inputs (TODO: only add new signatures, do not remove existing ones.)
-            BOOST_LOG_TRIVIAL(debug) << "Vault::addTx - we need to replace an older version of the transaction with a newer version.";
+            LOGGER(debug) << "Vault::addTx - we need to replace an older version of the transaction with a newer version." << std::endl;
             std::size_t i = 0;
             for (auto& txin: stored_tx->txins()) {
                 txin->script(tx->txins()[i++]->script());
@@ -1034,7 +1033,7 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
             return true;
         }
         if (tx->status() != stored_tx->status()) {
-            BOOST_LOG_TRIVIAL(debug) << "Vault::addTx - the status of the transaction has changed. old status: " << stored_tx->status() << " - new status: " << tx->status();
+            LOGGER(debug) << "Vault::addTx - the status of the transaction has changed. old status: " << stored_tx->status() << " - new status: " << tx->status() << std::endl;
             stored_tx->timestamp(time(NULL));
             stored_tx->status(tx->status());
             db_->update(stored_tx);
@@ -1071,10 +1070,10 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
             std::shared_ptr<TxIn> conflict_txin = txouts[outindex]->spent();
             if (conflict_txin) {
                 if (!delete_conflicting_txs) {
-                    BOOST_LOG_TRIVIAL(debug) << "Vault::addTx - outpoint already spent - outpoint: " << uchar_vector(conflict_txin->outhash()).getHex() << ":" << conflict_txin->outindex();
+                    LOGGER(debug) << "Vault::addTx - outpoint already spent - outpoint: " << uchar_vector(conflict_txin->outhash()).getHex() << ":" << conflict_txin->outindex() << std::endl;
                     throw std::runtime_error("Vault::addTx - outpoint already spent.");
                 }
-                BOOST_LOG_TRIVIAL(debug) << "Discovered conflicting transaction " << uchar_vector(conflict_txin->tx()->hash()).getHex();
+                LOGGER(debug) << "Discovered conflicting transaction " << uchar_vector(conflict_txin->tx()->hash()).getHex() << std::endl;
                 conflicting_txs.insert(conflict_txin->tx());
             }
             input_total += txouts[outindex]->value();
@@ -1171,7 +1170,7 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
 
 Vault::result_t Vault::insertTx_unwrapped(std::shared_ptr<Tx>& tx, bool delete_conflicting_txs)
 {
-    BOOST_LOG_TRIVIAL(trace) << "Vault::insertTx_unwrapped(" << uchar_vector(tx->hash()).getHex() << ", " << (delete_conflicting_txs ? "true" : "false") << ")";
+    LOGGER(trace) << "Vault::insertTx_unwrapped(" << uchar_vector(tx->hash()).getHex() << ", " << (delete_conflicting_txs ? "true" : "false") << ")" << std::endl;
 
     return OBJECT_UNCHANGED;
 }
@@ -1396,7 +1395,7 @@ bool Vault::insertBlock(const ChainBlock& block, bool reprocess_txs)
 {
     bytes_t prev_block_hash = block.blockHeader.prevBlockHash;
     bytes_t block_hash = block.blockHeader.getHashLittleEndian();
-    BOOST_LOG_TRIVIAL(trace) << "Vault::insertBlock(" << uchar_vector(block_hash).getHex() << (reprocess_txs ? ", true" : ", false") << ")";
+    LOGGER(trace) << "Vault::insertBlock(" << uchar_vector(block_hash).getHex() << (reprocess_txs ? ", true" : ", false") << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
 
@@ -1413,16 +1412,16 @@ bool Vault::insertBlock(const ChainBlock& block, bool reprocess_txs)
     if (!block_r.empty()) {
         header = block_r.begin().load();
         if (header->hash() == block_hash) {
-            BOOST_LOG_TRIVIAL(debug) << "Vault::insertBlock - already have block - hash: " << uchar_vector(block_hash).getHex() << " height: " << header->height();
+            LOGGER(debug) << "Vault::insertBlock - already have block - hash: " << uchar_vector(block_hash).getHex() << " height: " << header->height() << std::endl;
             return true;
         }
         else {
-            BOOST_LOG_TRIVIAL(debug) << "Vault::insertBlock - block collision - new hash: " << uchar_vector(block_hash).getHex() << " old hash: " << uchar_vector(header->hash()).getHex() << " height: " << header->height();
+            LOGGER(debug) << "Vault::insertBlock - block collision - new hash: " << uchar_vector(block_hash).getHex() << " old hash: " << uchar_vector(header->hash()).getHex() << " height: " << header->height() << std::endl;
             deleteBlock_unwrapped(header->hash());
         }
     }
 
-    BOOST_LOG_TRIVIAL(debug) << "Vault::insertBlock - inserting new block: " << uchar_vector(block_hash).getHex() << " height: " << block.height;
+    LOGGER(debug) << "Vault::insertBlock - inserting new block: " << uchar_vector(block_hash).getHex() << " height: " << block.height << std::endl;
     header = std::make_shared<BlockHeader>(
         block_hash,
         block.height,
@@ -1453,7 +1452,7 @@ bool Vault::insertBlock(const ChainBlock& block, bool reprocess_txs)
         tx_r = db_->query<Tx>(odb::query<Tx>::hash.in_range(tx_hashes.begin() + startpos, tx_hashes.begin() + endpos));
         startpos = endpos;
         for (auto& tx: tx_r) {
-            BOOST_LOG_TRIVIAL(debug) << "Vault::insertBlock - setting tx block header for tx " << uchar_vector(tx.hash()).getHex();
+            LOGGER(debug) << "Vault::insertBlock - setting tx block header for tx " << uchar_vector(tx.hash()).getHex() << std::endl;
             tx.block(header, index_map[tx.hash()]);
             db_->update(tx);
         }
@@ -1484,7 +1483,7 @@ bool Vault::insertMerkleBlock(const ChainMerkleBlock& merkleblock)
     std::vector<uchar_vector> tx_hashes = partialmerkletree.getTxHashesLittleEndianVector();
     bytes_t prev_block_hash = merkleblock.blockHeader.prevBlockHash;
     bytes_t block_hash = merkleblock.blockHeader.getHashLittleEndian();
-    BOOST_LOG_TRIVIAL(trace) << "Vault::insertMerkleBlock(" << uchar_vector(block_hash).getHex() << ")";
+    LOGGER(trace) << "Vault::insertMerkleBlock(" << uchar_vector(block_hash).getHex() << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session session;
@@ -1499,13 +1498,13 @@ bool Vault::insertMerkleBlock(const ChainMerkleBlock& merkleblock)
     std::shared_ptr<BlockHeader> header;
     if (!block_r.empty()) {
         header = block_r.begin().load();
-        BOOST_LOG_TRIVIAL(debug) << "Vault::insertMerkleBlock - already have block - hash: " << uchar_vector(block_hash).getHex() << " height: " << header->height();
+        LOGGER(debug) << "Vault::insertMerkleBlock - already have block - hash: " << uchar_vector(block_hash).getHex() << " height: " << header->height() << std::endl;
         return false;
     }
     else {
         block_r = db_->query<BlockHeader>(odb::query<BlockHeader>::height >= merkleblock.height);
         if (!block_r.empty()) {
-            BOOST_LOG_TRIVIAL(debug) << "Vault::insertMerkleBlock - reorganization - hash: " << uchar_vector(block_hash).getHex() << " height: " << merkleblock.height;
+            LOGGER(debug) << "Vault::insertMerkleBlock - reorganization - hash: " << uchar_vector(block_hash).getHex() << " height: " << merkleblock.height << std::endl;
             for (auto& h: block_r) {
                 db_->erase_query<MerkleBlock>(odb::query<MerkleBlock>::blockheader == h.id());
                 odb::result<Tx> tx_r = db_->query<Tx>(odb::query<Tx>::blockheader == h.id());
@@ -1518,7 +1517,7 @@ bool Vault::insertMerkleBlock(const ChainMerkleBlock& merkleblock)
         }
     }
 
-    BOOST_LOG_TRIVIAL(debug) << "Vault::insertMerkleBlock - inserting new merkle block: " << uchar_vector(block_hash).getHex() << " height: " << merkleblock.height;
+    LOGGER(debug) << "Vault::insertMerkleBlock - inserting new merkle block: " << uchar_vector(block_hash).getHex() << " height: " << merkleblock.height << std::endl;
     header = std::make_shared<BlockHeader>(
         block_hash,
         merkleblock.height,
@@ -1542,17 +1541,17 @@ bool Vault::insertMerkleBlock(const ChainMerkleBlock& merkleblock)
     db_->persist(header);
     db_->persist(db_merkleblock);
 
-    BOOST_LOG_TRIVIAL(debug) << "Vault::insertMerkleBlock - updating transactions in block: " << uchar_vector(block_hash).getHex() << " height: " << merkleblock.height;
+    LOGGER(debug) << "Vault::insertMerkleBlock - updating transactions in block: " << uchar_vector(block_hash).getHex() << " height: " << merkleblock.height << std::endl;
     odb::result<Tx> tx_r = db_->query<Tx>(odb::query<Tx>::hash.in_range(tx_hashes.begin(), tx_hashes.end()));
     for (auto& tx: tx_r) {
-        BOOST_LOG_TRIVIAL(debug) << "Vault::insertMerkleBlock - updating transaction: " << uchar_vector(tx.hash()).getHex();
+        LOGGER(debug) << "Vault::insertMerkleBlock - updating transaction: " << uchar_vector(tx.hash()).getHex() << std::endl;
         tx.block(header, 0xffffffff); // TODO: compute correct index or eliminate index altogether.
         db_->update(tx);
     }
 
-    BOOST_LOG_TRIVIAL(debug) << "Vault::insertMerkleBlock - updating all other unconfirmed transactions";
+    LOGGER(debug) << "Vault::insertMerkleBlock - updating all other unconfirmed transactions" << std::endl;
     int count = updateUnconfirmed_unwrapped();
-    BOOST_LOG_TRIVIAL(debug) << "Vault::insertMerkleBlock - " << count << " transactions confirmed";
+    LOGGER(debug) << "Vault::insertMerkleBlock - " << count << " transactions confirmed" << std::endl;
 
     t.commit();
 
@@ -1564,18 +1563,18 @@ bool Vault::deleteMerkleBlock_unwrapped(const bytes_t& hash)
 /*
     odb::result<BlockHeader> blockheader_r = db_->query<BlockHeader>(odb::query<BlockHeader>::hash == hash);
     if (blockheader_r.empty()) {
-        BOOST_LOG_TRIVIAL(debug) << "Vault::deleteMerkleBlock_unwrapped - header not found for hash " << uchar_vector(hash).getHex();
+        LOGGER(debug) << "Vault::deleteMerkleBlock_unwrapped - header not found for hash " << uchar_vector(hash).getHex() << std::endl;
         return false;
     }
 */
 //    std::shared_ptr<BlockHeader> header = blockheader_r.begin().load();
     odb::result<MerkleBlock> merkleblock_r = db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == hash);
     if (merkleblock_r.empty()) {
-        BOOST_LOG_TRIVIAL(debug) << "Vault::deleteMerkleBlock_unwrapped - no merkle block found for hash " << uchar_vector(hash).getHex();
+        LOGGER(debug) << "Vault::deleteMerkleBlock_unwrapped - no merkle block found for hash " << uchar_vector(hash).getHex() << std::endl;
         return false;
     }
 
-    BOOST_LOG_TRIVIAL(debug) << "Vault::deleteMerkleBlock_unwrapped - deleting merkle block and header for hash " << uchar_vector(hash).getHex();
+    LOGGER(debug) << "Vault::deleteMerkleBlock_unwrapped - deleting merkle block and header for hash " << uchar_vector(hash).getHex() << std::endl;
     db_->erase_query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == hash);
     db_->erase_query<BlockHeader>(odb::query<BlockHeader>::hash == hash);
 
@@ -1604,7 +1603,7 @@ unsigned int Vault::updateUnconfirmed_unwrapped(const bytes_t& txhash)
         txview_r = db_->query<ConfirmedTxView>(view_query::Tx::hash == txhash && view_query::Tx::blockheader.is_null());
     }
     for (auto& txview: txview_r) {
-        BOOST_LOG_TRIVIAL(debug) << "Vault::updateUnconfirmed_unwrapped() - tx_id: " << txview.tx_id << " / blockheader_id: " << txview.blockheader_id;
+        LOGGER(debug) << "Vault::updateUnconfirmed_unwrapped() - tx_id: " << txview.tx_id << " / blockheader_id: " << txview.blockheader_id << std::endl;
         if (txview.blockheader_id == 0) continue;
 
         odb::result<Tx> tx_r(db_->query<Tx>(txview.tx_id));
@@ -1620,7 +1619,7 @@ unsigned int Vault::updateUnconfirmed_unwrapped(const bytes_t& txhash)
         std::shared_ptr<Tx> tx(db_->load<Tx>(txview.tx_id));
         std::shared_ptr<BlockHeader> blockheader(db_->load<BlockHeader>(txview.blockheader_id));
         tx->blockheader(blockheader);
-        BOOST_LOG_TRIVIAL(debug) << "Vault::updateUnconfirmed_unwrapped() - block hash: " << uchar_vector(tx->blockheader()->hash()).getHex();
+        LOGGER(debug) << "Vault::updateUnconfirmed_unwrapped() - block hash: " << uchar_vector(tx->blockheader()->hash()).getHex() << std::endl;
         db_->update(*tx);
         count++;
     } 

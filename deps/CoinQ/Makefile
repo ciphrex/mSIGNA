@@ -10,7 +10,8 @@ endif
 
 INCLUDE_PATH = \
     -Isrc \
-    -I../CoinClasses/src
+    -I../CoinClasses/src \
+    -I../logger/src
 
 ifeq ($(OS), linux)
     CXX = g++

@@ -12,8 +12,7 @@
 
 #include <stdint.h>
 
-#include <boost/log/trivial.hpp>
-
+#include <logger.h>
 
 // Select the network
 
@@ -134,12 +133,11 @@ NetworkSync::NetworkSync()
                 notifyDoneSync();
             }
             else {
-                BOOST_LOG_TRIVIAL(debug) << "NetworkSync block handler - block rejected - hash: " << hash.getHex();
+                LOGGER(debug) << "NetworkSync block handler - block rejected - hash: " << hash.getHex() << std::endl;
             }
         }
         catch (const std::exception& e) {
-            BOOST_LOG_TRIVIAL(error) << "NetworkSync block handler - block hash: "
-                << hash.getHex() << " - " << e.what();
+            LOGGER(error) << "NetworkSync block handler - block hash: " << hash.getHex() << " - " << e.what() << std::endl;
             notifyStatus("NetworkSync block handler error.");
         }
     });
@@ -158,7 +156,7 @@ NetworkSync::NetworkSync()
                 notifyStatus("Done flushing block chain to file");
             }
             else {
-                BOOST_LOG_TRIVIAL(debug) << "NetworkSync merkle block handler - block rejected - hash: " << hash.getHex();
+                LOGGER(debug) << "NetworkSync merkle block handler - block rejected - hash: " << hash.getHex() << std::endl;
                 return;
             }
 
@@ -168,7 +166,7 @@ NetworkSync::NetworkSync()
             if (resynching && blockTree.getBestHeight() > header.height) {
                 const ChainHeader& nextHeader = blockTree.getHeader(header.height + 1);
                 uchar_vector blockHash = nextHeader.getHashLittleEndian();
-                BOOST_LOG_TRIVIAL(debug) << "Asking for block " << blockHash.getHex() << " / height: " << nextHeader.height;
+                LOGGER(debug) << "Asking for block " << blockHash.getHex() << " / height: " << nextHeader.height << std::endl;
                 std::stringstream status;
                 status << "Asking for block " << blockHash.getHex() << " / height: " << nextHeader.height;
                 notifyStatus(status.str());
@@ -183,7 +181,7 @@ NetworkSync::NetworkSync()
         catch (const std::exception& e) {
             std::stringstream err;
             err << "NetworkSync merkle block handler - block hash: " << hash.getHex() << " - " << e.what();
-            BOOST_LOG_TRIVIAL(error) << err.str();
+            LOGGER(error) << err.str() << std::endl;
             notifyStatus(err.str());
         }
     });
@@ -308,13 +306,13 @@ void NetworkSync::resync(const std::vector<bytes_t>& locatorHashes, uint32_t sta
     if (bestHeader.height >= resyncHeight) {
         std::stringstream status;
         status << "Resynching blocks " << resyncHeight << " - " << bestHeader.height;
-        BOOST_LOG_TRIVIAL(debug) << status.str();
+        LOGGER(debug) << status.str() << std::endl;
         notifyStatus(status.str());
         const ChainHeader& resyncHeader = blockTree.getHeader(resyncHeight);
         uchar_vector blockHash = resyncHeader.getHashLittleEndian();
         status.str("");
         status << "Asking for block " << blockHash.getHex();
-        BOOST_LOG_TRIVIAL(debug) << status.str();
+        LOGGER(debug) << status.str() << std::endl;
         notifyStatus(status.str());
         peer.getFilteredBlock(blockHash);
     }

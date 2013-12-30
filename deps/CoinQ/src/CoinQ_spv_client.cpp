@@ -15,8 +15,7 @@
 
 #include <stdint.h>
 
-#include <boost/log/trivial.hpp>
-
+#include <logger.h>
 
 // Select the network
 
@@ -328,12 +327,11 @@ void NetworkSync::start(const QString& host, int port)
                 emit doneSync();
             }
             else {
-                BOOST_LOG_TRIVIAL(debug) << "NetworkSync block handler - block rejected - hash: " << hash.getHex();
+                LOGGER(debug) << "NetworkSync block handler - block rejected - hash: " << hash.getHex() << std::endl;
             }
         }
         catch (const std::exception& e) {
-            BOOST_LOG_TRIVIAL(error) << "NetworkSync block handler - block hash: "
-                << hash.getHex() << " - " << e.what();
+            LOGGER(error) << "NetworkSync block handler - block hash: " << hash.getHex() << " - " << e.what() << std::endl;
             emit status(tr("NetworkSync block handler error."));
         }
     });
