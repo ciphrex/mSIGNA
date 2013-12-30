@@ -2,6 +2,7 @@ COINCLASSES = ../../../CoinClasses
 COINQ = ../../../CoinQ
 SQLITE3 = ../../../sqlite3
 CLI = ../../../cli
+LOGGER = ../../../logger
 
 ODB_DB = -DDATABASE_SQLITE
 
@@ -12,7 +13,7 @@ else
     CXX_FLAGS += -O3
 endif
 
-INCLUDE_PATH = -I$(COINCLASSES)/src -I$(COINQ)/src -I$(COINQ)/odb -I$(CLI)/src
+INCLUDE_PATH = -I$(COINCLASSES)/src -I$(COINQ)/src -I$(COINQ)/odb -I$(CLI)/src -I$(LOGGER)/src
 LIB_PATH =
 
 $(warning $(OS))
@@ -26,7 +27,6 @@ ifeq ($(OS), linux)
         -l pthread \
         -l ssl \
         -l crypto \
-        /usr/local/lib/libboost_log.a \
         -l boost_system \
         -l boost_filesystem \
         -l boost_program_options \
@@ -58,7 +58,6 @@ else ifeq ($(OS), mingw64)
 	-l gdi32 \
 	-l ws2_32 \
 	-l mswsock \
-        -l boost_log-mt-s \
 	-l boost_system-mt-s \
 	-l boost_filesystem-mt-s \
 	-l boost_program_options-mt-s \
@@ -86,7 +85,6 @@ else ifeq ($(OS), osx)
 
     ifdef DYNAMIC
         LIBS = \
-            -l boost_log \
             -l boost_system \
             -l boost_filesystem \
             -l boost_program_options \
@@ -101,7 +99,6 @@ else ifeq ($(OS), osx)
             -l pthread
     else
         LIBS = \
-            $(BOOST_LIB)/libboost_log.a \
             $(BOOST_LIB)/libboost_system.a \
             $(BOOST_LIB)/libboost_filesystem.a \
             $(BOOST_LIB)/libboost_program_options.a \
@@ -128,7 +125,6 @@ else ifeq ($(OS), cygwin)
             -l pthread \
             -l ssl \
             -l crypto \
-            libboost_log-mt.dll.a \
             libboost_system-mt.dll.a \
             libboost_filesystem-mt.dll.a \
             libboost_program_options-mt.dll.a \
@@ -142,7 +138,6 @@ else ifeq ($(OS), cygwin)
             -l pthread \
             -l ssl \
             -l crypto \
-            -l boost_log-mt \
             -l boost_system-mt \
             -l boost_filesystem-mt \
             -l boost_program_options-mt \
@@ -155,6 +150,9 @@ else ifeq ($(OS), cygwin)
 else
     $(error OS must be set to linux, osx, mingw64, or cygwin)
 endif
+
+LOGGER_OBJS = \
+    $(LOGGER)/obj/logger.o
 
 COINCLASSES_OBJS = \
     $(COINCLASSES)/obj/IPv6.o \
@@ -175,15 +173,15 @@ COINQ_OBJS = \
     $(COINQ)/obj/CoinQ_vault.o \
     $(COINQ)/obj/CoinQ_vault_db-odb.o
 
+ALL_OBJS = $(LOGGER_OBJS) $(COINCLASSES_OBJS) $(COINQ_OBJS)
+
 all: build/vault$(EXE_EXT)
 
 obj/vault.o: src/vault.cpp
 	$(CXX) $(INCLUDE_PATH) $(CXX_FLAGS) -o obj/vault.o -c src/vault.cpp $(ODB_DB)
 
 build/vault$(EXE_EXT): obj/vault.o
-	$(CXX) $(INCLUDE_PATH) $(CXX_FLAGS) -o $@ obj/vault.o $(COINCLASSES_OBJS) $(COINQ_OBJS) $(LIB_PATH) $(LIBS) $(ODB_DB)
-
-#$(COINQ)/src/obj/CoinQ_vault_db-odb.o $(COINQ)/src/obj/CoinQ_vault.o $(COINQ)/src/obj/CoinQ_script.o $(COINCLASSES)/src/obj/CoinKey.o $(COINCLASSES)/src/obj/CoinNodeData.o $(COINCLASSES)/src/obj/hdkeys.o $(COINCLASSES)/src/obj/MerkleTree.o $(COINCLASSES)/src/obj/IPv6.o $(COINCLASSES)/src/obj/BloomFilter.o $(LIB_PATH) $(LIBS) -DDATABASE_SQLITE
+	$(CXX) $(INCLUDE_PATH) $(CXX_FLAGS) -o $@ obj/vault.o $(ALL_OBJS) $(LIB_PATH) $(LIBS) $(ODB_DB)
 
 clean:
 	rm -f obj/*.o build/vault*
