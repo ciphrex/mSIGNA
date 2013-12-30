@@ -1,2 +1,4 @@
 /Makefile
 build/*
+*.Debug
+*.Release
