@@ -18,7 +18,10 @@ CURRENT_DIR=$(pwd)
 
 set -x
 
-cd deps/CoinClasses
+cd deps/logger
+make OS=$1
+
+cd ../CoinClasses
 make OS=$1
 
 cd ../CoinQ
