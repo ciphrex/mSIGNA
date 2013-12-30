@@ -17,10 +17,7 @@
 #include <QStandardItemModel>
 #include <QFile>
 
-#ifdef USE_LOGGING
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#endif
+#include "severitylogger.h"
 
 using namespace CoinQ::Vault;
 using namespace CoinQ::Script;

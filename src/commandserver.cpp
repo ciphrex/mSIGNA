@@ -19,9 +19,7 @@
 
 #include "settings.h"
 
-#ifdef USE_LOGGING
-#include <boost/log/trivial.hpp>
-#endif
+#include "severitylogger.h"
 
 const int COMMAND_SERVER_TIMEOUT = 500;
 const QString COMMAND_SERVER_NAME("VaultCommandServer");
@@ -86,9 +84,7 @@ bool CommandServer::processArgs(int argc, char* argv[])
         }
         socket.write(block);
         if (!socket.waitForBytesWritten(COMMAND_SERVER_TIMEOUT)) {
-#ifdef USE_LOGGING
-            BOOST_LOG_TRIVIAL(error) << "CommandServer::processArgs - " + socket.errorString().toStdString();
-#endif
+            LOGGER(error) << "CommandServer::processArgs - " + socket.errorString().toStdString() << std::endl;
         }
     }
 
@@ -127,8 +123,6 @@ void CommandServer::processArg(const QString& arg)
         emit gotFile(arg);
     }
     else {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "CommandServer::handleConnection - unhandled arg: " << arg.toStdString();
-#endif
+        LOGGER(debug) << "CommandServer::handleConnection - unhandled arg: " << arg.toStdString() << std::endl;
     }
 }

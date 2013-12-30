@@ -14,10 +14,7 @@
 
 #include <stdint.h>
 
-#ifdef USE_LOGGING
-#include <boost/log/trivial.hpp>
-#endif
-
+#include "severitylogger.h"
 
 // Select the network
 
@@ -128,13 +125,13 @@ NetworkSync::NetworkSync()
             }
             else {
 #ifdef USE_LOGGING
-                BOOST_LOG_TRIVIAL(debug) << "NetworkSync block handler - block rejected - hash: " << hash.getHex();
+                LOGGER(debug) << "NetworkSync block handler - block rejected - hash: " << hash.getHex();
 #endif
             }
         }
         catch (const std::exception& e) {
 #ifdef USE_LOGGING
-            BOOST_LOG_TRIVIAL(error) << "NetworkSync block handler - block hash: "
+            LOGGER(error) << "NetworkSync block handler - block hash: "
                 << hash.getHex() << " - " << e.what();
 #endif
             emit status(tr("NetworkSync block handler error."));
@@ -156,7 +153,7 @@ NetworkSync::NetworkSync()
             }
             else {
 #ifdef USE_LOGGING
-                BOOST_LOG_TRIVIAL(debug) << "NetworkSync merkle block handler - block rejected - hash: " << hash.getHex();
+                LOGGER(debug) << "NetworkSync merkle block handler - block rejected - hash: " << hash.getHex();
 #endif
                 return;
             }
@@ -168,7 +165,7 @@ NetworkSync::NetworkSync()
                 const ChainHeader& nextHeader = blockTree.getHeader(header.height + 1);
                 uchar_vector blockHash = nextHeader.getHashLittleEndian();
 #ifdef USE_LOGGING
-                BOOST_LOG_TRIVIAL(debug) << "Asking for block " << blockHash.getHex() << " / height: " << nextHeader.height;
+                LOGGER(debug) << "Asking for block " << blockHash.getHex() << " / height: " << nextHeader.height;
 #endif
                 emit status(tr("Asking for block ") + QString::fromStdString(blockHash.getHex()) + tr(" / height: ") + QString::number(nextHeader.height));
                 peer.getFilteredBlock(blockHash);
@@ -181,7 +178,7 @@ NetworkSync::NetworkSync()
         }
         catch (const std::exception& e) {
 #ifdef USE_LOGGING
-            BOOST_LOG_TRIVIAL(error) << "NetworkSync merkle block handler - block hash: "
+            LOGGER(error) << "NetworkSync merkle block handler - block hash: "
                 << hash.getHex() << " - " << e.what();
 #endif
             emit status(tr("NetworkSync merkle block handler error."));

@@ -19,6 +19,4 @@ const QString APPDATADIR(QDir::homePath() + "/vault");
 
 const unsigned char BASE58_VERSIONS[] = { 0x00, 0x05 };
 
-#define USE_LOGGING
-
 #endif //  COINVAULT_SETTINGS_H

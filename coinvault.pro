@@ -13,6 +13,7 @@ CONFIG += c++11 rtti thread
 QMAKE_CXXFLAGS_WARN_ON += -Wno-unknown-pragmas
 
 INCLUDEPATH += \
+    deps/logger/src \
     deps/CoinQ/src \
     deps/CoinClasses/src
 
@@ -30,6 +31,7 @@ HEADERS = \
     src/settings.h \
     src/versioninfo.h \
     src/copyrightinfo.h \
+    src/severitylogger.h \
     src/splashscreen.h \
     src/mainwindow.h \
     src/commandserver.h \
@@ -87,6 +89,10 @@ RESOURCES = \
 target.path = build 
 INSTALLS += target
 
+# logger objects
+LIBS += \
+    deps/logger/obj/logger.o
+
 # CoinQ objects 
 LIBS += \
     deps/CoinQ/obj/CoinQ_vault.o \
@@ -118,14 +124,12 @@ win32 {
     LIBS += \
         -lws2_32 \
         -lmswsock \
-        -lboost_log-mt-s \
         -lboost_system-mt-s \
         -lboost_filesystem-mt-s \
         -lboost_regex-mt-s \
         -lboost_thread_win32-mt-s \
 } else {
     LIBS += \
-        /usr/local/lib/libboost_log.a \
         -lboost_system \
         -lboost_filesystem \
         -lboost_regex \

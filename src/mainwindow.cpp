@@ -46,6 +46,9 @@
 #include "networksettingsdialog.h"
 #include "resyncdialog.h"
 
+// Logging
+#include "severitylogger.h"
+
 boost::mutex repaintMutex;
 
 using namespace CoinQ::Script;
@@ -118,17 +121,13 @@ MainWindow::MainWindow()
     // status updates
     connect(this, &MainWindow::status, [this](const QString& message) { updateStatusMessage(message); });
     connect(this, &MainWindow::updateSyncHeight, [this](int height) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::updateBestHeight emitted. New best height: " << height;
-#endif
+        LOGGER(debug) << "MainWindow::updateBestHeight emitted. New best height: " << height << std::endl;
         syncHeight = height;
         updateSyncLabel();
         updateNetworkState();
     });
     connect(this, &MainWindow::updateBestHeight, [this](int height) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::updateBestHeight emitted. New best height: " << height;
-#endif
+        LOGGER(debug) << "MainWindow::updateBestHeight emitted. New best height: " << height << std::endl;
         bestHeight = height;
         updateSyncLabel();
         updateNetworkState();
@@ -151,9 +150,7 @@ void MainWindow::tryConnect()
 
 void MainWindow::updateStatusMessage(const QString& message)
 {
-#ifdef USE_LOGGING
-    BOOST_LOG_TRIVIAL(debug) << "MainWindow::updateStatusMessage";
-#endif
+    LOGGER(debug) << "MainWindow::updateStatusMessage" << std::endl;
 //    boost::lock_guard<boost::mutex> lock(repaintMutex);
 //    statusBar()->showMessage(message);
 }
@@ -292,9 +289,7 @@ void MainWindow::newVault(QString fileName)
         updateVaultStatus(fileName);
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::newVault - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::newVault - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -335,9 +330,7 @@ void MainWindow::openVault(QString fileName)
         promptResync();
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::openVault - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::openVault - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -356,9 +349,7 @@ void MainWindow::closeVault()
         updateStatusMessage(tr("Closed vault"));
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::closeVault - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::closeVault - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -379,9 +370,7 @@ void MainWindow::newKeychain()
         }
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::newKeyChain - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::newKeyChain - " << e.what() << std::endl;
         showError(e.what());
     }    
 }
@@ -420,9 +409,7 @@ void MainWindow::importKeychain(QString fileName)
         updateStatusMessage(tr("Imported ") + (isPrivate ? tr("private") : tr("public")) + tr(" keychain ") + name);
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::importKeychain - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::importKeychain - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -463,9 +450,7 @@ void MainWindow::exportKeychain(bool exportPrivate)
         updateStatusMessage(tr("Saved ") + fileName);
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::exportKeychain - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::exportKeychain - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -587,9 +572,7 @@ void MainWindow::importAccount(QString fileName)
         promptResync();
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::importAccount - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::importAccount - " << e.what() << std::endl;
         showError(e.what());
     }
 
@@ -622,9 +605,7 @@ void MainWindow::exportAccount()
         updateStatusMessage(tr("Saved ") + fileName);
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::exportAccount - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::exportAccount - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -647,9 +628,7 @@ void MainWindow::deleteAccount()
             networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         }
         catch (const exception& e) {
-#ifdef USE_LOGGING
-            BOOST_LOG_TRIVIAL(debug) << "MainWindow::deleteAccount - " << e.what();
-#endif
+            LOGGER(debug) << "MainWindow::deleteAccount - " << e.what() << std::endl;
             showError(e.what());
         }
     }
@@ -674,9 +653,7 @@ void MainWindow::viewAccountHistory()
         dlg.exec();
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::viewAccountHistory - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::viewAccountHistory - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -699,9 +676,7 @@ void MainWindow::viewScripts()
         dlg.exec();
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::viewScripts - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::viewScripts - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -737,9 +712,7 @@ void MainWindow::requestPayment()
 */
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::requestPayment - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::requestPayment - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -760,9 +733,7 @@ void MainWindow::insertRawTx()
         } 
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::insertRawTx - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::insertRawTx - " << e.what() << std::endl;
         showError(e.what());
     } 
 }
@@ -790,9 +761,7 @@ void MainWindow::createRawTx()
             return;
         }
         catch (const exception& e) {
-#ifdef USE_LOGGING
-            BOOST_LOG_TRIVIAL(debug) << "MainWindow::createRawTx - " << e.what();
-#endif
+            LOGGER(debug) << "MainWindow::createRawTx - " << e.what() << std::endl;
             showError(e.what());
         }
     }
@@ -838,9 +807,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
             return;
         }
         catch (const exception& e) {
-#ifdef USE_LOGGING
-            BOOST_LOG_TRIVIAL(debug) << "MainWindow::createTx - " << e.what();
-#endif
+            LOGGER(debug) << "MainWindow::createTx - " << e.what() << std::endl;
             showError(e.what());
         }
     }
@@ -858,9 +825,7 @@ void MainWindow::signRawTx()
         }
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::signRawTx - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::signRawTx - " << e.what() << std::endl;
         showError(e.what());
     }
 
@@ -883,9 +848,7 @@ void MainWindow::sendRawTx()
         }
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::sendRawTx - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::sendRawTx - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -924,7 +887,7 @@ void MainWindow::newTx(const coin_tx_t& tx)
         }
     }
     catch (const exception& e) {
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::newTx - " << hash.toStdString() << " : " << e.what();
+        LOGGER(debug) << "MainWindow::newTx - " << hash.toStdString() << " : " << e.what();
         updateStatusMessage(tr("Error attempting to insert transaction ") + hash);
     }
 }
@@ -938,7 +901,7 @@ void MainWindow::newBlock(const chain_block_t& block)
             updateStatusaccountModel->insertBlock(block);
         }
         catch (const exception& e) {
-            BOOST_LOG_TRIVIAL(debug) << "MainWindow::newBlock - " << hash.toStdString() << " : " << e.what();
+            LOGGER(debug) << "MainWindow::newBlock - " << hash.toStdString() << " : " << e.what();
             showError(e.what());
         }
     }
@@ -965,9 +928,7 @@ void MainWindow::doneSync()
             resync();
         }
         catch (const exception& e) {
-#ifdef USE_LOGGING
-            BOOST_LOG_TRIVIAL(debug) << "MainWindow::doneSync - " << e.what();
-#endif
+            LOGGER(debug) << "MainWindow::doneSync - " << e.what() << std::endl;
 //            updateStatusMessage(QString::fromStdString(e.what()));
             emit status(QString::fromStdString(e.what()));
         }
@@ -989,9 +950,7 @@ void MainWindow::addBestChain(const chain_header_t& header)
 void MainWindow::removeBestChain(const chain_header_t& header)
 {
     bytes_t hash = header.getHashLittleEndian();
-#ifdef USE_LOGGING
-    BOOST_LOG_TRIVIAL(debug) << "MainWindow::removeBestChain - " << uchar_vector(hash).getHex();
-#endif
+    LOGGER(debug) << "MainWindow::removeBestChain - " << uchar_vector(hash).getHex() << std::endl;
     //accountModel->deleteMerkleBlock(hash);    
     int diff = bestHeight - networkSync.getBestHeight();
     if (diff >= 0) {
@@ -1032,9 +991,7 @@ void MainWindow::startNetworkSync()
         updateNetworkState();
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::startNetworkSync - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::startNetworkSync - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -1047,9 +1004,7 @@ void MainWindow::stopNetworkSync()
         networkSync.stop();
     }
     catch (const exception& e) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::stopNetworkSync - " << e.what();
-#endif
+        LOGGER(debug) << "MainWindow::stopNetworkSync - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -1068,9 +1023,7 @@ void MainWindow::resyncBlocks()
             networkSync.resync(resyncHeight);
         }
         catch (const exception& e) {
-#ifdef USE_LOGGING
-            BOOST_LOG_TRIVIAL(debug) << "MainWindow::resyncBlocks - " << e.what();
-#endif
+            LOGGER(debug) << "MainWindow::resyncBlocks - " << e.what() << std::endl;
             showError(e.what());
         }
     }
@@ -1154,9 +1107,7 @@ void MainWindow::about()
 
 void MainWindow::errorStatus(const QString& message)
 {
-#ifdef USE_LOGGING
-    BOOST_LOG_TRIVIAL(debug) << "MainWindow::errorStatus - " << message.toStdString();
-#endif
+    LOGGER(debug) << "MainWindow::errorStatus - " << message.toStdString() << std::endl;
     QString error = tr("Error - ") + message;
 //    updateStatusMessage(tr("Error - ") + message);
     emit status(error);
@@ -1191,9 +1142,7 @@ void MainWindow::processFile(const QString& fileName)
         importKeychain(fileName);
     }
     else {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "MainWindow::processFile - unhandled file type: " << fileName.toStdString();
-#endif
+        LOGGER(debug) << "MainWindow::processFile - unhandled file type: " << fileName.toStdString() << std::endl;
     }
 }
 
@@ -1362,58 +1311,42 @@ void MainWindow::createActions()
     connect(this, SIGNAL(signal_networkDoneSync()), this, SLOT(doneSync()));
 */
     networkSync.subscribeStatus([this](const std::string& message) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "status slot";
-#endif
+        LOGGER(debug) << "status slot" << std::endl;
         networkStatus(QString::fromStdString(message)); 
     });
 
     networkSync.subscribeError([this](const std::string& error) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "error slot";
-#endif
+        LOGGER(debug) << "error slot" << std::endl;
         networkError(QString::fromStdString(error));
     });
 
     networkSync.subscribeOpen([this]() {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "open slot";
-#endif
+        LOGGER(debug) << "open slot" << std::endl;
         connectionOpen();
     });
 
     networkSync.subscribeClose([this]() {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "close slot";
-#endif
+        LOGGER(debug) << "close slot" << std::endl;
         connectionClosed();
     });
 
     networkSync.subscribeStarted([this]() {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "started slot";
-#endif
+        LOGGER(debug) << "started slot" << std::endl;
         networkStarted();
     });
 
     networkSync.subscribeStopped([this]() {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "stopped slot";
-#endif
+        LOGGER(debug) << "stopped slot" << std::endl;
         networkStopped();
     });
 
     networkSync.subscribeTimeout([this]() {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "timeout slot";
-#endif
+        LOGGER(debug) << "timeout slot" << std::endl;
         networkTimeout();
     });
 
     networkSync.subscribeDoneSync([this]() {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "done sync slot";
-#endif
+        LOGGER(debug) << "done sync slot" << std::endl;
         doneSync();
     });
 
@@ -1424,16 +1357,12 @@ void MainWindow::createActions()
 */
 
     networkSync.subscribeAddBestChain([this](const chain_header_t& header) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "add best chain slot";
-#endif
+        LOGGER(debug) << "add best chain slot" << std::endl;
         addBestChain(header);
     });
 
     networkSync.subscribeRemoveBestChain([this](const chain_header_t& header) {
-#ifdef USE_LOGGING
-        BOOST_LOG_TRIVIAL(debug) << "remove best chain slot";
-#endif
+        LOGGER(debug) << "remove best chain slot" << std::endl;
         removeBestChain(header);
     });
 

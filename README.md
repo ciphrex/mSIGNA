@@ -4,7 +4,7 @@ Copyright (c) 2013 Ciphrex LLC, All Rights Reserved.
 
 
 Vault is an interactive desktop application for transacting on the bitcoin network
-which supports m-of-n signature policies and multiuser/multidevice account management.
+supporting m-of-n signature policies and multiuser/multidevice account management.
 
 It is built atop two custom libraries, CoinClasses and CoinQ, which provide
 all core functionality for managing bitcoin data structures and connecting to peers.
@@ -22,7 +22,6 @@ In addition, Vault depends on the following:
         * boost_filesystem
         * boost_regex
         * boost_thread
-        * boost_log
 
     - OpenSSL (including EC module)             http://www.openssl.org/
         * crypto
@@ -41,7 +40,7 @@ CoinClasses and CoinQ have also been built using clang 4.1 in OS X (10.7 and gre
 To build for linux:
     $ ./build-all.sh linux
 
-To build for windows
+To build for windows:
     $ ./build-all.sh mingw64
 
 ===============================================================================

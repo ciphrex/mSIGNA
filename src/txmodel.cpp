@@ -18,6 +18,8 @@
 
 #include "settings.h"
 
+#include "severitylogger.h"
+
 using namespace CoinQ::Vault;
 using namespace CoinQ::Script;
 using namespace std;
@@ -232,9 +234,7 @@ void TxModel::signTx(int row)
     std::shared_ptr<Tx> tx = vault->getTx(txhash);
     tx = vault->signTx(tx);
 
-#ifdef USE_LOGGING
-    BOOST_LOG_TRIVIAL(trace) << uchar_vector(tx->raw()).getHex();
-#endif
+    LOGGER(trace) << uchar_vector(tx->raw()).getHex() << std::endl;
 
     vault->addTx(tx, true);
 
