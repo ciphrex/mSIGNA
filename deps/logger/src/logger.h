@@ -29,8 +29,8 @@
 #include <string>
 
 namespace logger {
-    extern std::ostream out;
-    extern std::ostream no_out;
+    extern "C" std::ostream out;
+    extern "C" std::ostream no_out;
 }
 
 #if !defined(LOGGER_TRACE) && !defined(LOGGER_DEBUG) && !defined(LOGGER_INFO) && !defined(LOGGER_WARNING) && !defined(LOGGER_ERROR) && !defined(LOGGER_FATAL)
