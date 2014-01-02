@@ -1024,7 +1024,12 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
                 db_->update(txin);
             }
             if (Vault::isSigned(stored_tx)) {
-                stored_tx->status(Tx::UNSENT);
+                if (tx->status() == Tx::RECEIVED) {
+                    stored_tx->status(Tx::RECEIVED);
+                }
+                else {
+                    stored_tx->status(Tx::UNSENT);
+                }
                 stored_tx->updateHash();
                 db_->update(stored_tx);
             }
