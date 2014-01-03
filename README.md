@@ -9,6 +9,12 @@ supporting m-of-n signature policies and multiuser/multidevice account managemen
 It is built atop two custom libraries, CoinClasses and CoinQ, which provide
 all core functionality for managing bitcoin data structures and connecting to peers.
 
+    -CoinClasses is licensed under the MIT license.
+
+    -CoinQ is proprietary and cannot be redistributed without permission from author(s).
+
+
+
 In addition, Vault depends on the following:
 
     - Qt5 application and UI framework          http://qt-project.org/
