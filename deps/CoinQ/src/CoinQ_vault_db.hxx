@@ -811,6 +811,7 @@ inline std::shared_ptr<Keychain> Keychain::child(const std::string& name, uint32
 
     Coin::HDKeychain parent(extkey_);
     std::shared_ptr<Keychain> keychain(new Keychain(name, parent.getChild(i), numkeys));
+    return keychain;
 }
 
 #pragma db object pointer(std::shared_ptr)
