@@ -9,8 +9,11 @@ supporting m-of-n signature policies and multiuser/multidevice account managemen
 It is built atop two custom libraries, CoinClasses and CoinQ, which provide
 all core functionality for managing bitcoin data structures and connecting to peers.
 
-CoinClasses is licensed under the MIT license.
-CoinQ is proprietary and cannot be redistributed without permission from author(s).
+    -CoinClasses is licensed under the MIT license.
+
+    -CoinQ is proprietary and cannot be redistributed without permission from author(s).
+
+
 
 In addition, Vault depends on the following:
 
@@ -40,11 +43,25 @@ and 64-bit Windows (cross-build, mingw64).
 CoinClasses and CoinQ have also been built using clang 4.1 in OS X (10.7 and greater).
 
 
-To build for linux:
+- To build for linux:
     $ ./build-all.sh linux
 
-To build for windows:
+- To build for windows:
     $ ./build-all.sh mingw64
+
+- To build for osx:
+    brew update
+    brew install boost qt5 openssl libpng
+    
+    Download odb binary (currenlty odb-2.3.0-i686-macosx) and set path to odb
+    export PATH=/path/to/odb-2.3.0-i686-macosx/bin:$PATH
+    
+    Download, extract, compile, and install:
+     libodb-2.3.0, libodb-sqlite-2.3.0 (./configure && make && make install)
+    
+    /usr/local/opt/qt5/bin/qmake && make
+    
+
 
 ===============================================================================
 

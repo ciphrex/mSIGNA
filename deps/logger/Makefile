@@ -10,7 +10,8 @@ ifeq ($(OS), linux)
 else ifeq ($(OS), mingw64)
     CXX = x86_64-w64-mingw32-g++
 else ifeq ($(OS), osx)
-    CXX = g++
+    CXX = clang++
+    CXX_FLAGS += -std=c++11 -stdlib=libc++
 else
     $(error OS must be set to linux, osx, or mingw64)
 endif

@@ -164,8 +164,12 @@ public:
     virtual const char* getCommand() const = 0;
     virtual uint64_t getSize() const = 0;
 
-    virtual uchar_vector getHash(hashfunc_t hashfunc = &sha256_2) const { return hashfunc(this->getSerialized()); } // big endian
-    virtual uchar_vector getHashLittleEndian(hashfunc_t hashfunc = &sha256_2) const { return uchar_vector(this->getHash(hashfunc)).getReverse(); }
+    virtual uchar_vector getHash() const { return getHash(&sha256_2); }
+    virtual uchar_vector getHashLittleEndian() const { return getHashLittleEndian(&sha256_2); }
+
+    virtual uchar_vector getHash(hashfunc_t hashfunc) const { return hashfunc(this->getSerialized()); } // big endian
+    virtual uchar_vector getHashLittleEndian(hashfunc_t hashfunc) const { return uchar_vector(this->getHash(hashfunc)).getReverse(); }
+
     virtual uint32_t getChecksum() const; // 4 least significant bytes, big endian
 
     virtual uchar_vector getSerialized() const = 0;

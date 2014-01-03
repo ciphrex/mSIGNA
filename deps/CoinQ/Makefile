@@ -34,13 +34,12 @@ else ifeq ($(OS), mingw64)
     EXE_EXT = .exe
 
 else ifeq ($(OS), osx)
-    CXX = g++
-    CC = gcc
-    CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++0x -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
+    CXX = clang++
+    CC = clang
+    CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
 
     GLOBAL_LIB = /opt/local/lib
-
-    INCLUDE_PATH += -I$(BOOST_HOME)
+    INCLUDE_PATH += -I/opt/local/include
 
     ARCHIVER = ar
 

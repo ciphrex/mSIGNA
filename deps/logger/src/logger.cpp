@@ -26,7 +26,12 @@
 #include <fstream>
 
 namespace logger {
-    std::ofstream file("debug.log", std::ios_base::app);
+    std::ofstream file;
+    void init_logger(const char* filename)
+    {
+        file.open(filename, std::ios_base::app);
+    }
+
     std::ostream out(file.rdbuf());
     std::ostream no_out(NULL);
 }

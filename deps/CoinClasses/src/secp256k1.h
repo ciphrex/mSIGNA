@@ -194,6 +194,8 @@ public:
     {
         if (!EC_GROUP_copy(group, rhs.group)) throw std::runtime_error("secp256k1_point::operator= - EC_GROUP_copy failed.");
         if (!EC_POINT_copy(point, rhs.point)) throw std::runtime_error("secp256k1_point::operator= - EC_POINT_copy failed.");
+
+        return *this;
     }
 
     void bytes(const bytes_t& bytes)
@@ -260,6 +262,7 @@ public:
         if (!EC_POINT_add(group, point, point, rhs.point, ctx)) {
             throw std::runtime_error("secp256k1_point::operator+= - EC_POINT_add failed.");
         }
+        return *this;
     }
 
     secp256k1_point& operator*=(const bytes_t& rhs)
@@ -275,6 +278,8 @@ public:
         if (rval == 0) {
             throw std::runtime_error("secp256k1_point::operator*=  - EC_POINT_mul failed.");
         }
+
+        return *this;
     }
 
     const secp256k1_point operator+(const secp256k1_point& rhs) const { return secp256k1_point(*this) += rhs; }

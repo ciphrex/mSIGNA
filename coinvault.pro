@@ -130,10 +130,10 @@ win32 {
         -lboost_thread_win32-mt-s \
 } else {
     LIBS += \
-        -lboost_system \
-        -lboost_filesystem \
-        -lboost_regex \
-        -lboost_thread
+        /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_system.a \
+        /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_filesystem.a \
+        /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_regex.a \
+        /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_thread.a
 }
 
 LIBS += \
