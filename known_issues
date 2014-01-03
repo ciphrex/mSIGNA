@@ -2,3 +2,9 @@ Known Issues
 ============
 
 - Transactions Tab doesn't reset to "Transactions" when vault is closed.
+
+- Resync menu item, general problems.
+
+- Merkle Blocks in database must be replaced when new accounts are added - otherwise, transactions will not confirm.
+
+- Synching with peer sometimes stops before all merkle blocks have been inserted into db. Workaround, disconnect and reconnect.
