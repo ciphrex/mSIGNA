@@ -1,0 +1,4 @@
+Known Issues
+============
+
+- Transactions Tab doesn't reset to "Transactions" when vault is closed.
