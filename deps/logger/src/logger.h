@@ -29,9 +29,12 @@
 #include <string>
 
 namespace logger {
+    void init_logger(const char* filename);
     extern "C" std::ostream out;
     extern "C" std::ostream no_out;
 }
+
+#define INIT_LOGGER(filename) logger::init_logger(filename)
 
 #if !defined(LOGGER_TRACE) && !defined(LOGGER_DEBUG) && !defined(LOGGER_INFO) && !defined(LOGGER_WARNING) && !defined(LOGGER_ERROR) && !defined(LOGGER_FATAL)
     #define LOGGER_TRACE
