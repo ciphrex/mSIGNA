@@ -11,6 +11,7 @@
 #include "settings.h"
 
 #include <QApplication>
+#include <QDateTime>
 
 #include "splashscreen.h"
 #include "mainwindow.h"
@@ -20,6 +21,9 @@
 
 int main(int argc, char* argv[])
 {
+    INIT_LOGGER((APPDATADIR + "/debug.log").toStdString().c_str());
+    LOGGER(debug) << std::endl << std::endl << std::endl << std::endl << QDateTime::currentDateTime().toString().toStdString() << std::endl;
+
     Q_INIT_RESOURCE(coinvault);
 
     QApplication app(argc, argv);
@@ -63,5 +67,7 @@ int main(int argc, char* argv[])
     splash.finish(&mainWin);
     commandServer.uiReady();
 
-    return app.exec();
+    int rval = app.exec();
+    LOGGER(debug) << "Program stopped with code " << rval << std::endl;
+    return rval;
 }
