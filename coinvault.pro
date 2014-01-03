@@ -128,12 +128,23 @@ win32 {
         -lboost_filesystem-mt-s \
         -lboost_regex-mt-s \
         -lboost_thread_win32-mt-s \
-} else {
-    LIBS += \
-        /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_system.a \
-        /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_filesystem.a \
-        /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_regex.a \
-        /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_thread.a
+}
+
+unix {
+    !macx {
+        LIBS += \
+            -lboost_system \
+            -lboost_filesystem \
+            -lboost_regex \
+            -lboost_thread
+    }
+    else {
+        LIBS += \
+            /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_system.a \
+            /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_filesystem.a \
+            /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_regex.a \
+            /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_thread.a
+    }
 }
 
 LIBS += \
