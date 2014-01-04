@@ -38,6 +38,8 @@ public:
     std::shared_ptr<CoinQ::Vault::Tx> getTx(int row);
     void deleteTx(int row);
 
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
+
 signals:
     void txDeleted();
 

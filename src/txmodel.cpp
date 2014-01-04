@@ -305,3 +305,14 @@ void TxModel::deleteTx(int row)
     emit txDeleted();
 }
 
+QVariant TxModel::data(const QModelIndex& index, int role) const
+{
+    // Right-align numeric fields
+    if (role == Qt::TextAlignmentRole && index.column() >= 3 && index.column() <= 6) {
+        return Qt::AlignRight;
+    }
+    else {
+        return QStandardItemModel::data(index, role);
+    }
+}
+
