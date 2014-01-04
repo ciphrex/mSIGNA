@@ -26,8 +26,6 @@ UI
 
 - Add Save As... option to file menu.
 
-- Automatically select first account if one exists when vault is opened unless another one was selected in a previous session.
-
 - Require exactly one account to be selected always, unless no account exists.
 
 - Allow account selection from drop down in Create Transaction dialog. Use selected account as default.
