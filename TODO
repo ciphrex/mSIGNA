@@ -10,6 +10,8 @@ UI
 
 - Change focus to Account tab when a new account has just been created and select the new account.
 
+- Disable "Create Account" when no keychains are selected."
+
 - Icons for the remaining actions.
 
 - Add toolbars for keychain, account, and transaction actions.
