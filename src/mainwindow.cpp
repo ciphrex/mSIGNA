@@ -326,6 +326,7 @@ void MainWindow::openVault(QString fileName)
     try {
         loadVault(fileName);
         updateVaultStatus(fileName);
+        selectAccount(0);
         updateStatusMessage(tr("Opened ") + fileName);
         promptResync();
     }
@@ -478,6 +479,14 @@ void MainWindow::updateSelectedKeychains(const QItemSelection& /*selected*/, con
     newAccountAction->setEnabled(isSelected);
 }
 
+bool MainWindow::selectAccount(int i)
+{
+    if (accountModel->rowCount() <= i) return false;
+    QItemSelection selection(accountModel->index(i, 0), accountModel->index(i, accountModel->columnCount() - 1));
+    accountView->selectionModel()->select(selection, QItemSelectionModel::SelectCurrent);
+    return true;
+}
+
 void MainWindow::updateCurrentAccount(const QModelIndex& /*current*/, const QModelIndex& /*previous*/)
 {
 /*
@@ -501,6 +510,9 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
         txView->update();
         tabWidget->setTabText(2, tr("Transactions - ") + accountName);
         requestPaymentDialog->setCurrentAccount(accountName);
+    }
+    else {
+        tabWidget->setTabText(2, tr("Transactions"));
     }
     deleteAccountAction->setEnabled(isSelected);
     exportAccountAction->setEnabled(isSelected);
@@ -1446,6 +1458,10 @@ void MainWindow::createToolBars()
     fileToolBar->addAction(newVaultAction);
     fileToolBar->addAction(openVaultAction);
     fileToolBar->addAction(closeVaultAction);
+
+    keychainToolBar = addToolBar(tr("Keychains"));
+    keychainToolBar->addAction(newKeychainAction);
+    keychainToolBar->addAction(newAccountAction);
 /*
     editToolBar = addToolBar(tr("Edit"));
     editToolBar->addAction(newKeychainAction);
