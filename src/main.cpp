@@ -39,15 +39,13 @@ int main(int argc, char* argv[])
 
     splash.show();
     splash.setAutoFillBackground(true);
-    app.processEvents();
 
-    splash.showMessage("\n  Loading settings...");
     app.processEvents();
+    splash.showMessage("\n  Loading settings...");
     MainWindow mainWin; // constructor loads settings
     QObject::connect(&mainWin, &MainWindow::status, [&](const QString& message) { splash.showMessage(message); });
 
     splash.showMessage("\n  Starting command server...");
-    app.processEvents();
     if (!commandServer.start()) {
         LOGGER(debug) << "Could not start command server." << std::endl;
     }
@@ -56,11 +54,10 @@ int main(int argc, char* argv[])
         app.connect(&commandServer, SIGNAL(gotFile(const QString&)), &mainWin, SLOT(processFile(const QString&)));
     }
 
+    app.processEvents();
     splash.showMessage("\n  Loading block headers...");
     app.processEvents();
     mainWin.loadBlockTree();
-
-    app.processEvents();
     mainWin.tryConnect();
 
     mainWin.show();
