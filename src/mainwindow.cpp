@@ -1208,8 +1208,8 @@ void MainWindow::createActions()
     connect(exportPublicKeychainAction, &QAction::triggered, [=]() { this->exportKeychain(false); });
 
     // account actions
-    newAccountAction = new QAction(tr("New &Account..."), this);
-    newAccountAction->setStatusTip(tr("Create a new account"));
+    newAccountAction = new QAction(tr("Create &Account..."), this);
+    newAccountAction->setStatusTip(tr("Create a new account with selected keychains"));
     newAccountAction->setEnabled(false);
     connect(newAccountAction, SIGNAL(triggered()), this, SLOT(newAccount()));
 
@@ -1392,6 +1392,7 @@ void MainWindow::createMenus()
 
     keychainMenu = menuBar()->addMenu(tr("&Keychains"));
     keychainMenu->addAction(newKeychainAction);
+    keychainMenu->addAction(newAccountAction);
     keychainMenu->addSeparator()->setText(tr("Import Mode"));
     keychainMenu->addAction(importPrivateAction);
     keychainMenu->addAction(importPublicAction);
@@ -1404,7 +1405,6 @@ void MainWindow::createMenus()
     accountMenu->addAction(requestPaymentAction);
     accountMenu->addAction(sendPaymentAction);
     accountMenu->addSeparator();
-    accountMenu->addAction(newAccountAction);
     accountMenu->addAction(deleteAccountAction);
     accountMenu->addSeparator();
     accountMenu->addAction(importAccountAction);

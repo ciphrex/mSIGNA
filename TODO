@@ -8,6 +8,8 @@ UI
 
 - When a transaction is still missing signatures, rather than just showing "Unsigned" show which keychains must still sign.
 
+- Change focus to Account tab when a new account has just been created and select the new account.
+
 - Add toolbars for keychain, account, and transaction actions.
 
 - Make table data noneditable except for names and labels, update database and views when names and labels are modified.
