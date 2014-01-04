@@ -150,7 +150,7 @@ void MainWindow::tryConnect()
 
 void MainWindow::updateStatusMessage(const QString& message)
 {
-    LOGGER(debug) << "MainWindow::updateStatusMessage" << std::endl;
+    LOGGER(debug) << "MainWindow::updateStatusMessage - " << message.toStdString() << std::endl;
 //    boost::lock_guard<boost::mutex> lock(repaintMutex);
 //    statusBar()->showMessage(message);
 }
