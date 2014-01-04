@@ -33,3 +33,9 @@ UI
 - Prompt user to select account if more than one account exists when opening a payment url.
 
 - Remove extraneous, unused objects from UI classes.
+
+
+General
+-------
+
+- Create datadir. Place debug.log and blockchain.dat in datadir.
