@@ -10,6 +10,8 @@ UI
 
 - Change focus to Account tab when a new account has just been created and select the new account.
 
+- Icons for the remaining actions.
+
 - Add toolbars for keychain, account, and transaction actions.
 
 - Make table data noneditable except for names and labels, update database and views when names and labels are modified.
@@ -35,6 +37,8 @@ UI
 - Prompt user to select account if more than one account exists when opening a payment url.
 
 - Remove extraneous, unused objects from UI classes.
+
+- Force splashscreen it stay up for a minimum of x seconds.
 
 
 General
