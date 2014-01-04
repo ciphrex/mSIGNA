@@ -5,7 +5,11 @@
 #
 # All Rights Reserved.
 
+# Application icons for windows
 RC_FILE = res/coinvault.rc
+
+# Application icons for mac
+ICON = res/icons/app_icons/osx.icns
 
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += c++11 rtti thread
