@@ -1208,7 +1208,7 @@ void MainWindow::createActions()
     connect(exportPublicKeychainAction, &QAction::triggered, [=]() { this->exportKeychain(false); });
 
     // account actions
-    newAccountAction = new QAction(tr("Create &Account..."), this);
+    newAccountAction = new QAction(QIcon(":/icons/pencilpad.png"), tr("Create &Account..."), this);
     newAccountAction->setStatusTip(tr("Create a new account with selected keychains"));
     newAccountAction->setEnabled(false);
     connect(newAccountAction, SIGNAL(triggered()), this, SLOT(newAccount()));
