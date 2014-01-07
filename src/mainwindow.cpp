@@ -21,6 +21,9 @@
 
 #include "mainwindow.h"
 
+// Random
+#include <random.h>
+
 // Network
 #include <CoinQ_netsync.h>
 
@@ -371,8 +374,8 @@ void MainWindow::newKeychain()
             unsigned long numKeys = dlg.getNumKeys();
             updateStatusMessage(tr("Generating ") + QString::number(numKeys) + tr(" keys..."));
 
-            // TODO: Randomize
-            Coin::HDSeed hdSeed(uchar_vector("12345"));
+            // TODO: Randomize using user input for entropy
+            Coin::HDSeed hdSeed(random_bytes(32));
             Coin::HDKeychain keychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
 
             accountModel->newHDKeychain(name, keychain.extkey(), numKeys);
