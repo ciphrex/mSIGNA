@@ -81,6 +81,23 @@ void Vault::newKeychain(const std::string& name, unsigned long numkeys)
     t.commit();
 }
 
+void Vault::newHDKeychain(const std::string& name, const bytes_t& extkey, unsigned long numkeys)
+{
+    if (numkeys < 1) {
+        throw std::runtime_error("Vault::newKeychain() - keychain must contain at least one key.");
+    }
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session session;
+    odb::core::transaction t(db_->begin());
+
+    Keychain keychain(name, extkey, numkeys);
+    auto& keys = keychain.keys();
+    for (auto& key: keys) { db_->persist(*key); }
+    db_->persist(keychain);
+    t.commit();
+}
+
 std::vector<KeychainInfo> Vault::getKeychains() const
 {
     std::vector<KeychainInfo> keychains;
@@ -1299,6 +1316,7 @@ bool Vault::isSigned(std::shared_ptr<Tx> tx)
     return true;
 }
 
+// TODO: compute private key from extkey for deterministic keychains.
 std::shared_ptr<Tx> Vault::signTx(std::shared_ptr<Tx> tx) const
 {
     unsigned int sigsadded = 0;

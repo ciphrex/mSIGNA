@@ -698,6 +698,7 @@ public:
     Keychain(const std::string& name, const Coin::HDKeychain& hdkeychain, unsigned long numkeys = 0);
 
     bool is_deterministic() const { return !extkey_.empty(); }
+    bool is_private() const { return type_ == PRIVATE; }
 
     unsigned long id() const { return id_; }
     const std::string name() const { return name_; }

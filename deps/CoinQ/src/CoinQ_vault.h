@@ -83,6 +83,7 @@ public:
     // Keychain operations
     bool keychainExists(const std::string& keychain_name) const;
     void newKeychain(const std::string& name, unsigned long numkeys);
+    void newHDKeychain(const std::string& name, const bytes_t& extkey, unsigned long numkeys = 100);
     std::vector<KeychainInfo> getKeychains() const;
     std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
     bytes_t exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
