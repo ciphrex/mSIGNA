@@ -795,8 +795,7 @@ inline unsigned long Keychain::numkeys(unsigned long numkeys)
 
     for (uint32_t i = numkeys_; i < numkeys; i++) {
         Coin::HDKeychain child = hdkeychain.getChild(i | privmask);
-        bytes_t privkey = (type_ == PRIVATE) ? child.key() : bytes_t();
-        std::shared_ptr<Key> key(new Key(child.pubkey(), privkey)); 
+        std::shared_ptr<Key> key(new Key(child.pubkey(), child.privkey())); 
         hash_ = sha256(uchar_vector(hash_) + key->pubkey());
         keys_.push_back(key);
     }
