@@ -82,6 +82,7 @@ public:
     const bytes_t& chain_code() const { return chain_code_; }
     const bytes_t& key() const { return key_; }
 
+    bytes_t privkey() const;
     const bytes_t& pubkey() const { return pubkey_; }
 
     bool isPrivate() const { return ( key_.size() == 33 && key_[0] == 0x00); }

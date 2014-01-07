@@ -161,6 +161,16 @@ bytes_t HDKeychain::extkey() const
     return extkey;
 }
 
+bytes_t HDKeychain::privkey() const
+{
+    if (isPrivate()) {
+        return bytes_t(key_.begin() + 1, key_.end());
+    }
+    else {
+        return bytes_t();
+    }
+}
+
 bytes_t HDKeychain::hash() const
 {
     return ripemd160(sha256(pubkey_));
