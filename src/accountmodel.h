@@ -82,6 +82,8 @@ public:
     CoinQ::Vault::Vault* getVault() const { return vault; }
     int getNumAccounts() const { return numAccounts; }
 
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
+
 signals:
     void updated(const QStringList& accountNames);
     void newTx(const bytes_t& hash);

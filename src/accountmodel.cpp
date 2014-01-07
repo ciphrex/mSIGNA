@@ -27,7 +27,7 @@ AccountModel::AccountModel()
     : vault(NULL), numAccounts(0)
 {
     QStringList columns;
-    columns << tr("Account Name") << tr("Policy") << tr("Scripts Remaining") << tr("Balance");
+    columns << tr("Account Name") << tr("Policy") << tr("Scripts Remaining") << tr("Balance") << "";
     setHorizontalHeaderLabels(columns);
 }
 
@@ -352,3 +352,15 @@ bool AccountModel::deleteMerkleBlock(const bytes_t& hash)
 
     return false;
 }
+
+QVariant AccountModel::data(const QModelIndex& index, int role) const
+{
+    // Right-align numeric fields
+    if (role == Qt::TextAlignmentRole && index.column() >= 2) {
+        return Qt::AlignRight;
+    }
+    else {
+        return QStandardItemModel::data(index, role);
+    }
+}
+
