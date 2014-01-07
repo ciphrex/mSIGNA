@@ -132,6 +132,16 @@ void AccountModel::newKeychain(const QString& name, unsigned long numkeys)
     update();
 }
 
+void AccountModel::newHDKeychain(const QString& name, const bytes_t& extkey, unsigned long numkeys)
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    vault->newHDKeychain(name.toStdString(), extkey, numkeys);
+    update();
+}
+
 void AccountModel::newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames)
 {
     if (!vault) {
@@ -228,25 +238,19 @@ std::shared_ptr<Tx> AccountModel::insertTx(const Coin::Transaction& coinTx, Tx::
         return false;
     }
 
-    try {
-        std::shared_ptr<Tx> tx(new Tx());
-        tx->set(coinTx, time(NULL), status);
+    std::shared_ptr<Tx> tx(new Tx());
+    tx->set(coinTx, time(NULL), status);
 
-        if (sign) {
-            tx = vault->signTx(tx);
-        }
-
-        if (vault->addTx(tx)) {
-            update();
-            emit newTx(tx->hash());
-            return tx;
-        }
-    }
-    catch (const std::exception& e) {
-        emit error(QString::fromStdString(e.what()));
+    if (sign) {
+        tx = vault->signTx(tx);
     }
 
-    return NULL;
+    if (vault->addTx(tx)) {
+        update();
+        emit newTx(tx->hash());
+    }
+
+    return tx;
 }
 
 bytes_t AccountModel::createRawTx(const QString& accountName, const std::vector<TaggedOutput>& outputs, uint64_t fee)

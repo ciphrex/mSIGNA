@@ -86,7 +86,14 @@ MainWindow::MainWindow()
     accountView->setModel(accountModel);
     accountView->setMenu(accountMenu);
 
-    networkSync.subscribeTx([&](const Coin::Transaction& tx) { accountModel->insertTx(tx); });
+    networkSync.subscribeTx([&](const Coin::Transaction& tx) {
+        try {
+            accountModel->insertTx(tx);
+        }
+        catch (const std::exception& e) {
+            // TODO
+        }
+    });
     networkSync.subscribeBlock([&](const ChainBlock& block) { accountModel->insertBlock(block); });
     networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleBlock) { accountModel->insertMerkleBlock(merkleBlock); });
     networkSync.subscribeBlockTreeChanged([&]() { emit updateBestHeight(networkSync.getBestHeight()); });
@@ -363,7 +370,12 @@ void MainWindow::newKeychain()
             QString name = dlg.getName();
             unsigned long numKeys = dlg.getNumKeys();
             updateStatusMessage(tr("Generating ") + QString::number(numKeys) + tr(" keys..."));
-            accountModel->newKeychain(name, numKeys);
+
+            // TODO: Randomize
+            Coin::HDSeed hdSeed(uchar_vector("12345"));
+            Coin::HDKeychain keychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
+
+            accountModel->newHDKeychain(name, keychain.extkey(), numKeys);
             accountModel->update();
             keychainModel->update();
             keychainView->update();

@@ -110,6 +110,7 @@ LIBS += \
 # CoinClasses objects
 LIBS += \
     deps/CoinClasses/obj/CoinKey.o \
+    deps/CoinClasses/obj/hdkeys.o \
     deps/CoinClasses/obj/CoinNodeData.o \
     deps/CoinClasses/obj/MerkleTree.o \
     deps/CoinClasses/obj/BloomFilter.o \

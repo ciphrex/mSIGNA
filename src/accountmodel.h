@@ -55,6 +55,7 @@ public:
 
     // Key Chain operations
     void newKeychain(const QString& name, unsigned long numkeys);
+    void newHDKeychain(const QString& name, const bytes_t& extkey, unsigned long numkeys);
 
     // Account operations
     void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames);
