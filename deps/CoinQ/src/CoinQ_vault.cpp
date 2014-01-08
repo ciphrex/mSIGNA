@@ -87,13 +87,17 @@ void Vault::newHDKeychain(const std::string& name, const bytes_t& extkey, unsign
         throw std::runtime_error("Vault::newKeychain() - keychain must contain at least one key.");
     }
 
+    std::shared_ptr<ExtendedKey> extendedkey(new ExtendedKey(extkey));
+
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session session;
     odb::core::transaction t(db_->begin());
 
-    Keychain keychain(name, extkey, numkeys);
+    Keychain keychain(name, extendedkey, numkeys);
+    db_->persist(extendedkey);
     auto& keys = keychain.keys();
     for (auto& key: keys) { db_->persist(*key); }
+    keychain.numsavedkeys(numkeys);
     db_->persist(keychain);
     t.commit();
 }

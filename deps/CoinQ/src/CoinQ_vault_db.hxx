@@ -25,6 +25,7 @@
 
 #include <odb/core.hxx>
 #include <odb/nullable.hxx>
+#include <odb/database.hxx>
 //#include <odb/lazy-ptr.hxx>
 
 #include <vector>
@@ -600,34 +601,6 @@ private:
     std::string description_;
 };
 
-// Keys, Accounts
-#pragma db object
-class Key
-{
-public:
-    Key(const bytes_t& pubkey, const bytes_t& privkey)
-        : pubkey_(pubkey), privkey_(privkey) { }
-
-    Key(const bytes_t& pubkey)
-        : pubkey_(pubkey) { }
-
-    unsigned long id() const { return id_; }
-    bytes_t privkey() const { if (privkey_) return *privkey_; else return bytes_t(); }
-    const bytes_t& pubkey() const { return pubkey_; }
-
-private:
-    friend class odb::access;
-
-    Key() { }
-
-    #pragma db id auto
-    unsigned long id_;
-
-    bytes_t pubkey_;
-
-    #pragma db null
-    odb::nullable<bytes_t> privkey_;
-};
 
 /*
 #pragma db object
@@ -683,7 +656,97 @@ inline Coin::HDKeychain HDKey::keychain() const
 }
 */
 
-#pragma db object
+// Keys, Accounts
+#pragma db object pointer(std::shared_ptr)
+class ExtendedKey
+{
+public:
+    ExtendedKey(const bytes_t& bytes)
+        : bytes_(bytes) { }
+
+    const bytes_t& bytes() const { return bytes_; }
+
+    Coin::HDKeychain hdkeychain() const { return Coin::HDKeychain(bytes_); }
+
+private:
+    friend class odb::access;
+
+    ExtendedKey() { }
+
+    #pragma db id auto
+    unsigned long id_;
+
+    #pragma db unique
+    bytes_t bytes_;
+};
+
+#pragma db object pointer(std::shared_ptr)
+class Key
+{
+public:
+    // For random keys
+    Key(const bytes_t& pubkey, const bytes_t& privkey)
+        : pubkey_(pubkey), privkey_(privkey), childnum_(0) { }
+
+    Key(const bytes_t& pubkey)
+        : pubkey_(pubkey), childnum_(0) { }
+
+    // For deterministic keys
+    Key(const std::shared_ptr<ExtendedKey>& extendedkey, uint32_t childnum);
+
+    unsigned long id() const { return id_; }
+    bytes_t privkey() const;
+    const bytes_t& pubkey() const { return pubkey_; }
+
+private:
+    friend class odb::access;
+
+    Key() { }
+
+    #pragma db id auto
+    unsigned long id_;
+
+    bytes_t pubkey_;
+
+    // privkey is null for nonprivate keys
+    // privkey is nonnull but empty for private deterministic keys. This allows us to query by privkey.is_not_null.
+    #pragma db null
+    odb::nullable<bytes_t> privkey_;
+
+    // extended key as per BIP0032
+    #pragma db value_null
+    std::shared_ptr<ExtendedKey> extendedkey_;
+
+    uint32_t childnum_;
+};
+
+inline Key::Key(const std::shared_ptr<ExtendedKey>& extendedkey, uint32_t childnum)
+    : extendedkey_(extendedkey), childnum_(childnum)
+{
+    Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain();
+    if (hdkeychain.isPrivate()) { privkey_ = bytes_t(); }
+    hdkeychain = hdkeychain.getChild(childnum_);
+    pubkey_ = hdkeychain.pubkey();
+}
+
+inline bytes_t Key::privkey() const
+{
+    if (!privkey_) {
+        throw std::runtime_error("Key::privkey - cannot get private key from nonprivate key object.");
+    }
+
+    if (extendedkey_) {
+        Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain();
+        if (!hdkeychain.isPrivate()) {
+            throw std::runtime_error("Key::privkey - cannot get private key from nonprivate key object.");
+        }
+        return hdkeychain.getChild(childnum_ | 0x80000000).privkey();
+    }
+
+    return *privkey_;
+}
+
+#pragma db object pointer(std::shared_ptr)
 class Keychain
 {
 public:
@@ -691,24 +754,32 @@ public:
 
     // constructor for random keychain
     Keychain(const std::string& name, type_t type)
-        : name_(name), type_(type), numkeys_(0) { }
+        : name_(name), type_(type), numkeys_(0), numsavedkeys_(0) { }
 
-    // constructors for deterministic keychain (BIP0032)
-    Keychain(const std::string& name, const bytes_t& extkey, unsigned long numkeys = 0);
-    Keychain(const std::string& name, const Coin::HDKeychain& hdkeychain, unsigned long numkeys = 0);
+    // constructor for deterministic keychain (BIP0032)
+    Keychain(const std::string& name, const std::shared_ptr<ExtendedKey>& extendedkey, unsigned long numkeys = 0);
+    //Keychain(const std::string& name, const Coin::HDKeychain& hdkeychain, unsigned long numkeys = 0);
 
-    bool is_deterministic() const { return !extkey_.empty(); }
+    bool is_deterministic() const { return extendedkey_ != NULL; }
     bool is_private() const { return type_ == PRIVATE; }
 
     unsigned long id() const { return id_; }
     const std::string name() const { return name_; }
     type_t type() const { return type_; }
-    const bytes_t& extkey() const { return extkey_; }
+    std::shared_ptr<ExtendedKey> extendedkey() const { return extendedkey_; }
     const bytes_t& hash() const { return hash_; }
     unsigned long numkeys() const { return numkeys_; }
 
+    unsigned long numsavedkeys() const { return numsavedkeys_; }
+    void numsavedkeys(unsigned long numsavedkeys) { numsavedkeys_ = numsavedkeys; }
+
     typedef std::vector<std::shared_ptr<Key>> keys_t;
     const keys_t& keys() const { return keys_; }
+
+    // persist handles storing keys and extendedkey
+    void persist(const std::shared_ptr<odb::core::database>& db);
+
+    void update(const std::shared_ptr<odb::core::database>& db);
 
     // only for random keychains
     void add(std::shared_ptr<Key> key);
@@ -736,25 +807,26 @@ private:
     type_t type_;
 
     // extended key as per BIP0032
-    // TODO: encrypt
-    bytes_t extkey_;
+    #pragma db value_null
+    std::shared_ptr<ExtendedKey> extendedkey_; 
 
     bytes_t hash_;
     unsigned long numkeys_;
+
+    // numsavedkeys is the number of keys actually stored in database. used for update.
+    unsigned long numsavedkeys_;
 
     #pragma db value_not_null
     keys_t keys_;
 };
 
-inline Keychain::Keychain(const std::string& name, const bytes_t& extkey, unsigned long numkeys)
-    : name_(name), numkeys_(0)
+inline Keychain::Keychain(const std::string& name, const std::shared_ptr<ExtendedKey>& extendedkey, unsigned long numkeys)
+    : name_(name), extendedkey_(extendedkey), numkeys_(0), numsavedkeys_(0)
 {
-    Coin::HDKeychain hdkeychain(extkey);
-    extkey_ = extkey;
-    type_ = hdkeychain.isPrivate() ? PRIVATE : PUBLIC;
+    type_ = extendedkey_->hdkeychain().isPrivate() ? PRIVATE : PUBLIC;
     this->numkeys(numkeys);
 }
-
+/*
 inline Keychain::Keychain(const std::string& name, const Coin::HDKeychain& hdkeychain, unsigned long numkeys)
     : name_(name), numkeys_(0)
 {
@@ -765,6 +837,23 @@ inline Keychain::Keychain(const std::string& name, const Coin::HDKeychain& hdkey
     extkey_ = hdkeychain.extkey();
     type_ = hdkeychain.isPrivate() ? PRIVATE : PUBLIC;
     this->numkeys(numkeys);
+}
+*/
+
+inline void Keychain::persist(const std::shared_ptr<odb::core::database>& db)
+{
+    //for (auto& key: keys_) { db->persist(key); }
+    numsavedkeys_ = keys_.size();
+    //if (extendedkey_) { db->persist(extendedkey_); }
+    //db->persist(this);
+}
+
+inline void Keychain::update(const std::shared_ptr<odb::core::database>& db)
+{
+    unsigned long prevsavedkeys = keys_.size();
+    //for (unsigned long i = numsavedkeys_; i < prevsavedkeys; i++) { db->update(keys_[i]); }
+    numsavedkeys_ = prevsavedkeys;
+    //db->update(this);
 }
 
 inline void Keychain::add(std::shared_ptr<Key> key)
@@ -790,12 +879,13 @@ inline unsigned long Keychain::numkeys(unsigned long numkeys)
         throw std::runtime_error("Keychain::numkeys - cannot have more than 0x80000000 keys.");
     }
 
-    Coin::HDKeychain hdkeychain(extkey_);
+    Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain();
     uint32_t privmask = (type_ == PRIVATE) ? 0x80000000 : 0x00000000;
 
     for (uint32_t i = numkeys_; i < numkeys; i++) {
-        Coin::HDKeychain child = hdkeychain.getChild(i | privmask);
-        std::shared_ptr<Key> key(new Key(child.pubkey(), child.privkey())); 
+        uint32_t childnum = i | privmask;
+        Coin::HDKeychain child = hdkeychain.getChild(childnum);
+        std::shared_ptr<Key> key(new Key(extendedkey_, childnum)); 
         hash_ = sha256(uchar_vector(hash_) + key->pubkey());
         keys_.push_back(key);
     }
@@ -809,8 +899,9 @@ inline std::shared_ptr<Keychain> Keychain::child(const std::string& name, uint32
         throw std::runtime_error("Keychain::child - cannot get child key for random keychain.");
     }
 
-    Coin::HDKeychain parent(extkey_);
-    std::shared_ptr<Keychain> keychain(new Keychain(name, parent.getChild(i), numkeys));
+    Coin::HDKeychain parent = extendedkey_->hdkeychain();
+    std::shared_ptr<ExtendedKey> child(new ExtendedKey(parent.getChild(i).extkey()));
+    std::shared_ptr<Keychain> keychain(new Keychain(name, child, numkeys));
     return keychain;
 }
 
