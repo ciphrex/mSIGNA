@@ -164,35 +164,67 @@ bytes_t Vault::exportKeychain(const std::string& keychain_name, const std::strin
     }
 
     std::shared_ptr<Keychain> keychain(r.begin().load());
-    if (exportprivkeys && keychain->type() == Keychain::PUBLIC) {
+    if (exportprivkeys && !keychain->is_private()) {
         throw std::runtime_error("Vault::exportKeychain - keychain does not contain private keys.");
     }
 
+    uint32_t size;
     std::ofstream f(filepath, std::ofstream::trunc | std::ofstream::binary);
 
-    // write whether these are private keys
-    f.put(exportprivkeys);
+    // write whether this is a deterministic keychain
+    bool deterministic = keychain->is_deterministic();
+    f.put(deterministic);
 
-    // write number of keys using 4 bytes msb first
-    uint32_t size = keychain->keys().size();
-    write_uint32(f, size);
+    if (deterministic) {
+        // write extended key
+        bytes_t extkey = keychain->extendedkey()->bytes();
+        if (keychain->is_private() && !exportprivkeys) {
+            Coin::HDKeychain hdkeychain(extkey);
+            hdkeychain = hdkeychain.getPublic();
+            extkey = hdkeychain.extkey();
+        }
 
-    // write keys and compute hash
-    uchar_vector hash;
-    for (auto& key: keychain->keys()) {
-        hash = sha256(hash + key->pubkey());
-        bytes_t buffer = exportprivkeys ? key->privkey() : key->pubkey();
-        size = buffer.size();
+        size = extkey.size();
         write_uint32(f, size);
-        f.write((char*)&buffer[0], size);
+        f.write((char*)&extkey[0], size);
+
+        // write number of saved keys using 4 bytes msb first
+        size = keychain->numsavedkeys();
+        write_uint32(f, size);
+
+        // write hash
+        bytes_t hash = sha256_2(extkey);
+        size = hash.size();
+        write_uint32(f, size);
+        f.write((char*)&hash[0], size);
+
+        return hash;
     }
+    else {
+        // write whether these are private keys
+        f.put(exportprivkeys);
 
-    // write hash
-    size = hash.size();
-    write_uint32(f, size);
-    f.write((char*)&hash[0], size);
+        // write number of keys using 4 bytes msb first
+        size = keychain->keys().size();
+        write_uint32(f, size);
 
-    return hash;
+        // write keys and compute hash
+        uchar_vector hash;
+        for (auto& key: keychain->keys()) {
+            hash = sha256(hash + key->pubkey());
+            bytes_t buffer = exportprivkeys ? key->privkey() : key->pubkey();
+            size = buffer.size();
+            write_uint32(f, size);
+            f.write((char*)&buffer[0], size);
+        }
+
+        // write hash
+        size = hash.size();
+        write_uint32(f, size);
+        f.write((char*)&hash[0], size);
+
+        return hash;
+    }
 }
 
 inline uint32_t sizebuf_to_uint(char sizebuf[])
@@ -215,115 +247,184 @@ bytes_t Vault::importKeychain(const std::string& keychain_name, const std::strin
         throw std::runtime_error("Vault::importKeychain - file could not be opened.");
     }
 
-    // get privkeys flag
-    char hasprivkeys;
-    f.get(hasprivkeys);
-    if (!f) {
-        throw std::runtime_error("Vault::importKeychain - error reading exportprivkey flag.");
-    }
-    if (hasprivkeys == 0) {
-        importprivkeys = false;
-    }
+    const unsigned int MAXBUFSIZE = 1024;
 
-    char sizebuf[4];
-
-    // read number of keys using 4 bytes msb first
-    f.read(sizebuf, 4);
-    if (!f) {
-        throw std::runtime_error("Vault::importKeychain - error reading numkeys.");
-    }
-    uint32_t numkeys = sizebuf_to_uint(sizebuf);
-
-    Keychain::type_t keychain_type =
-        importprivkeys ? Keychain::PRIVATE : Keychain::PUBLIC;
-
-    Keychain keychain(keychain_name, keychain_type);
-
-    boost::lock_guard<boost::mutex> lock(mutex);
-
-    odb::core::transaction t(db_->begin());
-
-    const unsigned int MAXBUFSIZE = 256;
-
-    // read keys, write to db
-    std::stringstream err;
     uint32_t size;
-    uchar_vector hash;
-    CoinKey coinkey;
+    char sizebuf[4];
     char buf[MAXBUFSIZE];
-    uint32_t i;
-    for (i = 0; i < numkeys; i++) {
+
+    // check whether it is deterministic
+    char deterministic;
+    f.get(deterministic);
+    if (!f) {
+        throw std::runtime_error("Vault::importKeychain - error reading deterministic flag.");
+    }
+
+    if (deterministic != 0) {
+        // get extkey
         f.read(sizebuf, 4);
-        if (!f) break;
+        if (!f) {
+            throw std::runtime_error("Vault::importKeychain - error reading extkey.");
+        }
         size = sizebuf_to_uint(sizebuf);
-        if (size > MAXBUFSIZE) break;
+        if (size > MAXBUFSIZE) {
+            throw std::runtime_error("Vault::importKeychain - error reading extkey.");
+        }
 
         f.read(buf, size);
-        if (!f) break;
-        bytes_t keydata((unsigned char*)buf, (unsigned char*)buf + size);
+        if (!f) {
+            throw std::runtime_error("Vault::importKeychain - error reading extkey.");
+        }
 
-        if (hasprivkeys != 0) {
-            if (!coinkey.setPrivateKey(keydata)) {
-                err << "Vault::importKeychain - invalid private key at position " << i << ".";
-                throw std::runtime_error(err.str());
-            }
-            bytes_t pubkey = coinkey.getPublicKey();
-            hash = sha256(hash + pubkey);
-            Key* pKey;
-            if (importprivkeys) {
-                pKey = new Key(pubkey, keydata);
+        bytes_t extkey((unsigned char*)buf, (unsigned char*)buf + size);
+        bytes_t extkey_hash = sha256_2(extkey);
+        Coin::HDKeychain hdkeychain(extkey);
+        if (!hdkeychain.isPrivate()) {
+            importprivkeys = false;
+        }
+
+        if (!importprivkeys && hdkeychain.isPrivate()) {
+            hdkeychain = hdkeychain.getPublic();
+            extkey = hdkeychain.extkey();
+        }
+
+        // read number of saved keys (lookahead distance)
+        f.read(sizebuf, 4);
+        if (!f) {
+            throw std::runtime_error("Vault::importKeychain - error reading number of saved keys.");
+        }
+
+        uint32_t numkeys = sizebuf_to_uint(sizebuf);
+        // TODO: Add checksum for numkeys
+
+        // read hash
+        f.read(sizebuf, 4);
+        if (!f) {
+            throw std::runtime_error("Vault::importKeychain - error reading hash.");
+        }
+        size = sizebuf_to_uint(sizebuf);
+        if (size > MAXBUFSIZE) {
+            throw std::runtime_error("Vault::importKeychain - error reading hash.");
+        }
+
+        f.read(buf, size);
+        if (!f) {
+            throw std::runtime_error("Vault::importKeychain - error reading hash.");
+        }
+
+        bytes_t hash((unsigned char*)buf, (unsigned char*)buf + size);
+        if (hash != extkey_hash) {
+            throw std::runtime_error("Vault::importKeychain - hash mismatch, file is corrupted.");
+        }
+        
+        newHDKeychain(keychain_name, extkey, numkeys);
+        return sha256_2(extkey);
+    }
+    else {
+        // get privkeys flag
+        char hasprivkeys;
+        f.get(hasprivkeys);
+        if (!f) {
+            throw std::runtime_error("Vault::importKeychain - error reading exportprivkey flag.");
+        }
+        if (hasprivkeys == 0) {
+            importprivkeys = false;
+        }
+
+        // read number of keys using 4 bytes msb first
+        f.read(sizebuf, 4);
+        if (!f) {
+            throw std::runtime_error("Vault::importKeychain - error reading numkeys.");
+        }
+        uint32_t numkeys = sizebuf_to_uint(sizebuf);
+
+        Keychain::type_t keychain_type =
+            importprivkeys ? Keychain::PRIVATE : Keychain::PUBLIC;
+
+        Keychain keychain(keychain_name, keychain_type);
+
+        boost::lock_guard<boost::mutex> lock(mutex);
+
+        odb::core::transaction t(db_->begin());
+
+        // read keys, write to db
+        std::stringstream err;
+        uchar_vector hash;
+        CoinKey coinkey;
+        uint32_t i;
+        for (i = 0; i < numkeys; i++) {
+            f.read(sizebuf, 4);
+            if (!f) break;
+            size = sizebuf_to_uint(sizebuf);
+            if (size > MAXBUFSIZE) break;
+
+            f.read(buf, size);
+            if (!f) break;
+            bytes_t keydata((unsigned char*)buf, (unsigned char*)buf + size);
+
+            if (hasprivkeys != 0) {
+                if (!coinkey.setPrivateKey(keydata)) {
+                    err << "Vault::importKeychain - invalid private key at position " << i << ".";
+                    throw std::runtime_error(err.str());
+                }
+                bytes_t pubkey = coinkey.getPublicKey();
+                hash = sha256(hash + pubkey);
+                Key* pKey;
+                if (importprivkeys) {
+                    pKey = new Key(pubkey, keydata);
+                }
+                else {
+                    pKey = new Key(pubkey);
+                }
+                std::shared_ptr<Key> key(pKey);
+                keychain.add(key);
+                db_->persist(*key);                         
             }
             else {
-                pKey = new Key(pubkey);
+                if (!coinkey.setPublicKey(keydata)) {
+                    err << "Vault::importKeychain - invalid public key at position " << i << ".";
+                    throw std::runtime_error(err.str());
+                }
+                hash = sha256(hash + keydata);
+                std::shared_ptr<Key> key(new Key(keydata));
+                keychain.add(key);
+                db_->persist(*key);
             }
-            std::shared_ptr<Key> key(pKey);
-            keychain.add(key);
-            db_->persist(*key);                         
         }
-        else {
-            if (!coinkey.setPublicKey(keydata)) {
-                err << "Vault::importKeychain - invalid public key at position " << i << ".";
-                throw std::runtime_error(err.str());
-            }
-            hash = sha256(hash + keydata);
-            std::shared_ptr<Key> key(new Key(keydata));
-            keychain.add(key);
-            db_->persist(*key);
+        if (i < numkeys) {
+            err << "Vault::importKeychain - error reading key at position " << i << ".";
+            throw std::runtime_error(err.str());
         }
-    }
-    if (i < numkeys) {
-        err << "Vault::importKeychain - error reading key at position " << i << ".";
-        throw std::runtime_error(err.str());
-    }
 
-    // read hash, compare
-    f.read(sizebuf, 4);
-    size = sizebuf_to_uint(sizebuf);
-    if (!f || size > MAXBUFSIZE) {
-        throw std::runtime_error("Vault::importKeychain - error reading hash.");
+        // read hash, compare
+        f.read(sizebuf, 4);
+        size = sizebuf_to_uint(sizebuf);
+        if (!f || size > MAXBUFSIZE) {
+            throw std::runtime_error("Vault::importKeychain - error reading hash.");
+        }
+
+        f.read(buf, size);
+        if (!f) {
+            throw std::runtime_error("Vault::importKeychain - error reading hash.");
+        }
+        
+        bytes_t hashread((unsigned char*)buf, (unsigned char*)buf + size);
+        if (hashread != hash) {
+            throw std::runtime_error("Vault::importKeychain - hash mismatch, file is corrupted.");
+        }
+
+        // make sure we don't already have a keychain with this hash
+        odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::hash == hash));
+        if (!r.empty()) {
+            throw std::runtime_error("Vault::importKeychain - vault already contains a keychain with the same hash.");
+        }
+
+        db_->persist(keychain);
+
+        t.commit();
+
+        return hash;
     }
-
-    f.read(buf, size);
-    if (!f) {
-        throw std::runtime_error("Vault::importKeychain - error reading hash.");
-    }
-    
-    bytes_t hashread((unsigned char*)buf, (unsigned char*)buf + size);
-    if (hashread != hash) {
-        throw std::runtime_error("Vault::importKeychain - hash mismatch, file is corrupted.");
-    }
-
-    // make sure we don't already have a keychain with this hash
-    odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::hash == hash));
-    if (!r.empty()) {
-        throw std::runtime_error("Vault::importKeychain - vault already contains a keychain with the same hash.");
-    }
-
-    db_->persist(keychain);
-
-    t.commit();
-
-    return hash;
 }
 
 bool Vault::isKeychainPrivate(const std::string& filepath) const

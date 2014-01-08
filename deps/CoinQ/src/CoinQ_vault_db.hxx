@@ -824,6 +824,7 @@ inline Keychain::Keychain(const std::string& name, const std::shared_ptr<Extende
     : name_(name), extendedkey_(extendedkey), numkeys_(0), numsavedkeys_(0)
 {
     type_ = extendedkey_->hdkeychain().isPrivate() ? PRIVATE : PUBLIC;
+    hash_ = sha256_2(extendedkey_->bytes());
     this->numkeys(numkeys);
 }
 /*
@@ -886,7 +887,6 @@ inline unsigned long Keychain::numkeys(unsigned long numkeys)
         uint32_t childnum = i | privmask;
         Coin::HDKeychain child = hdkeychain.getChild(childnum);
         std::shared_ptr<Key> key(new Key(extendedkey_, childnum)); 
-        hash_ = sha256(uchar_vector(hash_) + key->pubkey());
         keys_.push_back(key);
     }
     numkeys_ = numkeys;
