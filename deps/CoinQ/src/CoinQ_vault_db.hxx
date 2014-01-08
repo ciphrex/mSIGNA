@@ -776,11 +776,6 @@ public:
     typedef std::vector<std::shared_ptr<Key>> keys_t;
     const keys_t& keys() const { return keys_; }
 
-    // persist handles storing keys and extendedkey
-    void persist(const std::shared_ptr<odb::core::database>& db);
-
-    void update(const std::shared_ptr<odb::core::database>& db);
-
     // only for random keychains
     void add(std::shared_ptr<Key> key);
 
@@ -826,35 +821,6 @@ inline Keychain::Keychain(const std::string& name, const std::shared_ptr<Extende
     type_ = extendedkey_->hdkeychain().isPrivate() ? PRIVATE : PUBLIC;
     hash_ = sha256_2(extendedkey_->bytes());
     this->numkeys(numkeys);
-}
-/*
-inline Keychain::Keychain(const std::string& name, const Coin::HDKeychain& hdkeychain, unsigned long numkeys)
-    : name_(name), numkeys_(0)
-{
-    if (!hdkeychain) {
-        throw std::runtime_error("Keychain::Keychain - invalid hdkeychain.");
-    }
-
-    extkey_ = hdkeychain.extkey();
-    type_ = hdkeychain.isPrivate() ? PRIVATE : PUBLIC;
-    this->numkeys(numkeys);
-}
-*/
-
-inline void Keychain::persist(const std::shared_ptr<odb::core::database>& db)
-{
-    //for (auto& key: keys_) { db->persist(key); }
-    numsavedkeys_ = keys_.size();
-    //if (extendedkey_) { db->persist(extendedkey_); }
-    //db->persist(this);
-}
-
-inline void Keychain::update(const std::shared_ptr<odb::core::database>& db)
-{
-    unsigned long prevsavedkeys = keys_.size();
-    //for (unsigned long i = numsavedkeys_; i < prevsavedkeys; i++) { db->update(keys_[i]); }
-    numsavedkeys_ = prevsavedkeys;
-    //db->update(this);
 }
 
 inline void Keychain::add(std::shared_ptr<Key> key)
