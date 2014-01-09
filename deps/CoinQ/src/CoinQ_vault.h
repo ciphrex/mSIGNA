@@ -164,6 +164,8 @@ protected:
     void persistKeychain_unwrapped(Keychain& keychain);
     void updateKeychain_unwrapped(Keychain& keychain);
 
+    unsigned long generateLookaheadScripts_unwrapped(const std::string& account_name, unsigned long lookahead);
+
     result_t insertTx_unwrapped(std::shared_ptr<Tx>& tx, bool delete_conflicting_txs = false);
     bool deleteTx_unwrapped(const bytes_t& txhash);
     bool deleteBlock_unwrapped(const bytes_t& hash);

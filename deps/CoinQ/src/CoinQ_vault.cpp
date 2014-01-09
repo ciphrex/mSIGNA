@@ -584,11 +584,8 @@ std::shared_ptr<Account> Vault::getAccount(const std::string& name) const
 bool Vault::accountExists(const std::string& account_name) const
 {
     boost::lock_guard<boost::mutex> lock(mutex);
-
     odb::core::transaction t(db_->begin());
-
     odb::result<AccountView> r(db_->query<AccountView>(odb::query<AccountView>::name == account_name));
-
     return !r.empty();
 }
 
@@ -940,15 +937,18 @@ unsigned long Vault::getScriptCount(const std::string& account_name, SigningScri
 unsigned long Vault::generateLookaheadScripts(const std::string& account_name, unsigned long lookahead)
 {
     boost::lock_guard<boost::mutex> lock(mutex);
-
     odb::core::session session;
-
-    if (!accountExists(account_name)) {
-        throw std::runtime_error("Account not found.");
-    }
-
     odb::core::transaction t(db_->begin());
 
+    lookahead = generateLookaheadScripts_unwrapped(account_name, lookahead);
+
+    t.commit();
+
+    return lookahead;
+}
+
+unsigned long Vault::generateLookaheadScripts_unwrapped(const std::string& account_name, unsigned long lookahead)
+{
     odb::result<Account> account_r(db_->query<Account>(odb::query<Account>::name == account_name));
     if (account_r.empty()) {
         std::stringstream err;
@@ -994,8 +994,6 @@ unsigned long Vault::generateLookaheadScripts(const std::string& account_name, u
     account->extend(keychains);
     for (unsigned long i = scriptcount; i < newscriptcount; i++) { db_->persist(account->scripts()[i]); }
     db_->update(account);
-
-    t.commit();
 
     return lookahead;
 }
