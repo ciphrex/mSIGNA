@@ -112,6 +112,13 @@ void Vault::persistKeychain_unwrapped(Keychain& keychain)
 
 void Vault::updateKeychain_unwrapped(Keychain& keychain)
 {
+    if (keychain.numsavedkeys() < keychain.numkeys()) {
+        for (uint32_t i = keychain.numsavedkeys(); i < keychain.numkeys(); i++) {
+            db_->persist(*keychain.keys()[i]);
+        }
+        keychain.numsavedkeys(keychain.numkeys());
+        db_->update(keychain);
+    }
 }
 
 std::vector<KeychainInfo> Vault::getKeychains() const
