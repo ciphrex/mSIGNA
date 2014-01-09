@@ -843,14 +843,15 @@ inline void Keychain::add(std::shared_ptr<Key> key)
 
 inline unsigned long Keychain::numkeys(unsigned long numkeys)
 {
+    LOGGER(trace) << "Keychain::numkeys(" << numkeys << ")" << std::endl;
     if (!is_deterministic()) {
         throw std::runtime_error("Keychain::numkeys - cannot set numkeys for random wallet.");
     }
 
     if (numkeys_ >= numkeys) return numkeys_;
 
-    if (numkeys > 0x80000000) {
-        throw std::runtime_error("Keychain::numkeys - cannot have more than 0x80000000 keys.");
+    if (numkeys > 0x7fffffff) {
+        throw std::runtime_error("Keychain::numkeys - cannot have more than 0x7fffffff keys.");
     }
 
     Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain();

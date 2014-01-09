@@ -162,7 +162,7 @@ public:
 protected:
     // unwrapped methods must be called from within a session and transaction
     void persistKeychain_unwrapped(Keychain& keychain);
-    void updateKeychain_unwrapped(Keychain& keychain);
+    void updateKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
 
     unsigned long generateLookaheadScripts_unwrapped(const std::string& account_name, unsigned long lookahead);
 

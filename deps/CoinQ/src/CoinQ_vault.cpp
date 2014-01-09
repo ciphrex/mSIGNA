@@ -29,6 +29,8 @@
 
 const std::size_t MAXSQLCLAUSES = 500;
 
+const unsigned long LOOKAHEAD = 100;
+
 using namespace CoinQ::Vault;
 
 /*
@@ -110,13 +112,13 @@ void Vault::persistKeychain_unwrapped(Keychain& keychain)
     db_->persist(keychain);
 }
 
-void Vault::updateKeychain_unwrapped(Keychain& keychain)
+void Vault::updateKeychain_unwrapped(std::shared_ptr<Keychain> keychain)
 {
-    if (keychain.numsavedkeys() < keychain.numkeys()) {
-        for (uint32_t i = keychain.numsavedkeys(); i < keychain.numkeys(); i++) {
-            db_->persist(*keychain.keys()[i]);
+    if (keychain->numsavedkeys() < keychain->numkeys()) {
+        for (uint32_t i = keychain->numsavedkeys(); i < keychain->numkeys(); i++) {
+            db_->persist(*keychain->keys()[i]);
         }
-        keychain.numsavedkeys(keychain.numkeys());
+        keychain->numsavedkeys(keychain->numkeys());
         db_->update(keychain);
     }
 }
@@ -966,27 +968,26 @@ unsigned long Vault::generateLookaheadScripts_unwrapped(const std::string& accou
 
     const std::set<bytes_t>& hashes = account->keychain_hashes();
     odb::result<Keychain> keychain_r(db_->query<Keychain>(odb::query<Keychain>::hash.in_range(hashes.begin(), hashes.end())));
-    if (hashes.size() != keychain_r.size()) return lookaheadcount;
+    Account::keychains_t keychains;
+    for (auto& keychain: keychain_r) { keychains.insert(std::make_shared<Keychain>(keychain)); }
+    if (hashes.size() != keychains.size()) return lookaheadcount;
 
     uint32_t scriptcount = account->scripts().size();
     uint32_t newscriptcount = scriptcount + lookahead - lookaheadcount;
 
-    // All keychains are in vault, so let's calculate the maximum number of new scripts we can get. 
-    uint32_t maxscripts = 0x79999999;
-    for (auto& keychain: keychain_r) {
-        if (!keychain.is_deterministic() && keychain.numkeys() < maxscripts) {
-            maxscripts = keychain.numkeys();
+    // All keychains are in vault, so let's calculate the maximum number of new scripts we can get.
+    for (auto& keychain: keychains) {
+        if (!keychain->is_deterministic() && keychain->numkeys() < newscriptcount) {
+            newscriptcount = keychain->numkeys();
         }
     }
 
     // we cannot create enough keys
-    if (maxscripts <= scriptcount) return lookaheadcount;
+    if (newscriptcount <= scriptcount) return lookaheadcount;
 
-    Account::keychains_t keychains;
-    for (auto& keychain: keychain_r) {
-        keychains.insert(std::make_shared<Keychain>(keychain));
-        if (keychain.is_deterministic()) {
-            keychain.numkeys(maxscripts);
+    for (auto& keychain: keychains) {
+        if (keychain->is_deterministic()) {
+            keychain->numkeys(newscriptcount);
             updateKeychain_unwrapped(keychain);
         }
     }
@@ -1123,10 +1124,9 @@ std::shared_ptr<TxOut> Vault::newTxOut(const std::string& account_name, const st
     }
 
     boost::lock_guard<boost::mutex> lock(mutex);
-
     odb::core::session session;
-
     odb::core::transaction t(db_->begin());
+    t.tracer(odb::stderr_tracer);
 
     typedef odb::query<SigningScriptView> view_query;
 
@@ -1143,6 +1143,9 @@ std::shared_ptr<TxOut> Vault::newTxOut(const std::string& account_name, const st
     script->label(label);
     script->status(SigningScript::REQUEST);
     db_->update(script);
+
+    // TODO: assert the following returns LOOKAHEAD
+    generateLookaheadScripts_unwrapped(account_name, LOOKAHEAD);
 
     ScriptTag tag(script->txoutscript(), label);
     db_->persist(tag);
@@ -1212,9 +1215,7 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
     using namespace CoinQ::Script;
 
     boost::lock_guard<boost::mutex> lock(mutex);
-
     odb::core::session session;
-
     odb::core::transaction t(db_->begin());
 //    t.tracer(odb::stderr_tracer);
 
@@ -1325,6 +1326,7 @@ bool Vault::addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs)
                     vault_script->status(SigningScript::RECEIPT);
                     txout->type(TxOut::CREDIT);
                 }
+                generateLookaheadScripts_unwrapped(vault_script->account()->name(), LOOKAHEAD);
                 break;
 
             case SigningScript::CHANGE:
@@ -1463,9 +1465,7 @@ std::shared_ptr<Tx> Vault::newTx(const std::string& account_name, uint32_t tx_ve
     // TODO: put the script update and addTx operations inside a single session, transaction
     if (change > 0) {
         boost::lock_guard<boost::mutex> lock(mutex);
-
         odb::core::session session;
-
         odb::core::transaction t(db_->begin());
 
         typedef odb::query<SigningScript> query;
@@ -1479,6 +1479,8 @@ std::shared_ptr<Tx> Vault::newTx(const std::string& account_name, uint32_t tx_ve
         changescript->status(SigningScript::CHANGE);
 
         db_->update(changescript);
+
+        generateLookaheadScripts_unwrapped(account_name, LOOKAHEAD);
 
         t.commit();
 
