@@ -197,10 +197,15 @@ bytes_t Vault::exportKeychain(const std::string& keychain_name, const std::strin
     if (deterministic) {
         // write extended key
         bytes_t extkey = keychain->extendedkey()->bytes();
-        if (keychain->is_private() && !exportprivkeys) {
-            Coin::HDKeychain hdkeychain(extkey);
-            hdkeychain = hdkeychain.getPublic();
-            extkey = hdkeychain.extkey();
+        bytes_t extpubkey;
+        if (keychain->is_private()) {
+            extpubkey = Coin::HDKeychain(extkey).getPublic().extkey();
+            if (!exportprivkeys) {
+                extkey = extpubkey;
+            }
+        }
+        else {
+            extpubkey = extkey;
         }
 
         size = extkey.size();
@@ -212,7 +217,7 @@ bytes_t Vault::exportKeychain(const std::string& keychain_name, const std::strin
         write_uint32(f, size);
 
         // write hash
-        bytes_t hash = sha256_2(extkey);
+        bytes_t hash = sha256_2(extpubkey);
         size = hash.size();
         write_uint32(f, size);
         f.write((char*)&hash[0], size);
@@ -296,15 +301,17 @@ bytes_t Vault::importKeychain(const std::string& keychain_name, const std::strin
         }
 
         bytes_t extkey((unsigned char*)buf, (unsigned char*)buf + size);
-        bytes_t extkey_hash = sha256_2(extkey);
+        bytes_t extpubkey;
         Coin::HDKeychain hdkeychain(extkey);
-        if (!hdkeychain.isPrivate()) {
-            importprivkeys = false;
+        if (hdkeychain.isPrivate()) {
+            extpubkey = hdkeychain.getPublic().extkey();
+            if (!importprivkeys) {
+                extkey = extpubkey;
+            }
         }
-
-        if (!importprivkeys && hdkeychain.isPrivate()) {
-            hdkeychain = hdkeychain.getPublic();
-            extkey = hdkeychain.extkey();
+        else { 
+            importprivkeys = false;
+            extpubkey = extkey;
         }
 
         // read number of saved keys (lookahead distance)
@@ -332,7 +339,7 @@ bytes_t Vault::importKeychain(const std::string& keychain_name, const std::strin
         }
 
         bytes_t hash((unsigned char*)buf, (unsigned char*)buf + size);
-        if (hash != extkey_hash) {
+        if (hash != sha256_2(extpubkey)) {
             throw std::runtime_error("Vault::importKeychain - hash mismatch, file is corrupted.");
         }
         
@@ -954,7 +961,12 @@ unsigned long Vault::generateLookaheadScripts(const std::string& account_name, u
     typedef odb::query<ScriptCountView> scriptcount_query;
     odb::result<ScriptCountView> scriptcount_r(db_->query<ScriptCountView>(scriptcount_query::Account::name == account_name && scriptcount_query::SigningScript::status == SigningScript::UNUSED));
 
-    unsigned scriptcount = scriptcount_r.begin()->count;
+    unsigned long scriptcount = scriptcount_r.begin()->count;
+    if (scriptcount >= lookahead) return scriptcount;
+/*
+    const std::set<bytes_t>& hashes = account->keychain_hashes();
+    odb::result<Keychain> keychain_r(db_->query<Keychain>(odb::query<Keychain>::hash.in_range(hashes.begin(), hashes.end())));
+  */  
 
     // TODO: If unused script count is smaller than desired lookahead:
     //  1) check that all keychains are in vault.

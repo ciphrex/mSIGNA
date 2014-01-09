@@ -818,8 +818,15 @@ private:
 inline Keychain::Keychain(const std::string& name, const std::shared_ptr<ExtendedKey>& extendedkey, unsigned long numkeys)
     : name_(name), extendedkey_(extendedkey), numkeys_(0), numsavedkeys_(0)
 {
-    type_ = extendedkey_->hdkeychain().isPrivate() ? PRIVATE : PUBLIC;
-    hash_ = sha256_2(extendedkey_->bytes());
+    Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain();
+    if (hdkeychain.isPrivate()) {
+        type_ = PRIVATE;
+        hash_ = sha256_2(hdkeychain.getPublic().extkey());
+    }
+    else {
+        type_ = PUBLIC;
+        hash_ = sha256_2(hdkeychain.extkey());
+    }
     this->numkeys(numkeys);
 }
 
