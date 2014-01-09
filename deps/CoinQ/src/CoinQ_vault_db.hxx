@@ -952,6 +952,8 @@ public:
     typedef std::set<std::shared_ptr<Keychain>> keychains_t;
     void set(const std::string& name, unsigned int minsigs, const keychains_t& keychains, uint32_t time_created = time(NULL));
 
+    void extend(const keychains_t& keychains);
+
     unsigned long id() const { return id_; }
     const std::string& name() const { return name_; }
     unsigned int minsigs() const { return minsigs_; }
@@ -1012,7 +1014,7 @@ inline void Account::set(const std::string& name, unsigned int minsigs, const ke
         for (auto& keychain: keychains) {
             pubkeys.push_back(keychain->keys()[i]->pubkey());
         }
-        // TODO: use more secure randomization
+        // Sort the pubkeys to ensure the same set of pubkeys always generates the same multisig
         std::sort(pubkeys.begin(), pubkeys.end());
 
         CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, minsigs, pubkeys);
@@ -1029,6 +1031,39 @@ inline void Account::set(const std::string& name, unsigned int minsigs, const ke
     for (auto& keychain: keychains) {
         keychain_hashes_.insert(keychain->hash());
     }
+}
+
+inline void Account::extend(const keychains_t& keychains)
+{
+    // TODO: check keychain hashes
+
+    // Find the smallest keychain's length. That will be the number of scripts in the account.
+    unsigned long minkeys = 0;
+    for (auto& keychain: keychains) {
+        if (minkeys == 0) {
+            minkeys = keychain->numkeys();
+        }
+        else if (keychain->numkeys() < minkeys) {
+            minkeys = keychain->numkeys();
+        }
+    }
+
+    unsigned long numscripts = signingscripts_.size();
+    if (minkeys <= numscripts) return; // the < should never occur or we won't be able to sign! (TODO: assert)
+
+    for (unsigned long i = numscripts; i < minkeys; i++) {
+        std::vector<bytes_t> pubkeys;
+        for (auto& keychain: keychains) {
+            pubkeys.push_back(keychain->keys()[i]->pubkey());
+        }
+        // Sort the pubkeys to ensure the same set of pubkeys always generates the same multisig
+        std::sort(pubkeys.begin(), pubkeys.end());
+
+        CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, minsigs_, pubkeys);
+        std::shared_ptr<SigningScript> signingscript(new SigningScript(script.txinscript(CoinQ::Script::Script::EDIT), script.txoutscript()));
+        signingscripts_.push_back(signingscript);
+        signingscript->account_ = shared_from_this(); 
+   } 
 }
 
 // Views

@@ -959,23 +959,45 @@ unsigned long Vault::generateLookaheadScripts(const std::string& account_name, u
     std::shared_ptr<Account> account(account_r.begin().load());
 
     typedef odb::query<ScriptCountView> scriptcount_query;
-    odb::result<ScriptCountView> scriptcount_r(db_->query<ScriptCountView>(scriptcount_query::Account::name == account_name && scriptcount_query::SigningScript::status == SigningScript::UNUSED));
+    odb::result<ScriptCountView> lookaheadcount_r(db_->query<ScriptCountView>(scriptcount_query::Account::name == account_name && scriptcount_query::SigningScript::status == SigningScript::UNUSED));
 
-    unsigned long scriptcount = scriptcount_r.begin()->count;
-    if (scriptcount >= lookahead) return scriptcount;
-/*
+    unsigned long lookaheadcount = lookaheadcount_r.begin()->count;
+    if (lookaheadcount >= lookahead) return lookaheadcount;
+
     const std::set<bytes_t>& hashes = account->keychain_hashes();
     odb::result<Keychain> keychain_r(db_->query<Keychain>(odb::query<Keychain>::hash.in_range(hashes.begin(), hashes.end())));
-  */  
+    if (hashes.size() != keychain_r.size()) return lookaheadcount;
 
-    // TODO: If unused script count is smaller than desired lookahead:
-    //  1) check that all keychains are in vault.
-    //  2) calculate maximum new key sets we can get.
-    //  3) generate new keys for deterministic keychains if necessary.
-    //  4) generate scripts and persist/update account.
-    //  5) return new lookahead count.
+    uint32_t scriptcount = account->scripts().size();
+    uint32_t newscriptcount = scriptcount + lookahead - lookaheadcount;
 
-    return scriptcount;
+    // All keychains are in vault, so let's calculate the maximum number of new scripts we can get. 
+    uint32_t maxscripts = 0x79999999;
+    for (auto& keychain: keychain_r) {
+        if (!keychain.is_deterministic() && keychain.numkeys() < maxscripts) {
+            maxscripts = keychain.numkeys();
+        }
+    }
+
+    // we cannot create enough keys
+    if (maxscripts <= scriptcount) return lookaheadcount;
+
+    Account::keychains_t keychains;
+    for (auto& keychain: keychain_r) {
+        keychains.insert(std::make_shared<Keychain>(keychain));
+        if (keychain.is_deterministic()) {
+            keychain.numkeys(maxscripts);
+            updateKeychain_unwrapped(keychain);
+        }
+    }
+
+    account->extend(keychains);
+    for (unsigned long i = scriptcount; i < newscriptcount; i++) { db_->persist(account->scripts()[i]); }
+    db_->update(account);
+
+    t.commit();
+
+    return lookahead;
 }
  
 bool Vault::scriptTagExists(const bytes_t& txoutscript) const
