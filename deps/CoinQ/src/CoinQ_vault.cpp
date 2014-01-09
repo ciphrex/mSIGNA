@@ -60,12 +60,6 @@ void Vault::newKeychain(const std::string& name, unsigned long numkeys)
         throw std::runtime_error("Vault::newKeychain() - keychain must contain at least one key.");
     }
 
-    boost::lock_guard<boost::mutex> lock(mutex);
-
-    odb::core::session session;
-
-    odb::core::transaction t(db_->begin());
-
     Keychain keychain(name, Keychain::PRIVATE);
     CoinKey coinkey;
     {
@@ -73,10 +67,14 @@ void Vault::newKeychain(const std::string& name, unsigned long numkeys)
             coinkey.generateNewKey();
             std::shared_ptr<Key> key(new Key(coinkey.getPublicKey(), coinkey.getPrivateKey()));
             keychain.add(key);
-            db_->persist(*key);
         }
     }
-    db_->persist(keychain);
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session session;
+    odb::core::transaction t(db_->begin());
+
+    persistKeychain_unwrapped(keychain);
 
     t.commit();
 }
@@ -89,17 +87,31 @@ void Vault::newHDKeychain(const std::string& name, const bytes_t& extkey, unsign
 
     std::shared_ptr<ExtendedKey> extendedkey(new ExtendedKey(extkey));
 
+    Keychain keychain(name, extendedkey, numkeys);
+
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session session;
     odb::core::transaction t(db_->begin());
 
-    Keychain keychain(name, extendedkey, numkeys);
-    db_->persist(extendedkey);
+    persistKeychain_unwrapped(keychain);
+
+    t.commit();
+}
+
+void Vault::persistKeychain_unwrapped(Keychain& keychain)
+{
+    if (keychain.is_deterministic()) {
+        db_->persist(keychain.extendedkey());
+    }
+
     auto& keys = keychain.keys();
     for (auto& key: keys) { db_->persist(*key); }
-    keychain.numsavedkeys(numkeys);
+    keychain.numsavedkeys(keychain.numkeys());
     db_->persist(keychain);
-    t.commit();
+}
+
+void Vault::updateKeychain_unwrapped(Keychain& keychain)
+{
 }
 
 std::vector<KeychainInfo> Vault::getKeychains() const

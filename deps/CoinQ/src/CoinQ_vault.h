@@ -157,6 +157,9 @@ public:
 
 protected:
     // unwrapped methods must be called from within a session and transaction
+    void persistKeychain_unwrapped(Keychain& keychain);
+    void updateKeychain_unwrapped(Keychain& keychain);
+
     result_t insertTx_unwrapped(std::shared_ptr<Tx>& tx, bool delete_conflicting_txs = false);
     bool deleteTx_unwrapped(const bytes_t& txhash);
     bool deleteBlock_unwrapped(const bytes_t& hash);
