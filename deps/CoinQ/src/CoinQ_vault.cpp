@@ -930,6 +930,41 @@ unsigned long Vault::getScriptCount(const std::string& account_name, SigningScri
     return r.begin()->count;
 }
 
+unsigned long Vault::generateLookaheadScripts(const std::string& account_name, unsigned long lookahead)
+{
+    boost::lock_guard<boost::mutex> lock(mutex);
+
+    odb::core::session session;
+
+    if (!accountExists(account_name)) {
+        throw std::runtime_error("Account not found.");
+    }
+
+    odb::core::transaction t(db_->begin());
+
+    odb::result<Account> account_r(db_->query<Account>(odb::query<Account>::name == account_name));
+    if (account_r.empty()) {
+        std::stringstream err;
+        err << "Account " << account_name << " not found.";
+        throw std::runtime_error(err.str());
+    }
+
+    std::shared_ptr<Account> account(account_r.begin().load());
+
+    typedef odb::query<ScriptCountView> scriptcount_query;
+    odb::result<ScriptCountView> scriptcount_r(db_->query<ScriptCountView>(scriptcount_query::Account::name == account_name && scriptcount_query::SigningScript::status == SigningScript::UNUSED));
+
+    unsigned scriptcount = scriptcount_r.begin()->count;
+
+    // TODO: If unused script count is smaller than desired lookahead:
+    //  1) check that all keychains are in vault.
+    //  2) calculate maximum new key sets we can get.
+    //  3) generate new keys for deterministic keychains if necessary.
+    //  4) generate scripts and persist/update account.
+    //  5) return new lookahead count.
+
+    return scriptcount;
+}
  
 bool Vault::scriptTagExists(const bytes_t& txoutscript) const
 {

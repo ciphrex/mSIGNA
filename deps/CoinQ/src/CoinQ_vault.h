@@ -103,11 +103,15 @@ public:
 
     unsigned long getScriptCount(const std::string& account_name, SigningScript::status_t status) const;
 
+    unsigned long generateLookaheadScripts(const std::string& account_name, unsigned long lookahead);
+
+    // Tag operations
     bool scriptTagExists(const bytes_t& txoutscript) const;
     void addScriptTag(const bytes_t& txoutscript, const std::string& description);
     void updateScriptTag(const bytes_t& txoutscript, const std::string& description);
     void deleteScriptTag(const bytes_t& txoutscript);
 
+    // Tx operations
     std::vector<std::shared_ptr<TxOut>> getTxOuts(const std::string& account_name) const;
     std::vector<std::shared_ptr<TxOutView>> getTxOutViews(const std::string& account_name, bool unspentonly = true) const;
 
