@@ -83,6 +83,26 @@ cli::result_t cmd_newkeychain(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_renamekeychain(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 3) {
+        return "renamekeychain <filename> <oldname> <newname> - rename a keychain.";
+    }
+
+    int argc = 3;
+    char prog[] = "prog";
+    char opt[] = "--database";
+    char buf[255];
+    std::strcpy(buf, params[0].c_str());
+    char* argv[] = {prog, opt, buf};
+
+    Vault vault(argc, argv, false);
+    vault.renameKeychain(params[1], params[2]);
+
+    stringstream ss;
+    ss << "Keychain " << params[1] << " renamed to " << params[2] << ".";
+    return ss.str();
+}
 
 cli::result_t cmd_listkeychains(bool bHelp, const cli::params_t& params)
 {
@@ -866,6 +886,7 @@ int main(int argc, char** argv)
     cli::command_map cmds("CoinVault by Eric Lombrozo v0.0.1");
     cmds.add("create", &cmd_create);
     cmds.add("newkeychain", &cmd_newkeychain);
+    cmds.add("renamekeychain", &cmd_renamekeychain);
     cmds.add("listkeychains", &cmd_listkeychains);
     cmds.add("listkeys", &cmd_listkeys);
     cmds.add("exportkeys", &cmd_exportkeys);
