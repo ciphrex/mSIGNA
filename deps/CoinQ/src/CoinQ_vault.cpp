@@ -617,6 +617,7 @@ void Vault::eraseAccount(const std::string& name) const
 void Vault::renameAccount(const std::string& old_name, const std::string& new_name)
 {
     boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session session;
     odb::core::transaction t(db_->begin());
 
     odb::result<Account> account_r(db_->query<Account>(odb::query<Account>::name == old_name));
