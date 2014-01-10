@@ -252,6 +252,27 @@ cli::result_t cmd_eraseaccount(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_renameaccount(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 3) {
+        return "renameaccount <filename> <oldname> <newname> - rename an account.";
+    }
+
+    int argc = 3;
+    char prog[] = "prog";
+    char opt[] = "--database";
+    char buf[255];
+    std::strcpy(buf, params[0].c_str());
+    char* argv[] = {prog, opt, buf};
+
+    Vault vault(argc, argv, false);
+    vault.renameAccount(params[1], params[2]);
+
+    stringstream ss;
+    ss << "Account " << params[1] << " renamed to " << params[2] << ".";
+    return ss.str();
+}
+
 cli::result_t cmd_listaccounts(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 1) {
@@ -851,6 +872,7 @@ int main(int argc, char** argv)
     cmds.add("importkeys", &cmd_importkeys);
     cmds.add("newaccount", &cmd_newaccount);
     cmds.add("eraseaccount", &cmd_eraseaccount);
+    cmds.add("renameaccount", &cmd_renameaccount);
     cmds.add("listaccounts", &cmd_listaccounts);
     cmds.add("exportaccount", &cmd_exportaccount);
     cmds.add("importaccount", &cmd_importaccount);
