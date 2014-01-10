@@ -370,6 +370,19 @@ QVariant AccountModel::data(const QModelIndex& index, int role) const
 bool AccountModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
     if (role == Qt::EditRole) {
+        if (index.column() == 0) {
+            // Account name edited.
+            if (!vault) return false;
+
+            try {
+                vault->renameAccount(index.data().toString().toStdString(), value.toString().toStdString());
+                setItem(index.row(), index.column(), new QStandardItem(value.toString()));
+                return true;
+            }
+            catch (const std::exception& e) {
+                emit error(QString::fromStdString(e.what()));
+            }
+        }
         return false;
     }
 
