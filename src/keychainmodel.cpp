@@ -76,3 +76,45 @@ bool KeychainModel::exists(const QString& keychainName) const
     QList<QStandardItem*> items = findItems(keychainName, Qt::MatchExactly, 0);
     return !items.isEmpty();
 }
+
+QVariant KeychainModel::data(const QModelIndex& index, int role) const
+{
+    if (role == Qt::TextAlignmentRole && index.column() == 1) {
+        // Right-align numeric fields
+        return Qt::AlignRight;
+    }
+
+    return QStandardItemModel::data(index, role);
+}
+
+bool KeychainModel::setData(const QModelIndex& index, const QVariant& value, int role)
+{
+    if (role == Qt::EditRole) {
+        if (index.column() == 0) {
+            // Keychain name edited.
+            if (!vault) return false;
+
+            try {
+                //vault->renameKeychain(index.data().toString().toStdString(), value.toString().toStdString());
+                return false;
+                setItem(index.row(), index.column(), new QStandardItem(value.toString()));
+                return true;
+            }
+            catch (const std::exception& e) {
+                emit error(QString::fromStdString(e.what()));
+            }
+        }
+        return false;
+    }
+
+    return true;
+}
+
+Qt::ItemFlags KeychainModel::flags(const QModelIndex& index) const
+{
+    if (index.column() == 0) {
+        return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable;
+    }
+
+    return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+}

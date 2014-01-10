@@ -113,6 +113,8 @@ MainWindow::MainWindow()
     connect(accountSelectionModel, &QItemSelectionModel::selectionChanged,
             this, &MainWindow::updateSelectedAccounts);
 
+    connect(keychainModel, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
+
     // Transaction tab page
     txModel = new TxModel();
     txView = new TxView();
