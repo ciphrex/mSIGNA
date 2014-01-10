@@ -84,6 +84,8 @@ public:
     bool keychainExists(const std::string& keychain_name) const;
     void newKeychain(const std::string& name, unsigned long numkeys);
     void newHDKeychain(const std::string& name, const bytes_t& extkey, unsigned long numkeys = 100);
+    void eraseKeychain(const std::string& keychain_name) const;
+    void renameKeychain(const std::string& old_name, const std::string& new_name);
     std::vector<KeychainInfo> getKeychains() const;
     std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
     bytes_t exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
@@ -93,10 +95,10 @@ public:
     // Account operations
     bool accountExists(const std::string& account_name) const;
     void newAccount(const std::string& name, unsigned int minsigs, const std::vector<std::string>& keychain_names);
+    void eraseAccount(const std::string& name) const;
+    void renameAccount(const std::string& old_name, const std::string& new_name);
     std::vector<AccountInfo> getAccounts() const;
     std::shared_ptr<Account> getAccount(const std::string& name) const;
-    void eraseAccount(const std::string& account_name) const;
-    void renameAccount(const std::string& old_name, const std::string& new_name);
     bytes_t exportAccount(const std::string& account_name, const std::string& filepath) const;
     bytes_t importAccount(const std::string& account_name, const std::string& filepath);
 

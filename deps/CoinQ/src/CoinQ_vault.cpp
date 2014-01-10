@@ -100,6 +100,53 @@ void Vault::newHDKeychain(const std::string& name, const bytes_t& extkey, unsign
     t.commit();
 }
 
+void Vault::eraseKeychain(const std::string& name) const
+{
+    // TODO: erase individual keys - for now, this method is commented out
+/*
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session session;
+    odb::core::transaction t(db_->begin());
+
+    odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == name));
+
+    if (r.empty()) {
+        throw std::runtime_error("Keychain not found.");
+    }
+
+    std::shared_ptr<Keychain> keychain(r.begin().load());
+
+    odb::result<Key> signing_script_r(db_->query<SigningScript>(odb::query<SigningScript>::account->id == account->id()));
+    for (auto& signing_script: signing_script_r) { db_->erase(signing_script); }
+
+//    db_->erase_query<SigningScript>(odb::query<SigningScript>::account == account->id());
+    db_->erase(account);
+
+    t.commit();
+*/
+}
+
+void Vault::renameKeychain(const std::string& old_name, const std::string& new_name)
+{
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session session;
+    odb::core::transaction t(db_->begin());
+
+    odb::result<Keychain> keychain_r(db_->query<Keychain>(odb::query<Keychain>::name == old_name));
+    if (keychain_r.empty()) throw std::runtime_error("Account not found.");
+
+    if (old_name == new_name) return;
+
+    odb::result<Keychain> new_keychain_r(db_->query<Keychain>(odb::query<Keychain>::name == new_name));
+    if (!new_keychain_r.empty()) throw std::runtime_error("A keychain with that name already exists.");
+
+    std::shared_ptr<Keychain> keychain(keychain_r.begin().load());
+    keychain->name(new_name);
+
+    db_->update(keychain);
+    t.commit();
+}
+
 void Vault::persistKeychain_unwrapped(Keychain& keychain)
 {
     if (keychain.is_deterministic()) {

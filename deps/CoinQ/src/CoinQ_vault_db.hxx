@@ -764,7 +764,10 @@ public:
     bool is_private() const { return type_ == PRIVATE; }
 
     unsigned long id() const { return id_; }
+
+    void name(const std::string& name) { name_ = name; }
     const std::string name() const { return name_; }
+
     type_t type() const { return type_; }
     std::shared_ptr<ExtendedKey> extendedkey() const { return extendedkey_; }
     const bytes_t& hash() const { return hash_; }
