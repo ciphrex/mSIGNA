@@ -17,6 +17,9 @@ UI
 - Add toolbars for keychain, account, and transaction actions.
 
 - Make table data noneditable except for names and labels, update database and views when names and labels are modified.
+    * Done for KeychainModel and AccountModel
+        TODO: notify MainWindow of changes, update
+        TODO: TxModel - make labels editable.
 
 - Export all script labels for account, including request labels.
 
