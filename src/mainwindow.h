@@ -83,6 +83,8 @@ protected:
         NETWORK_STATE_SYNCHING,
         NETWORK_STATE_SYNCHED
     };
+
+protected slots:
     void updateSyncLabel();
     void updateNetworkState(network_state_t newState = NETWORK_STATE_UNKNOWN);
     void updateVaultStatus(const QString& name = QString());

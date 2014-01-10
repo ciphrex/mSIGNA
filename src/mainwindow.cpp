@@ -105,7 +105,7 @@ MainWindow::MainWindow()
     connect(accountModel, SIGNAL(newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
     connect(accountModel, SIGNAL(newBlock(const bytes_t&, int)), this, SLOT(newBlock(const bytes_t&, int)));
     connect(accountModel, &AccountModel::updateSyncHeight, [this](int height) { emit updateSyncHeight(height); });
-    connect(accountModel, SIGNAL(error(const QString&)), this, SLOT(errorStatus(const QString&)));
+    connect(accountModel, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
 
     accountSelectionModel = accountView->selectionModel();
     connect(accountSelectionModel, &QItemSelectionModel::currentChanged,
