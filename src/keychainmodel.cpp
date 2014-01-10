@@ -95,8 +95,7 @@ bool KeychainModel::setData(const QModelIndex& index, const QVariant& value, int
             if (!vault) return false;
 
             try {
-                //vault->renameKeychain(index.data().toString().toStdString(), value.toString().toStdString());
-                return false;
+                vault->renameKeychain(index.data().toString().toStdString(), value.toString().toStdString());
                 setItem(index.row(), index.column(), new QStandardItem(value.toString()));
                 return true;
             }
