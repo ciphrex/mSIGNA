@@ -593,8 +593,8 @@ bool Vault::accountExists(const std::string& account_name) const
 
 void Vault::eraseAccount(const std::string& name) const
 {
+    boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session session;
-
     odb::core::transaction t(db_->begin());
 
     odb::result<Account> r(db_->query<Account>(odb::query<Account>::name == name));
@@ -611,6 +611,26 @@ void Vault::eraseAccount(const std::string& name) const
 //    db_->erase_query<SigningScript>(odb::query<SigningScript>::account == account->id());
     db_->erase(account);
 
+    t.commit();
+}
+
+void Vault::renameAccount(const std::string& old_name, const std::string& new_name)
+{
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+
+    odb::result<Account> account_r(db_->query<Account>(odb::query<Account>::name == old_name));
+    if (account_r.empty()) throw std::runtime_error("Account not found.");
+
+    if (old_name == new_name) return;
+
+    odb::result<Account> new_account_r(db_->query<Account>(odb::query<Account>::name == new_name));
+    if (!new_account_r.empty()) throw std::runtime_error("An account with that name already exists.");
+
+    std::shared_ptr<Account> account(account_r.begin().load());
+    account->name(new_name);
+
+    db_->update(account);
     t.commit();
 }
 

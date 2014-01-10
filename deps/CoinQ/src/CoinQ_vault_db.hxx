@@ -956,8 +956,12 @@ public:
     void extend(const keychains_t& keychains);
 
     unsigned long id() const { return id_; }
+
+    void name(const std::string& name) { name_ = name; }
     const std::string& name() const { return name_; }
+
     unsigned int minsigs() const { return minsigs_; }
+
     uint32_t time_created() const { return time_created_; }
 
     const std::set<bytes_t>& keychain_hashes() const { return keychain_hashes_; }
