@@ -37,7 +37,7 @@ NetworkSync::NetworkSync()
             if (bloomFilter.isSet()) {
                 Coin::FilterLoadMessage filterLoad(bloomFilter.getNHashFuncs(), bloomFilter.getNTweak(), bloomFilter.getNFlags(), bloomFilter.getFilter());
                 peer.send(filterLoad);
-        std::cout << "Sent filter to peer." << std::endl;
+                LOGGER(trace) << "Sent filter to peer." << std::endl;
             }
 
 //            notifyStatus("Fetching block headers...");
@@ -64,19 +64,19 @@ NetworkSync::NetworkSync()
     });
 
     peer.subscribeInv([&](CoinQ::Peer& peer, const Coin::Inventory& inv) {
-        std::cout << "Received inventory message:" << std::endl << inv.toIndentedString() << std::endl;
+        LOGGER(trace) << "Received inventory message:" << std::endl << inv.toIndentedString() << std::endl;
         Coin::GetDataMessage getData(inv);
         getData.toFilteredBlocks();
         peer.send(getData);
     });
 
     peer.subscribeTx([&](CoinQ::Peer& /*peer*/, const Coin::Transaction& tx) {
+        LOGGER(trace) << "Received transaction: " << tx.getHashLittleEndian().getHex() << std::endl;
         notifyTx(tx);
-        //std::cout << "Received transaction: " << tx.getHashLittleEndian().getHex() << std::endl;
     });
 
     peer.subscribeHeaders([&](CoinQ::Peer& peer, const Coin::HeadersMessage& headers) {
-        std::cout << "Received headers message..." << std::endl;
+        LOGGER(trace) << "Received headers message..." << std::endl;
         try {
             if (headers.headers.size() > 0) {
                 for (auto& item: headers.headers) {
@@ -88,13 +88,13 @@ NetworkSync::NetworkSync()
                     catch (const std::exception& e) {
                         std::stringstream err;
                         err << "Block tree insertion error for block " << item.getHashLittleEndian().getHex() << ": " << e.what(); // TODO: localization
-                        std::cout << err.str() << std::endl;
+                        LOGGER(error) << err.str() << std::endl;
                         notifyError(err.str());
                         throw e;
                     }
                 }
 
-                std::cout << "Processed " << headers.headers.size() << " headers."
+                LOGGER(trace) << "Processed " << headers.headers.size() << " headers."
                      << " mBestHeight: " << blockTree.getBestHeight()
                      << " mTotalWork: " << blockTree.getTotalWork().getDec()
                      << " Attempting to fetch more headers..." << std::endl;
@@ -114,7 +114,7 @@ NetworkSync::NetworkSync()
             }
         }
         catch (const std::exception& e) {
-            std::cout << std::endl << "block tree exception: " << e.what() << std::endl;
+            LOGGER(error) << "block tree exception: " << e.what() << std::endl;
         }
     });
 
@@ -143,7 +143,7 @@ NetworkSync::NetworkSync()
     });
 
     peer.subscribeMerkleBlock([&](CoinQ::Peer& /*peer*/, const Coin::MerkleBlock& merkleBlock) {
-        std::cout << "Received merkle block:" << std::endl << merkleBlock.toIndentedString() << std::endl;
+        LOGGER(trace) << "Received merkle block:" << std::endl << merkleBlock.toIndentedString() << std::endl;
         uchar_vector hash = merkleBlock.blockHeader.getHashLittleEndian();
         try {
             if (blockTree.hasHeader(hash)) {
@@ -412,6 +412,6 @@ void NetworkSync::setBloomFilter(const Coin::BloomFilter& bloomFilter_)
     if (isConnected_ && bloomFilter.isSet()) {
         Coin::FilterLoadMessage filterLoad(bloomFilter.getNHashFuncs(), bloomFilter.getNTweak(), bloomFilter.getNFlags(), bloomFilter.getFilter());
         peer.send(filterLoad);
-std::cout << "Sent filter to peer." << std::endl;
+        LOGGER(trace) << "Sent filter to peer." << std::endl;
     }
 }
