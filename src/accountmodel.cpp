@@ -359,12 +359,28 @@ bool AccountModel::deleteMerkleBlock(const bytes_t& hash)
 
 QVariant AccountModel::data(const QModelIndex& index, int role) const
 {
-    // Right-align numeric fields
     if (role == Qt::TextAlignmentRole && index.column() >= 2) {
+        // Right-align numeric fields
         return Qt::AlignRight;
     }
-    else {
-        return QStandardItemModel::data(index, role);
-    }
+    
+    return QStandardItemModel::data(index, role);
 }
 
+bool AccountModel::setData(const QModelIndex& index, const QVariant& value, int role)
+{
+    if (role == Qt::EditRole) {
+        return false;
+    }
+
+    return true;
+}
+
+Qt::ItemFlags AccountModel::flags(const QModelIndex& index) const
+{
+    if (index.column() == 0) {
+        return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable;
+    }
+
+    return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+}
