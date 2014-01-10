@@ -38,7 +38,9 @@ public:
     std::shared_ptr<CoinQ::Vault::Tx> getTx(int row);
     void deleteTx(int row);
 
+    // Overridden methods
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
+    Qt::ItemFlags flags(const QModelIndex& index) const;
 
 signals:
     void txDeleted();
