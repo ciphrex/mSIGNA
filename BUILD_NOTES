@@ -1,0 +1,9 @@
+Building Qt5 with mingw32-make
+==============================
+
+> git clone git://gitorious.org/qt/qt5.git qt5-win32-sjlj-static
+> cd qt5-win32-sjlj-static
+> git checkout -b release origin/release
+> perl init-repository
+> configure -static -release -no-openssl -opensource -confirm-license -nomake examples -nomake tests -skip declarative -skip quick1 -skip quickcontrols -skip location -platform win32-g++ -opengl desktop 
+> mingw32-make
