@@ -38,9 +38,8 @@ In addition, Vault depends on the following:
         * SQLite Database Runtime Library (libodb-sqlite)
 
 Vault has been built in Linux using gcc 4.6.3 and greater for both 64-bit Linux
-and 64-bit Windows (cross-build, mingw64).
-
-CoinClasses and CoinQ have also been built using clang 4.1 in OS X (10.7 and greater).
+and 64-bit Windows (cross-build, mingw64). It has also been built using
+clang (4.1 and greater) in OS X (10.7 and greater).
 
 
 - To build for linux:
@@ -49,18 +48,22 @@ CoinClasses and CoinQ have also been built using clang 4.1 in OS X (10.7 and gre
 - To build for windows:
     $ ./build-all.sh mingw64
 
-- To build for osx:
-    brew update
-    brew install boost qt5 openssl libpng
+- To build for os x:
+    $ ./build-all.sh osx
+
+
+OS X installation notes:
+
+    $ brew update
+    $ brew install boost qt5 openssl libpng
     
-    Download odb binary (currenlty odb-2.3.0-i686-macosx) and set path to odb
-    export PATH=/path/to/odb-2.3.0-i686-macosx/bin:$PATH
+    Download odb binary (currenlty odb-2.3.0-i686-macosx) or build from source.
+    Set path to odb:
+    $ export PATH=/path/to/odb-2.3.0-i686-macosx/bin:$PATH
     
     Download, extract, compile, and install:
-     libodb-2.3.0, libodb-sqlite-2.3.0 (./configure && make && make install)
-    
-    /usr/local/opt/qt5/bin/qmake && make
-    
+      libodb-2.3.0, libodb-sqlite-2.3.0
+    $ ./configure && make && make install
 
 
 ===============================================================================
