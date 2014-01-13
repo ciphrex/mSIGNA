@@ -15,6 +15,8 @@
 
 #include <CoinQ_vault.h>
 
+#include <CoinQ_typedefs.h>
+
 class KeychainModel : public QStandardItemModel
 {
     Q_OBJECT
@@ -28,6 +30,8 @@ public:
     void exportKeychain(const QString& keychainName, const QString& fileName, bool exportPrivate) const;
     void importKeychain(const QString& keychainName, const QString& fileName, bool& importPrivate);
     bool exists(const QString& keychainName) const;
+
+    bytes_t getExtendedKey(const QString& keychainName) const;
 
     // Overridden methods
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;

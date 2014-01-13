@@ -58,6 +58,7 @@ HEADERS = \
     src/scriptdialog.h \
     src/requestpaymentdialog.h \
     src/networksettingsdialog.h \
+    src/keychainbackupdialog.h \
     src/resyncdialog.h
                 
 SOURCES = \
@@ -84,6 +85,7 @@ SOURCES = \
     src/scriptdialog.cpp \
     src/requestpaymentdialog.cpp \
     src/networksettingsdialog.cpp \
+    src/keychainbackupdialog.cpp \
     src/resyncdialog.cpp
 
 RESOURCES = \

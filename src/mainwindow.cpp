@@ -47,6 +47,7 @@
 #include "scriptdialog.h"
 #include "requestpaymentdialog.h"
 #include "networksettingsdialog.h"
+#include "keychainbackupdialog.h"
 #include "resyncdialog.h"
 
 // Logging
@@ -473,12 +474,38 @@ void MainWindow::exportKeychain(bool exportPrivate)
     }
 }
 
+void MainWindow::backupKeychain()
+{
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0) {
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+
+    try {
+        bytes_t extendedKey = keychainModel->getExtendedKey(name);
+
+        KeychainBackupDialog dlg(tr("Keychain information"));
+        dlg.setExtendedKey(extendedKey);
+        dlg.exec();
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::backupKeychain - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
 void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelIndex& /*previous*/)
 {
     int row = current.row();
     if (row == -1) {
         exportPrivateKeychainAction->setEnabled(false);
         exportPublicKeychainAction->setEnabled(false);
+        backupKeychainAction->setEnabled(false);
     }
     else {
         QStandardItem* typeItem = keychainModel->item(row, 1);
@@ -486,6 +513,7 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
 
         exportPrivateKeychainAction->setEnabled(isPrivate);
         exportPublicKeychainAction->setEnabled(true);
+        backupKeychainAction->setEnabled(true);
     }
 }
 
@@ -1236,6 +1264,11 @@ void MainWindow::createActions()
     exportPublicKeychainAction->setEnabled(false);
     connect(exportPublicKeychainAction, &QAction::triggered, [=]() { this->exportKeychain(false); });
 
+    backupKeychainAction = new QAction(tr("Backup Keychain..."), this);
+    backupKeychainAction->setStatusTip(tr("Make paper backup"));
+    backupKeychainAction->setEnabled(false);
+    connect(backupKeychainAction, SIGNAL(triggered()), this, SLOT(backupKeychain()));
+
     // account actions
     newAccountAction = new QAction(QIcon(":/icons/pencilpad.png"), tr("Create &Account..."), this);
     newAccountAction->setStatusTip(tr("Create a new account with selected keychains"));
@@ -1429,6 +1462,8 @@ void MainWindow::createMenus()
     keychainMenu->addAction(importKeychainAction);
     keychainMenu->addAction(exportPrivateKeychainAction);
     keychainMenu->addAction(exportPublicKeychainAction);
+    keychainMenu->addSeparator();
+    keychainMenu->addAction(backupKeychainAction);
 
     accountMenu = menuBar()->addMenu(tr("&Accounts"));
     accountMenu->addAction(requestPaymentAction);

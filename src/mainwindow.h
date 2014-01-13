@@ -103,6 +103,7 @@ private slots:
     void newKeychain();
     void importKeychain(QString fileName = QString());
     void exportKeychain(bool exportPrivate);
+    void backupKeychain();
 //    void mergeKeychains();
 //    void removeKeychain();
 //    void renameKeychain();
@@ -230,6 +231,7 @@ private:
     QAction* importKeychainAction;
     QAction* exportPrivateKeychainAction;
     QAction* exportPublicKeychainAction;
+    QAction* backupKeychainAction;
 
     // account actions
     QAction* newAccountAction;

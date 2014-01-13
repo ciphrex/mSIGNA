@@ -77,6 +77,15 @@ bool KeychainModel::exists(const QString& keychainName) const
     return !items.isEmpty();
 }
 
+bytes_t KeychainModel::getExtendedKey(const QString& keychainName) const
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    return vault->getExtendedKeyBytes(keychainName.toStdString());
+}
+
 QVariant KeychainModel::data(const QModelIndex& index, int role) const
 {
     if (role == Qt::TextAlignmentRole && index.column() == 1) {
