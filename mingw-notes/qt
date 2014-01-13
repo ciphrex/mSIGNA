@@ -1,0 +1,73 @@
+===============
+Cross-build Qt5
+===============
+
+
+============
+Compiling Qt
+============
+
+(NOTE: MingGW-w64 has no localtime_r, so the following patch was applied to <qt>/qtdeclarative/src/qml/jsruntime/qv4dateobject.cpp. This patch is unnecessary if we -skip declarative.)
+
+struct tm *localtime_r(const time_t *timep, struct tm *result)
+{
+    struct tm *p = localtime(timep);
+    memset(result, 0, sizeof(*result));
+    if (p) {
+        *result = *p;
+        p = result;
+    }
+    return p;
+}
+
+- Make sure perl and python are installed.
+
+- Get Source Code
+    $ git clone git://gitorious.org/qt/qt5.git qt5
+    $ cd qt5
+    $ perl init-repository
+
+- Configure
+    $ configure -static -release -no-openssl -opensource -nomake examples -nomake tests -skip declarative -skip quick1 -skip quickcontrols
+
+On windows, add the following options:
+    -platform win32-g++ -opengl desktop
+
+On linux:
+    -qt-xcb
+
+(Note: could only get -shared to work on windows although -static is desired. Plugin issue.)
+
+- Build on windows
+    $ mingw32-make
+
+==========================
+Building on OS X using g++
+==========================
+
+$ ../qt5/configure --prefix=/opt/local -static -release -no-openssl -opensource -confirm-license -nomake examples -nomake tests -skip declarative -skip quick1 -skip quickcontrols
+
+======================================
+Setting up build environment on Linux:
+======================================
+1) Copy qt5/qtbase/include and qt5/qtbase/lib directories to /opt/mingw64
+
+2) Edit <Qt>/qtbase/mkspecs/win32-g++/qmake.conf:
+
+Replace $$(CROSS_COMPILE) with x86_64-w64-mingw32
+
+Set the following variables:
+
+QMAKE_INCDIR            = /opt/mingw64/include
+QMAKE_INCDIR_QT         = /opt/mingw64/qt5/qtbase/include
+QMAKE_LIBDIR_QT         = /opt/mingw64/qt5/qtbase/lib
+
+QMAKE_LFLAGS            = -L/opt/mingw64/qt5/qtbase/lib
+
+(Note: A working qmake.conf was copied into the same directory as this file.)
+
+==========================
+Building Qt apps on Linux:
+==========================
+
+$ qmake < -mwindows | -mconsole > -spec win32-g++

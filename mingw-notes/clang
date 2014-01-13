@@ -1,0 +1,14 @@
+======================================
+Building boost with clang++ and libc++
+======================================
+
+$ ./b2 clean
+$ ./b2 toolset=clang cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++
+
+
+================================
+Building odb with g++ and libc++
+================================
+
+$ ./configure --prefix=/opt/local CXXFLAGS="-nostdlib -lc++ -lc++abi -std=c++11" CPPFLAGS="-I/opt/local/include" LDFLAGS="-L/opt/local/lib"
+$ ./make -j4

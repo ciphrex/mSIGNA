@@ -1,0 +1,31 @@
+====================
+Windows with mingw64
+====================
+
+To build libodb, libodb-sqlite
+$ ./configure --host=x86_64-w64-mingw32 --target=windows --prefix=/opt/mingw64 --enable-threads=win32 CPPFLAGS=-I/opt/mingw64/include LDFLAGS=-L/opt/mingw64/lib
+
+(NOTE: Need to figure out how to enable sjlj exceptions. Right now exceptions are not caught.)
+
+To build libsqlite3:
+$ ./configure --host=x86_64-w64-mingw32 --target=windows --prefix=/opt/mingw64 CFLAGS=-DSQLITE_ENABLE_UNLOCK_NOTIFY
+
+
+===============
+OS X with clang
+===============
+
+To build sqlite3:
+$ ./configure --prefix=/opt/local CFLAGS="-DSQLITE_ENABLE_UNLOCK_NOTIFY"
+
+To build libodb
+$ ./configure --prefix=/opt/local
+
+Tp build libodb-sqlite:
+$ ./configure --prefix=/opt/local CPPFLAGS=-I/opt/local/include LDFLAGS=-L/opt/local/lib
+
+
+
+
+
+//$ ./configure CXX="clang++ --std=c++11 --stdlib=libc++" --prefix=/opt/local

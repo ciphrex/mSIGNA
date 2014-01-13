@@ -1,0 +1,5 @@
+Download from http://www.openssl.org/source/
+
+Configure:
+
+$ CROSS_COMPILE="x86_64-w64-mingw32-" ./Configure mingw64 no-asm shared static --prefix=/opt/mingw64

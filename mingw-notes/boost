@@ -1,0 +1,57 @@
+$ ./bootstrap --without -icu
+
+$ echo "using gcc : mingw32 : x86_64-w64-mingw32-g++ : <rc>x86_64-w64-mingw32-windres <archiver>x86_64-w64-mingw32-ar ;" > user-config.jam
+
+$ sudo ./bjam toolset=gcc address-model=64 target-os=windows variant=release threading=multi threadapi=win32\
+    link=static runtime-link=static --prefix=$PREFIX --user-config=user-config.jam -j 2\
+    --without-mpi --without-python -sNO_BZIP2=1 -sNO_ZLIB=1 --layout=tagged install
+
+if last command complains of /zlib, remove -NO_ZLIB=1
+
+use -a option to force rebuild.
+
+run x64_64-w64-ming32-ranlib on the .a (archive) files, i.e.:
+$ cd /opt/mingw64/lib
+$ sudo x86_64-w64-mingw32-ranlib *.a
+
+Hello,
+
+I'm interested in the status of this issue. In case if MinGW-w64 
+developers/users are not aware, I'll post some brief description.
+
+When I stumble across some library that uses a large precompiled header, 
+then it is for sure that I'll get 'cc1plus.exe' crash. It happens with 
+any existing build of MinGW-w64 out there, including the famous Ruben's 
+builds and MinGW-builds project. Here are some links:
+
+  * http://stackoverflow.com/questions/10841306/cc1plus-exe-crash-when-using-large-precompiled-header-file
+  * http://stackoverflow.com/questions/6811240/cc1plus-exe-has-stopped-working-while-compiling-boost-spirit-code
+  * https://codereview.qt-project.org/#change,34049
+
+It seems like there is not enough stack for 'cc1plus.exe' to handle huge 
+precompiled headers. This issue got especially frustrating when building 
+Boost. For instance, you can try it yourself, BJam by default uses large 
+precompiled header during compilation of Boost.Math, which is indicated 
+by presence of the -DBOOST_BUILD_PCH_ENABLED definition. As a result, 
+all the Boost is built fine, except Boost.Math because 'cc1plus.exe' 
+just continuously keeps crashing when trying to compile any source file 
+of Boost.Math project. Of course I found a workaround: in 
+<boost-source>/tools/build/v2/tools/pch.jam change this:
+
+return [ generators.add-usage-requirements $(r)
+        : <define>BOOST_BUILD_PCH_ENABLED ] ;
+
+to this:
+
+return [ generators.add-usage-requirements $(r) ] ;
+
+so that during Boost.Math compilation the -DBOOST_BUILD_PCH_ENABLED 
+definition is no longer injected. Then the Boost.Math is built fine too, 
+but, as you've probably guessed, incredibly slowly.
+
+Workarounds are good, but they are annoying, and sometimes merely 
+impossible. So I wonder if there was some progress in this issue, and if 
+not, then what are the plans? Thanks.
+
+Regards,
+Haroogan

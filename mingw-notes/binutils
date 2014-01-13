@@ -1,0 +1,2 @@
+To see all the dll's that a binary depends on:
+$ objdump -x prog.exe | grep "DLL Name"
