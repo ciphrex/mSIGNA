@@ -1207,7 +1207,7 @@ std::shared_ptr<TxOut> Vault::newTxOut(const std::string& account_name, const st
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session session;
     odb::core::transaction t(db_->begin());
-    t.tracer(odb::stderr_tracer);
+    //t.tracer(odb::stderr_tracer);
 
     typedef odb::query<SigningScriptView> view_query;
 
