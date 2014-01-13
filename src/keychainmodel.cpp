@@ -19,7 +19,7 @@ KeychainModel::KeychainModel()
     : vault(NULL)
 {
     QStringList columns;
-    columns << tr("Key Chain Name") << tr("Type") << tr("Keys") << tr("Hash");
+    columns << tr("Keychain Name") << tr("Type") << tr("Keys") << tr("Hash");
     setHorizontalHeaderLabels(columns);
 }
 
