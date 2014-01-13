@@ -1,0 +1,16 @@
+*.o
+*.la
+*.lo
+.deps
+.libs
+Makefile
+config.h
+config.log
+config.status
+libqrencode.pc
+libtool
+qrencode
+qrencode.1
+stamp-h1
+tests/.deps
+tests/Makefile
