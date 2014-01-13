@@ -12,6 +12,7 @@ all core functionality for managing bitcoin data structures and connecting to pe
     -CoinClasses is licensed under the MIT license.
 
     -CoinQ is proprietary and cannot be redistributed without permission from author(s).
+        *CoinQ will be made open-source and free for non-commercial use upon public beta release
 
 
 
