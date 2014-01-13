@@ -284,8 +284,10 @@ void NetworkSync::resync(const std::vector<bytes_t>& locatorHashes, uint32_t sta
     for (auto& hash: locatorHashes) {
         try {
             header = blockTree.getHeader(hash);
-            foundHeader = true;
-            break;
+            if (header.inBestChain) {
+                foundHeader = true;
+                break;
+            }
         }
         catch (const std::exception& e) {
             notifyStatus(e.what());
