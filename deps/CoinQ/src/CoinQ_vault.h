@@ -86,6 +86,7 @@ public:
     void newHDKeychain(const std::string& name, const bytes_t& extkey, unsigned long numkeys = 100);
     void eraseKeychain(const std::string& keychain_name) const;
     void renameKeychain(const std::string& old_name, const std::string& new_name);
+    bytes_t getExtendedKeyBytes(const std::string& keychain_name) const;
     std::vector<KeychainInfo> getKeychains() const;
     std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
     bytes_t exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;

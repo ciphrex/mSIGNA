@@ -133,7 +133,7 @@ void Vault::renameKeychain(const std::string& old_name, const std::string& new_n
     odb::core::transaction t(db_->begin());
 
     odb::result<Keychain> keychain_r(db_->query<Keychain>(odb::query<Keychain>::name == old_name));
-    if (keychain_r.empty()) throw std::runtime_error("Account not found.");
+    if (keychain_r.empty()) throw std::runtime_error("Keychain not found.");
 
     if (old_name == new_name) return;
 
@@ -145,6 +145,19 @@ void Vault::renameKeychain(const std::string& old_name, const std::string& new_n
 
     db_->update(keychain);
     t.commit();
+}
+
+bytes_t Vault::getExtendedKeyBytes(const std::string& keychain_name) const
+{
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session session;
+    odb::core::transaction t(db_->begin());
+
+    odb::result<Keychain> keychain_r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
+    if (keychain_r.empty()) throw std::runtime_error("Keychain not found.");
+
+    std::shared_ptr<Keychain> keychain(keychain_r.begin().load());
+    return keychain->extendedkey()->bytes();
 }
 
 void Vault::persistKeychain_unwrapped(Keychain& keychain)

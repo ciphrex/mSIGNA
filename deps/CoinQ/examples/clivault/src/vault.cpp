@@ -104,6 +104,27 @@ cli::result_t cmd_renamekeychain(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_getextendedkey(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 2) {
+        return "getextendedkey <filename> <keychain_name> - get extended key for keychain.";
+    }
+
+    int argc = 3;
+    char prog[] = "prog";
+    char opt[] = "--database";
+    char buf[255];
+    std::strcpy(buf, params[0].c_str());
+    char* argv[] = {prog, opt, buf};
+
+    Vault vault(argc, argv, false);
+    bytes_t extkey = vault.getExtendedKeyBytes(params[1]);
+
+    stringstream ss;
+    ss << toBase58Check(extkey);
+    return ss.str();
+}
+
 cli::result_t cmd_listkeychains(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 1) {
@@ -887,6 +908,7 @@ int main(int argc, char** argv)
     cmds.add("create", &cmd_create);
     cmds.add("newkeychain", &cmd_newkeychain);
     cmds.add("renamekeychain", &cmd_renamekeychain);
+    cmds.add("getextendedkey", &cmd_getextendedkey);
     cmds.add("listkeychains", &cmd_listkeychains);
     cmds.add("listkeys", &cmd_listkeys);
     cmds.add("exportkeys", &cmd_exportkeys);
