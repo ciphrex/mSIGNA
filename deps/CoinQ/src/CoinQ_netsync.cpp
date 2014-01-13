@@ -288,6 +288,9 @@ void NetworkSync::resync(const std::vector<bytes_t>& locatorHashes, uint32_t sta
                 foundHeader = true;
                 break;
             }
+            else {
+                LOGGER(debug) << "reorg detected at height " << header.height << std::endl;
+            }
         }
         catch (const std::exception& e) {
             notifyStatus(e.what());
