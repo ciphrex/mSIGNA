@@ -1233,6 +1233,11 @@ void MainWindow::createActions()
     newKeychainAction->setEnabled(false);
     connect(newKeychainAction, SIGNAL(triggered()), this, SLOT(newKeychain()));
 
+    newAccountAction = new QAction(QIcon(":/icons/money.png"), tr("Create &Account..."), this);
+    newAccountAction->setStatusTip(tr("Create a new account with selected keychains"));
+    newAccountAction->setEnabled(false);
+    connect(newAccountAction, SIGNAL(triggered()), this, SLOT(newAccount()));
+
     importPrivateAction = new QAction(tr("Private Imports"), this);
     importPrivateAction->setCheckable(true);
     importPrivateAction->setStatusTip(tr("Import private keys if available"));
@@ -1270,10 +1275,15 @@ void MainWindow::createActions()
     connect(backupKeychainAction, SIGNAL(triggered()), this, SLOT(backupKeychain()));
 
     // account actions
-    newAccountAction = new QAction(QIcon(":/icons/pencilpad.png"), tr("Create &Account..."), this);
-    newAccountAction->setStatusTip(tr("Create a new account with selected keychains"));
-    newAccountAction->setEnabled(false);
-    connect(newAccountAction, SIGNAL(triggered()), this, SLOT(newAccount()));
+    requestPaymentAction = new QAction(QIcon(":/icons/cashregister.png"), tr("Request Payment..."), this);
+    requestPaymentAction->setStatusTip(tr("Get a new address to request a payment"));
+    requestPaymentAction->setEnabled(false);
+    connect(requestPaymentAction, SIGNAL(triggered()), this, SLOT(requestPayment()));
+
+    sendPaymentAction = new QAction(QIcon(":/icons/payment.png"), tr("Send Payment..."), this);
+    sendPaymentAction->setStatusTip(tr("Create a new transaction to send payment"));
+    sendPaymentAction->setEnabled(false);
+    connect(sendPaymentAction, SIGNAL(triggered()), this, SLOT(createTx()));
 
     importAccountAction = new QAction(tr("Import Account..."), this);
     importAccountAction->setStatusTip(tr("Import an account"));
@@ -1289,16 +1299,6 @@ void MainWindow::createActions()
     deleteAccountAction->setStatusTip(tr("Delete current account"));
     deleteAccountAction->setEnabled(false);
     connect(deleteAccountAction, SIGNAL(triggered()), this, SLOT(deleteAccount()));
-
-    requestPaymentAction = new QAction(tr("Request Payment..."), this);
-    requestPaymentAction->setStatusTip(tr("Get a new address in order to request a payment"));
-    requestPaymentAction->setEnabled(false);
-    connect(requestPaymentAction, SIGNAL(triggered()), this, SLOT(requestPayment()));
-
-    sendPaymentAction = new QAction(tr("Send Payment..."), this);
-    sendPaymentAction->setStatusTip(tr("Create a new transcation"));
-    sendPaymentAction->setEnabled(false);
-    connect(sendPaymentAction, SIGNAL(triggered()), this, SLOT(createTx()));
 
     viewAccountHistoryAction = new QAction(tr("View Account History"), this);
     viewAccountHistoryAction->setStatusTip(tr("View history for active account"));
@@ -1514,6 +1514,11 @@ void MainWindow::createToolBars()
     keychainToolBar = addToolBar(tr("Keychains"));
     keychainToolBar->addAction(newKeychainAction);
     keychainToolBar->addAction(newAccountAction);
+
+    accountToolBar = addToolBar(tr("Accounts"));
+    accountToolBar->addAction(requestPaymentAction);
+    accountToolBar->addAction(sendPaymentAction);
+
 /*
     editToolBar = addToolBar(tr("Edit"));
     editToolBar->addAction(newKeychainAction);

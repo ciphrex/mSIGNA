@@ -4,7 +4,10 @@
     <file>icons/openvault.png</file>
     <file>icons/closevault.png</file>
     <file>icons/keypair.png</file>
+    <file>icons/money.png</file>
     <file>icons/pencilpad.png</file>
+    <file>icons/cashregister.png</file>
+    <file>icons/payment.png</file>
     <file>images/splash.png</file>
     <file>icons/vault_status_icons/36x22/nc-icon-36x22.gif</file>
     <file>icons/vault_status_icons/36x22/synching-icon-animated-36x22.gif</file>

@@ -210,6 +210,7 @@ private:
     // toolbars
     QToolBar* fileToolBar;
     QToolBar* keychainToolBar;
+    QToolBar* accountToolBar;
     QToolBar* editToolBar;
     QToolBar* txToolBar;
 
