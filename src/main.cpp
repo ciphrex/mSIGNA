@@ -19,6 +19,12 @@
 
 #include "severitylogger.h"
 
+// For splash screen timer
+#include <boost/asio.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+
+const int MINIMUM_SPLASH_SECS = 5;
+
 int main(int argc, char* argv[])
 {
     INIT_LOGGER((APPDATADIR + "/debug.log").toStdString().c_str());
@@ -58,6 +64,20 @@ int main(int argc, char* argv[])
     splash.showMessage("\n  Loading block headers...");
     app.processEvents();
     mainWin.loadBlockTree();
+
+    // Require splash screen to always remain open for at least a couple seconds
+    bool waiting = true;
+    boost::asio::io_service timer_io;
+    boost::asio::deadline_timer timer(timer_io, boost::posix_time::seconds(MINIMUM_SPLASH_SECS));
+    timer.async_wait([&](const boost::system::error_code& /*ec*/) { waiting = false; });
+    timer_io.run();
+
+    app.processEvents();
+    splash.showMessage("\n  Initializing...");
+    app.processEvents();
+    while (waiting) { usleep(200); }
+    timer_io.stop();
+
     mainWin.tryConnect();
 
     mainWin.show();
