@@ -1,0 +1,18 @@
+build qt:
+wget http://download.qt-project.org/official_releases/qt/5.1/5.1.1/single/qt-everywhere-opensource-src-5.1.1.tar.gz
+tar xf qt-everywhere-opensource-src-5.1.1.tar.gz
+export INSTALLPREFIX=/opt/mingw64
+./configure -prefix / -hostprefix $INSTALLPREFIX/host -plugindir /plugins -translationdir /translations -xplatform win32-g++ -device-option CROSS_COMPILE=x86_64-w64-mingw32- -sysroot $INSTALLPREFIX -confirm-license -release -opensource -static -qt-pcre -no-icu -no-glib -no-audio-backend -no-javascript-jit -no-sql-sqlite -no-nis -no-cups -no-iconv -no-dbus -no-opengl -nomake examples -no-feature-style-plastique -no-feature-style-cleanlooks -no-feature-style-motif -no-feature-style-cde -no-feature-style-windowsce -no-feature-style-windowsmobile -no-feature-style-s60 -no-pch -no-sql-odbc -no-compile-examples -no-qml-debug -no-sm -skip qtactiveqt -skip qtdeclarative -skip qtdoc -skip qtgraphicaleffects -skip qtjsbackend -skip qtmultimedia -skip qtquick1 -skip qtquickcontrols -skip qtscript -skip qtsensors -skip qtserialport -skip qtsvg -skip qtwebkit -skip qtwebkit-examples -skip qtx11extras -skip qtxmlpatterns -no-openssl -qt-zlib
+make
+make install
+
+build CoinVault:
+#use the correct quake:
+export PATH=/opt/mingw64/host/bin:$PATH
+./build-all.sh mingw64
+
+#link error. Todo: proper fix. For now, just link it manually:
+x86_64-w64-mingw32-g++ --sysroot=/opt/mingw64 -Wl,-s -Wl,-subsystem,windows -mthreads -o build/release/coinvault.exe object_script.coinvault.Release  -lmingw32 -lqtmain deps/logger/obj/logger.o deps/CoinQ/obj/CoinQ_vault.o deps/CoinQ/obj/CoinQ_vault_db-odb.o deps/CoinQ/obj/CoinQ_script.o deps/CoinQ/obj/CoinQ_peer_io.o deps/CoinQ/obj/CoinQ_netsync.o deps/CoinQ/obj/CoinQ_blocks.o deps/CoinQ/obj/CoinQ_filter.o deps/CoinClasses/obj/CoinKey.o deps/CoinClasses/obj/hdkeys.o deps/CoinClasses/obj/CoinNodeData.o deps/CoinClasses/obj/MerkleTree.o deps/CoinClasses/obj/BloomFilter.o deps/CoinClasses/obj/IPv6.o -lmswsock -lboost_system-mt-s -lboost_filesystem-mt-s -lboost_regex-mt-s -lboost_thread_win32-mt-s -lcrypto -lodb-sqlite -lodb -L/opt/mingw64//lib -lQt5Widgets -L/opt/mingw64/plugins/platforms -lqwindows -lQt5Network -ldnsapi -lQt5Gui -lgdi32 -lcomdlg32 -loleaut32 -limm32 -lwinmm -lQt5Core -lole32 -luuid -lws2_32 -ladvapi32 -lshell32 -luser32 -lkernel32  build/release/obj/coinvault_res.o
+
+done!
+
