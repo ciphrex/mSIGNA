@@ -1,0 +1,7 @@
+libodb
+======
+$ ./configure --host=x86_64-w64-mingw32 --prefix=/opt/mingw64 --enable-threads=win32 --disable-shared --enable-static CPPFLAGS=-I/opt/mingw64/include LDFLAGS=-L/opt/mingw64/lib
+
+libodb-sqlite
+=============
+$ ./configure --host=x86_64-w64-mingw32 --prefix=/opt/mingw64 --enable-threads=win32 --disable-shared CPPFLAGS=-I/opt/mingw64/include LDFLAGS=-L/opt/mingw64/lib
