@@ -12,7 +12,13 @@ export PATH=/opt/mingw64/host/bin:$PATH
 ./build-all.sh mingw64
 
 #link error. Todo: proper fix. For now, just link it manually:
+--Dynamically linked odb, gcc runtime:
+
 x86_64-w64-mingw32-g++ --sysroot=/opt/mingw64 -Wl,-s -Wl,-subsystem,windows -mthreads -o build/release/coinvault.exe object_script.coinvault.Release  -lmingw32 -lqtmain deps/logger/obj/logger.o deps/CoinQ/obj/CoinQ_vault.o deps/CoinQ/obj/CoinQ_vault_db-odb.o deps/CoinQ/obj/CoinQ_script.o deps/CoinQ/obj/CoinQ_peer_io.o deps/CoinQ/obj/CoinQ_netsync.o deps/CoinQ/obj/CoinQ_blocks.o deps/CoinQ/obj/CoinQ_filter.o deps/CoinClasses/obj/CoinKey.o deps/CoinClasses/obj/hdkeys.o deps/CoinClasses/obj/CoinNodeData.o deps/CoinClasses/obj/MerkleTree.o deps/CoinClasses/obj/BloomFilter.o deps/CoinClasses/obj/IPv6.o -lmswsock -lboost_system-mt-s -lboost_filesystem-mt-s -lboost_regex-mt-s -lboost_thread_win32-mt-s -lcrypto -lodb-sqlite -lodb -L/opt/mingw64//lib -lQt5Widgets -L/opt/mingw64/plugins/platforms -lqwindows -lQt5Network -ldnsapi -lQt5Gui -lgdi32 -lcomdlg32 -loleaut32 -limm32 -lwinmm -lQt5Core -lole32 -luuid -lws2_32 -ladvapi32 -lshell32 -luser32 -lkernel32  build/release/obj/coinvault_res.o
+
+--Full static build
+
+x86_64-w64-mingw32-g++ --sysroot=/opt/mingw64 -static -Wl,-s -Wl,-subsystem,windows -mthreads -o build/release/coinvault.exe object_script.coinvault.Release  -lmingw32 -lqtmain deps/logger/obj/logger.o deps/CoinQ/obj/CoinQ_vault.o deps/CoinQ/obj/CoinQ_vault_db-odb.o deps/CoinQ/obj/CoinQ_script.o deps/CoinQ/obj/CoinQ_peer_io.o deps/CoinQ/obj/CoinQ_netsync.o deps/CoinQ/obj/CoinQ_blocks.o deps/CoinQ/obj/CoinQ_filter.o deps/CoinClasses/obj/CoinKey.o deps/CoinClasses/obj/hdkeys.o deps/CoinClasses/obj/CoinNodeData.o deps/CoinClasses/obj/MerkleTree.o deps/CoinClasses/obj/BloomFilter.o deps/CoinClasses/obj/IPv6.o -lmswsock -lboost_system-mt-s -lboost_filesystem-mt-s -lboost_regex-mt-s -lboost_thread_win32-mt-s -lcrypto -lodb-sqlite -lodb -lsqlite3 -L/opt/mingw64/lib -lQt5Widgets -L/opt/mingw64/plugins/platforms -lqwindows -lQt5Network -ldnsapi -lQt5Gui -lgdi32 -lcomdlg32 -loleaut32 -limm32 -lwinmm -lQt5Core -lole32 -luuid -lws2_32 -ladvapi32 -lshell32 -luser32 -lkernel32  build/release/obj/coinvault_res.o
 
 done!
 
