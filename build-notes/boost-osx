@@ -1,0 +1,2 @@
+ ./bootstrap.sh
+ ./b2 toolset=clang threading=multi runtime-link=static  link=static cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++"
