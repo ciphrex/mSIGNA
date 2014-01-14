@@ -40,7 +40,11 @@ bool CommandServer::start()
     if (server) stop();
 
     server = new QLocalServer(this);
-    if (!server || !server->listen(COMMAND_SERVER_NAME)) {
+    if (!server) return false;
+
+    server->removeServer(COMMAND_SERVER_NAME);
+
+    if (!server->listen(COMMAND_SERVER_NAME)) {
         server->close();
         delete server;
         server = NULL;
