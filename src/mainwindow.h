@@ -211,6 +211,7 @@ private:
     QToolBar* fileToolBar;
     QToolBar* keychainToolBar;
     QToolBar* accountToolBar;
+    QToolBar* networkToolBar;
     QToolBar* editToolBar;
     QToolBar* txToolBar;
 

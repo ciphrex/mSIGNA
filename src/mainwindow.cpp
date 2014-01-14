@@ -1342,11 +1342,11 @@ void MainWindow::createActions()
     connect(sendRawTxAction, SIGNAL(triggered()), this, SLOT(sendRawTx()));
 
     // network actions
-    connectAction = new QAction(tr("Connect to ") + host, this);
+    connectAction = new QAction(QIcon(":/icons/connect.png"), tr("Connect to ") + host, this);
     connectAction->setStatusTip(tr("Connect to a p2p node"));
     connectAction->setEnabled(true);
 
-    disconnectAction = new QAction(tr("Disconnect"), this);
+    disconnectAction = new QAction(QIcon(":/icons/disconnect.png"), tr("Disconnect from ") + host, this);
     disconnectAction->setStatusTip(tr("Disconnect from p2p node"));
     disconnectAction->setEnabled(false);
 
@@ -1518,6 +1518,10 @@ void MainWindow::createToolBars()
     accountToolBar = addToolBar(tr("Accounts"));
     accountToolBar->addAction(requestPaymentAction);
     accountToolBar->addAction(sendPaymentAction);
+
+    networkToolBar = addToolBar(tr("Network"));
+    networkToolBar->addAction(connectAction);
+    networkToolBar->addAction(disconnectAction);
 
 /*
     editToolBar = addToolBar(tr("Edit"));
