@@ -721,6 +721,16 @@ public:
     CoinBlockHeader(const uchar_vector& bytes) { this->setSerialized(bytes); }
     CoinBlockHeader(const std::string& hex);
 
+    void set(uint32_t _version, uint32_t _timestamp, uint32_t _bits, uint32_t _nonce = 0, const uchar_vector& _prevBlockHash = g_zero32bytes, const uchar_vector& _merkleRoot = g_zero32bytes)
+    {
+        version = _version;
+        prevBlockHash = _prevBlockHash;
+        merkleRoot = _merkleRoot;
+        timestamp = _timestamp;
+        bits = _bits;
+        nonce = _nonce;
+    }
+
     const char* getCommand() const { return ""; }
     uint64_t getSize() const { return 80; }
     uchar_vector getSerialized() const;
