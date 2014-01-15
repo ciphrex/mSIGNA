@@ -66,7 +66,7 @@ inline CoinParams getBitcoinParams()
 
 inline CoinParams getLitecoinParams()
 {
-    return CoinParams(0xdbb6c0fbul, 60002, "9333", 0x30, 0x05, "Litecoin", &sha256_2, &scrypt_1024_1_1_256,
+    return CoinParams(0xdbb6c0fbul, 70002, "9333", 0x30, 0x05, "Litecoin", &sha256_2, &scrypt_1024_1_1_256,
         Coin::CoinBlockHeader(1, 1317972665, 0x1e0ffff0, 2084524493, uchar_vector(32, 0), uchar_vector("97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9")));
 }
 
