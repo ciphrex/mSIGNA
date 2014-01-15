@@ -1,0 +1,33 @@
+Another way of tying the Qt library to the application is to put it into the bundle as a "private framework". This makes it possible to upgrade Qt and the executable independently.
+
+First, we must copy the library into the bundle. Libraries and frameworks belong in the "Contents/Frameworks" section of the bundle:
+
+    cd $QTDIR/examples/demo
+    mkdir -p demo.app/Contents/Frameworks
+    cp $QTDIR/lib/libqt.3.dylib demo.app/Contents/Frameworks
+    
+If you use a multithreaded version of Qt, replace libqt.3.dylib with libqt-mt.3.dylib in the last line above.
+
+Now that we have copied the Qt library into the bundle, we must update both the library and the executable so that they know where they can be found. This is where the install_name_tool command-line tool comes in handy. For the Qt library:
+
+    install_name_tool \
+        -id @executable_path/../Frameworks/libqt.3.dylib \
+        demo.app/Contents/Frameworks/libqt.3.dylib
+    
+And for the executable:
+
+    install_name_tool \
+        -change libqt.3.dylib \
+        @executable_path/../Frameworks/libqt.3.dylib \
+        demo.app/Contents/MacOS/demo
+    
+The "@executable_path" symbol should to be typed as is; it must not be replaced by the real path to the executable on your machine. As usual, all occurrences of libqt.3.dylib should be replaced with libqt-mt.3.dylib if you enabled multithreading support in Qt.
+
+If you run otool now, the output should now contain a reference to "@executable_path/../Frameworks/libqt.3.dylib".
+
+By putting the Qt library in the bundle's Contents/Frameworks directory, we ensure that the application will always use that version of the library, even if a more recent Qt library is installed in "/usr/lib" or in " /lib".
+
+One final word: The DYLD_LIBRARY_PATH variable allows developers to specify where to look for libraries first, overriding the application's preference. This can be useful for debugging.
+
+===========================
+From http://doc.qt.digia.com/qq/qq09-mac-deployment.html#sharedlibraries
