@@ -14,20 +14,13 @@
 
 #include <logger.h>
 
-// Select the network
-
-#define USE_BITCOIN
-//#define USE_LITECOIN
-//#define USE_QUARKCOIN
-#include "CoinQ_coinparams.h"
-
 using namespace CoinQ::Network;
 
-NetworkSync::NetworkSync()
-    : work(io_service), io_service_thread(NULL), peer(io_service), blockFilter(&blockTree), resynching(false), isConnected_(false)
+NetworkSync::NetworkSync(const CoinQ::CoinParams& coin_params)
+    : coin_params_(coin_params), work(io_service), io_service_thread(NULL), peer(io_service), blockFilter(&blockTree), resynching(false), isConnected_(false)
 {
-    Coin::CoinBlockHeader::setHashFunc(COIN_PARAMS::BLOCK_HEADER_HASH_FUNCTION);
-    Coin::CoinBlockHeader::setPOWHashFunc(COIN_PARAMS::BLOCK_HEADER_POW_HASH_FUNCTION);
+    Coin::CoinBlockHeader::setHashFunc(coin_params_.block_header_hash_function());
+    Coin::CoinBlockHeader::setPOWHashFunc(coin_params_.block_header_pow_hash_function());
 
     io_service_thread = new boost::thread(boost::bind(&CoinQ::io_service_t::run, &io_service));
 
@@ -213,7 +206,7 @@ void NetworkSync::initBlockTree(const std::string& blockTreeFile)
 
     blockTree.clear();
 
-    blockTree.setGenesisBlock(COIN_PARAMS::GENESIS_BLOCK);
+    blockTree.setGenesisBlock(coin_params_.genesis_block());
     blockTreeFlushed = false;
     notifyStatus("Block tree file not found. A new one will be created.");
 }
@@ -374,7 +367,7 @@ void NetworkSync::start(const std::string& host, const std::string& port)
         stop();
     }
 
-    peer.set(host, port, COIN_PARAMS::MAGIC_BYTES, COIN_PARAMS::PROTOCOL_VERSION, "Wallet v0.1", 0, false);
+    peer.set(host, port, coin_params_.magic_bytes(), coin_params_.protocol_version(), "Wallet v0.1", 0, false);
 
     peer.start();
     notifyStarted();

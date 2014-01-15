@@ -26,6 +26,8 @@
 
 #include <BloomFilter.h>
 
+#include "CoinQ_coinparams.h"
+
 typedef Coin::Transaction coin_tx_t;
 typedef ChainHeader chain_header_t;
 typedef ChainBlock chain_block_t;
@@ -37,7 +39,8 @@ namespace CoinQ {
 class NetworkSync
 {
 public:
-    NetworkSync();
+    // select default coin parameters if desired
+    NetworkSync(const CoinQ::CoinParams& coin_params = CoinQ::getBitcoinParams());
     ~NetworkSync();
 
     bool isConnected() const { return isConnected_; }
@@ -81,6 +84,8 @@ public:
     void subscribeBlockTreeChanged(void_slot_t slot) { notifyBlockTreeChanged.connect(slot); }
 
 private:
+    CoinQ::CoinParams coin_params_;
+
     CoinQ::io_service_t io_service;
     CoinQ::io_service_t::work work;
     boost::thread* io_service_thread;
