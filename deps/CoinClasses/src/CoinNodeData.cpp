@@ -1658,6 +1658,7 @@ uchar_vector Transaction::getHashWithAppendedCode(uint32_t code) const
 //
 
 hashfunc_t CoinBlockHeader::hashfunc_ = &sha256_2; // use Hashcash as default. Change with CoinBlockHeader::setHashFunc(<hash function>).
+hashfunc_t CoinBlockHeader::powhashfunc_ = &sha256_2;
 
 CoinBlockHeader::CoinBlockHeader(const string& hex)
 {

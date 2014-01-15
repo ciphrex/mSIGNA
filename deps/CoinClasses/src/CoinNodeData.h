@@ -737,12 +737,17 @@ public:
     const BigInt getWork() const;
 
     static void setHashFunc(hashfunc_t hashfunc) { hashfunc_ = hashfunc; }
+    static void setPOWHashFunc(hashfunc_t hashfunc) { powhashfunc_ = hashfunc; }
 
     uchar_vector getHash() const { return hashfunc_(this->getSerialized()); } // big endian
     uchar_vector getHashLittleEndian() const { return uchar_vector(this->getHash()).getReverse(); }
 
+    uchar_vector getPOWHash() const { return powhashfunc_(this->getSerialized()); } // big endian
+    uchar_vector getPOWHashLittleEndian() const { return uchar_vector(this->getPOWHash()).getReverse(); }
+
 private:
     static hashfunc_t hashfunc_;
+    static hashfunc_t powhashfunc_;
 };
 
 class CoinBlock : public CoinNodeStructure
