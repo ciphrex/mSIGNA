@@ -120,6 +120,10 @@ LIBS += \
     deps/CoinClasses/obj/BloomFilter.o \
     deps/CoinClasses/obj/IPv6.o
 
+# Hash function object (for Litecoin)
+LIBS += \
+    deps/CoinClasses/src/scrypt/obj/scrypt.o
+
 # Hash function objects (for QuarkCoin)
 #LIBS += \
 #    ../../deps/CoinClasses/src/hashfunc/obj/blake.o \
