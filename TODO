@@ -47,4 +47,6 @@ UI
 General
 -------
 
+- Add notifyError event to CoinQ_peer_io and handle error logging higher up the stack.
+
 - Create datadir. Place debug.log and blockchain.dat in datadir.
