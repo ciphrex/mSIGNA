@@ -35,6 +35,7 @@ HEADERS = \
     src/settings.h \
     src/versioninfo.h \
     src/copyrightinfo.h \
+    src/coinparams.h \
     src/severitylogger.h \
     src/splashscreen.h \
     src/mainwindow.h \
@@ -62,6 +63,7 @@ HEADERS = \
     src/resyncdialog.h
                 
 SOURCES = \
+    src/coinparams.cpp \
     src/main.cpp \
     src/splashscreen.cpp \
     src/mainwindow.cpp \

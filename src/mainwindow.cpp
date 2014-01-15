@@ -53,13 +53,16 @@
 // Logging
 #include "severitylogger.h"
 
+// Coin Parameters
+#include "coinparams.h"
+
 boost::mutex repaintMutex;
 
 using namespace CoinQ::Script;
 using namespace std;
 
 MainWindow::MainWindow()
-    : networkSync(), syncHeight(0), bestHeight(0), connected(false), networkState(NETWORK_STATE_NOT_CONNECTED)
+    : networkSync(getCoinParams()), syncHeight(0), bestHeight(0), connected(false), networkState(NETWORK_STATE_NOT_CONNECTED)
 {
     loadSettings();
 
@@ -1564,7 +1567,7 @@ void MainWindow::loadSettings()
 
     blockTreeFile = settings.value("blocktreefile", "blocktree.dat").toString();
     host = settings.value("host", "localhost").toString();
-    port = settings.value("port", 8333).toInt();
+    port = settings.value("port", getCoinParams().default_port()).toInt();
     autoConnect = settings.value("autoconnect", false).toBool();
     resyncHeight = settings.value("resyncheight", 0).toInt();
 }
