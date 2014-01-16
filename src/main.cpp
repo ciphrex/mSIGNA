@@ -27,7 +27,7 @@ const int MINIMUM_SPLASH_SECS = 5;
 
 int main(int argc, char* argv[])
 {
-    INIT_LOGGER((APPDATADIR + "/debug.log").toStdString().c_str());
+    INIT_LOGGER("debug.log");
     LOGGER(debug) << std::endl << std::endl << std::endl << std::endl << QDateTime::currentDateTime().toString().toStdString() << std::endl;
 
     Q_INIT_RESOURCE(coinvault);

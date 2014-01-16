@@ -1156,6 +1156,10 @@ void MainWindow::networkSettings()
         port = dlg.getPort();
         autoConnect = dlg.getAutoConnect();
         connectAction->setText(tr("Connect to ") + host);
+
+        QSettings settings("Ciphrex", APPNAME);
+        settings.setValue("host", host);
+        settings.setValue("port", port);
     }
 }
 
