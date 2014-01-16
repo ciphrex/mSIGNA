@@ -154,7 +154,7 @@ MainWindow::MainWindow()
 
 void MainWindow::loadBlockTree()
 {
-    networkSync.initBlockTree(blockTreeFile.toStdString());
+    networkSync.initBlockTree(blockTreeFile.toStdString(), false);
     emit updateBestHeight(networkSync.getBestHeight());
 }
 
@@ -974,6 +974,9 @@ void MainWindow::resync()
     updateStatusMessage(tr("Resynchronizing vault"));
     uint32_t startTime = accountModel->getFirstAccountTimeCreated();
     std::vector<bytes_t> locatorHashes = accountModel->getLocatorHashes();
+    for (auto& hash: locatorHashes) {
+        LOGGER(debug) << "MainWindow::resync() - hash: " << uchar_vector(hash).getHex() << std::endl;
+    }
     networkSync.resync(locatorHashes, startTime - 2*60*60);
 }
 
