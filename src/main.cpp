@@ -12,6 +12,8 @@
 
 #include <QApplication>
 #include <QDateTime>
+#include <QDir>
+#include <QMessageBox>
 
 #include "splashscreen.h"
 #include "mainwindow.h"
@@ -27,14 +29,21 @@ const int MINIMUM_SPLASH_SECS = 5;
 
 int main(int argc, char* argv[])
 {
-    INIT_LOGGER("debug.log");
-    LOGGER(debug) << std::endl << std::endl << std::endl << std::endl << QDateTime::currentDateTime().toString().toStdString() << std::endl;
-
     Q_INIT_RESOURCE(coinvault);
 
     QApplication app(argc, argv);
     app.setOrganizationName("Ciphrex");
     app.setApplicationName(APPNAME);
+
+    QDir datadir(APPDATADIR);
+    if (!datadir.exists() && !datadir.mkpath(APPDATADIR)) {
+        QMessageBox msgBox;
+        msgBox.setText(QMessageBox::tr("Warning: Failed to create vault data directory."));
+        msgBox.exec();
+    }
+        
+    INIT_LOGGER((APPDATADIR + "/debug.log").toStdString().c_str());
+    LOGGER(debug) << std::endl << std::endl << std::endl << std::endl << QDateTime::currentDateTime().toString().toStdString() << std::endl;
 
     CommandServer commandServer(&app);
     if (commandServer.processArgs(argc, argv)) exit(0);
