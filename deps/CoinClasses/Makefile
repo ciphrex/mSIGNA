@@ -52,13 +52,13 @@ OBJS = \
         obj/StandardTransactions.o
 
 
+all: $(OBJS) src/scrypt/obj/scrypt.o
+
 obj/%.o: src/%.cpp
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
 
 src/scrypt/obj/scrypt.o: src/scrypt/scrypt.cpp
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
-
-all: $(OBJS) src/scrypt/obj/scrypt.o
 
 clean:
 	-rm -f obj/*.o
