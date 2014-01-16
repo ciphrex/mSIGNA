@@ -17,6 +17,7 @@
 #include <QMessageBox>
 
 #include "settings.h"
+#include "coinparams.h"
 
 #include "severitylogger.h"
 
@@ -27,12 +28,18 @@ using namespace std;
 TxModel::TxModel(QObject* parent)
     : QStandardItemModel(parent)
 {
+    base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
+    base58_versions[1] = getCoinParams().pay_to_script_hash_version();
+
     initColumns();
 }
 
 TxModel::TxModel(CoinQ::Vault::Vault* vault, const QString& accountName, QObject* parent)
     : QStandardItemModel(parent)
 {
+    base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
+    base58_versions[1] = getCoinParams().pay_to_script_hash_version();
+
     initColumns();
     setVault(vault);
     setAccount(accountName);
@@ -170,7 +177,7 @@ void TxModel::update()
         QStandardItem* confirmationsItem = new QStandardItem(confirmations);
         confirmationsItem->setData(item->txstatus, Qt::UserRole);
 
-        QString address = QString::fromStdString(getAddressForTxOutScript(item->script, BASE58_VERSIONS));
+        QString address = QString::fromStdString(getAddressForTxOutScript(item->script, base58_versions));
         QString txhash = QString::fromStdString(uchar_vector(item->txhash).getHex());
 
         row.append(new QStandardItem(time));

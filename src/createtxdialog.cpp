@@ -12,6 +12,7 @@
 #include "numberformats.h"
 
 #include "settings.h"
+#include "coinparams.h"
 
 #include <uchar_vector.h>
 #include <CoinQ_script.h>
@@ -81,6 +82,10 @@ static uint64_t btcStringToSatoshis(const std::string& btcString)
 TxOutLayout::TxOutLayout(QWidget* parent)
     : QHBoxLayout(parent)
 {
+    // Base58 version bytes
+    base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
+    base58_versions[1] = getCoinParams().pay_to_script_hash_version();
+
     QLabel* addressLabel = new QLabel(tr("Address:"));
     addressEdit = new QLineEdit();
     addressEdit->setFixedWidth(300);
@@ -116,7 +121,7 @@ inline QString TxOutLayout::getAddress() const
 
 bytes_t TxOutLayout::getScript() const
 {
-    bytes_t script = CoinQ::Script::getTxOutScriptForAddress(getAddress().toStdString(), BASE58_VERSIONS);
+    bytes_t script = CoinQ::Script::getTxOutScriptForAddress(getAddress().toStdString(), base58_versions);
     return script;
 }
 

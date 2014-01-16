@@ -97,6 +97,8 @@ signals:
     void error(const QString& message);
 
 private:
+    unsigned char base58_versions[2];
+
     CoinQ::Vault::Vault* vault;
     int numAccounts;
 };

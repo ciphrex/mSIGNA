@@ -50,6 +50,8 @@ public:
     void removeWidgets();
 
 private:
+    unsigned char base58_versions[2];
+
     QLineEdit* addressEdit;
     QLineEdit* amountEdit;
     QLineEdit* recipientEdit;

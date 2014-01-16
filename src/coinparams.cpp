@@ -10,7 +10,7 @@
 
 #include "coinparams.h"
 
-const CoinQ::CoinParams COIN_PARAMS = CoinQ::getBitcoinParams();
+const CoinQ::CoinParams COIN_PARAMS = CoinQ::getLitecoinParams();
 
 const CoinQ::CoinParams& getCoinParams()
 {

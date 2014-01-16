@@ -9,6 +9,7 @@
 // All Rights Reserved.
 
 #include "settings.h"
+#include "coinparams.h"
 
 #include "accountmodel.h"
 
@@ -26,6 +27,9 @@ using namespace std;
 AccountModel::AccountModel()
     : vault(NULL), numAccounts(0)
 {
+    base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
+    base58_versions[1] = getCoinParams().pay_to_script_hash_version();
+
     QStringList columns;
     columns << tr("Account Name") << tr("Policy") << tr("Scripts Remaining") << tr("Balance") << "";
     setHorizontalHeaderLabels(columns);
@@ -200,7 +204,7 @@ QPair<QString, bytes_t> AccountModel::issueNewScript(const QString& accountName,
     }
 
     std::shared_ptr<TxOut> txout = vault->newTxOut(accountName.toStdString(), label.toStdString());
-    QString address = QString::fromStdString(getAddressForTxOutScript(txout->script(), BASE58_VERSIONS));
+    QString address = QString::fromStdString(getAddressForTxOutScript(txout->script(), base58_versions));
     update();
 
     return qMakePair(address, txout->script());

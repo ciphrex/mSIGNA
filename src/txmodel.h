@@ -46,6 +46,8 @@ signals:
     void txDeleted();
 
 private:
+    unsigned char base58_versions[2];
+
     void initColumns();
 
     CoinQ::Vault::Vault* vault;
