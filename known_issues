@@ -9,4 +9,6 @@ Known Issues
 
 - Synching with peer sometimes stops before all merkle blocks have been inserted into db. Workaround, disconnect and reconnect.
 
-- Opening a vault while block header sync is taking place can cause crash. Need synchronization.
+- Opening or creating a vault while block header sync is taking place can cause crash. Need synchronization.
+
+- Closing app before block sync is complete results in no progress stored. blocktree should be flushed to disk more often.
