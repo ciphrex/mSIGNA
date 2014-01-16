@@ -1,0 +1,15 @@
+FILE=${BUILT_PRODUCTS_DIR}/${EXECUTABLE_PATH}
+LIBPATH=${BUILT_PRODUCTS_DIR}/${SHARED_SUPPORT_FOLDER_PATH}
+NEWLIBPATH="@executable_path/../SharedSupport"
+
+# space separated list of libraries
+TARGETS="libgauche.dylib"
+for TARGET in ${TARGETS} ; do
+LIBFILE=${LIBPATH}/${TARGET}
+TARGETID=`otool -DX ${LIBPATH}/$TARGET`
+NEWTARGETID=${NEWLIBPATH}/${TARGET}
+install_name_tool -id ${NEWTARGETID} ${LIBFILE}
+install_name_tool -change ${TARGETID} ${NEWTARGETID} ${EXECFILE}
+done
+
+# from http://ynniv.com/blog/2006/02/deploying-app-that-use-dylibs-on-mac.html
