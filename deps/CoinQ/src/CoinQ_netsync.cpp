@@ -189,11 +189,11 @@ NetworkSync::~NetworkSync()
     delete io_service_thread;
 }
 
-void NetworkSync::initBlockTree(const std::string& blockTreeFile)
+void NetworkSync::initBlockTree(const std::string& blockTreeFile, bool bCheckProofOfWork)
 {
     this->blockTreeFile = blockTreeFile;
     try {
-        blockTree.loadFromFile(blockTreeFile);
+        blockTree.loadFromFile(blockTreeFile, bCheckProofOfWork);
         blockTreeFlushed = true;
         std::stringstream status;
         status << "Best Height: " << blockTree.getBestHeight() << " / " << "Total Work: " << blockTree.getTotalWork().getDec();

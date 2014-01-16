@@ -45,7 +45,7 @@ public:
 
     bool isConnected() const { return isConnected_; }
 
-    void initBlockTree(const std::string& blockTreeFile);
+    void initBlockTree(const std::string& blockTreeFile, bool bCheckProofOfWork = true);
     int getBestHeight();
 
     void start(const std::string& host, const std::string& port);

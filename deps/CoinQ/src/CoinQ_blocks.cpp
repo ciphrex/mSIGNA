@@ -8,6 +8,8 @@
 
 #include "CoinQ_blocks.h"
 
+#include <logger.h>
+
 bool CoinQBlockTreeMem::setBestChain(ChainHeader& header)
 {
     if (header.inBestChain) return false;
@@ -100,7 +102,7 @@ void CoinQBlockTreeMem::setGenesisBlock(const Coin::CoinBlockHeader& header)
     notifyAddBestChain(header);
 }
 
-bool CoinQBlockTreeMem::insertHeader(const Coin::CoinBlockHeader& header)
+bool CoinQBlockTreeMem::insertHeader(const Coin::CoinBlockHeader& header, bool bCheckProofOfWork)
 {
     if (mHeaderHashMap.size() == 0) {
         throw std::runtime_error("No genesis block.");
@@ -125,10 +127,11 @@ bool CoinQBlockTreeMem::insertHeader(const Coin::CoinBlockHeader& header)
     }*/
 
     // Check proof of work
-    if (bCheckProofOfWork) {
-        if (BigInt(headerHash) > header.getTarget()) {
-            throw std::runtime_error("Header hash is too big.");
-        }
+    if (!bCheckProofOfWork) { 
+        // Do nothing
+    }
+    else if (this->bCheckProofOfWork && BigInt(header.getPOWHashLittleEndian()) > header.getTarget()) {
+        throw std::runtime_error("Header hash is too big.");
     }
 
     ChainHeader& chainHeader = mHeaderHashMap[headerHash] = header;
@@ -247,7 +250,7 @@ int CoinQBlockTreeMem::getConfirmations(const uchar_vector& hash) const
     return mBestHeight - it->second.height + 1;
 }
 
-void CoinQBlockTreeMem::loadFromFile(const std::string& filename)
+void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckProofOfWork)
 {
     boost::filesystem::path p(filename);
     if (!boost::filesystem::exists(p)) {
@@ -277,6 +280,8 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename)
     uchar_vector hash;
     Coin::CoinBlockHeader header;
 
+    unsigned int count = 0;
+
     char buf[RECORD_SIZE * 64];
     while (fs) {
         fs.read(buf, RECORD_SIZE * 64);
@@ -296,10 +301,16 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename)
 
             try {
                 if (mBestHeight >= 0) {
-                    insertHeader(header);
+                    if (count % 10000 == 0) {
+                        LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - header hash: " << header.getHashLittleEndian().getHex() << " height: " << count << std::endl;
+                    }
+                    insertHeader(header, bCheckProofOfWork);
+                    count++;
                 }
-                else {
+                else { 
+                    LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - genesis hash: " << header.getHashLittleEndian().getHex() << std::endl;
                     setGenesisBlock(header);
+                    count++;
                 }
             }
             catch (const std::exception& e) {

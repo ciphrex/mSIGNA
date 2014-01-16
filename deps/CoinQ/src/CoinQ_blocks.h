@@ -97,7 +97,8 @@ public:
 
     // returns true if new header added, false if header already exists
     // throws runtime_error if header invalid or parent not known
-    virtual bool insertHeader(const Coin::CoinBlockHeader& header) = 0;
+//    virtual bool insertHeader(const Coin::CoinBlockHeader& header) = 0;
+    virtual bool insertHeader(const Coin::CoinBlockHeader& header, bool bCheckProofOfWork) = 0;
 
     // returns true if header removed, false if header unknown
     virtual bool deleteHeader(const uchar_vector& hash) = 0;
@@ -162,7 +163,7 @@ public:
     void clearReorg() { notifyReorg.clear();; }
 
     void setGenesisBlock(const Coin::CoinBlockHeader& header);
-    bool insertHeader(const Coin::CoinBlockHeader& header);
+    bool insertHeader(const Coin::CoinBlockHeader& header, bool bCheckProofOfWork = true);
     bool deleteHeader(const uchar_vector& hash);
 
     bool hasHeader(const uchar_vector& hash) const;
@@ -178,7 +179,7 @@ public:
     int getConfirmations(const uchar_vector& hash) const;
     void clear() { mHeaderHashMap.clear(); mHeaderHeightMap.clear(); mBestHeight = -1; mTotalWork = 0; pHead = NULL; }
 
-    void loadFromFile(const std::string& filename);
+    void loadFromFile(const std::string& filename, bool bCheckProofOfWork = true);
     void flushToFile(const std::string& filename);
 };
 
