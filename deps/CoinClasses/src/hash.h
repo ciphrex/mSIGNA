@@ -99,6 +99,16 @@ inline uchar_vector hash9(const uchar_vector& data)
     return uchar_vector((unsigned char*)&hash, (unsigned char*)&hash + 32);
 }
 
+inline uchar_vector sha3_256(const uchar_vector& data)
+{
+    uchar_vector hash(32);
+    sph_keccak256_context ctx_keccak;
+    sph_keccak256_init(&ctx_keccak);
+    sph_keccak256(&ctx_keccak, (unsigned char*)&data[0], data.size());
+    sph_keccak256_close(&ctx_keccak, (unsigned char*)&hash[0]);
+    return hash;
+}
+
 inline uchar_vector scrypt_1024_1_1_256(const uchar_vector& data)
 {
     uint256 hash;
