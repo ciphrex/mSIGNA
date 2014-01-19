@@ -31,6 +31,9 @@ MOC_DIR = $$DESTDIR/moc
 RCC_DIR = $$DESTDIR/rcc
 UI_DIR = $$DESTDIR/ui
 
+FORMS = \
+    src/requestpaymentdialog.ui
+
 HEADERS = \
     src/settings.h \
     src/versioninfo.h \

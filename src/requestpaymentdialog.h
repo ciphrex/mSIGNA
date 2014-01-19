@@ -1,50 +1,24 @@
-///////////////////////////////////////////////////////////////////////////////
-//
-// CoinVault
-//
-// requestpaymentdialog.h
-//
-// Copyright (c) 2013 Eric Lombrozo
-//
-// All Rights Reserved.
-
-#ifndef COINVAULT_REQUESTPAYMENTDIALOG_H
-#define COINVAULT_REQUESTPAYMENTDIALOG_H
-
-class AccountModel;
-
-class QComboBox;
-class QLineEdit;
+#ifndef REQUESTPAYMENTDIALOG_H
+#define REQUESTPAYMENTDIALOG_H
 
 #include <QDialog>
+
+namespace Ui {
+class RequestPaymentDialog;
+}
 
 class RequestPaymentDialog : public QDialog
 {
     Q_OBJECT
-
+    
 public:
-    RequestPaymentDialog(AccountModel* accountModel, QWidget* parent = NULL);
+    explicit RequestPaymentDialog(QWidget *parent = 0);
+    ~RequestPaymentDialog();
 
-    QString getAccountName() const;
-    QString getSender() const;
-
-public slots:
-    void setCurrentAccount(const QString& accountName);
-
-private slots:
-    void setAccounts(const QStringList& accountNames);
-
-    void getScript();
+    void setCurrentAccount(const QString& /*accountName*/) { }
 
 private:
-    AccountModel* accountModel;
-
-    QComboBox* accountComboBox;
-    QLineEdit* senderEdit;
-
-    QLineEdit* labelEdit;
-    QLineEdit* addressEdit;
-    QLineEdit* scriptEdit;
+    Ui::RequestPaymentDialog *ui;
 };
 
-#endif // COINVAULT_REQUESTPAYMENTDIALOG_H
+#endif // REQUESTPAYMENTDIALOG_H

@@ -132,7 +132,8 @@ MainWindow::MainWindow()
     tabWidget->addTab(txView, tr("Transactions"));
     setCentralWidget(tabWidget);
 
-    requestPaymentDialog = new RequestPaymentDialog(accountModel, this);
+    //requestPaymentDialog = new RequestPaymentDialog(accountModel, this);
+    requestPaymentDialog = new RequestPaymentDialog(this);
 
     // status updates
     connect(this, &MainWindow::status, [this](const QString& message) { updateStatusMessage(message); });
