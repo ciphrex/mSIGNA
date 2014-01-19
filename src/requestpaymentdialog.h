@@ -24,6 +24,9 @@ private slots:
     void setAccounts(const QStringList& accountNames);
 
     void on_newInvoiceButton_clicked();
+    void on_addressClipboardButton_clicked();
+    void on_scriptClipboardButton_clicked();
+    void on_urlClipboardButton_clicked();
     void on_closeButton_clicked();
 
 private:

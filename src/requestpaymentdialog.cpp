@@ -4,6 +4,7 @@
 #include "accountmodel.h"
 
 #include <QMessageBox>
+#include <QClipboard>
 
 RequestPaymentDialog::RequestPaymentDialog(AccountModel* accountModel, QWidget *parent) :
     QDialog(parent),
@@ -44,6 +45,21 @@ void RequestPaymentDialog::on_newInvoiceButton_clicked()
     catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Error"), QString::fromStdString(e.what()));
     }
+}
+
+void RequestPaymentDialog::on_addressClipboardButton_clicked()
+{
+    QApplication::clipboard()->setText(ui->invoiceDetailsAddressLineEdit->text());
+}
+
+void RequestPaymentDialog::on_scriptClipboardButton_clicked()
+{
+    QApplication::clipboard()->setText(ui->invoiceDetailsScriptLineEdit->text());
+}
+
+void RequestPaymentDialog::on_urlClipboardButton_clicked()
+{
+    QApplication::clipboard()->setText(ui->invoiceDetailsUrlLineEdit->text());
 }
 
 void RequestPaymentDialog::on_closeButton_clicked()

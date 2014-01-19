@@ -130,6 +130,9 @@
       <height>21</height>
      </rect>
     </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
    </widget>
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
@@ -149,7 +152,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="invoiceDetailsScriptLineEdit"/>
+      <widget class="QLineEdit" name="invoiceDetailsScriptLineEdit">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="scriptClipboardButton">
@@ -178,7 +185,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="invoiceDetailsUrlLineEdit"/>
+      <widget class="QLineEdit" name="invoiceDetailsUrlLineEdit">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="urlClipboardButton">
@@ -207,7 +218,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="invoiceDetailsAddressLineEdit"/>
+      <widget class="QLineEdit" name="invoiceDetailsAddressLineEdit">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="addressClipboardButton">
