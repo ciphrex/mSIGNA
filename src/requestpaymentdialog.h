@@ -1,6 +1,8 @@
 #ifndef REQUESTPAYMENTDIALOG_H
 #define REQUESTPAYMENTDIALOG_H
 
+class AccountModel;
+
 #include <QDialog>
 
 namespace Ui {
@@ -12,13 +14,22 @@ class RequestPaymentDialog : public QDialog
     Q_OBJECT
     
 public:
-    explicit RequestPaymentDialog(QWidget *parent = 0);
+    explicit RequestPaymentDialog(AccountModel* accountModel, QWidget *parent = 0);
     ~RequestPaymentDialog();
 
-    void setCurrentAccount(const QString& /*accountName*/) { }
+public slots:
+    void setCurrentAccount(const QString& accountName);
+
+private slots:
+    void setAccounts(const QStringList& accountNames);
+
+    void on_newInvoiceButton_clicked();
+    void on_closeButton_clicked();
 
 private:
     Ui::RequestPaymentDialog *ui;
+
+    AccountModel* accountModel_;
 };
 
 #endif // REQUESTPAYMENTDIALOG_H

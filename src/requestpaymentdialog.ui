@@ -48,7 +48,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>80</y>
+      <y>90</y>
       <width>611</width>
       <height>21</height>
      </rect>
@@ -63,7 +63,7 @@
     </widget>
     <widget class="QLineEdit" name="invoiceLineEdit"/>
    </widget>
-   <widget class="QPushButton" name="newAddressButton">
+   <widget class="QPushButton" name="newInvoiceButton">
     <property name="geometry">
      <rect>
       <x>500</x>
@@ -219,7 +219,7 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QPushButton" name="pushButton">
+  <widget class="QPushButton" name="closeButton">
    <property name="geometry">
     <rect>
      <x>520</x>
