@@ -1,3 +1,13 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// CoinVault
+//
+// requestpaymentdialogview.cpp
+//
+// Copyright (c) 2013-2014 Eric Lombrozo
+//
+// All Rights Reserved.
+
 #include "requestpaymentdialog.h"
 #include "ui_requestpaymentdialog.h"
 

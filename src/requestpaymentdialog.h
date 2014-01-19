@@ -1,5 +1,15 @@
-#ifndef REQUESTPAYMENTDIALOG_H
-#define REQUESTPAYMENTDIALOG_H
+///////////////////////////////////////////////////////////////////////////////
+//
+// CoinVault
+//
+// requestpaymentdialog.h
+//
+// Copyright (c) 2013-2014 Eric Lombrozo
+//
+// All Rights Reserved.
+
+#ifndef COINVAULT_REQUESTPAYMENTDIALOG_H
+#define COINVAULT_REQUESTPAYMENTDIALOG_H
 
 class AccountModel;
 
@@ -35,4 +45,4 @@ private:
     AccountModel* accountModel_;
 };
 
-#endif // REQUESTPAYMENTDIALOG_H
+#endif // COINVAULT_REQUESTPAYMENTDIALOG_H
