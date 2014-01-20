@@ -62,7 +62,7 @@ using namespace CoinQ::Script;
 using namespace std;
 
 MainWindow::MainWindow()
-    : networkSync(getCoinParams()), syncHeight(0), bestHeight(0), connected(false), networkState(NETWORK_STATE_NOT_CONNECTED)
+    : networkSync(getCoinParams()), syncHeight(0), bestHeight(0), connected(false), doneHeaderSync(false), networkState(NETWORK_STATE_NOT_CONNECTED)
 {
     loadSettings();
 
@@ -103,7 +103,7 @@ MainWindow::MainWindow()
     });
     networkSync.subscribeBlock([&](const ChainBlock& block) { accountModel->insertBlock(block); });
     networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleBlock) { accountModel->insertMerkleBlock(merkleBlock); });
-    networkSync.subscribeBlockTreeChanged([&]() { emit updateBestHeight(networkSync.getBestHeight()); });
+    networkSync.subscribeBlockTreeChanged([&]() { doneHeaderSync = false; emit updateBestHeight(networkSync.getBestHeight()); });
 
     qRegisterMetaType<bytes_t>("bytes_t");
     connect(accountModel, SIGNAL(newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
@@ -217,10 +217,11 @@ void MainWindow::updateNetworkState(network_state_t newState)
         if (!connected) {
             newState = NETWORK_STATE_NOT_CONNECTED;
         }
-        else if ((accountModel->getNumAccounts() > 0) && (syncHeight != bestHeight)) {
+        else if (syncHeight != bestHeight && (!doneHeaderSync || accountModel->getNumAccounts() > 0)) {
             newState = NETWORK_STATE_SYNCHING;
         }
         else {
+            doneHeaderSync = true;
             newState = NETWORK_STATE_SYNCHED;
         }
     }
@@ -982,6 +983,7 @@ void MainWindow::resync()
 
 void MainWindow::doneSync()
 {
+    doneHeaderSync = true;
     emit updateBestHeight(networkSync.getBestHeight());
 //    updateStatusMessage(tr("Finished headers sync"));
     emit status(tr("Finished headers sync"));
@@ -1035,6 +1037,7 @@ void MainWindow::connectionOpen()
 
 void MainWindow::connectionClosed()
 {
+    doneHeaderSync = false;
 //    updateStatusMessage(tr("Connection closed"));
     emit status(tr("Connection closed"));
     // networkStateLabel->setPixmap(*notConnectedIcon);    

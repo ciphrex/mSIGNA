@@ -259,6 +259,7 @@ private:
     QLabel* syncLabel;
     QLabel* networkStateLabel;
     bool connected;
+    bool doneHeaderSync;
     QString blockTreeFile;
     QString host;
     int port;
