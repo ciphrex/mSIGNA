@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>697</width>
-    <height>528</height>
+    <width>687</width>
+    <height>477</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,57 +17,19 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>20</y>
-     <width>661</width>
-     <height>201</height>
+     <y>10</y>
+     <width>651</width>
+     <height>191</height>
     </rect>
    </property>
    <property name="title">
     <string>Request Payment</string>
    </property>
-   <widget class="QSplitter" name="splitter">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>40</y>
-      <width>621</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
-    </property>
-    <widget class="QLabel" name="accountLabel">
-     <property name="text">
-      <string>Account:</string>
-     </property>
-    </widget>
-    <widget class="QComboBox" name="accountComboBox"/>
-   </widget>
-   <widget class="QSplitter" name="splitter_2">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>90</y>
-      <width>611</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
-    </property>
-    <widget class="QLabel" name="invoiceLabelLabel">
-     <property name="text">
-      <string>Invoice Label:</string>
-     </property>
-    </widget>
-    <widget class="QLineEdit" name="invoiceLineEdit"/>
-   </widget>
    <widget class="QPushButton" name="newInvoiceButton">
     <property name="geometry">
      <rect>
-      <x>500</x>
-      <y>160</y>
+      <x>480</x>
+      <y>40</y>
       <width>131</width>
       <height>32</height>
      </rect>
@@ -76,169 +38,259 @@
      <string>New Invoice</string>
     </property>
    </widget>
-   <widget class="QSplitter" name="splitter_3">
+   <widget class="QLabel" name="accountLabel">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>40</y>
+      <width>56</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Account:</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="accountComboBox">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>40</y>
+      <width>301</width>
+      <height>26</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="invoiceLineEdit">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>90</y>
+      <width>301</width>
+      <height>21</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="invoiceLabelLabel">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>90</y>
+      <width>86</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Invoice Label:</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="invoiceLabelLabel_2">
     <property name="geometry">
      <rect>
       <x>20</x>
       <y>130</y>
-      <width>611</width>
+      <width>103</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Invoice Amount:</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="invoiceLineEdit_2">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>130</y>
+      <width>301</width>
       <height>21</height>
      </rect>
     </property>
-    <property name="orientation">
-     <enum>Qt::Horizontal</enum>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
     </property>
-    <widget class="QLabel" name="invoiceLabelLabel_2">
-     <property name="text">
-      <string>Invoice Amount:</string>
-     </property>
-    </widget>
-    <widget class="QLineEdit" name="invoiceLineEdit_2"/>
    </widget>
+   <zorder>newInvoiceButton</zorder>
   </widget>
   <widget class="QGroupBox" name="InvoiceDetailsBox">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>240</y>
-     <width>661</width>
-     <height>221</height>
+     <y>230</y>
+     <width>671</width>
+     <height>181</height>
     </rect>
    </property>
    <property name="title">
     <string>Invoice Details</string>
    </property>
+   <widget class="QLabel" name="invoiceDetailsLabel_4">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>140</y>
+      <width>29</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>URL:</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="invoiceDetailsLabel_3">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>100</y>
+      <width>40</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Script:</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="invoiceDetailsLabel_2">
+    <property name="geometry">
+     <rect>
+      <x>16</x>
+      <y>72</y>
+      <width>56</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Address:</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="invoiceDetailsLabelLineEdit">
+    <property name="geometry">
+     <rect>
+      <x>80</x>
+      <y>40</y>
+      <width>421</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
+   </widget>
    <widget class="QLabel" name="invoiceDetailsLabel">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>50</y>
-      <width>62</width>
-      <height>16</height>
+      <y>40</y>
+      <width>38</width>
+      <height>21</height>
      </rect>
     </property>
     <property name="text">
      <string>Label:</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="invoiceDetailsLabelLineEdit">
+   <widget class="QLineEdit" name="invoiceDetailsUrlLineEdit">
     <property name="geometry">
      <rect>
-      <x>150</x>
-      <y>50</y>
-      <width>331</width>
+      <x>80</x>
+      <y>135</y>
+      <width>421</width>
       <height>21</height>
      </rect>
+    </property>
+    <property name="maxLength">
+     <number>32767</number>
+    </property>
+    <property name="frame">
+     <bool>true</bool>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
     </property>
     <property name="readOnly">
      <bool>true</bool>
     </property>
    </widget>
-   <widget class="QWidget" name="layoutWidget">
+   <widget class="QLineEdit" name="invoiceDetailsScriptLineEdit">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>80</x>
+      <y>104</y>
+      <width>421</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="invoiceDetailsAddressLineEdit">
+    <property name="geometry">
+     <rect>
+      <x>80</x>
+      <y>72</y>
+      <width>421</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+    </property>
+    <property name="readOnly">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="addressClipboardButton">
+    <property name="geometry">
+     <rect>
+      <x>500</x>
+      <y>67</y>
+      <width>160</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Copy To Clipboard</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="scriptClipboardButton">
+    <property name="geometry">
+     <rect>
+      <x>500</x>
+      <y>100</y>
+      <width>160</width>
+      <height>32</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Copy To Clipboard</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="urlClipboardButton">
+    <property name="geometry">
+     <rect>
+      <x>500</x>
       <y>130</y>
-      <width>621</width>
-      <height>33</height>
+      <width>160</width>
+      <height>32</height>
      </rect>
     </property>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <item>
-      <widget class="QLabel" name="invoiceDetailsLabel_3">
-       <property name="text">
-        <string>Script:</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="invoiceDetailsScriptLineEdit">
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="scriptClipboardButton">
-       <property name="text">
-        <string>Copy To Clipboard</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QWidget" name="layoutWidget_2">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>180</y>
-      <width>621</width>
-      <height>33</height>
-     </rect>
+    <property name="text">
+     <string>Copy To Clipboard</string>
     </property>
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
-     <item>
-      <widget class="QLabel" name="invoiceDetailsLabel_4">
-       <property name="text">
-        <string>URL:</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="invoiceDetailsUrlLineEdit">
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="urlClipboardButton">
-       <property name="text">
-        <string>Copy To Clipboard</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QWidget" name="">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>80</y>
-      <width>621</width>
-      <height>33</height>
-     </rect>
-    </property>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QLabel" name="invoiceDetailsLabel_2">
-       <property name="text">
-        <string>Address:</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="invoiceDetailsAddressLineEdit">
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="addressClipboardButton">
-       <property name="text">
-        <string>Copy To Clipboard</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
    </widget>
   </widget>
   <widget class="QPushButton" name="closeButton">
    <property name="geometry">
     <rect>
-     <x>520</x>
-     <y>480</y>
+     <x>530</x>
+     <y>430</y>
      <width>114</width>
      <height>32</height>
     </rect>
@@ -247,6 +299,9 @@
     <string>Close</string>
    </property>
   </widget>
+  <zorder>RequestPaymentBox</zorder>
+  <zorder>InvoiceDetailsBox</zorder>
+  <zorder>closeButton</zorder>
  </widget>
  <resources/>
  <connections/>
