@@ -12,6 +12,7 @@
 #include "ui_requestpaymentdialog.h"
 
 #include "accountmodel.h"
+#include "coinparams.h"
 
 #include <QMessageBox>
 #include <QClipboard>
@@ -46,11 +47,27 @@ void RequestPaymentDialog::on_newInvoiceButton_clicked()
     try {
         QString accountName = ui->accountComboBox->currentText();
         QString invoiceLabel = ui->invoiceLineEdit->text();
+        QString invoiceAmount = ui->invoiceAmountLineEdit->text();
         auto pair = accountModel_->issueNewScript(accountName, invoiceLabel);
         accountModel_->update();
         ui->invoiceDetailsLabelLineEdit->setText(invoiceLabel);
         ui->invoiceDetailsAddressLineEdit->setText(pair.first);
         ui->invoiceDetailsScriptLineEdit->setText(QString::fromStdString(uchar_vector(pair.second).getHex()));
+        QString url = QString(getCoinParams().url_prefix()) + ":" + pair.first;
+        int nParams = 0;
+        if (!invoiceLabel.isEmpty()) {
+            url += (nParams == 0) ? "?" : "&";
+            url += "label=";
+            url += invoiceLabel;
+            nParams++;
+        }
+        if (!invoiceAmount.isEmpty()) {
+            url += (nParams == 0) ? "?" : "&";
+            url += "amount=";
+            url += invoiceAmount;
+            nParams++;
+        }
+        ui->invoiceDetailsUrlLineEdit->setText(url);
     }
     catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Error"), QString::fromStdString(e.what()));

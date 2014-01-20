@@ -97,7 +97,7 @@
      <string>Invoice Amount:</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="invoiceLineEdit_2">
+   <widget class="QLineEdit" name="invoiceAmountLineEdit">
     <property name="geometry">
      <rect>
       <x>150</x>
@@ -110,6 +110,12 @@
      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
     </property>
    </widget>
+   <zorder>accountLabel</zorder>
+   <zorder>accountComboBox</zorder>
+   <zorder>invoiceLineEdit</zorder>
+   <zorder>invoiceLabelLabel</zorder>
+   <zorder>invoiceLabelLabel_2</zorder>
+   <zorder>invoiceAmountLineEdit</zorder>
    <zorder>newInvoiceButton</zorder>
   </widget>
   <widget class="QGroupBox" name="InvoiceDetailsBox">
@@ -299,9 +305,6 @@
     <string>Close</string>
    </property>
   </widget>
-  <zorder>RequestPaymentBox</zorder>
-  <zorder>InvoiceDetailsBox</zorder>
-  <zorder>closeButton</zorder>
  </widget>
  <resources/>
  <connections/>
