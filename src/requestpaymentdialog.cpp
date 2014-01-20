@@ -13,9 +13,11 @@
 
 #include "accountmodel.h"
 #include "coinparams.h"
+#include "numberformats.h"
 
 #include <QMessageBox>
 #include <QClipboard>
+#include <QRegExpValidator>
 
 RequestPaymentDialog::RequestPaymentDialog(AccountModel* accountModel, QWidget *parent) :
     QDialog(parent),
@@ -24,6 +26,8 @@ RequestPaymentDialog::RequestPaymentDialog(AccountModel* accountModel, QWidget *
 {
     ui->setupUi(this);
     connect(accountModel_, SIGNAL(updated(const QStringList&)), this, SLOT(setAccounts(const QStringList&)));
+
+    ui->invoiceAmountLineEdit->setValidator(new QRegExpValidator(AMOUNT_REGEXP));
 }
 
 RequestPaymentDialog::~RequestPaymentDialog()
