@@ -174,10 +174,11 @@ private slots:
     // STATUS UPDATES
     void errorStatus(const QString& message);
 
-    //////////////////////
-    // URL/FILE OPERATIONS
+    //////////////////////////////
+    // URL/FILE/COMMAND OPERATIONS
     void processUrl(const QUrl& url);
     void processFile(const QString& fileName);
+    void processCommand(const QString& command);
 
 private:
     // License accepted?

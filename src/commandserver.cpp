@@ -127,6 +127,6 @@ void CommandServer::processArg(const QString& arg)
         emit gotFile(arg);
     }
     else {
-        LOGGER(debug) << "CommandServer::handleConnection - unhandled arg: " << arg.toStdString() << std::endl;
+        emit gotCommand(arg);
     }
 }

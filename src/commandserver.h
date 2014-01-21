@@ -33,6 +33,7 @@ public:
 signals:
     void gotUrl(const QUrl& url);
     void gotFile(const QString& fileName);
+    void gotCommand(const QString& command);
 
 private slots:
     void handleConnection();

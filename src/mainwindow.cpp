@@ -1216,6 +1216,18 @@ void MainWindow::processFile(const QString& fileName)
     }
 }
 
+void MainWindow::processCommand(const QString& command)
+{
+    if (command == "unlicense") {
+        LOGGER(trace) << "MainWindow::processCommand - " << command.toStdString() << std::endl;
+        licenseAccepted = false;
+        saveSettings();
+    }
+    else {
+        LOGGER(trace) << "MainWindow::processCommand - unhandled command: " << command.toStdString() << std::endl;
+    }
+}
+
 void MainWindow::createActions()
 {
     // application actions

@@ -42,13 +42,13 @@ int main(int argc, char* argv[])
         msgBox.setText(QMessageBox::tr("Warning: Failed to create vault data directory."));
         msgBox.exec();
     }
-        
-    INIT_LOGGER((APPDATADIR + "/debug.log").toStdString().c_str());
-    LOGGER(debug) << std::endl << std::endl << std::endl << std::endl << QDateTime::currentDateTime().toString().toStdString() << std::endl;
 
+    // Check whether another instance is already running. If so, send it commands and exit.    
     CommandServer commandServer(&app);
     if (commandServer.processArgs(argc, argv)) exit(0);
 
+    INIT_LOGGER((APPDATADIR + "/debug.log").toStdString().c_str());
+    LOGGER(debug) << std::endl << std::endl << std::endl << std::endl << QDateTime::currentDateTime().toString().toStdString() << std::endl;
     LOGGER(debug) << "Vault started." << std::endl;
 
     SplashScreen splash;
@@ -68,6 +68,7 @@ int main(int argc, char* argv[])
     else {
         app.connect(&commandServer, SIGNAL(gotUrl(const QUrl&)), &mainWin, SLOT(processUrl(const QUrl&)));
         app.connect(&commandServer, SIGNAL(gotFile(const QString&)), &mainWin, SLOT(processFile(const QString&)));
+        app.connect(&commandServer, SIGNAL(gotCommand(const QString&)), &mainWin, SLOT(processCommand(const QString&)));
     }
 
     app.processEvents();
@@ -95,7 +96,11 @@ int main(int argc, char* argv[])
     if (!mainWin.isLicenseAccepted()) {
         //Display license agreement
         AcceptLicenseDialog acceptLicenseDialog;
-        if (!acceptLicenseDialog.exec()) return -1;
+        if (!acceptLicenseDialog.exec()) {
+            LOGGER(error) << "License agreement not accepted." << std::endl;
+            return -1;
+        }
+        LOGGER(debug) << "License agreement accepted." << std::endl;
         mainWin.setLicenseAccepted(true);
         mainWin.saveSettings();
     }
