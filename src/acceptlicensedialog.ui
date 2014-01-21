@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>License Agreement</string>
+   <string>End-user License Agreement</string>
   </property>
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">

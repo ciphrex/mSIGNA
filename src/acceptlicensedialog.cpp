@@ -6,6 +6,7 @@ AcceptLicenseDialog::AcceptLicenseDialog(QWidget *parent) :
     ui(new Ui::AcceptLicenseDialog)
 {
     ui->setupUi(this);
+    ui->licenseTextBrowser->setSource(QUrl("qrc:/docs/eula.html"));
 }
 
 AcceptLicenseDialog::~AcceptLicenseDialog()

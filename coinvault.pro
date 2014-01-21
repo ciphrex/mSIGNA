@@ -97,7 +97,8 @@ SOURCES = \
     src/resyncdialog.cpp
 
 RESOURCES = \
-    res/coinvault.qrc
+    res/coinvault.qrc \
+    docs/docs.qrc
 
 # install
 target.path = build 
