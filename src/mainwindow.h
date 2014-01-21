@@ -184,6 +184,8 @@ private:
     // License accepted?
     bool licenseAccepted;
 
+    QString lastVaultDir;
+
     void createActions();
     void createMenus();
     void createToolBars();

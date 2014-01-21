@@ -286,10 +286,14 @@ void MainWindow::newVault(QString fileName)
         fileName = QFileDialog::getSaveFileName(
             this,
             tr("Create New Vault"),
-            APPDATADIR,
+            lastVaultDir,
             tr("Vaults (*.vault)"));
     }
     if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    lastVaultDir = fileInfo.dir().absolutePath();
+    saveSettings();
 
     try {
         accountModel->create(fileName);
@@ -334,17 +338,23 @@ void MainWindow::openVault(QString fileName)
         fileName = QFileDialog::getOpenFileName(
             this,
             tr("Open Vault"),
-            APPDATADIR,
+            lastVaultDir,
             tr("Vaults (*.vault)"));
     }
     if (fileName.isEmpty()) return;
 
     fileName = QFileInfo(fileName).absoluteFilePath();
+
+    QFileInfo fileInfo(fileName);
+    lastVaultDir = fileInfo.dir().absolutePath();
+    saveSettings();
+
     try {
         loadVault(fileName);
         updateVaultStatus(fileName);
         selectAccount(0);
         updateStatusMessage(tr("Opened ") + fileName);
+
         promptResync();
     }
     catch (const exception& e) {
@@ -404,15 +414,20 @@ void MainWindow::importKeychain(QString fileName)
         fileName = QFileDialog::getOpenFileName(
             this,
             tr("Import Keychain"),
-            APPDATADIR,
+            lastVaultDir,
             tr("Keychains") + "(*.keys)");
     }
     if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    lastVaultDir = fileInfo.dir().absolutePath();
+    saveSettings();
 
     bool ok;
     QString name = QFileInfo(fileName).baseName();
     while (true) {
         name = QInputDialog::getText(this, tr("Keychain Import"), tr("Keychain Name:"), QLineEdit::Normal, name, &ok);
+
         if (!ok) return;
         if (name.isEmpty()) {
             showError(tr("Name cannot be empty."));
@@ -462,10 +477,14 @@ void MainWindow::exportKeychain(bool exportPrivate)
     fileName = QFileDialog::getSaveFileName(
         this,
         tr("Exporting ") + (exportPrivate ? tr("Private") : tr("Public")) + tr(" Keychain - ") + name,
-        APPDATADIR + "/" + fileName,
+        lastVaultDir + "/" + fileName,
         tr("Keychains (*.keys)"));
 
     if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    lastVaultDir = fileInfo.dir().absolutePath();
+    saveSettings();
 
     try {
         updateStatusMessage(tr("Exporting ") + (exportPrivate ? tr("private") : tr("public")) + tr("  keychain...") + name);
@@ -602,11 +621,15 @@ void MainWindow::importAccount(QString fileName)
         fileName = QFileDialog::getOpenFileName(
             this,
             tr("Import Account"),
-            APPDATADIR,
+            lastVaultDir,
             tr("Account") + "(*.acct)");
     }
 
     if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    lastVaultDir = fileInfo.dir().absolutePath();
+    saveSettings();
 
     bool ok;
     QString name = QFileInfo(fileName).baseName();
@@ -655,10 +678,14 @@ void MainWindow::exportAccount()
     fileName = QFileDialog::getSaveFileName(
         this,
         tr("Exporting Account - ") + name,
-        APPDATADIR + "/" + fileName,
+        lastVaultDir + "/" + fileName,
         tr("Accounts (*.acct)"));
 
     if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    lastVaultDir = fileInfo.dir().absolutePath();
+    saveSettings();
 
     try {
         updateStatusMessage(tr("Exporting account ") + name + "...");
@@ -1594,6 +1621,8 @@ void MainWindow::loadSettings()
     port = settings.value("port", getCoinParams().default_port()).toInt();
     autoConnect = settings.value("autoconnect", false).toBool();
     resyncHeight = settings.value("resyncheight", 0).toInt();
+
+    lastVaultDir = settings.value("lastvaultdir", APPDATADIR).toString();
 }
 
 void MainWindow::saveSettings()
@@ -1607,6 +1636,7 @@ void MainWindow::saveSettings()
     settings.setValue("port", port);
     settings.setValue("autoconnect", autoConnect);
     settings.setValue("resyncheight", resyncHeight);
+    settings.setValue("lastvaultdir", lastVaultDir);
 }
 
 void MainWindow::loadVault(const QString &fileName)
