@@ -62,7 +62,7 @@ using namespace CoinQ::Script;
 using namespace std;
 
 MainWindow::MainWindow()
-    : networkSync(getCoinParams()), syncHeight(0), bestHeight(0), connected(false), doneHeaderSync(false), networkState(NETWORK_STATE_NOT_CONNECTED)
+    : licenseAccepted(false), networkSync(getCoinParams()), syncHeight(0), bestHeight(0), connected(false), doneHeaderSync(false), networkState(NETWORK_STATE_NOT_CONNECTED)
 {
     loadSettings();
 
@@ -1575,6 +1575,8 @@ void MainWindow::loadSettings()
     resize(size);
     move(pos);
 
+    licenseAccepted = settings.value("licenseaccepted", false).toBool();
+
     blockTreeFile = settings.value("blocktreefile", "blocktree.dat").toString();
     host = settings.value("host", "localhost").toString();
     port = settings.value("port", getCoinParams().default_port()).toInt();
@@ -1587,6 +1589,7 @@ void MainWindow::saveSettings()
     QSettings settings("Ciphrex", APPNAME);
     settings.setValue("pos", pos());
     settings.setValue("size", size());
+    settings.setValue("licenseaccepted", licenseAccepted);
     settings.setValue("blocktreefile", blockTreeFile);
     settings.setValue("host", host);
     settings.setValue("port", port);

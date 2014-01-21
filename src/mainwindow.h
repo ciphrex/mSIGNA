@@ -45,6 +45,9 @@ class MainWindow : public QMainWindow
 public:
     MainWindow();
 
+    bool isLicenseAccepted() const { return licenseAccepted; }
+    void setLicenseAccepted(bool licenseAccepted = true) { this->licenseAccepted = licenseAccepted; }
+
     void loadSettings();
     void saveSettings();
 
@@ -177,6 +180,9 @@ private slots:
     void processFile(const QString& fileName);
 
 private:
+    // License accepted?
+    bool licenseAccepted;
+
     void createActions();
     void createMenus();
     void createToolBars();

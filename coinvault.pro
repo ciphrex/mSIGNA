@@ -32,6 +32,7 @@ RCC_DIR = $$DESTDIR/rcc
 UI_DIR = $$DESTDIR/ui
 
 FORMS = \
+    src/acceptlicensedialog.ui \
     src/requestpaymentdialog.ui
 
 HEADERS = \
@@ -41,6 +42,7 @@ HEADERS = \
     src/coinparams.h \
     src/severitylogger.h \
     src/splashscreen.h \
+    src/acceptlicensedialog.h \
     src/mainwindow.h \
     src/commandserver.h \
     src/paymentrequest.h \
@@ -69,6 +71,7 @@ SOURCES = \
     src/coinparams.cpp \
     src/main.cpp \
     src/splashscreen.cpp \
+    src/acceptlicensedialog.cpp \
     src/mainwindow.cpp \
     src/commandserver.cpp \
     src/paymentrequest.cpp \

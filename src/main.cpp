@@ -16,6 +16,7 @@
 #include <QMessageBox>
 
 #include "splashscreen.h"
+#include "acceptlicensedialog.h"
 #include "mainwindow.h"
 #include "commandserver.h"
 
@@ -88,9 +89,17 @@ int main(int argc, char* argv[])
     timer_io.stop();
 
     mainWin.tryConnect();
-
     mainWin.show();
     splash.finish(&mainWin);
+
+    if (!mainWin.isLicenseAccepted()) {
+        //Display license agreement
+        AcceptLicenseDialog acceptLicenseDialog;
+        if (!acceptLicenseDialog.exec()) return -1;
+        mainWin.setLicenseAccepted(true);
+        mainWin.saveSettings();
+    }
+
     commandServer.uiReady();
 
     int rval = app.exec();
