@@ -71,7 +71,7 @@ private:
 class Vault
 {
 public:
-    Vault(int argc, char** argv, bool create = false);
+    Vault(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION);
 
     enum result_t {
         OBJECT_INSERTED,
@@ -79,6 +79,10 @@ public:
         OBJECT_UNCHANGED,
         OBJECT_IGNORED
     };
+
+    // Global operations
+    void setVersion(uint32_t version);
+    uint32_t getVersion() const;
 
     // Keychain operations
     bool keychainExists(const std::string& keychain_name) const;

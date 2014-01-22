@@ -37,10 +37,45 @@ using namespace CoinQ::Vault;
  * class Vault implementation
 */
 
-Vault::Vault(int argc, char** argv, bool create)
+Vault::Vault(int argc, char** argv, bool create, uint32_t version)
     : db_(open_database(argc, argv, create))
 {
     LOGGER(trace) << "Created Vault instance" << std::endl;
+    if (create) setVersion(version);
+}
+
+void Vault::setVersion(uint32_t version)
+{
+    LOGGER(trace) << "Vault::setVersion(" << version << ")" << std::endl;
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+
+    odb::result<Version> r(db_->query<Version>((odb::query<Version>::id <= 1) + "LIMIT 1"));
+    std::shared_ptr<Version> version_object;
+    if (r.empty()) {
+        version_object = std::shared_ptr<Version>(new Version(version));
+        db_->persist(version_object);
+    }
+    else {
+        version_object = std::shared_ptr<Version>(r.begin().load());
+        version_object->version(version);
+        db_->update(version_object);
+    }
+
+    t.commit();
+}
+
+uint32_t Vault::getVersion() const
+{
+    LOGGER(trace) << "Vault::getVersion()" << std::endl;
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+
+    odb::result<Version> r(db_->query<Version>((odb::query<Version>::id <= 1) + "LIMIT 1"));
+    if (r.empty()) return 0;
+
+    std::shared_ptr<Version> version_object(r.begin().load());
+    return version_object->version();
 }
 
 bool Vault::keychainExists(const std::string& keychain_name) const

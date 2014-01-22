@@ -48,6 +48,28 @@ class Account;
 class SigningScript;
 class ScriptTag;
 
+const uint32_t SCHEMA_VERSION = 1;
+
+// Vault schema version
+#pragma db object pointer(std::shared_ptr)
+class Version
+{
+public:
+    Version() : version_(0) { }
+    Version(uint32_t version) : version_(version) { }
+
+    void version(uint32_t version) { version_ = version; }
+    uint32_t version() const { return version_; }
+
+private:
+    friend class odb::access;
+
+    #pragma db id auto
+    unsigned long id_;
+
+    uint32_t version_;
+};
+
 // Blocks, Transactions
 #pragma db object pointer(std::shared_ptr)
 class BlockHeader
