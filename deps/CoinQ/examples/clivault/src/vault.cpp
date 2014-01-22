@@ -56,6 +56,47 @@ cli::result_t cmd_create(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_setversion(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 2) {
+        return "setversion <filename> <version> - set the schema version for the vault.";
+    }
+
+    int argc = 3;
+    char prog[] = "prog";
+    char opt[] = "--database";
+    char buf[255];
+    std::strcpy(buf, params[0].c_str());
+    char* argv[] = {prog, opt, buf};
+
+    Vault vault(argc, argv, false); 
+    vault.setVersion(strtoul(params[1].c_str(), NULL, 0));
+
+    stringstream ss;
+    ss << "New schema version: " << vault.getVersion();
+    return ss.str();
+}
+
+cli::result_t cmd_getversion(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 1) {
+        return "getversion <filename> - get the schema version for the vault.";
+    }
+
+    int argc = 3;
+    char prog[] = "prog";
+    char opt[] = "--database";
+    char buf[255];
+    std::strcpy(buf, params[0].c_str());
+    char* argv[] = {prog, opt, buf};
+
+    Vault vault(argc, argv, false); 
+
+    stringstream ss;
+    ss << "Schema version: " << vault.getVersion();
+    return ss.str();
+}
+
 cli::result_t cmd_newkeychain(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 3) {
@@ -73,7 +114,6 @@ cli::result_t cmd_newkeychain(bool bHelp, const cli::params_t& params)
     char buf[255];
     std::strcpy(buf, params[0].c_str());
     char* argv[] = {prog, opt, buf};
-    unique_ptr<database> db(open_database(argc, argv));
 
     Vault vault(argc, argv, false);
     vault.newKeychain(params[1], numkeys);
@@ -906,6 +946,8 @@ int main(int argc, char** argv)
 {
     cli::command_map cmds("CoinVault by Eric Lombrozo v0.0.1");
     cmds.add("create", &cmd_create);
+    cmds.add("setversion", &cmd_setversion);
+    cmds.add("getversion", &cmd_getversion);
     cmds.add("newkeychain", &cmd_newkeychain);
     cmds.add("renamekeychain", &cmd_renamekeychain);
     cmds.add("getextendedkey", &cmd_getextendedkey);
