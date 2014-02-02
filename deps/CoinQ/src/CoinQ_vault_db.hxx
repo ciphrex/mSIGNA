@@ -776,7 +776,7 @@ public:
 
     // constructor for random keychain
     Keychain(const std::string& name, type_t type)
-        : name_(name), type_(type), numkeys_(0), numsavedkeys_(0) { }
+        : name_(name), type_(type), numkeys_(0), nextkeyindex_(0), numsavedkeys_(0) { }
 
     // constructor for deterministic keychain (BIP0032)
     Keychain(const std::string& name, const std::shared_ptr<ExtendedKey>& extendedkey, unsigned long numkeys = 0);
@@ -833,6 +833,9 @@ private:
     bytes_t hash_;
     unsigned long numkeys_;
 
+    // nextkeyindex is the next child index for a deterministic keychain. necessary because some indices might be invalid.
+    unsigned long nextkeyindex_;
+
     // numsavedkeys is the number of keys actually stored in database. used for update.
     unsigned long numsavedkeys_;
 
@@ -841,7 +844,7 @@ private:
 };
 
 inline Keychain::Keychain(const std::string& name, const std::shared_ptr<ExtendedKey>& extendedkey, unsigned long numkeys)
-    : name_(name), extendedkey_(extendedkey), numkeys_(0), numsavedkeys_(0)
+    : name_(name), extendedkey_(extendedkey), numkeys_(0), nextkeyindex_(0), numsavedkeys_(0)
 {
     Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain();
     if (hdkeychain.isPrivate()) {
@@ -883,10 +886,14 @@ inline unsigned long Keychain::numkeys(unsigned long numkeys)
     uint32_t privmask = (type_ == PRIVATE) ? 0x80000000 : 0x00000000;
 
     for (uint32_t i = numkeys_; i < numkeys; i++) {
-        uint32_t childnum = i | privmask;
-        Coin::HDKeychain child = hdkeychain.getChild(childnum);
-        std::shared_ptr<Key> key(new Key(extendedkey_, childnum)); 
-        keys_.push_back(key);
+        while (true) {
+            uint32_t childnum = nextkeyindex_++ | privmask;
+            Coin::HDKeychain child = hdkeychain.getChild(childnum);
+            if (!child) continue;
+            std::shared_ptr<Key> key(new Key(extendedkey_, childnum)); 
+            keys_.push_back(key);
+            break;
+        }
     }
     numkeys_ = numkeys;
     return numkeys_;

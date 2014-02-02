@@ -35,6 +35,9 @@
 
 #include "typedefs.h"
 
+// cstdlib - for rand()
+// #include <cstdlib>
+
 using namespace Coin;
 
 const uchar_vector CURVE_ORDER_BYTES("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
@@ -224,6 +227,9 @@ HDKeychain HDKeychain::getChild(uint32_t i) const
     bytes_t left32(digest.begin(), digest.begin() + 32);
     BigInt Il(left32);
     if (Il >= CURVE_ORDER) return child;
+
+    // The following line is used to test behavior for invalid indices
+    // if (rand() % 100 < 10) return child;
 
     if (isPrivate()) {
         BigInt k(key_);
