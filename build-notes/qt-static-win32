@@ -1,6 +1,21 @@
-build qt:
+build qt 5.1.1
 wget http://download.qt-project.org/official_releases/qt/5.1/5.1.1/single/qt-everywhere-opensource-src-5.1.1.tar.gz
 tar xf qt-everywhere-opensource-src-5.1.1.tar.gz
+
+    MinGW-W64 defines the symbol FILE_ID_128 which conflicts with Qt5. The workaround is as follows:
+    In ~/qt-everywhere-opensource-src-5.1.1/qtbase/src/corelib/io/qfilesystemengine_win.cpp,
+        Comment out or remove the entire typedef struct _FILE_ID_128 definition
+        Replace
+            result += QByteArray((char *)infoEx.FileId.Identifier, sizeof(infoEx.FileId.Identifier)).toHex();
+        with
+            result += QByteArray((char *)&infoEx.FileId, sizeof(infoEx.FileId).toHex();
+
+    (source: https://bugreports.qt-project.org/browse/QTBUG-33155)
+
+or build qt 5.2.1
+wget http://download.qt-project.org/official_releases/qt/5.2/5.2.1/single/qt-everywhere-opensource-src-5.2.1.tar.gz
+tar xzvf qt-everywhere-opensource-src-5.2.1.tar.gz
+
 export INSTALLPREFIX=/opt/mingw64
 ./configure -prefix / -hostprefix $INSTALLPREFIX/host -plugindir /plugins -translationdir /translations -xplatform win32-g++ -device-option CROSS_COMPILE=x86_64-w64-mingw32- -sysroot $INSTALLPREFIX -confirm-license -release -opensource -static -qt-pcre -no-icu -no-glib -no-audio-backend -no-javascript-jit -no-sql-sqlite -no-nis -no-cups -no-iconv -no-dbus -no-opengl -nomake examples -no-feature-style-plastique -no-feature-style-cleanlooks -no-feature-style-motif -no-feature-style-cde -no-feature-style-windowsce -no-feature-style-windowsmobile -no-feature-style-s60 -no-pch -no-sql-odbc -no-compile-examples -no-qml-debug -no-sm -skip qtactiveqt -skip qtdeclarative -skip qtdoc -skip qtgraphicaleffects -skip qtjsbackend -skip qtmultimedia -skip qtquick1 -skip qtquickcontrols -skip qtscript -skip qtsensors -skip qtserialport -skip qtsvg -skip qtwebkit -skip qtwebkit-examples -skip qtx11extras -skip qtxmlpatterns -no-openssl -qt-zlib
 make
