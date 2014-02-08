@@ -844,7 +844,7 @@ private:
 };
 
 inline Keychain::Keychain(const std::string& name, const std::shared_ptr<ExtendedKey>& extendedkey, unsigned long numkeys)
-    : name_(name), extendedkey_(extendedkey), numkeys_(0), numsavedkeys_(0)
+    : name_(name), extendedkey_(extendedkey), numkeys_(0), nextkeyindex_(0), numsavedkeys_(0)
 {
     Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain();
     if (hdkeychain.isPrivate()) {
