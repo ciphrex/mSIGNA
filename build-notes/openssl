@@ -6,6 +6,11 @@ $ sudo make install
 
 (-Wno-unused-function to suppress warnings)
 
+Building documentation might cause errors. If so, do
+$ sudo make install_sw
+
+To fix documentation build errors:
+
 If make install produces "Expected text after =item, not a number" errors, edit doc/apps/<whatever>.pod, replace
 -=item n
 +=item C<n>
