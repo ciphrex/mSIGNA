@@ -1,5 +1,13 @@
 Download from http://www.openssl.org/source/
 
-Configure:
+$ CROSS_COMPILE="x86_64-w64-mingw32-" ./Configure mingw64 no-asm no-shared --prefix=/opt/mingw64
+$ make
+$ sudo make install
 
-$ CROSS_COMPILE="x86_64-w64-mingw32-" ./Configure mingw64 no-asm shared static --prefix=/opt/mingw64
+(-Wno-unused-function to suppress warnings)
+
+If make install produces "Expected text after =item, not a number" errors, edit doc/apps/<whatever>.pod, replace
+-=item n
++=item C<n>
+
+where n is a number
