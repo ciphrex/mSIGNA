@@ -1,0 +1,22 @@
+qmake and macdeployqt must be run from same Qt installation
+
+From project root directory, run:
+    $ /usr/local/host/bin/qmake && make
+    $ /usr/local/usr/local/bin/macdeployqt build/debug/CoinVault.app
+
+To check bundle, run:
+    $ otool -L build/debug/CoinVault.app/Contents/MacOS/CoinVault
+
+Output should look something like this:
+build/debug/CoinVault.app/Contents/MacOS/CoinVault:
+    @executable_path/../Frameworks/libodb-sqlite-2.3.dylib (compatibility version 0.0.0, current version 0.0.0)
+    @executable_path/../Frameworks/libodb-2.3.dylib (compatibility version 0.0.0, current version 0.0.0)
+    /usr/lib/libcrypto.0.9.8.dylib (compatibility version 0.9.8, current version 47.2.0)
+    @executable_path/../Frameworks/QtWidgets.framework/Versions/5/QtWidgets (compatibility version 5.2.0, current version 5.2.1)
+    @executable_path/../Frameworks/QtGui.framework/Versions/5/QtGui (compatibility version 5.2.0, current version 5.2.1)
+    @executable_path/../Frameworks/QtCore.framework/Versions/5/QtCore (compatibility version 5.2.0, current version 5.2.1)
+    @executable_path/../Frameworks/QtNetwork.framework/Versions/5/QtNetwork (compatibility version 5.2.0, current version 5.2.1)
+    /System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL (compatibility version 1.0.0, current version 1.0.0)
+    /System/Library/Frameworks/AGL.framework/Versions/A/AGL (compatibility version 1.0.0, current version 1.0.0)
+    /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 65.1.0)
+    /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 169.3.0)

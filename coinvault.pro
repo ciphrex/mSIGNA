@@ -17,6 +17,7 @@ CONFIG += c++11 rtti thread
 QMAKE_CXXFLAGS_WARN_ON += -Wno-unknown-pragmas
 
 INCLUDEPATH += \
+    /usr/local/include \
     deps/logger/src \
     deps/CoinQ/src \
     deps/CoinClasses/src
@@ -148,6 +149,9 @@ win32 {
         -lboost_filesystem-mt-s \
         -lboost_regex-mt-s \
         -lboost_thread_win32-mt-s \
+        -lcrypto \
+        -lodb-sqlite \
+        -lodb
 }
 
 unix {
@@ -156,18 +160,24 @@ unix {
             -lboost_system \
             -lboost_filesystem \
             -lboost_regex \
-            -lboost_thread
+            -lboost_thread \
+            -lcrypto \
+            -lodb-sqlite \
+            -lodb
     }
     else {
+        INCLUDEPATH += \
+            /opt/local/include
+            /usr/local/Cellar/boost/1.54.0/include
+
         LIBS += \
+            -L/opt/local/lib \
             /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_system.a \
             /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_filesystem.a \
             /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_regex.a \
-            /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_thread.a
+            /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_thread.a \
+            /opt/local/lib/libodb-sqlite.dylib \
+            /opt/local/lib/libodb.dylib \
+            -lcrypto
     }
 }
-
-LIBS += \
-    -lcrypto \
-    -lodb-sqlite \
-    -lodb
