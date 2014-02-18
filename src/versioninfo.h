@@ -16,6 +16,6 @@
 const int VERSIONPADDINGRIGHT = 20;
 const int VERSIONPADDINGBOTTOM = 30;
 
-const QString VERSIONTEXT("Version 0.0.8 alpha");
+const QString VERSIONTEXT("Version 0.0.9 alpha");
 
 #endif //  VAULT_VERSIONINFO_H
