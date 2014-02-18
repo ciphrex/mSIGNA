@@ -402,7 +402,7 @@ public:
 
     unsigned long id() const { return id_; }
     const bytes_t& hash() const { return hash_; }
-    bytes_t unsigned_hash() const;
+    bytes_t unsigned_hash() const { return unsigned_hash_; }
     const txins_t& txins() const { return txins_; }
     const txouts_t& txouts() const { return txouts_; }
     uint32_t locktime() const { return locktime_; }
@@ -427,6 +427,7 @@ public:
     void shuffle_txins();
     void shuffle_txouts();
 
+    void updateUnsignedHash();
     void updateHash();
 
 private:
@@ -439,6 +440,9 @@ private:
 
     #pragma db unique
     bytes_t hash_;
+
+    #pragma db unique
+    bytes_t unsigned_hash_;
 
     uint32_t version_;
 
@@ -475,17 +479,16 @@ inline void Tx::updateHash()
         std::reverse(hash_.begin(), hash_.end());
     }
     else {
-        Coin::Transaction coin_tx = toCoinClasses();
-        coin_tx.clearScriptSigs();
-        hash_ = coin_tx.getHashLittleEndian();
+        // TODO: should be nullable unique.
+        hash_ = unsigned_hash_;
     }
 }
 
-inline bytes_t Tx::unsigned_hash() const
+inline void Tx::updateUnsignedHash()
 {
     Coin::Transaction coin_tx = toCoinClasses();
     coin_tx.clearScriptSigs();
-    return coin_tx.getHashLittleEndian();
+    unsigned_hash_ = coin_tx.getHashLittleEndian();
 }
 
 inline void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp, status_t status)
@@ -505,6 +508,7 @@ inline void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txou
     timestamp_ = timestamp;
     status_ = status;
 
+    updateUnsignedHash();
     updateHash();
 }
 
@@ -515,6 +519,8 @@ inline void Tx::set(const Coin::Transaction& coin_tx, uint32_t timestamp, status
 
     timestamp_ = timestamp;
     status_ = status;
+
+    updateUnsignedHash();
     updateHash();
 }
 
@@ -524,6 +530,8 @@ inline void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
     fromCoinClasses(coin_tx);
     timestamp_ = timestamp;
     status_ = status;
+
+    updateUnsignedHash();
     updateHash();
 }
 
