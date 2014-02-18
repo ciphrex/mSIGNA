@@ -1,5 +1,8 @@
 qmake and macdeployqt must be run from same Qt installation
 
+Use:
+    $ export PATH=/usr/local/host/bin:/usr/local/usr/local/bin:$PATH
+
 From project root directory, run:
     $ /usr/local/host/bin/qmake && make
     $ /usr/local/usr/local/bin/macdeployqt build/debug/CoinVault.app

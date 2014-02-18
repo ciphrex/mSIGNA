@@ -36,3 +36,10 @@ make OS=$1
 
 cd $CURRENT_DIR
 qmake $SPEC && make
+
+case $1 in
+osx)
+    macdeployqt $(find * -name *.app)
+;;
+
+esac
