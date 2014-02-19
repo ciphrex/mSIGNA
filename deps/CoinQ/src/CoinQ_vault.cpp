@@ -1246,7 +1246,8 @@ std::shared_ptr<TxOut> Vault::newTxOut(const std::string& account_name, const st
 
     typedef odb::query<SigningScriptView> view_query;
 
-    odb::result<SigningScriptView> view_result(db_->query<SigningScriptView>((view_query::Account::name == account_name && view_query::SigningScript::status == SigningScript::UNUSED) + "LIMIT 1"));
+    odb::result<SigningScriptView> view_result(db_->query<SigningScriptView>((view_query::Account::name == account_name && view_query::SigningScript::status == SigningScript::UNUSED) +
+        "ORDER BY" + view_query::SigningScript::id + "LIMIT 1"));
     if (view_result.empty()) {
         throw std::runtime_error("No scripts available.");
     }
