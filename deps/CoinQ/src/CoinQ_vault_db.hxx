@@ -816,7 +816,8 @@ inline bytes_t Key::privkey(const bytes_t& decryption_key) const
         if (!hdkeychain.isPrivate()) {
             throw std::runtime_error("Key::privkey - cannot get private key from nonprivate key object.");
         }
-        return hdkeychain.getChild(childnum_ | 0x80000000).privkey();
+        LOGGER(debug) << "Key::privKey - childnum: " << childnum_ << std::endl;
+        return hdkeychain.getChild(childnum_).privkey();
     }
 
     // TODO: decrypt random key
