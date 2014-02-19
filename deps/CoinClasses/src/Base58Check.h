@@ -94,6 +94,22 @@ inline bool fromBase58Check(const std::string& base58check, std::vector<unsigned
     return true;
 }
 
+inline bool fromBase58Check(const std::string& base58check, std::vector<unsigned char>& payload, const char* _base58chars = DEFAULT_BASE58_CHARS)
+{
+    BigInt bn(base58check, 58, _base58chars);                                // convert from base58
+    uchar_vector bytes = bn.getBytes();
+    if (bytes.size() < 4) return false;                                     // not enough bytes
+    uchar_vector checksum = uchar_vector(bytes.end() - 4, bytes.end());
+    bytes.assign(bytes.begin(), bytes.end() - 4);                           // split string into payload part and checksum part
+    uchar_vector leading0s(countLeading0s(base58check, _base58chars[0]), 0); // prepend leading 0's
+    bytes = leading0s + bytes;
+    uchar_vector hashBytes = sha256_2(bytes);
+    hashBytes.assign(hashBytes.begin(), hashBytes.begin() + 4);
+    if (hashBytes != checksum) return false;                                // verify checksum
+    payload.assign(bytes.begin(), bytes.end());
+    return true;
+}
+
 inline bool isBase58CheckValid(const std::string& base58check, const char* _base58chars = DEFAULT_BASE58_CHARS)
 {
     BigInt bn(base58check, 58, _base58chars);                                // convert from base58
