@@ -182,7 +182,7 @@ void Vault::renameKeychain(const std::string& old_name, const std::string& new_n
     t.commit();
 }
 
-bytes_t Vault::getExtendedKeyBytes(const std::string& keychain_name) const
+bytes_t Vault::getExtendedKeyBytes(const std::string& keychain_name, bool get_private, const bytes_t& decryption_key) const
 {
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session session;
@@ -192,7 +192,7 @@ bytes_t Vault::getExtendedKeyBytes(const std::string& keychain_name) const
     if (keychain_r.empty()) throw std::runtime_error("Keychain not found.");
 
     std::shared_ptr<Keychain> keychain(keychain_r.begin().load());
-    return keychain->extendedkey()->bytes();
+    return keychain->extendedkey()->bytes(get_private, decryption_key);
 }
 
 void Vault::persistKeychain_unwrapped(Keychain& keychain)
@@ -550,18 +550,18 @@ bytes_t Vault::importKeychain(const std::string& keychain_name, const std::strin
     }
 }
 
-bool Vault::isKeychainPrivate(const std::string& filepath) const
+bool Vault::isKeychainFilePrivate(const std::string& filepath) const
 {
     std::ifstream f(filepath, std::ifstream::binary);
     if (!f) {
-        throw std::runtime_error("Vault::isKeychainPrivate - file could not be opened.");
+        throw std::runtime_error("Vault::isKeychainFilePrivate - file could not be opened.");
     }
 
     // get exportprivkeys flag
     char exportprivkeys;
     f.get(exportprivkeys);
     if (!f) {
-        throw std::runtime_error("Vault::isKeychainPrivate - error reading exportprivkey flag.");
+        throw std::runtime_error("Vault::isKeychainFilePrivate - error reading exportprivkey flag.");
     }
 
     return exportprivkeys;
@@ -1625,7 +1625,7 @@ bool Vault::isSigned(std::shared_ptr<Tx> tx)
     return true;
 }
 
-// TODO: compute private key from extkey for deterministic keychains.
+// TODO: Pass decryption keys
 std::shared_ptr<Tx> Vault::signTx(std::shared_ptr<Tx> tx) const
 {
     unsigned int sigsadded = 0;
@@ -1641,7 +1641,7 @@ std::shared_ptr<Tx> Vault::signTx(std::shared_ptr<Tx> tx) const
                 odb::core::transaction t(db_->begin());
 
                 typedef odb::query<Key> query;
-                odb::result<Key> r(db_->query<Key>(query::privkey.is_not_null() && query::pubkey.in_range(pubkeys.begin(), pubkeys.end())));
+                odb::result<Key> r(db_->query<Key>(query::is_private != 0 && query::pubkey.in_range(pubkeys.begin(), pubkeys.end())));
                 if (!r.empty()) {
                     // We've found an input we can sign. Compute the hash to sign.
                     // TODO: compute the hash without constructing a new instance and directly accessing Coin::Transaction internal data
@@ -1670,7 +1670,7 @@ std::shared_ptr<Tx> Vault::signTx(std::shared_ptr<Tx> tx) const
                         }
                         if (coinkey.getPublicKey() != key.pubkey()) {
                             std::stringstream err;
-                            err << "Private key does not correspond to public key " << uchar_vector(key.pubkey()).getHex() << ".";
+                            err << "Private key " << uchar_vector(key.privkey()).getHex() << " does not correspond to public key " << uchar_vector(key.pubkey()).getHex() << ".";
                             throw std::runtime_error(err.str());
                         }
 

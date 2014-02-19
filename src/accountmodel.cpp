@@ -246,6 +246,7 @@ std::shared_ptr<Tx> AccountModel::insertTx(const Coin::Transaction& coinTx, Tx::
     tx->set(coinTx, time(NULL), status);
 
     if (sign) {
+        LOGGER(trace) << "Attempting to sign tx " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
         tx = vault->signTx(tx);
     }
 

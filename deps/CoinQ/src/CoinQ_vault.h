@@ -90,12 +90,12 @@ public:
     void newHDKeychain(const std::string& name, const bytes_t& extkey, unsigned long numkeys = 100);
     void eraseKeychain(const std::string& keychain_name) const;
     void renameKeychain(const std::string& old_name, const std::string& new_name);
-    bytes_t getExtendedKeyBytes(const std::string& keychain_name) const;
+    bytes_t getExtendedKeyBytes(const std::string& keychain_name, bool get_private = false, const bytes_t& decryption_key = bytes_t()) const;
     std::vector<KeychainInfo> getKeychains() const;
     std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
     bytes_t exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
     bytes_t importKeychain(const std::string& keychain_name, const std::string& filepath, bool& importprivkeys);
-    bool isKeychainPrivate(const std::string& filepath) const;
+    bool isKeychainFilePrivate(const std::string& filepath) const;
 
     // Account operations
     bool accountExists(const std::string& account_name) const;

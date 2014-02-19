@@ -30,8 +30,9 @@ public:
     void exportKeychain(const QString& keychainName, const QString& fileName, bool exportPrivate) const;
     void importKeychain(const QString& keychainName, const QString& fileName, bool& importPrivate);
     bool exists(const QString& keychainName) const;
+    bool isPrivate(const QString& keychainName) const;
 
-    bytes_t getExtendedKey(const QString& keychainName) const;
+    bytes_t getExtendedKeyBytes(const QString& keychainName, bool getPrivate = false, const bytes_t& decryptionKey = bytes_t()) const;
 
     // Overridden methods
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;

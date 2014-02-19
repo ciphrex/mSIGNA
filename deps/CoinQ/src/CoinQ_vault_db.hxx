@@ -691,12 +691,13 @@ inline Coin::HDKeychain HDKey::keychain() const
 class ExtendedKey
 {
 public:
-    ExtendedKey(const bytes_t& bytes)
-        : bytes_(bytes) { }
+    ExtendedKey(const bytes_t& bytes, const bytes_t& encryption_key = bytes_t(), const bytes_t& privkey_salt = bytes_t());
 
-    const bytes_t& bytes() const { return bytes_; }
+    const bytes_t& bytes(bool get_private = false, const bytes_t& decryption_key = bytes_t()) const;
 
-    Coin::HDKeychain hdkeychain() const { return Coin::HDKeychain(bytes_); }
+    Coin::HDKeychain hdkeychain(bool get_private = false, const bytes_t& decryption_key = bytes_t()) const;
+
+    bool is_private() const { return (bool)privkey_ciphertext_; }
 
 private:
     friend class odb::access;
@@ -707,26 +708,66 @@ private:
     unsigned long id_;
 
     #pragma db unique
-    bytes_t bytes_;
+    bytes_t pubkey_bytes_;
+
+    #pragma db null
+    odb::nullable<bytes_t> privkey_ciphertext_;
+
+    #pragma db null
+    odb::nullable<bytes_t> privkey_salt_;
 };
+
+inline ExtendedKey::ExtendedKey(const bytes_t& bytes, const bytes_t& /*encryption_key*/, const bytes_t& privkey_salt)
+{
+    Coin::HDKeychain keychain(bytes);
+    if (!keychain.isPrivate()) {
+        pubkey_bytes_ = bytes;
+        return;
+    }
+
+    // TODO: Encrypt
+    privkey_ciphertext_ = bytes;
+    privkey_salt_ = privkey_salt;
+
+    pubkey_bytes_ = keychain.getPublic().extkey();
+}
+
+inline const bytes_t& ExtendedKey::bytes(bool get_private, const bytes_t& /*decryption_key*/) const
+{
+    if (get_private) {
+        if (!is_private())
+            throw std::runtime_error("ExtendedKey::bytes - cannot get private key from public key.");
+
+        // TODO: Decrypt
+        return *privkey_ciphertext_;
+    }
+
+    return pubkey_bytes_;
+}
+
+inline Coin::HDKeychain ExtendedKey::hdkeychain(bool get_private, const bytes_t& decryption_key) const
+{
+    return Coin::HDKeychain(bytes(get_private, decryption_key));
+}
 
 #pragma db object pointer(std::shared_ptr)
 class Key
 {
 public:
     // For random keys
-    Key(const bytes_t& pubkey, const bytes_t& privkey)
-        : pubkey_(pubkey), privkey_(privkey), childnum_(0) { }
+    Key(const bytes_t& pubkey, const bytes_t& privkey_ciphertext, const bytes_t& privkey_salt = bytes_t())
+        : is_private_(true), pubkey_(pubkey), privkey_ciphertext_(privkey_ciphertext), privkey_salt_(privkey_salt), childnum_(0) { }
 
     Key(const bytes_t& pubkey)
-        : pubkey_(pubkey), childnum_(0) { }
+        : is_private_(false), pubkey_(pubkey), childnum_(0) { }
 
     // For deterministic keys
     Key(const std::shared_ptr<ExtendedKey>& extendedkey, uint32_t childnum);
 
     unsigned long id() const { return id_; }
-    bytes_t privkey() const;
+    bool is_private() const { return is_private_; }
     const bytes_t& pubkey() const { return pubkey_; }
+    bytes_t privkey(const bytes_t& decryption_key = bytes_t()) const;
 
 private:
     friend class odb::access;
@@ -736,12 +777,17 @@ private:
     #pragma db id auto
     unsigned long id_;
 
+    bool is_private_;
+
     bytes_t pubkey_;
 
-    // privkey is null for nonprivate keys
-    // privkey is nonnull but empty for private deterministic keys. This allows us to query by privkey.is_not_null.
+    // privkey_ciphertext_ is null for deterministic and nonprivate keys
     #pragma db null
-    odb::nullable<bytes_t> privkey_;
+    odb::nullable<bytes_t> privkey_ciphertext_;
+
+    // privkey_salt_ is null for deterministic and nonprivate keys
+    #pragma db null
+    odb::nullable<bytes_t> privkey_salt_;
 
     // extended key as per BIP0032
     #pragma db value_null
@@ -753,27 +799,28 @@ private:
 inline Key::Key(const std::shared_ptr<ExtendedKey>& extendedkey, uint32_t childnum)
     : extendedkey_(extendedkey), childnum_(childnum)
 {
+    is_private_ = extendedkey_->is_private();
     Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain();
-    if (hdkeychain.isPrivate()) { privkey_ = bytes_t(); }
     hdkeychain = hdkeychain.getChild(childnum_);
     pubkey_ = hdkeychain.pubkey();
 }
 
-inline bytes_t Key::privkey() const
+inline bytes_t Key::privkey(const bytes_t& decryption_key) const
 {
-    if (!privkey_) {
+    if (!is_private_) {
         throw std::runtime_error("Key::privkey - cannot get private key from nonprivate key object.");
     }
 
     if (extendedkey_) {
-        Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain();
+        Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain(true, decryption_key);
         if (!hdkeychain.isPrivate()) {
             throw std::runtime_error("Key::privkey - cannot get private key from nonprivate key object.");
         }
         return hdkeychain.getChild(childnum_ | 0x80000000).privkey();
     }
 
-    return *privkey_;
+    // TODO: decrypt random key
+    return *privkey_ciphertext_;
 }
 
 #pragma db object pointer(std::shared_ptr)
@@ -854,15 +901,8 @@ private:
 inline Keychain::Keychain(const std::string& name, const std::shared_ptr<ExtendedKey>& extendedkey, unsigned long numkeys)
     : name_(name), extendedkey_(extendedkey), numkeys_(0), nextkeyindex_(0), numsavedkeys_(0)
 {
-    Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain();
-    if (hdkeychain.isPrivate()) {
-        type_ = PRIVATE;
-        hash_ = sha256_2(hdkeychain.getPublic().extkey());
-    }
-    else {
-        type_ = PUBLIC;
-        hash_ = sha256_2(hdkeychain.extkey());
-    }
+    type_ = extendedkey_->is_private() ? PRIVATE : PUBLIC;
+    hash_ = sha256_2(extendedkey_->hdkeychain().extkey());
     this->numkeys(numkeys);
 }
 

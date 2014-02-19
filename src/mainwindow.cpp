@@ -510,7 +510,15 @@ void MainWindow::backupKeychain()
     QString name = nameItem->data(Qt::DisplayRole).toString();
 
     try {
-        bytes_t extendedKey = keychainModel->getExtendedKey(name);
+        bytes_t extendedKey;
+
+        if (keychainModel->isPrivate(name)) {
+            // TODO: prompt user for decryption key
+            extendedKey = keychainModel->getExtendedKeyBytes(name, true);
+        }
+        else {
+            extendedKey = keychainModel->getExtendedKeyBytes(name);
+        }
 
         KeychainBackupDialog dlg(tr("Keychain information"));
         dlg.setExtendedKey(extendedKey);
