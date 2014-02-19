@@ -816,7 +816,6 @@ inline bytes_t Key::privkey(const bytes_t& decryption_key) const
         if (!hdkeychain.isPrivate()) {
             throw std::runtime_error("Key::privkey - cannot get private key from nonprivate key object.");
         }
-        LOGGER(debug) << "Key::privKey - childnum: " << childnum_ << std::endl;
         return hdkeychain.getChild(childnum_).privkey();
     }
 
@@ -932,11 +931,10 @@ inline unsigned long Keychain::numkeys(unsigned long numkeys)
     }
 
     Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain();
-    uint32_t privmask = (type_ == PRIVATE) ? 0x80000000 : 0x00000000;
 
     for (uint32_t i = numkeys_; i < numkeys; i++) {
         while (true) {
-            uint32_t childnum = nextkeyindex_++ | privmask;
+            uint32_t childnum = nextkeyindex_++;
             Coin::HDKeychain child = hdkeychain.getChild(childnum);
             if (!child) continue;
             std::shared_ptr<Key> key(new Key(extendedkey_, childnum)); 

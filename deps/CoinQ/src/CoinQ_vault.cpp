@@ -1670,7 +1670,7 @@ std::shared_ptr<Tx> Vault::signTx(std::shared_ptr<Tx> tx) const
                         }
                         if (coinkey.getPublicKey() != key.pubkey()) {
                             std::stringstream err;
-                            err << "Private key " << uchar_vector(key.privkey()).getHex() << " does not correspond to public key " << uchar_vector(key.pubkey()).getHex() << ".";
+                            err << "Private key does not correspond to public key " << uchar_vector(key.pubkey()).getHex() << ".";
                             throw std::runtime_error(err.str());
                         }
 
