@@ -1253,8 +1253,11 @@ void MainWindow::processFile(const QString& fileName)
 
 void MainWindow::processCommand(const QString& command)
 {
-    if (command == "unlicense") {
-        LOGGER(trace) << "MainWindow::processCommand - " << command.toStdString() << std::endl;
+    LOGGER(trace) << "MainWindow::processCommand - " << command.toStdString() << std::endl;
+    if (command == "clearsettings") {
+        clearSettings();
+    }
+    else if (command == "unlicense") {
         licenseAccepted = false;
         saveSettings();
     }
@@ -1645,6 +1648,13 @@ void MainWindow::saveSettings()
     settings.setValue("autoconnect", autoConnect);
     settings.setValue("resyncheight", resyncHeight);
     settings.setValue("lastvaultdir", lastVaultDir);
+}
+
+void MainWindow::clearSettings()
+{
+    QSettings settings("Ciphrex", getDefaultSettings().getAppName());
+    settings.clear();
+    loadSettings();
 }
 
 void MainWindow::loadVault(const QString &fileName)

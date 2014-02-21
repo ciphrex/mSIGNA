@@ -50,6 +50,7 @@ public:
 
     void loadSettings();
     void saveSettings();
+    void clearSettings();
 
     void loadBlockTree();
     void tryConnect();
