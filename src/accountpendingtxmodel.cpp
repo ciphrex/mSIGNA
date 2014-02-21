@@ -145,7 +145,7 @@ void AccountPendingTxModel::update()
             confirmations = "0";
         }
 
-        QString address = QString::fromStdString(getAddressForTxOutScript(item->script, BASE58_VERSIONS));
+        QString address = QString::fromStdString(getAddressForTxOutScript(item->script, getDefaultSettings().getBase58Versions()));
         QString txid = QString::fromStdString(uchar_vector(item->txhash).getHex());
 
         row.append(new QStandardItem(time));

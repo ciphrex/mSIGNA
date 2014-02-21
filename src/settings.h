@@ -14,9 +14,27 @@
 #include <QDir>
 #include <QString>
 
-const QString APPNAME("Vault");
-const QString APPDATADIR(QDir::homePath() + "/vault");
+class DefaultSettings
+{
+public:
+    DefaultSettings() : loaded(false) { }
 
-const unsigned char BASE58_VERSIONS[] = { 0x00, 0x05 };
+    void load();
+    bool isLoaded() const { return loaded; }
+
+    const QString& getAppName() const { return appName; }
+    const QString& getDataDir() const { return dataDir; }
+    const unsigned char* getBase58Versions() const { return base58Versions; }
+
+private:
+    bool loaded;
+
+    QString appName;
+    QString dataDir;
+    const unsigned char* base58Versions;
+};
+
+// Singleton
+extern const DefaultSettings& getDefaultSettings();
 
 #endif //  COINVAULT_SETTINGS_H

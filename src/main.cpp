@@ -34,10 +34,21 @@ int main(int argc, char* argv[])
 
     QApplication app(argc, argv);
     app.setOrganizationName("Ciphrex");
-    app.setApplicationName(APPNAME);
 
-    QDir datadir(APPDATADIR);
-    if (!datadir.exists() && !datadir.mkpath(APPDATADIR)) {
+    try {
+        getDefaultSettings();
+    }
+    catch (const std::exception& e) {
+        QMessageBox msgBox;
+        msgBox.setText(QMessageBox::tr("Error: ") + QString::fromStdString(e.what()));
+        msgBox.exec();
+        return -1;
+    }
+
+    app.setApplicationName(getDefaultSettings().getAppName());
+
+    QDir datadir(getDefaultSettings().getDataDir());
+    if (!datadir.exists() && !datadir.mkpath(getDefaultSettings().getDataDir())) {
         QMessageBox msgBox;
         msgBox.setText(QMessageBox::tr("Warning: Failed to create vault data directory."));
         msgBox.exec();
@@ -47,7 +58,7 @@ int main(int argc, char* argv[])
     CommandServer commandServer(&app);
     if (commandServer.processArgs(argc, argv)) exit(0);
 
-    INIT_LOGGER((APPDATADIR + "/debug.log").toStdString().c_str());
+    INIT_LOGGER((getDefaultSettings().getDataDir() + "/debug.log").toStdString().c_str());
     LOGGER(debug) << std::endl << std::endl << std::endl << std::endl << QDateTime::currentDateTime().toString().toStdString() << std::endl;
     LOGGER(debug) << "Vault started." << std::endl;
 

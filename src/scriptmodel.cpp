@@ -69,7 +69,7 @@ void ScriptModel::update()
     std::vector<std::shared_ptr<SigningScriptView>> scripts = vault->getSigningScriptViews(accountName.toStdString(), SigningScript::CHANGE | SigningScript::REQUEST | SigningScript::RECEIPT);
     for (auto& script: scripts) {
         QList<QStandardItem*> row;
-        QString address = QString::fromStdString(getAddressForTxOutScript(script->txoutscript, BASE58_VERSIONS));
+        QString address = QString::fromStdString(getAddressForTxOutScript(script->txoutscript, getDefaultSettings().getBase58Versions()));
 
         QString type;
         switch (script->status) {

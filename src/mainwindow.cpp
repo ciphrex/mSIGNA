@@ -267,10 +267,10 @@ void MainWindow::updateVaultStatus(const QString& name)
     signRawTxAction->setEnabled(isOpen);
 
     if (isOpen) {
-        setWindowTitle(APPNAME + " - " + name);
+        setWindowTitle(getDefaultSettings().getAppName() + " - " + name);
     }
     else {
-        setWindowTitle(APPNAME);
+        setWindowTitle(getDefaultSettings().getAppName());
     }
 }
 
@@ -1198,7 +1198,7 @@ void MainWindow::networkSettings()
         autoConnect = dlg.getAutoConnect();
         connectAction->setText(tr("Connect to ") + host);
 
-        QSettings settings("Ciphrex", APPNAME);
+        QSettings settings("Ciphrex", getDefaultSettings().getAppName());
         settings.setValue("host", host);
         settings.setValue("port", port);
     }
@@ -1206,8 +1206,8 @@ void MainWindow::networkSettings()
 
 void MainWindow::about()
 {
-   QMessageBox::about(this, tr("About ") + APPNAME,
-            tr("<b>") + APPNAME + "(TM) " + VERSIONTEXT + "</b><br />" + COPYRIGHTTEXT);
+   QMessageBox::about(this, tr("About ") + getDefaultSettings().getAppName(),
+            tr("<b>") + getDefaultSettings().getAppName() + "(TM) " + VERSIONTEXT + "</b><br />" + COPYRIGHTTEXT);
 }
 
 void MainWindow::errorStatus(const QString& message)
@@ -1266,7 +1266,7 @@ void MainWindow::processCommand(const QString& command)
 void MainWindow::createActions()
 {
     // application actions
-    quitAction = new QAction(tr("&Quit ") + APPNAME, this);
+    quitAction = new QAction(tr("&Quit ") + getDefaultSettings().getAppName(), this);
     quitAction->setShortcuts(QKeySequence::Quit);
     quitAction->setStatusTip(tr("Quit the application"));
     connect(quitAction, SIGNAL(triggered()), this, SLOT(close()));
@@ -1495,7 +1495,7 @@ void MainWindow::createActions()
 
     // about/help actions
     aboutAction = new QAction(tr("About..."), this);
-    aboutAction->setStatusTip(tr("About ") + APPNAME);
+    aboutAction->setStatusTip(tr("About ") + getDefaultSettings().getAppName());
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(about()));
 
     updateVaultStatus();
@@ -1616,7 +1616,7 @@ void MainWindow::createStatusBar()
 
 void MainWindow::loadSettings()
 {
-    QSettings settings("Ciphrex", APPNAME);
+    QSettings settings("Ciphrex", getDefaultSettings().getAppName());
     QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
     QSize size = settings.value("size", QSize(800, 400)).toSize();
     resize(size);
@@ -1630,12 +1630,12 @@ void MainWindow::loadSettings()
     autoConnect = settings.value("autoconnect", false).toBool();
     resyncHeight = settings.value("resyncheight", 0).toInt();
 
-    lastVaultDir = settings.value("lastvaultdir", APPDATADIR).toString();
+    lastVaultDir = settings.value("lastvaultdir", getDefaultSettings().getDataDir()).toString();
 }
 
 void MainWindow::saveSettings()
 {
-    QSettings settings("Ciphrex", APPNAME);
+    QSettings settings("Ciphrex", getDefaultSettings().getAppName());
     settings.setValue("pos", pos());
     settings.setValue("size", size());
     settings.setValue("licenseaccepted", licenseAccepted);

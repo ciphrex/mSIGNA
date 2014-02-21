@@ -33,5 +33,5 @@ AccountHistoryDialog::AccountHistoryDialog(CoinQ::Vault::Vault* vault, const QSt
     QVBoxLayout* mainLayout = new QVBoxLayout();
     mainLayout->addWidget(accountHistoryView);
     setLayout(mainLayout);
-    setWindowTitle(APPNAME + " - " + accountName + tr(" account history"));
+    setWindowTitle(getDefaultSettings().getAppName() + " - " + accountName + tr(" account history"));
 }

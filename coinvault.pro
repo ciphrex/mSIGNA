@@ -69,6 +69,7 @@ HEADERS = \
     src/resyncdialog.h
                 
 SOURCES = \
+    src/settings.cpp \
     src/coinparams.cpp \
     src/main.cpp \
     src/splashscreen.cpp \
