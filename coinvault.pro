@@ -38,6 +38,7 @@ FORMS = \
 
 HEADERS = \
     src/settings.h \
+    src/filesystem.h \
     src/versioninfo.h \
     src/copyrightinfo.h \
     src/coinparams.h \
@@ -70,6 +71,7 @@ HEADERS = \
                 
 SOURCES = \
     src/settings.cpp \
+    src/filesystem.cpp \
     src/coinparams.cpp \
     src/main.cpp \
     src/splashscreen.cpp \

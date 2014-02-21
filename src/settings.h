@@ -24,6 +24,7 @@ public:
 
     const QString& getAppName() const { return appName; }
     const QString& getDataDir() const { return dataDir; }
+    const QString& getDocumentDir() const { return documentDir; }
     const unsigned char* getBase58Versions() const { return base58Versions; }
 
 private:
@@ -31,6 +32,7 @@ private:
 
     QString appName;
     QString dataDir;
+    QString documentDir;
     const unsigned char* base58Versions;
 };
 

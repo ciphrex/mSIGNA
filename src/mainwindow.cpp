@@ -1624,13 +1624,13 @@ void MainWindow::loadSettings()
 
     licenseAccepted = settings.value("licenseaccepted", false).toBool();
 
-    blockTreeFile = settings.value("blocktreefile", "blocktree.dat").toString();
+    blockTreeFile = settings.value("blocktreefile", getDefaultSettings().getDataDir() + "/blocktree.dat").toString();
     host = settings.value("host", "localhost").toString();
     port = settings.value("port", getCoinParams().default_port()).toInt();
     autoConnect = settings.value("autoconnect", false).toBool();
     resyncHeight = settings.value("resyncheight", 0).toInt();
 
-    lastVaultDir = settings.value("lastvaultdir", getDefaultSettings().getDataDir()).toString();
+    lastVaultDir = settings.value("lastvaultdir", getDefaultSettings().getDocumentDir()).toString();
 }
 
 void MainWindow::saveSettings()

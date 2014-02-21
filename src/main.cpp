@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     QDir datadir(getDefaultSettings().getDataDir());
     if (!datadir.exists() && !datadir.mkpath(getDefaultSettings().getDataDir())) {
         QMessageBox msgBox;
-        msgBox.setText(QMessageBox::tr("Warning: Failed to create vault data directory."));
+        msgBox.setText(QMessageBox::tr("Warning: Failed to create app data directory."));
         msgBox.exec();
     }
 
