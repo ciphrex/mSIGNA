@@ -22,7 +22,11 @@ class TxView : public QTreeView
 public:
     TxView(QWidget* parent = NULL);
 
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Woverloaded-virtual"
     void setModel(TxModel* model);
+    #pragma clang diagnostic pop
+
     void setMenu(QMenu* menu) { this->menu = menu; }
     void update();
 

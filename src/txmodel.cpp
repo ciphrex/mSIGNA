@@ -323,7 +323,7 @@ QVariant TxModel::data(const QModelIndex& index, int role) const
     }
 }
 
-Qt::ItemFlags TxModel::flags(const QModelIndex& index) const
+Qt::ItemFlags TxModel::flags(const QModelIndex& /*index*/) const
 {
     return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
 }

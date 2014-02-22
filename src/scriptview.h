@@ -22,7 +22,11 @@ class ScriptView : public QTreeView
 public:
     ScriptView(QWidget* parent = NULL);
 
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Woverloaded-virtual"
     void setModel(ScriptModel* model);
+    #pragma clang diagnostic pop
+
     void update();
 
 protected:

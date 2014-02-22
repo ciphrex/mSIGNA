@@ -239,7 +239,7 @@ bool AccountModel::insertRawTx(const bytes_t& rawTx)
 std::shared_ptr<Tx> AccountModel::insertTx(const Coin::Transaction& coinTx, Tx::status_t status, bool sign)
 {
     if (!vault) {
-        return false;
+        return std::shared_ptr<Tx>();
     }
 
     std::shared_ptr<Tx> tx(new Tx());
