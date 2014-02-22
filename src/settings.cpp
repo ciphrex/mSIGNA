@@ -9,17 +9,20 @@
 // All Rights Reserved.
 
 #include "settings.h"
+#include "coinparams.h"
 #include "filesystem.h"
 
-static const unsigned char BASE58_VERSIONS[] = { 0x00, 0x05 };
+//static const unsigned char BASE58_VERSIONS[] = { 0x00, 0x05 };
 
 void DefaultSettings::load()
 {
-    appName = "Vault";
-    dataDir = QString::fromStdString(getDefaultDataDir());
-    documentDir = QDir::homePath() + "/Vaults";
-    base58Versions = BASE58_VERSIONS;
-    loaded = true;
+    m_appName = getCoinParams().network_name();
+    m_appName += "Vault";
+    m_dataDir = QString::fromStdString(getDefaultDataDir(m_appName.toStdString()));
+    m_documentDir = QDir::homePath() + "/Vaults";
+    m_base58Versions[0] = getCoinParams().pay_to_pubkey_hash_version();
+    m_base58Versions[1] = getCoinParams().pay_to_script_hash_version();
+    m_loaded = true;
 }
 
 static DefaultSettings defaultSettings;

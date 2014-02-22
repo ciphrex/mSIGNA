@@ -12,4 +12,4 @@
 
 #include <string>
 
-std::string getDefaultDataDir();
+std::string getDefaultDataDir(const std::string& appName);

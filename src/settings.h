@@ -17,23 +17,23 @@
 class DefaultSettings
 {
 public:
-    DefaultSettings() : loaded(false) { }
+    DefaultSettings() : m_loaded(false) { }
 
     void load();
-    bool isLoaded() const { return loaded; }
+    bool isLoaded() const { return m_loaded; }
 
-    const QString& getAppName() const { return appName; }
-    const QString& getDataDir() const { return dataDir; }
-    const QString& getDocumentDir() const { return documentDir; }
-    const unsigned char* getBase58Versions() const { return base58Versions; }
+    const QString& getAppName() const { return m_appName; }
+    const QString& getDataDir() const { return m_dataDir; }
+    const QString& getDocumentDir() const { return m_documentDir; }
+    const unsigned char* getBase58Versions() const { return m_base58Versions; }
 
 private:
-    bool loaded;
+    bool m_loaded;
 
-    QString appName;
-    QString dataDir;
-    QString documentDir;
-    const unsigned char* base58Versions;
+    QString m_appName;
+    QString m_dataDir;
+    QString m_documentDir;
+    unsigned char m_base58Versions[2];
 };
 
 // Singleton
