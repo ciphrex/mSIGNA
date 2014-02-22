@@ -58,6 +58,8 @@ public:
     Version() : version_(0) { }
     Version(uint32_t version) : version_(version) { }
 
+    unsigned long id() const { return id_; }
+
     void version(uint32_t version) { version_ = version; }
     uint32_t version() const { return version_; }
 
@@ -692,6 +694,8 @@ class ExtendedKey
 {
 public:
     ExtendedKey(const bytes_t& bytes, const bytes_t& encryption_key = bytes_t(), const bytes_t& privkey_salt = bytes_t());
+
+    unsigned long id() const { return id_; }
 
     const bytes_t& bytes(bool get_private = false, const bytes_t& decryption_key = bytes_t()) const;
 
