@@ -2,7 +2,7 @@
 //
 // hdkeys.cpp
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -54,6 +54,7 @@ HDKeychain::HDKeychain(const bytes_t& key, const bytes_t& chain_code, uint32_t c
     }
 
    if (key_.size() == 32) {
+        // key is private
         BigInt n(key_);
         if (n >= CURVE_ORDER || n.isZero()) {
             throw std::runtime_error("Invalid key.");
@@ -64,7 +65,16 @@ HDKeychain::HDKeychain(const bytes_t& key, const bytes_t& chain_code, uint32_t c
         privkey += key_;
         key_ = privkey;
     }
-    else if (key_.size() != 33) {
+    else if (key_.size() == 33) {
+        // key is public
+        try {
+            secp256k1_point K(key_);
+        }
+        catch (...) {
+            throw std::runtime_error("Invalid key.");
+        }
+    }
+    else {
         throw std::runtime_error("Invalid key.");
     }
 
