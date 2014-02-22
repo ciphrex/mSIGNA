@@ -399,6 +399,7 @@ void MainWindow::newKeychain()
             accountModel->update();
             keychainModel->update();
             keychainView->update();
+            tabWidget->setCurrentWidget(keychainView);
             updateStatusMessage(tr("Created keychain ") + name);
         }
     }
@@ -444,6 +445,8 @@ void MainWindow::importKeychain(QString fileName)
         updateStatusMessage(tr("Importing keychain..."));
         bool isPrivate = importPrivate; // importPrivate is a user setting. isPrivate is whether or not this particular keychain is private.
         keychainModel->importKeychain(name, fileName, isPrivate);
+        keychainView->update();
+        tabWidget->setCurrentWidget(keychainView);
         updateStatusMessage(tr("Imported ") + (isPrivate ? tr("private") : tr("public")) + tr(" keychain ") + name);
     }
     catch (const exception& e) {
@@ -614,6 +617,7 @@ void MainWindow::newAccount()
         if (dlg.exec()) {
             accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames());
             accountView->update();
+            tabWidget->setCurrentWidget(accountView);
             networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
             if (connected) resync();
         }
@@ -659,6 +663,8 @@ void MainWindow::importAccount(QString fileName)
         updateStatusMessage(tr("Importing account..."));
         accountModel->importAccount(name, fileName);
         accountModel->update();
+        accountView->update();
+        tabWidget->setCurrentWidget(accountView);
         networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         updateStatusMessage(tr("Imported account ") + name);
         promptResync();
@@ -826,6 +832,7 @@ void MainWindow::insertRawTx()
             accountView->update();
             txModel->update();
             txView->update();
+            tabWidget->setCurrentWidget(txView);
         } 
     }
     catch (const exception& e) {
@@ -885,6 +892,9 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
             Coin::Transaction coin_tx = accountModel->createTx(dlg.getAccountName(), outputs, fee);
             std::shared_ptr<CoinQ::Vault::Tx> tx = accountModel->insertTx(coin_tx, CoinQ::Vault::Tx::UNSIGNED, sign);
             saved = true;
+            txModel->update();
+            txView->update();
+            tabWidget->setCurrentWidget(txView);
             if (status == CreateTxDialog::SIGN_AND_SEND) {
                 // TODO: Clean up signing and sending code
                 if (tx->status() == CoinQ::Vault::Tx::UNSIGNED) {
@@ -899,7 +909,9 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 // TODO: Check transaction has propagated before changing status to RECEIVED
                 tx->status(CoinQ::Vault::Tx::RECEIVED);
                 accountModel->getVault()->addTx(tx, true);
-            } 
+            }
+            txModel->update();
+            txView->update();
             return;
         }
         catch (const exception& e) {
