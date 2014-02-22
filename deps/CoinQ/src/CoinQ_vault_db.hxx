@@ -1024,7 +1024,7 @@ inline void SigningScript::addTxOut(std::shared_ptr<TxOut> txout)
 class Account : public std::enable_shared_from_this<Account>
 {
 public:
-    Account() { }
+    Account(bool is_ours = true) : is_ours_(is_ours) { }
 
     typedef std::vector<std::shared_ptr<SigningScript>> signingscripts_t;
     void set(const std::string& name, unsigned int minsigs, const std::set<bytes_t>& keychain_hashes, const signingscripts_t& scripts, uint32_t time_created = time(NULL));
@@ -1047,6 +1047,8 @@ public:
 
     const signingscripts_t& scripts() const { return signingscripts_; }
 
+    bool is_ours() const { return is_ours_; }
+
 private:
     friend class odb::access;
 
@@ -1067,6 +1069,8 @@ private:
     signingscripts_t signingscripts_;
 
     uint32_t time_created_;
+
+    bool is_ours_;
 };
 
 
@@ -1157,6 +1161,7 @@ struct AccountView
     unsigned long id;
     std::string name;
     unsigned int minsigs;
+    bool is_ours;
 };
 
 #pragma db view \
@@ -1211,6 +1216,9 @@ struct TxOutView
 
     #pragma db column(Account::name_)
     std::string account_name;
+
+    #pragma db column(Account::is_ours_)
+    bool account_is_ours;
 
     #pragma db column(SigningScript::id_)
     unsigned long signingscript_id;
@@ -1280,6 +1288,9 @@ struct SigningScriptView
     #pragma db column(Account::name_)
     std::string account_name;
 
+    #pragma db column(Account::is_ours_)
+    bool account_is_ours;
+
     #pragma db column(SigningScript::id_)
     unsigned long id;
 
@@ -1346,6 +1357,9 @@ struct AccountTxOutView
 
     #pragma db column(Account::name_)
     std::string account_name;
+
+    #pragma db column(Account::is_ours_)
+    bool account_is_ours;
 
     #pragma db column(TxOut::script_)
     bytes_t script;

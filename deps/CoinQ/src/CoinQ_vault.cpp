@@ -567,7 +567,7 @@ bool Vault::isKeychainFilePrivate(const std::string& filepath) const
     return exportprivkeys;
 }
 
-void Vault::newAccount(const std::string& name, unsigned int minsigs, const std::vector<std::string>& keychain_names)
+void Vault::newAccount(const std::string& name, unsigned int minsigs, const std::vector<std::string>& keychain_names, bool is_ours)
 {
     if (keychain_names.empty()) {
         throw std::runtime_error("Vault::newAccount() - keychain_names cannot be empty.");
@@ -611,7 +611,7 @@ void Vault::newAccount(const std::string& name, unsigned int minsigs, const std:
             keychains.insert(keychain);
         }
 
-        std::shared_ptr<Account> account(new Account());
+        std::shared_ptr<Account> account(new Account(is_ours));
         account->set(name, minsigs, keychains);
         for (auto& script: account->scripts()) { db_->persist(script); }
         db_->persist(account);
@@ -620,7 +620,7 @@ void Vault::newAccount(const std::string& name, unsigned int minsigs, const std:
     }
 }
 
-std::vector<AccountInfo> Vault::getAccounts() const
+std::vector<AccountInfo> Vault::getAccounts(account_ownership_t ownership) const
 {
     std::vector<AccountInfo> accounts;
 
@@ -629,7 +629,16 @@ std::vector<AccountInfo> Vault::getAccounts() const
     odb::core::transaction t(db_->begin());
 //    t.tracer(odb::stderr_tracer);
 
-    odb::result<AccountView> accountview_result(db_->query<AccountView>());
+    odb::result<AccountView> accountview_result;
+    if (ownership == ACCOUNT_OWNER_US) {
+        accountview_result = db_->query<AccountView>(odb::query<AccountView>::is_ours);
+    }
+    else if (ownership == ACCOUNT_OWNER_NOT_US) {
+        accountview_result = db_->query<AccountView>(!odb::query<AccountView>::is_ours);
+    }
+    else {
+        accountview_result = db_->query<AccountView>();
+    }
     for (auto& accountview: accountview_result) {
         std::vector<std::string> keychain_names;
         odb::result<KeychainView> keychainview_result(db_->query<KeychainView>(odb::query<KeychainView>::Account::name == accountview.name));
@@ -801,7 +810,7 @@ bytes_t Vault::exportAccount(const std::string& account_name, const std::string&
     return hash;
 }
 
-bytes_t Vault::importAccount(const std::string& account_name, const std::string& filepath)
+bytes_t Vault::importAccount(const std::string& account_name, const std::string& filepath, bool is_ours)
 {
     if (accountExists(account_name)) {
         throw std::runtime_error("Vault::importAccount - account with same name already exists.");
@@ -976,7 +985,7 @@ bytes_t Vault::importAccount(const std::string& account_name, const std::string&
         throw std::runtime_error("Vault::importAccount - hash mismatch.");
     }
 
-    Account account;
+    Account account(is_ours);
     account.set(account_name, minsigs, keychain_hashes, scripts, time_created);
 
     boost::lock_guard<boost::mutex> lock(mutex);

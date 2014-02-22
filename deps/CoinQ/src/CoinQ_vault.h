@@ -47,8 +47,8 @@ private:
 class AccountInfo
 {
 public:
-    AccountInfo(unsigned long id, const std::string name, unsigned int minsigs, const std::vector<std::string> keychain_names, uint64_t balance = 0, uint64_t pending = 0, unsigned long scripts_remaining = 0)
-        :id_(id), name_(name), minsigs_(minsigs), keychain_names_(keychain_names), balance_(balance), pending_(pending), scripts_remaining_(scripts_remaining) { }
+    AccountInfo(unsigned long id, const std::string name, unsigned int minsigs, const std::vector<std::string> keychain_names, uint64_t balance = 0, uint64_t pending = 0, unsigned long scripts_remaining = 0, bool is_ours = true)
+        :id_(id), name_(name), minsigs_(minsigs), keychain_names_(keychain_names), balance_(balance), pending_(pending), scripts_remaining_(scripts_remaining), is_ours_(is_ours)  { }
 
     unsigned long id() const { return id_; }
     const std::string& name() const { return name_; }
@@ -57,6 +57,7 @@ public:
     uint64_t balance() const { return balance_; }
     uint64_t pending() const { return pending_; }
     unsigned long scripts_remaining() const { return scripts_remaining_; }
+    bool is_ours() const { return is_ours_; }
 
 private:
     unsigned long id_;
@@ -66,6 +67,7 @@ private:
     uint64_t balance_;
     uint64_t pending_;
     unsigned long scripts_remaining_;
+    bool is_ours_;
 };
 
 class Vault
@@ -97,15 +99,21 @@ public:
     bytes_t importKeychain(const std::string& keychain_name, const std::string& filepath, bool& importprivkeys);
     bool isKeychainFilePrivate(const std::string& filepath) const;
 
+    enum account_ownership_t {
+        ACCOUNT_OWNER_US = 0x01,
+        ACCOUNT_OWNER_NOT_US = 0x02,
+        ACCOUNT_OWNER_ANY = 0x03
+    };
+        
     // Account operations
     bool accountExists(const std::string& account_name) const;
-    void newAccount(const std::string& name, unsigned int minsigs, const std::vector<std::string>& keychain_names);
+    void newAccount(const std::string& name, unsigned int minsigs, const std::vector<std::string>& keychain_names, bool is_ours = true);
     void eraseAccount(const std::string& name) const;
     void renameAccount(const std::string& old_name, const std::string& new_name);
-    std::vector<AccountInfo> getAccounts() const;
+    std::vector<AccountInfo> getAccounts(account_ownership_t ownership = ACCOUNT_OWNER_US) const;
     std::shared_ptr<Account> getAccount(const std::string& name) const;
     bytes_t exportAccount(const std::string& account_name, const std::string& filepath) const;
-    bytes_t importAccount(const std::string& account_name, const std::string& filepath);
+    bytes_t importAccount(const std::string& account_name, const std::string& filepath, bool is_ours = true);
 
     std::vector<std::shared_ptr<SigningScriptView>> getSigningScriptViews(const std::string& account_name, int flags = SigningScript::ALL) const;
 
