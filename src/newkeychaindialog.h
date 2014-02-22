@@ -29,7 +29,7 @@ public:
 
 private:
     QLineEdit* nameEdit;
-    QLineEdit* numKeysEdit;
+//    QLineEdit* numKeysEdit;
 };
 
 #endif // COINVAULT_NEWKEYCHAINDIALOG_H

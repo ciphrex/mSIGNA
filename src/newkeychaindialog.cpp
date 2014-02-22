@@ -31,7 +31,7 @@ NewKeychainDialog::NewKeychainDialog(QWidget* parent)
 
     // Key Chain Name
     QLabel* nameLabel = new QLabel();
-    nameLabel->setText(tr("Key Chain  Name:"));
+    nameLabel->setText(tr("Keychain Name:"));
     nameEdit = new QLineEdit();
 
     QHBoxLayout* nameLayout = new QHBoxLayout();
@@ -40,6 +40,7 @@ NewKeychainDialog::NewKeychainDialog(QWidget* parent)
     nameLayout->addWidget(nameEdit);
 
     // NumKeys
+/*
     QLabel* numKeysLabel = new QLabel();
     numKeysLabel->setText(tr("Number of Keys:"));
     numKeysEdit = new QLineEdit();
@@ -50,11 +51,12 @@ NewKeychainDialog::NewKeychainDialog(QWidget* parent)
     numKeysLayout->setSizeConstraint(QLayout::SetNoConstraint);
     numKeysLayout->addWidget(numKeysLabel);
     numKeysLayout->addWidget(numKeysEdit);
+*/
  
     QVBoxLayout* mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
     mainLayout->addLayout(nameLayout);
-    mainLayout->addLayout(numKeysLayout);
+    //mainLayout->addLayout(numKeysLayout);
     mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
 }
@@ -66,5 +68,5 @@ QString NewKeychainDialog::getName() const
 
 int NewKeychainDialog::getNumKeys() const
 {
-    return numKeysEdit->text().toInt();
+    return DEFAULT_NUMKEYS; //numKeysEdit->text().toInt();
 }
