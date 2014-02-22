@@ -146,6 +146,7 @@ LIBS += \
 
 win32 {
     LIBS += \
+        -static-libgcc -static-libstdc++ \
         -lws2_32 \
         -lmswsock \
         -lboost_system-mt-s \
