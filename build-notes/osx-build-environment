@@ -1,0 +1,52 @@
+1) Install Mountain Lion from dmg on VirtualBox.
+
+2) Upgrade to Mavericks via AppStore. (or copy .app from another machine)
+
+3) Install Xcode from AppStore. (or copy .app from another machine)
+
+4) Install Xcode command line tools:
+    $ xcode-select --install
+
+    When prompted by the desktop, click "Install"
+
+5) Install Homebrew:
+    $ ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
+    $ brew doctor
+
+6) Install packages:
+    $ brew update
+    $ brew install git wget boost qt5 openssl libpng
+    $ brew link qt5 --force
+    $ brew link openssl --force
+    
+7) Install odb compiler and libraries:
+    $ mkdir odb
+    $ cd odb
+
+    ODB Compiler:
+    $ wget http://www.codesynthesis.com/download/odb/2.3/odb-2.3.0-i686-macosx.tar.bz2
+    $ tar -xjvf odb-2.3.0-i686-macosx.tar.bz2
+
+    Set up path environment variable:
+    $ echo '#!/bin/bash' > ~/.bash_profile
+    $ echo "export PATH=$(pwd)/odb-2.3.0-i686-macosx/bin:\$PATH" > ~/.bash_profile
+    $ source ~/.bash_profile
+
+    Common Runtime Library:
+    $ wget http://www.codesynthesis.com/download/odb/2.3/libodb-2.3.0.tar.bz2
+    $ tar -xjvf libodb-2.3.0.tar.bz2
+    $ cd libodb-2.3.0
+    $ ./configure
+    $ make
+    $ make install
+    $ cd ..
+
+    Database Runtime Library:
+    $ wget http://www.codesynthesis.com/download/odb/2.3/libodb-sqlite-2.3.0.tar.bz2
+    $ tar -xjvf libodb-sqlite-2.3.0.tar.bz2
+    $ cd libodb-sqlite-2.3.0
+    $ ./configure
+    $ make
+    $ make install
+    $ cd ..
+

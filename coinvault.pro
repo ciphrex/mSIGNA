@@ -170,18 +170,14 @@ unix {
             -lodb
     }
     else {
-        INCLUDEPATH += \
-            /opt/local/include
-            /usr/local/Cellar/boost/1.54.0/include
-
         LIBS += \
-            -L/opt/local/lib \
-            /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_system.a \
-            /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_filesystem.a \
-            /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_regex.a \
-            /Users/Rey/dev/boost_1_54_0/stage/lib/libboost_thread.a \
-            /opt/local/lib/libodb-sqlite.dylib \
-            /opt/local/lib/libodb.dylib \
-            -lcrypto
+            -L/usr/local/lib \
+            -lboost_system-mt \
+            -lboost_filesystem-mt \
+            -lboost_regex-mt \
+            -lboost_thread-mt \
+            -lcrypto \
+            -lodb-sqlite \
+            -lodb
     }
 }
