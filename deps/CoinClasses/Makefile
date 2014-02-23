@@ -51,14 +51,27 @@ OBJS = \
         obj/MerkleTree.o \
         obj/StandardTransactions.o
 
+SCRYPT_OBJS = \
+	src/scrypt/obj/scrypt.o
 
-all: $(OBJS) src/scrypt/obj/scrypt.o
+HASH9_OBJS = \
+	src/hashfunc/obj/blake.o \
+	src/hashfunc/obj/bmw.o \
+	src/hashfunc/obj/groestl.o \
+	src/hashfunc/obj/jh.o \
+	src/hashfunc/obj/keccak.o \
+	src/hashfunc/obj/skein.o
+
+all: $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
 
 obj/%.o: src/%.cpp
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
 
 src/scrypt/obj/scrypt.o: src/scrypt/scrypt.cpp
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
+
+src/hashfunc/obj/%.o: src/hashfunc/%.c
+	$(CC) -c -o $@ $< $(INCLUDE_PATH)
 
 clean:
 	-rm -f obj/*.o
