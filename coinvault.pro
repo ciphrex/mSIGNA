@@ -136,13 +136,13 @@ LIBS += \
     deps/CoinClasses/src/scrypt/obj/scrypt.o
 
 # Hash function objects (for QuarkCoin)
-#LIBS += \
-#    ../../deps/CoinClasses/src/hashfunc/obj/blake.o \
-#    ../../deps/CoinClasses/src/hashfunc/obj/bmw.o \
-#    ../../deps/CoinClasses/src/hashfunc/obj/groestl.o \
-#    ../../deps/CoinClasses/src/hashfunc/obj/jh.o \
-#    ../../deps/CoinClasses/src/hashfunc/obj/keccak.o \
-#    ../../deps/CoinClasses/src/hashfunc/obj/skein.o
+LIBS += \
+    deps/CoinClasses/src/hashfunc/obj/blake.o \
+    deps/CoinClasses/src/hashfunc/obj/bmw.o \
+    deps/CoinClasses/src/hashfunc/obj/groestl.o \
+    deps/CoinClasses/src/hashfunc/obj/jh.o \
+    deps/CoinClasses/src/hashfunc/obj/keccak.o \
+    deps/CoinClasses/src/hashfunc/obj/skein.o
 
 win32 {
     LIBS += \
