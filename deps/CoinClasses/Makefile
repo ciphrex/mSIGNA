@@ -30,8 +30,7 @@ else ifeq ($(OS), osx)
     CC = clang
     CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
 
-    GLOBAL_LIB = /opt/local/lib
-    INCLUDE_PATH += -I/opt/local/include
+    INCLUDE_PATH += -I/usr/local/include
 
     ARCHIVER = ar
 
