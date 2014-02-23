@@ -74,6 +74,12 @@ inline CoinParams getLitecoinParams()
         Coin::CoinBlockHeader(1, 1317972665, 0x1e0ffff0, 2084524493, uchar_vector(32, 0), uchar_vector("97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9")));
 }
 
+inline CoinParams getQuarkcoinParams()
+{
+    return CoinParams(0xdd03a5feul, 70001, "11973", 0x3a, 0x09, "Quarkcoin", "quarkcoin", &hash9, &hash9,
+        Coin::CoinBlockHeader(112, 1374408079, 0x1e0fffff, 12058113, uchar_vector(32, 0), uchar_vector("868b2fb28cb1a0b881480cc85eb207e29e6ae75cdd6d26688ed34c2d2d23c776")));
+}
+
 #if defined(USE_BITCOIN)
 namespace BITCOIN_PARAMS
 {
