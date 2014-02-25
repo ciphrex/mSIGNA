@@ -54,9 +54,13 @@ void AccountModel::update()
         row.append(new QStandardItem(accountName));
 
         QString m_of_n = QString::number(account.minsigs()) + tr(" of ");
+
+        std::vector<std::string> keychains = account.keychain_names();
+        std::sort(keychains.begin(), keychains.end());
+
         QString keychainNames;
         bool first = true;
-        for (auto& name: account.keychain_names()) {
+        for (auto& name: keychains) {
             if (first)  { first = false; }
             else        { keychainNames += ", "; }
             keychainNames += QString::fromStdString(name);
