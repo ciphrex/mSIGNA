@@ -24,8 +24,11 @@ INCLUDEPATH += \
 
 QT += widgets network
 
-release:    DESTDIR = build/release
-debug:      DESTDIR = build/debug
+CONFIG(debug, debug|release) {
+    DESTDIR = build/debug
+} else {
+    DESTDIR = build/release
+}
 
 OBJECTS_DIR = $$DESTDIR/obj
 MOC_DIR = $$DESTDIR/moc
