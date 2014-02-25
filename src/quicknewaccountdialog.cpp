@@ -19,6 +19,8 @@
 
 #include <stdexcept>
 
+static const int MAX_SIG_COUNT = 8;
+
 QuickNewAccountDialog::QuickNewAccountDialog(QWidget* parent)
     : QDialog(parent)
 {
@@ -47,7 +49,7 @@ QuickNewAccountDialog::QuickNewAccountDialog(QWidget* parent)
 
     minSigComboBox = new QComboBox();
     maxSigComboBox = new QComboBox();
-    for (int i = 1; i <= MAX_SIG_COUNT; i++)
+    for (int i = 1; i <= MAX_SIG_COUNT; i++) {
         minSigComboBox->addItem(QString::number(i));
         maxSigComboBox->addItem(QString::number(i));
     }
@@ -55,7 +57,6 @@ QuickNewAccountDialog::QuickNewAccountDialog(QWidget* parent)
     QHBoxLayout* policyLayout = new QHBoxLayout();
     policyLayout->setSizeConstraint(QLayout::SetNoConstraint);
     policyLayout->addWidget(policyLabel);
-    policyLayout->addWidget(minSigLabel);
     policyLayout->addWidget(minSigComboBox);
     policyLayout->addWidget(ofLabel);
     policyLayout->addWidget(maxSigComboBox);
@@ -74,7 +75,7 @@ QString QuickNewAccountDialog::getName() const
     return nameEdit->text();
 }
 
-int NewAccountDialog::getMinSigs() const
+int QuickNewAccountDialog::getMinSigs() const
 {
     return minSigComboBox->currentIndex() + 1;
 }

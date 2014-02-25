@@ -40,6 +40,7 @@
 
 // Dialogs
 #include "newkeychaindialog.h"
+#include "quicknewaccountdialog.h"
 #include "newaccountdialog.h"
 #include "rawtxdialog.h"
 #include "createtxdialog.h"
@@ -1360,7 +1361,7 @@ void MainWindow::createActions()
     connect(backupKeychainAction, SIGNAL(triggered()), this, SLOT(backupKeychain()));
 
     // account actions
-    quickNewAccountAction = new QAction(tr("Create &Quick Account..."), this);
+    quickNewAccountAction = new QAction(QIcon(":/icons/rocket.png"), tr("Create &Quick Account..."), this);
     quickNewAccountAction->setStatusTip(tr("Create a new account, automatically create new keychains for it"));
     quickNewAccountAction->setEnabled(false);
     connect(quickNewAccountAction, SIGNAL(triggered()), this, SLOT(quickNewAccount()));
