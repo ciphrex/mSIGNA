@@ -39,7 +39,7 @@ qmake $SPEC && make
 
 case $1 in
 osx)
-    macdeployqt $(find * -name *.app)
+    macdeployqt $(find ./build/* -name *.app)
 ;;
 
 esac

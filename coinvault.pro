@@ -170,12 +170,20 @@ unix {
             -lodb
     }
     else {
+	isEmpty(BOOST_LIB_PATH) {
+            BOOST_LIB_PATH = /usr/local/lib
+        }
+
+        exists($$BOOST_LIB_PATH/libboost_system-mt*) {
+            BOOST_LIB_SUFFIX = -mt
+        }
+
         LIBS += \
-            -L/usr/local/lib \
-            -lboost_system-mt \
-            -lboost_filesystem-mt \
-            -lboost_regex-mt \
-            -lboost_thread-mt \
+            -L$$BOOST_LIB_PATH \
+            -lboost_system$$BOOST_LIB_SUFFIX \
+            -lboost_filesystem$$BOOST_LIB_SUFFIX \
+            -lboost_regex$$BOOST_LIB_SUFFIX \
+            -lboost_thread$$BOOST_LIB_SUFFIX \
             -lcrypto \
             -lodb-sqlite \
             -lodb
