@@ -257,6 +257,7 @@ void MainWindow::updateVaultStatus(const QString& name)
     importKeychainAction->setEnabled(isOpen);
 
     // account actions
+    quickNewAccountAction->setEnabled(isOpen);
     newAccountAction->setEnabled(isOpen);
     importAccountAction->setEnabled(isOpen);
 
@@ -602,6 +603,19 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
     viewUnsignedTxsAction->setEnabled(isSelected);
 }
 
+void MainWindow::quickNewAccount()
+{
+    try {
+        QuickNewAccountDialog dlg(this);
+        if (dlg.exec()) {
+            // ...
+        }
+    }
+    catch (const exception& e) {
+        showError(e.what());
+    }
+}
+
 void MainWindow::newAccount()
 {
     QItemSelectionModel* selectionModel = keychainView->selectionModel();
@@ -623,6 +637,7 @@ void MainWindow::newAccount()
         }
     }
     catch (const exception& e) {
+        // TODO: Handle other possible errors.
         showError(tr("No keychains selected."));
     }
 }
@@ -1308,11 +1323,6 @@ void MainWindow::createActions()
     newKeychainAction->setEnabled(false);
     connect(newKeychainAction, SIGNAL(triggered()), this, SLOT(newKeychain()));
 
-    newAccountAction = new QAction(QIcon(":/icons/money.png"), tr("Create &Account..."), this);
-    newAccountAction->setStatusTip(tr("Create a new account with selected keychains"));
-    newAccountAction->setEnabled(false);
-    connect(newAccountAction, SIGNAL(triggered()), this, SLOT(newAccount()));
-
     importPrivateAction = new QAction(tr("Private Imports"), this);
     importPrivateAction->setCheckable(true);
     importPrivateAction->setStatusTip(tr("Import private keys if available"));
@@ -1350,6 +1360,16 @@ void MainWindow::createActions()
     connect(backupKeychainAction, SIGNAL(triggered()), this, SLOT(backupKeychain()));
 
     // account actions
+    quickNewAccountAction = new QAction(tr("Create &Quick Account..."), this);
+    quickNewAccountAction->setStatusTip(tr("Create a new account, automatically create new keychains for it"));
+    quickNewAccountAction->setEnabled(false);
+    connect(quickNewAccountAction, SIGNAL(triggered()), this, SLOT(quickNewAccount()));
+
+    newAccountAction = new QAction(QIcon(":/icons/money.png"), tr("Create &Account..."), this);
+    newAccountAction->setStatusTip(tr("Create a new account with selected keychains"));
+    newAccountAction->setEnabled(false);
+    connect(newAccountAction, SIGNAL(triggered()), this, SLOT(newAccount()));
+
     requestPaymentAction = new QAction(QIcon(":/icons/cashregister.png"), tr("Request Payment..."), this);
     requestPaymentAction->setStatusTip(tr("Get a new address to request a payment"));
     requestPaymentAction->setEnabled(false);
@@ -1581,12 +1601,15 @@ void MainWindow::createMenus()
 
 void MainWindow::createToolBars()
 {
+    // TODO: rename toolbars more appropriately
+
     fileToolBar = addToolBar(tr("File"));
     fileToolBar->addAction(newVaultAction);
     fileToolBar->addAction(openVaultAction);
     fileToolBar->addAction(closeVaultAction);
 
     keychainToolBar = addToolBar(tr("Keychains"));
+    keychainToolBar->addAction(quickNewAccountAction);
     keychainToolBar->addAction(newKeychainAction);
     keychainToolBar->addAction(newAccountAction);
 

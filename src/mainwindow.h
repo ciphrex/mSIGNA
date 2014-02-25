@@ -115,6 +115,7 @@ private slots:
     void updateSelectedKeychains(const QItemSelection& selected, const QItemSelection& deselected);
 
     // ACCOUNT OPERATIONS
+    void quickNewAccount();
     void newAccount();
     void importAccount(QString fileName = QString());
     void exportAccount();
@@ -246,6 +247,7 @@ private:
     QAction* backupKeychainAction;
 
     // account actions
+    QAction* quickNewAccountAction;
     QAction* newAccountAction;
     QAction* importAccountAction;
     QAction* exportAccountAction;

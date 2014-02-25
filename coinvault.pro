@@ -56,6 +56,7 @@ HEADERS = \
     src/accountview.h \
     src/keychainmodel.h \
     src/keychainview.h \
+    src/quicknewaccountdialog.h \
     src/newaccountdialog.h \
     src/newkeychaindialog.h \
     src/rawtxdialog.h \
@@ -87,6 +88,7 @@ SOURCES = \
     src/accountview.cpp \
     src/keychainmodel.cpp \
     src/keychainview.cpp \
+    src/quicknewaccountdialog.cpp \
     src/newaccountdialog.cpp \
     src/newkeychaindialog.cpp \
     src/rawtxdialog.cpp \
