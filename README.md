@@ -51,19 +51,7 @@ clang (4.1 and greater) in OS X (10.7 and greater).
     $ ./build-all.sh osx
 
 
-OS X installation notes:
-
-    $ brew update
-    $ brew install boost qt5 openssl libpng
-    
-    Download odb binary (currenlty odb-2.3.0-i686-macosx) or build from source.
-    Set path to odb:
-    $ export PATH=/path/to/odb-2.3.0-i686-macosx/bin:$PATH
-    
-    Download, extract, compile, and install:
-      libodb-2.3.0, libodb-sqlite-2.3.0
-    $ ./configure && make && make install
-
+An optional second parameter can be specified [debug|release]. Default is release.
 
 ===============================================================================
 
