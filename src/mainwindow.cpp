@@ -606,14 +606,49 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
 
 void MainWindow::quickNewAccount()
 {
-    try {
-        QuickNewAccountDialog dlg(this);
-        if (dlg.exec()) {
-            // ...
+    QuickNewAccountDialog dlg(this);
+    while (dlg.exec()) {
+        try {
+            QString accountName = dlg.getName();
+            if (accountName.isEmpty())
+                throw std::runtime_error(tr("Account name is empty.").toStdString());
+
+            if (dlg.getMinSigs() > dlg.getMaxSigs())
+                throw std::runtime_error(tr("The minimum signature count cannot exceed the number of keychains.").toStdString());
+
+            if (accountModel->accountExists(accountName))
+                throw std::runtime_error(tr("An account with that name already exists.").toStdString());
+
+            const int MAX_KEYCHAIN_INDEX = 1000;
+            const unsigned int DEFAULT_KEY_COUNT = 100;
+            int i = 0;
+            QList<QString> keychainNames;
+            while (keychainNames.size() < dlg.getMaxSigs() && ++i <= MAX_KEYCHAIN_INDEX) {
+                QString keychainName = accountName + "_" + QString::number(i);
+                if (!keychainModel->exists(keychainName))
+                    keychainNames << keychainName;
+            }
+            if (i > MAX_KEYCHAIN_INDEX)
+                throw std::runtime_error(tr("Ran out of keychain indices.").toStdString());
+
+            for (auto& keychainName: keychainNames) {
+                // TODO: Randomize using user input for entropy
+                Coin::HDSeed hdSeed(random_bytes(32));
+                Coin::HDKeychain keychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
+                accountModel->newHDKeychain(keychainName, keychain.extkey(), DEFAULT_KEY_COUNT);
+            }
+
+            accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames);
+            accountModel->update();
+            keychainModel->update();
+            keychainView->update();
+            tabWidget->setCurrentWidget(accountView);
+            updateStatusMessage(tr("Created account ") + accountName);
+            break;
         }
-    }
-    catch (const exception& e) {
-        showError(e.what());
+        catch (const exception& e) {
+            showError(e.what());
+        }
     }
 }
 
@@ -1361,7 +1396,7 @@ void MainWindow::createActions()
     connect(backupKeychainAction, SIGNAL(triggered()), this, SLOT(backupKeychain()));
 
     // account actions
-    quickNewAccountAction = new QAction(QIcon(":/icons/rocket.png"), tr("Create &Quick Account..."), this);
+    quickNewAccountAction = new QAction(QIcon(":/icons/magicwand.png"), tr("Account &Wizard..."), this);
     quickNewAccountAction->setStatusTip(tr("Create a new account, automatically create new keychains for it"));
     quickNewAccountAction->setEnabled(false);
     connect(quickNewAccountAction, SIGNAL(triggered()), this, SLOT(quickNewAccount()));
@@ -1549,6 +1584,8 @@ void MainWindow::createMenus()
     fileMenu->addAction(quitAction);    
 
     keychainMenu = menuBar()->addMenu(tr("&Keychains"));
+    keychainMenu->addAction(quickNewAccountAction);
+    keychainMenu->addSeparator();
     keychainMenu->addAction(newKeychainAction);
     keychainMenu->addAction(newAccountAction);
     keychainMenu->addSeparator()->setText(tr("Import Mode"));
