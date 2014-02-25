@@ -1,3 +1,68 @@
+Mac OS 10.8.5 Mountain Lion
+===========================
+
+1) Install Mountain Lion from dmg on VirtualBox.
+
+2) Upgrade to 10.8.5 from Apple Developer Support. (OSXUpdCombo10.8.5.dmg)
+
+3) Install Xcode 5 from Apple Developer Support. (xcode_5.0.2.dmg)
+
+4) Install Xcode command line tools from Apple Developer Support. (command_line_tools_osx_mountain_lion_for_xcode_october_2013.dmg)
+
+5) Install Homebrew:
+    $ ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
+    $ brew doctor
+
+6) Install packages:
+    $ brew update
+    $ brew install git wget qt5 openssl libpng
+    $ brew link qt5 --force
+    $ brew link openssl --force
+
+Boost from homebrew on Mountain Lion is built using libstdc++ rather than libc++, so we build ourselves:
+7) Build boost:
+    $ wget http://downloads.sourceforge.net/project/boost/boost/1.55.0/boost_1_55_0.tar.bz2
+    $ tar -xjvf boost_1_55_0.tar.bz2
+    $ cd boost_1_55_0
+    $ ./bootstrap.sh
+    $ ./b2 toolset=clang threading=multi address-model=64 cxxflags="-std=c++11 -stdlib=libc++" linkflags="-stdlib=libc++" \
+        variant=release --prefix=/usr/local install
+
+8) Install odb compiler and libraries:
+    $ mkdir odb
+    $ cd odb
+
+    ODB Compiler:
+    $ wget http://www.codesynthesis.com/download/odb/2.3/odb-2.3.0-i686-macosx.tar.bz2
+    $ tar -xjvf odb-2.3.0-i686-macosx.tar.bz2
+
+    Set up path environment variable:
+    $ echo '#!/bin/bash' > ~/.bash_profile
+    $ echo "export PATH=$(pwd)/odb-2.3.0-i686-macosx/bin:\$PATH" > ~/.bash_profile
+    $ source ~/.bash_profile
+
+    Common Runtime Library:
+    $ wget http://www.codesynthesis.com/download/odb/2.3/libodb-2.3.0.tar.bz2
+    $ tar -xjvf libodb-2.3.0.tar.bz2
+    $ cd libodb-2.3.0
+    $ ./configure CXX="clang++ -std=c++11 -stdlib=libc++"
+    $ make
+    $ make install
+    $ cd ..
+
+    Database Runtime Library:
+    $ wget http://www.codesynthesis.com/download/odb/2.3/libodb-sqlite-2.3.0.tar.bz2
+    $ tar -xjvf libodb-sqlite-2.3.0.tar.bz2
+    $ cd libodb-sqlite-2.3.0
+    $ ./configure CXX="clang++ -std=c++11 -stdlib=libc++"
+    $ make
+    $ make install
+    $ cd ..
+
+
+Mac OS X 10.9.x Mavericks
+=========================
+
 1) Install Mountain Lion from dmg on VirtualBox.
 
 2) Upgrade to Mavericks via AppStore. (or copy .app from another machine)
