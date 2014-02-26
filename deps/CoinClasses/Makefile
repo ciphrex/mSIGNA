@@ -61,7 +61,10 @@ HASH9_OBJS = \
 	src/hashfunc/obj/keccak.o \
 	src/hashfunc/obj/skein.o
 
-all: $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
+all: lib/libCoinClasses.a $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
+
+lib/libCoinClasses.a: $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
+	$(ARCHIVER) rcs $@ $^
 
 obj/%.o: src/%.cpp
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
@@ -73,4 +76,4 @@ src/hashfunc/obj/%.o: src/hashfunc/%.c
 	$(CC) -c -o $@ $< $(INCLUDE_PATH)
 
 clean:
-	-rm -f obj/*.o
+	-rm -f obj/*.o lib/*.a

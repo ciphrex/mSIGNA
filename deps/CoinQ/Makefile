@@ -50,8 +50,6 @@ else
 endif
 
 OBJS = \
-    obj/CoinQ_vault_db-odb.o \
-    obj/CoinQ_vault.o \
     obj/CoinQ_script.o \
     obj/CoinQ_peer_io.o \
     obj/CoinQ_netsync.o \
@@ -60,8 +58,18 @@ OBJS = \
     obj/CoinQ_keys.o \
     obj/CoinQ_filter.o
 
+VAULT_OBJS = \
+    obj/CoinQ_vault_db-odb.o \
+    obj/CoinQ_vault.o
 
-all: $(OBJS)
+
+all: lib/libCoinQ.a lib/libvault.a
+
+lib/libCoinQ.a: $(OBJS)
+	$(ARCHIVER) rcs $@ $^
+
+lib/libvault.a: $(VAULT_OBJS)
+	$(ARCHIVER) rcs $@ $^
 
 #
 # odb compiled dependencies
@@ -91,4 +99,4 @@ obj/%.o: src/%.cpp
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
 
 clean:
-	-rm -f obj/*.o odb/*-odb.*
+	-rm -f obj/*.o odb/*-odb.* lib/*.a

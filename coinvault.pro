@@ -14,15 +14,24 @@ ICON = res/icons/app_icons/osx.icns
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += c++11 rtti thread
 
+QT += widgets network
+
 QMAKE_CXXFLAGS_WARN_ON += -Wno-unknown-pragmas
+
+COINCLASSES = deps/CoinClasses
+COINQ = deps/CoinQ
+LOGGER = deps/logger
 
 INCLUDEPATH += \
     /usr/local/include \
-    deps/logger/src \
-    deps/CoinQ/src \
-    deps/CoinClasses/src
+    $$LOGGER/src \
+    $$COINCLASSES/src \
+    $$COINQ/src
 
-QT += widgets network
+LIBS += \
+    -L$$LOGGER/lib -llogger \
+    -L$$COINCLASSES/lib -lCoinClasses \
+    -L$$COINQ/lib -lCoinQ -lvault
 
 CONFIG(debug, debug|release) {
     DESTDIR = build/debug
@@ -112,42 +121,6 @@ RESOURCES = \
 # install
 target.path = build 
 INSTALLS += target
-
-# logger objects
-LIBS += \
-    deps/logger/obj/logger.o
-
-# CoinQ objects 
-LIBS += \
-    deps/CoinQ/obj/CoinQ_vault.o \
-    deps/CoinQ/obj/CoinQ_vault_db-odb.o \
-    deps/CoinQ/obj/CoinQ_script.o \
-    deps/CoinQ/obj/CoinQ_peer_io.o \
-    deps/CoinQ/obj/CoinQ_netsync.o \
-    deps/CoinQ/obj/CoinQ_blocks.o \
-    deps/CoinQ/obj/CoinQ_filter.o
-
-# CoinClasses objects
-LIBS += \
-    deps/CoinClasses/obj/CoinKey.o \
-    deps/CoinClasses/obj/hdkeys.o \
-    deps/CoinClasses/obj/CoinNodeData.o \
-    deps/CoinClasses/obj/MerkleTree.o \
-    deps/CoinClasses/obj/BloomFilter.o \
-    deps/CoinClasses/obj/IPv6.o
-
-# Hash function object (for Litecoin)
-LIBS += \
-    deps/CoinClasses/src/scrypt/obj/scrypt.o
-
-# Hash function objects (for QuarkCoin)
-LIBS += \
-    deps/CoinClasses/src/hashfunc/obj/blake.o \
-    deps/CoinClasses/src/hashfunc/obj/bmw.o \
-    deps/CoinClasses/src/hashfunc/obj/groestl.o \
-    deps/CoinClasses/src/hashfunc/obj/jh.o \
-    deps/CoinClasses/src/hashfunc/obj/keccak.o \
-    deps/CoinClasses/src/hashfunc/obj/skein.o
 
 win32 {
     LIBS += \
