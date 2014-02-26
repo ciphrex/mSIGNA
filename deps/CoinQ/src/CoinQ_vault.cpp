@@ -293,7 +293,8 @@ bytes_t Vault::exportKeychain(const std::string& keychain_name, const std::strin
 
     if (deterministic) {
         // write extended key
-        bytes_t extkey = keychain->extendedkey()->bytes();
+        // TODO: save encrypted bytes
+        bytes_t extkey = keychain->extendedkey()->bytes(exportprivkeys);
         bytes_t extpubkey;
         if (keychain->is_private()) {
             extpubkey = Coin::HDKeychain(extkey).getPublic().extkey();
