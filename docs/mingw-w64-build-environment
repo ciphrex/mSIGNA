@@ -1,0 +1,141 @@
+1) Create fresh ubuntu 14.04 (Trusty Tahr) VM
+    http://cdimage.ubuntu.com/daily-live/current/trusty-desktop-amd64.iso
+
+    (Note: ubuntu 13.xx can also be used, but mingw-w64 only comes with gcc4.6.3 which lacks full support for C++11)
+
+2) Install packages
+    $ sudo apt-get update && sudo apt-get upgrade
+    $ sudo apt-get install ssh git build-essential mingw-w64 gcc-mingw-w64 g++-mingw-w64 binutils-mingw-w64
+
+3) Build boost for windows
+    $ wget http://downloads.sourceforge.net/project/boost/boost/1.55.0/boost_1_55_0.tar.bz2
+    $ tar -xjvf boost_1_55_0.tar.bz2
+    $ cd boost_1_55_0
+    $ ./bootstrap.sh --without-icu
+    $ echo "using gcc : mingw32 : x86_64-w64-mingw32-g++ : <rc>x86_64-w64-mingw32-windres <archiver>x86_64-w64-mingw32-ar <ranlib>x86_64-w64-mingw32-ranlib ;" > user-config.jam
+    $ sudo ./b2 toolset=gcc address-model=64 target-os=windows variant=release threading=multi threadapi=win32 \
+        link=static runtime-link=static --prefix=/usr/x86_64-w64-mingw32 --user-config=user-config.jam \
+        --without-mpi --without-python -sNO_BZIP2=1 --layout=tagged install
+    $ cd
+
+    (-Wno-unused-local-typedefs -Wno-unused-parameter to suppress warnings)
+
+4) Build zlib for windows (required by Qt5)
+    $ wget http://zlib.net/zlib-1.2.8.tar.gz
+    $ tar -xzvf zlib-1.2.8.tar.gz
+    $ cd zlib-1.2.8
+    $ CC=x86_64-w64-mingw32-gcc AR=x86_64-w64-mingw32-ar RANLIB=x86_64-w64-mingw32-ranlib ./configure --prefix=/usr/x86_64-w64-mingw32 --static
+    $ make
+    $ sudo make install
+    $ cd
+
+5) Build Qt5 for windows
+    $ wget http://download.qt-project.org/official_releases/qt/5.2/5.2.1/single/qt-everywhere-opensource-src-5.2.1.tar.gz
+    $ tar -xzvf qt-everywhere-opensource-src-5.2.1.tar.gz
+
+    Qt5.2.1 has some problems with preprocessor definitions when building with MinGW.
+    $ sed -i -e 's/QT_NO_SESSIONMANAGER/__QT_NO_SESSIONMANAGER/g' \
+        ~/qt-everywhere-opensource-src-5.2.1/qtbase/src/gui/kernel/qplatformsessionmanager.h \
+        ~/qt-everywhere-opensource-src-5.2.1/qtbase/src/gui/kernel/qsessionmanager.h
+
+    $ export INSTALLPREFIX=/usr/x86_64-w64-mingw32
+    $ mkdir qt5-win64-build
+    $ cd qt5-win64-build
+    $ ../qt-everywhere-opensource-src-5.2.1/configure -prefix / -hostprefix $INSTALLPREFIX/host -plugindir /plugins -translationdir /translations \
+        -xplatform win32-g++ -device-option CROSS_COMPILE=x86_64-w64-mingw32- -sysroot $INSTALLPREFIX -confirm-license -release -opensource -static -qt-pcre \
+        -no-icu -no-glib -no-javascript-jit -no-sql-sqlite -no-nis -no-cups -no-iconv -no-dbus  -nomake examples \
+        -no-feature-style-plastique -no-feature-style-cleanlooks -no-feature-style-motif -no-feature-style-cde -no-feature-style-windowsce \
+        -no-feature-style-windowsmobile -no-feature-style-s60 -no-pch -no-sql-odbc -no-compile-examples -no-qml-debug -no-sm \
+        -skip qtwebkit -skip qtwebkit-examples -skip qtactiveqt -no-openssl -qt-zlib
+    $ make
+    $ sudo make install
+
+    (-Wno-strict-overflow -Wno-strict-aliasing -Wno-unused-parameters to suppress warnings)
+
+    Patch Qt5.2.1 to work with cmake for static build. Windows uses library naming convention name.lib, MinGW uses libname.a. So we must replace the names:
+    $ cd /usr/x86_64-w64-mingw32/lib/cmake
+    $ sudo sed -i -e 's/\/\([^\.]*\)\.lib/\/lib\1\.a/g' $(find * -type f)
+    $ cd
+
+    You will need to set the path to find the appropriate qmake, i.e.:
+    $ export PATH=/usr/x86_64-w64-mingw32/host/bin:$PATH
+
+6) Build OpenSSL for windows
+    $ wget http://www.openssl.org/source/openssl-1.0.1f.tar.gz
+    $ tar -xzvf openssl-1.0.1f.tar.gz
+    $ cp -R openssl-1.0.1f openssl-win64-build
+    $ cd openssl-win64-build
+    $ CROSS_COMPILE="x86_64-w64-mingw32-" ./Configure mingw64 no-asm no-shared --prefix=/usr/x86_64-w64-mingw32
+    $ make
+    $ sudo make install_sw
+    $ cd
+
+    (-Wno-unused-function to suppress warnings)
+
+7) Build SQLite for windows
+    $ wget https://www.sqlite.org/2014/sqlite-autoconf-3080301.tar.gz
+    $ tar -xzvf sqlite-autoconf-3080301.tar.gz
+    $ mkdir sqlite-win64-build
+    $ cd sqlite-win64-build
+    $ ../sqlite-autoconf-3080301/configure --host=x86_64-w64-mingw32 --target=windows --prefix=/usr/x86_64-w64-mingw32 CFLAGS=-DSQLITE_ENABLE_UNLOCK_NOTIFY
+    $ make
+    $ sudo make install
+    $ cd
+
+8) Install ODB compiler and library
+    $ mkdir odb
+    $ cd odb
+
+    Build and install libcutl for linux
+    $ wget http://www.codesynthesis.com/download/libcutl/1.8/libcutl-1.8.0.tar.bz2
+    $ tar -xjvf libcutl-1.8.0.tar.bz2
+    $ cd libcutl-1.8.0
+    $ ./configure
+    $ make
+    $ sudo make install
+    $ sudo ldconfig
+    $ cd ..
+
+    Build and install ODB compiler for linux
+    $ sudo apt-get install gcc-4.8-plugin-dev
+    $ wget http://www.codesynthesis.com/download/odb/2.3/odb-2.3.0.tar.bz2
+    $ tar -xjvf odb-2.3.0.tar.bz2
+    $ cd odb-2.3.0
+    $ ./configure
+    $ make
+    $ sudo make install
+    $ cd ..
+
+9) Build ODB Common Runtime Library (libodb) for windows
+    $ wget http://www.codesynthesis.com/download/odb/2.3/libodb-2.3.0.tar.bz2
+    $ tar -xjvf libodb-2.3.0.tar.bz2
+    $ mkdir libodb-win64-build
+    $ cd libodb-win64-build 
+    $ ../libodb-2.3.0/configure --host=x86_64-w64-mingw32 --target=windows --prefix=/usr/x86_64-w64-mingw32 --enable-threads=win32 \
+        CPPFLAGS=-I/usr/x86_64-w64-mingw32/include LDFLAGS=-L/usr/x86_64-w64-mingw32/lib
+    $ make
+    $ sudo make install
+    $ cd ..
+
+10) Build ODB Database Runtime Library for sqlite (libodb-sqlite) for windows
+    $ wget http://www.codesynthesis.com/download/odb/2.3/libodb-sqlite-2.3.0.tar.bz2
+    $ tar -xjvf libodb-sqlite-2.3.0.tar.bz2
+    $ mkdir libodb-sqlite-win64-build
+    $ cd libodb-sqlite-win64-build
+    $ ../libodb-sqlite-2.3.0/configure --host=x86_64-w64-mingw32 --target=windows --prefix=/usr/x86_64-w64-mingw32 --enable-threads=win32 \
+        CPPFLAGS=-I/usr/x86_64-w64-mingw32/include LDFLAGS=-L/usr/x86_64-w64-mingw32/lib
+    $ make
+    $ sudo make install
+    $ cd
+
+11) ODB will, by default, use the linux headers. We want this behavior for system libraries, but we want to override it for
+    nonsystem libraries. To do this, we create symlinks.
+    $ cd /usr/x86_64-w64-mingw32
+    $ sudo mkdir -p local/include
+    $ cd local/include
+    $ sudo ln -s ../../include/odb/ odb
+    $ sudo ln -s ../../include/boost/ boost
+    $ sudo ln -s ../../include/openssl/ openssl
+    $ sudo ln -s ../../include/sqlite3.h sqlite3.h
+    $ sudo ln -s ../../include/sqlite3ext.h sqlite3ext.h
+    $ cd
