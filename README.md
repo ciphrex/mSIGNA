@@ -40,6 +40,7 @@ Vault has been built in Linux using gcc 4.6.3 and greater for both 64-bit Linux
 and 64-bit Windows (cross-build, mingw64). It has also been built using
 clang (4.1 and greater) in OS X (10.7 and greater).
 
+For instructions on setting up a build environment, look inside the docs directory.
 
 - To build for linux:
     $ ./build-all.sh linux
