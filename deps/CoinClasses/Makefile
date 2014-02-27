@@ -17,7 +17,7 @@ else ifeq ($(OS), mingw64)
     CC =  x86_64-w64-mingw32-gcc
     CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
 
-    MINGW64_ROOT = /opt/mingw64
+    MINGW64_ROOT = /usr/x86_64-w64-mingw32
 
     INCLUDE_PATH += -I$(MINGW64_ROOT)/include
 

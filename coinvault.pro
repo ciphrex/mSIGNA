@@ -24,14 +24,14 @@ LOGGER = deps/logger
 
 INCLUDEPATH += \
     /usr/local/include \
-    $$LOGGER/src \
+    $$COINQ/src \
     $$COINCLASSES/src \
-    $$COINQ/src
+    $$LOGGER/src
 
 LIBS += \
-    -L$$LOGGER/lib -llogger \
+    -L$$COINQ/lib -lvault -lCoinQ \
     -L$$COINCLASSES/lib -lCoinClasses \
-    -L$$COINQ/lib -lCoinQ -lvault
+    -L$$LOGGER/lib -llogger
 
 CONFIG(debug, debug|release) {
     DESTDIR = build/debug
@@ -124,6 +124,7 @@ INSTALLS += target
 
 win32 {
     LIBS += \
+        -L/usr/x86_64-w64-mingw32/plugins/platforms \
         -static-libgcc -static-libstdc++ \
         -lws2_32 \
         -lmswsock \

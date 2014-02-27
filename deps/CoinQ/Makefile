@@ -13,6 +13,11 @@ INCLUDE_PATH = \
     -I../CoinClasses/src \
     -I../logger/src
 
+ODB_INCLUDE_PATH = \
+    -Isrc \
+    -I../CoinClasses/src \
+    -I../logger/src
+
 ifeq ($(OS), linux)
     CXX = g++
     CC = gcc
@@ -25,9 +30,12 @@ else ifeq ($(OS), mingw64)
     CC =  x86_64-w64-mingw32-gcc
     CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
 
-    MINGW64_ROOT = /opt/mingw64
+    MINGW64_ROOT = /usr/x86_64-w64-mingw32
 
     INCLUDE_PATH += -I$(MINGW64_ROOT)/include
+
+    # ODB_INCLUDE_PATH must not contain windows system headers
+    ODB_INCLUDE_PATH += -I$(MINGW64_ROOT)/local/include
 
     ARCHIVER = x86_64-w64-mingw32-ar
 
@@ -39,6 +47,7 @@ else ifeq ($(OS), osx)
     CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
 
     INCLUDE_PATH += -I/usr/local/include
+    ODB_INCLUDE_PATH += -I/usr/local/include
 
     ARCHIVER = ar
 
@@ -75,10 +84,10 @@ lib/libvault.a: $(VAULT_OBJS)
 # odb compiled dependencies
 #
 odb/CoinQ_vault_db-odb.hxx: src/CoinQ_vault_db.hxx
-	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema src/CoinQ_vault_db.hxx $(INCLUDE_PATH)
+	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema src/CoinQ_vault_db.hxx $(ODB_INCLUDE_PATH)
 
 odb/CoinQ_vault_db-odb.cxx: src/CoinQ_vault_db.hxx
-	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema src/CoinQ_vault_db.hxx $(INCLUDE_PATH)
+	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema src/CoinQ_vault_db.hxx $(ODB_INCLUDE_PATH)
 
 #
 # vault dependencies
