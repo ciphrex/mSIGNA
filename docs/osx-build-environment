@@ -37,8 +37,8 @@ Boost from homebrew on Mountain Lion is built using libstdc++ rather than libc++
     $ tar -xjvf odb-2.3.0-i686-macosx.tar.bz2
 
     Set up path environment variable:
-    $ echo '#!/bin/bash' > ~/.bash_profile
-    $ echo "export PATH=$(pwd)/odb-2.3.0-i686-macosx/bin:\$PATH" > ~/.bash_profile
+    $ echo '#!/bin/bash' >> ~/.bash_profile
+    $ echo "export PATH=$(pwd)/odb-2.3.0-i686-macosx/bin:\$PATH" >> ~/.bash_profile
     $ source ~/.bash_profile
 
     Common Runtime Library:
@@ -93,8 +93,8 @@ Mac OS X 10.9.x Mavericks
     $ tar -xjvf odb-2.3.0-i686-macosx.tar.bz2
 
     Set up path environment variable:
-    $ echo '#!/bin/bash' > ~/.bash_profile
-    $ echo "export PATH=$(pwd)/odb-2.3.0-i686-macosx/bin:\$PATH" > ~/.bash_profile
+    $ echo '#!/bin/bash' >> ~/.bash_profile
+    $ echo "export PATH=$(pwd)/odb-2.3.0-i686-macosx/bin:\$PATH" >> ~/.bash_profile
     $ source ~/.bash_profile
 
     Common Runtime Library:
