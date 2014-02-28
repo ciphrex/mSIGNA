@@ -11,7 +11,7 @@
 #ifndef COINVAULT_SCRIPTDIALOG_H
 #define COINVAULT_SCRIPTDIALOG_H
 
-#include <CoinQ_vault.h>
+#include <Vault.h>
 
 class ScriptModel;
 class ScriptView;
@@ -23,7 +23,7 @@ class ScriptDialog : public QDialog
     Q_OBJECT
 
 public:
-    ScriptDialog(CoinQ::Vault::Vault* vault, const QString& accountName, QWidget* parent = NULL);
+    ScriptDialog(CoinDB::Vault* vault, const QString& accountName, QWidget* parent = NULL);
 
 private:
     ScriptModel* scriptModel;

@@ -11,7 +11,7 @@
 #ifndef COINVAULT_TXDIALOG_H
 #define COINVAULT_TXDIALOG_H
 
-#include <CoinQ_vault.h>
+#include <Vault.h>
 
 class TxOutModel;
 class TxOutView;
@@ -23,9 +23,9 @@ class TxDialog : public QDialog
     Q_OBJECT
 
 public:
-    TxDialog(CoinQ::Vault::Vault* vault, const QString& accountName, QWidget* parent = NULL);
+    TxDialog(CoinDB::Vault* vault, const QString& accountName, QWidget* parent = NULL);
 
-    void setVault(CoinQ::Vault::Vault* vault);
+    void setVault(CoinDB::Vault* vault);
     void setAccount(const QString& accountName);
 
 protected:

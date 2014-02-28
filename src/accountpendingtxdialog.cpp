@@ -18,7 +18,7 @@
 
 #include <QVBoxLayout>
 
-AccountHistoryDialog::AccountHistoryDialog(CoinQ::Vault::Vault* vault, const QString& accountName, QWidget* parent)
+AccountHistoryDialog::AccountHistoryDialog(CoinDB::Vault* vault, const QString& accountName, QWidget* parent)
     : QDialog(parent)
 {
     resize(QSize(800, 400));

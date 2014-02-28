@@ -15,7 +15,7 @@
 
 #include <QPair>
 
-#include <CoinQ_vault.h>
+#include <Vault.h>
 
 #include <CoinQ_typedefs.h>
 
@@ -68,7 +68,7 @@ public:
 
     // Transaction operations
     bool insertRawTx(const bytes_t& rawTx);
-    std::shared_ptr<CoinQ::Vault::Tx> insertTx(const Coin::Transaction& coinTx, CoinQ::Vault::Tx::status_t status = CoinQ::Vault::Tx::RECEIVED, bool sign = false);
+    std::shared_ptr<CoinDB::Tx> insertTx(const Coin::Transaction& coinTx, CoinDB::Tx::status_t status = CoinDB::Tx::RECEIVED, bool sign = false);
     bytes_t createRawTx(const QString& accountName, const std::vector<TaggedOutput>& outputs, uint64_t fee);
     // TODO: not sure I'm too happy about exposing Coin:Vault::Tx
     Coin::Transaction createTx(const QString& accountName, const std::vector<TaggedOutput>& outputs, uint64_t fee);
@@ -80,7 +80,7 @@ public:
     bool insertMerkleBlock(const ChainMerkleBlock& merkleBlock);
     bool deleteMerkleBlock(const bytes_t& hash);
 
-    CoinQ::Vault::Vault* getVault() const { return vault; }
+    CoinDB::Vault* getVault() const { return vault; }
     int getNumAccounts() const { return numAccounts; }
 
     // Overridden methods
@@ -99,7 +99,7 @@ signals:
 private:
     unsigned char base58_versions[2];
 
-    CoinQ::Vault::Vault* vault;
+    CoinDB::Vault* vault;
     int numAccounts;
 };
 

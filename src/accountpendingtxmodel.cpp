@@ -16,7 +16,7 @@
 
 #include "settings.h"
 
-using namespace CoinQ::Vault;
+using namespace CoinDB;
 using namespace CoinQ::Script;
 using namespace std;
 
@@ -26,7 +26,7 @@ AccountPendingTxModel::AccountPendingTxModel(QObject* parent)
     initColumns();
 }
 
-AccountPendingTxModel::AccountPendingTxModel(CoinQ::Vault::Vault* vault, const QString& accountName, QObject* parent)
+AccountPendingTxModel::AccountPendingTxModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent)
     : QStandardItemModel(parent)
 {
     initColumns();
@@ -41,7 +41,7 @@ void AccountPendingTxModel::initColumns()
     setHorizontalHeaderLabels(columns);
 }
 
-void AccountPendingTxModel::setVault(CoinQ::Vault::Vault* vault)
+void AccountPendingTxModel::setVault(CoinDB::Vault* vault)
 {
     this->vault = vault;
     accountName.clear();

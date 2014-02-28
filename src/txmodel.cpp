@@ -21,7 +21,7 @@
 
 #include "severitylogger.h"
 
-using namespace CoinQ::Vault;
+using namespace CoinDB;
 using namespace CoinQ::Script;
 using namespace std;
 
@@ -34,7 +34,7 @@ TxModel::TxModel(QObject* parent)
     initColumns();
 }
 
-TxModel::TxModel(CoinQ::Vault::Vault* vault, const QString& accountName, QObject* parent)
+TxModel::TxModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent)
     : QStandardItemModel(parent)
 {
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
@@ -52,7 +52,7 @@ void TxModel::initColumns()
     setHorizontalHeaderLabels(columns);
 }
 
-void TxModel::setVault(CoinQ::Vault::Vault* vault)
+void TxModel::setVault(CoinDB::Vault* vault)
 {
     this->vault = vault;
     accountName.clear();
@@ -230,7 +230,7 @@ void TxModel::signTx(int row)
 
     QStandardItem* typeItem = item(row, 6);
     int type = typeItem->data(Qt::UserRole).toInt();
-    if (type != CoinQ::Vault::Tx::UNSIGNED) {
+    if (type != CoinDB::Tx::UNSIGNED) {
         throw std::runtime_error(tr("Transaction is already signed.").toStdString());
     }
 
@@ -260,10 +260,10 @@ void TxModel::sendTx(int row, CoinQ::Network::NetworkSync* networkSync)
 
     QStandardItem* typeItem = item(row, 6);
     int type = typeItem->data(Qt::UserRole).toInt();
-    if (type == CoinQ::Vault::Tx::UNSIGNED) {
+    if (type == CoinDB::Tx::UNSIGNED) {
         throw std::runtime_error(tr("Transaction must be fully signed before sending.").toStdString());
     }
-    else if (type == CoinQ::Vault::Tx::RECEIVED) {
+    else if (type == CoinDB::Tx::RECEIVED) {
         throw std::runtime_error(tr("Transaction already sent.").toStdString());
     }
 
@@ -271,12 +271,12 @@ void TxModel::sendTx(int row, CoinQ::Network::NetworkSync* networkSync)
     uchar_vector txhash;
     txhash.setHex(txHashItem->text().toStdString());
 
-    std::shared_ptr<CoinQ::Vault::Tx> tx = vault->getTx(txhash);
+    std::shared_ptr<CoinDB::Tx> tx = vault->getTx(txhash);
     Coin::Transaction coin_tx = tx->toCoinClasses();
     networkSync->sendTx(coin_tx);
 
     // TODO: Check transaction has propagated before changing status to RECEIVED
-    tx->status(CoinQ::Vault::Tx::RECEIVED);
+    tx->status(CoinDB::Tx::RECEIVED);
     vault->addTx(tx, true);
 
     update();
