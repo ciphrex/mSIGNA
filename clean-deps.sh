@@ -2,14 +2,13 @@
 set -x
 
 cd deps/logger
-make clean OS=linux
+make clean
 
 cd ../CoinClasses
-make clean OS=linux
+make clean
 
 cd ../CoinQ
-make clean OS=linux
+make clean
 
-cd ../sqlite3
-make clean OS=linux
-
+cd ../CoinDB
+make clean

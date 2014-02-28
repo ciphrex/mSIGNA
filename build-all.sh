@@ -44,9 +44,8 @@ make OS=$1 $OPTIONS
 cd ../CoinQ
 make OS=$1 $OPTIONS
 
-cd ../sqlite3
+cd ../CoinDB
 make OS=$1 $OPTIONS
-
 
 cd $CURRENT_DIR
 qmake $SPEC CONFIG+=$BUILD_TYPE && make

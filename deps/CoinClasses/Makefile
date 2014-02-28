@@ -1,8 +1,19 @@
 CXX_FLAGS = -Wall
 ifdef DEBUG
+    C_FLAGS += -g
     CXX_FLAGS += -g
 else
+    C_FLAGS += -03
     CXX_FLAGS += -O3
+endif
+
+ifndef OS
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S), Linux)
+        OS = linux
+    else ifeq ($(UNAME_S), Darwin)
+        OS = osx
+    endif
 endif
 
 ifeq ($(OS), linux)
@@ -34,11 +45,8 @@ else ifeq ($(OS), osx)
 
     ARCHIVER = ar
 
-else ifeq ($(OS), cygwin)
-    CXX_FLAGS += -Wno-unused-local-typedefs -std=c++0x
-
-else
-    $(error OS must be set to linux, osx, mingw64, or cygwin)
+else ifneq ($(MAKECMDGOALS), clean)
+    $(error OS must be set to linux, mingw64, or osx)
 endif
 
 OBJS = \
@@ -73,7 +81,7 @@ src/scrypt/obj/scrypt.o: src/scrypt/scrypt.cpp
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
 
 src/hashfunc/obj/%.o: src/hashfunc/%.c
-	$(CC) -c -o $@ $< $(INCLUDE_PATH)
+	$(CC) $(C_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
 
 clean:
 	-rm -f obj/*.o lib/*.a

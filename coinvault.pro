@@ -18,18 +18,22 @@ QT += widgets network
 
 QMAKE_CXXFLAGS_WARN_ON += -Wno-unknown-pragmas
 
+
+LOGGER = deps/logger
 COINCLASSES = deps/CoinClasses
 COINQ = deps/CoinQ
-LOGGER = deps/logger
+COINDB = deps/CoinDB
 
 INCLUDEPATH += \
     /usr/local/include \
+    $$COINDB/src \
     $$COINQ/src \
     $$COINCLASSES/src \
     $$LOGGER/src
 
 LIBS += \
-    -L$$COINQ/lib -lvault -lCoinQ \
+    -L$$COINDB/lib -lCoinDB \
+    -L$$COINQ/lib -lCoinQ \
     -L$$COINCLASSES/lib -lCoinClasses \
     -L$$LOGGER/lib -llogger
 
