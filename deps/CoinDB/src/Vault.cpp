@@ -582,7 +582,7 @@ void Vault::newAccount(const std::string& name, unsigned int minsigs, const std:
     std::vector<std::string> keychain_names__(keychain_names);
     std::sort(keychain_names__.begin(), keychain_names__.end());
     auto it = std::unique_copy(keychain_names.begin(), keychain_names.end(), keychain_names__.begin());
-    if (std::distance(keychain_names__.begin(), it) != (size_t)(keychain_names.size())) {
+    if ((size_t)std::distance(keychain_names__.begin(), it) != (size_t)(keychain_names.size())) {
         throw std::runtime_error("Vault::newAccount() - keychain_names cannot contain duplicates.");
     }
 
