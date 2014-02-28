@@ -3,7 +3,7 @@ ifdef DEBUG
     C_FLAGS += -g
     CXX_FLAGS += -g
 else
-    C_FLAGS += -03
+    C_FLAGS += -O3
     CXX_FLAGS += -O3
 endif
 
@@ -84,4 +84,4 @@ src/hashfunc/obj/%.o: src/hashfunc/%.c
 	$(CC) $(C_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
 
 clean:
-	-rm -f obj/*.o lib/*.a
+	-rm -f obj/*.o lib/*.a src/scrypt/obj/*.o src/hashfunc/obj/*.o
