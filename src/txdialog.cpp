@@ -17,7 +17,7 @@
 #include <QVBoxLayout>
 #include <QMessageBox>
 
-TxDialog::TxDialog(CoinQ::Vault::Vault* vault, const QString& accountName, QWidget* parent)
+TxDialog::TxDialog(CoinDB::Vault* vault, const QString& accountName, QWidget* parent)
     : QDialog(parent)
 {
     resize(QSize(800, 400));
@@ -40,7 +40,7 @@ void TxDialog::showError(const QString& errorMsg)
     QMessageBox::critical(this, tr("Error"), errorMsg);
 }
 
-void TxDialog::setVault(CoinQ::Vault::Vault* vault)
+void TxDialog::setVault(CoinDB::Vault* vault)
 {
 }
 

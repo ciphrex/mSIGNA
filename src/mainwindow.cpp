@@ -941,14 +941,14 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
             std::vector<TaggedOutput> outputs = dlg.getOutputs();
             uint64_t fee = dlg.getFeeValue();
             Coin::Transaction coin_tx = accountModel->createTx(dlg.getAccountName(), outputs, fee);
-            std::shared_ptr<CoinQ::Vault::Tx> tx = accountModel->insertTx(coin_tx, CoinQ::Vault::Tx::UNSIGNED, sign);
+            std::shared_ptr<CoinDB::Tx> tx = accountModel->insertTx(coin_tx, CoinDB::Tx::UNSIGNED, sign);
             saved = true;
             txModel->update();
             txView->update();
             tabWidget->setCurrentWidget(txView);
             if (status == CreateTxDialog::SIGN_AND_SEND) {
                 // TODO: Clean up signing and sending code
-                if (tx->status() == CoinQ::Vault::Tx::UNSIGNED) {
+                if (tx->status() == CoinDB::Tx::UNSIGNED) {
                     throw std::runtime_error(tr("Could not send - transaction still missing signatures.").toStdString());
                 }
                 if (!connected) {
@@ -958,7 +958,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 networkSync.sendTx(coin_tx);
 
                 // TODO: Check transaction has propagated before changing status to RECEIVED
-                tx->status(CoinQ::Vault::Tx::RECEIVED);
+                tx->status(CoinDB::Tx::RECEIVED);
                 accountModel->getVault()->addTx(tx, true);
             }
             txModel->update();

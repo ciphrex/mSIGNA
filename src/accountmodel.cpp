@@ -20,7 +20,7 @@
 
 #include "severitylogger.h"
 
-using namespace CoinQ::Vault;
+using namespace CoinDB;
 using namespace CoinQ::Script;
 using namespace std;
 

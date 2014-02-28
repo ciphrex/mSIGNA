@@ -1,11 +1,28 @@
+ODB_DB = \
+    -DDATABASE_SQLITE
+
 CXX_FLAGS = -Wall
 ifdef DEBUG
-    C_FLAGS += -g
     CXX_FLAGS += -g
 else
-    C_FLAGS += -O3
     CXX_FLAGS += -O3
 endif
+
+LOGGER = ../logger
+COINCLASSES = ../CoinClasses
+COINQ = ../CoinQ
+
+INCLUDE_PATH = \
+    -Isrc \
+    -I$(COINQ)/src \
+    -I$(COINCLASSES)/src \
+    -I$(LOGGER)/src
+
+ODB_INCLUDE_PATH = \
+    -Isrc \
+    -I$(COINQ)/src \
+    -I$(COINCLASSES)/src \
+    -I$(LOGGER)/src
 
 ifndef OS
     UNAME_S := $(shell uname -s)
@@ -32,6 +49,9 @@ else ifeq ($(OS), mingw64)
 
     INCLUDE_PATH += -I$(MINGW64_ROOT)/include
 
+    # ODB_INCLUDE_PATH must not contain windows system headers
+    ODB_INCLUDE_PATH += -I$(MINGW64_ROOT)/local/include
+
     ARCHIVER = x86_64-w64-mingw32-ar
 
     EXE_EXT = .exe
@@ -42,6 +62,7 @@ else ifeq ($(OS), osx)
     CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
 
     INCLUDE_PATH += -I/usr/local/include
+    ODB_INCLUDE_PATH += -I/usr/local/include
 
     ARCHIVER = ar
 
@@ -50,38 +71,35 @@ else ifneq ($(MAKECMDGOALS), clean)
 endif
 
 OBJS = \
-        obj/IPv6.o \
-        obj/CoinNodeData.o \
-        obj/CoinKey.o \
-        obj/hdkeys.o \
-        obj/BloomFilter.o \
-        obj/MerkleTree.o \
-        obj/StandardTransactions.o
+    obj/Schema-odb.o \
+    obj/Vault.o
 
-SCRYPT_OBJS = \
-	src/scrypt/obj/scrypt.o
 
-HASH9_OBJS = \
-	src/hashfunc/obj/blake.o \
-	src/hashfunc/obj/bmw.o \
-	src/hashfunc/obj/groestl.o \
-	src/hashfunc/obj/jh.o \
-	src/hashfunc/obj/keccak.o \
-	src/hashfunc/obj/skein.o
+all: lib/libCoinDB.a
 
-all: lib/libCoinClasses.a $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
-
-lib/libCoinClasses.a: $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
+lib/libCoinDB.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
 
-obj/%.o: src/%.cpp
+#
+# odb compiled dependencies
+#
+odb/Schema-odb.hxx: src/Schema.hxx
+	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema $< $(ODB_INCLUDE_PATH)
+
+odb/Schema-odb.cxx: src/Schema.hxx
+	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema $< $(ODB_INCLUDE_PATH)
+
+#
+# schema
+#
+obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx src/Schema.hxx
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
 
-src/scrypt/obj/scrypt.o: src/scrypt/scrypt.cpp
-	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
-
-src/hashfunc/obj/%.o: src/hashfunc/%.c
-	$(CC) $(C_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
+#
+# vault class
+#
+obj/Vault.o: src/Vault.cpp src/Vault.h odb/Schema-odb.hxx
+	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(ODB_DB) $(INCLUDE_PATH)
 
 clean:
-	-rm -f obj/*.o lib/*.a src/scrypt/obj/*.o src/hashfunc/obj/*.o
+	-rm -f obj/*.o odb/*-odb.* lib/*.a

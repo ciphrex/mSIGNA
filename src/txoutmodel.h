@@ -13,7 +13,7 @@
 
 #include <QStandardItemModel>
 
-#include <CoinQ_vault.h>
+#include <Vault.h>
 
 class TxOutModel : public QStandardItemModel
 {
@@ -22,12 +22,12 @@ class TxOutModel : public QStandardItemModel
 public:
     TxOutModel();
 
-    void setVault(CoinQ::Vault::Vault* vault);
+    void setVault(CoinDB::Vault* vault);
     void setAccount(const QString& accountName);
     void update();
 
 private:
-    CoinQ::Vault::Vault* vault;
+    CoinDB::Vault* vault;
     QString accountName; // empty when not loaded
     uint64_t confirmedBalance;
     uint64_t pendingBalance;

@@ -13,7 +13,7 @@
 
 #include <QStandardItemModel>
 
-#include <CoinQ_vault.h>
+#include <Vault.h>
 
 #include <CoinQ_typedefs.h>
 
@@ -24,7 +24,7 @@ class KeychainModel : public QStandardItemModel
 public:
     KeychainModel();
 
-    void setVault(CoinQ::Vault::Vault* vault);
+    void setVault(CoinDB::Vault* vault);
     void update();
 
     void exportKeychain(const QString& keychainName, const QString& fileName, bool exportPrivate) const;
@@ -43,7 +43,7 @@ signals:
     void error(const QString& message);
 
 private:
-    CoinQ::Vault::Vault* vault;
+    CoinDB::Vault* vault;
 };
 
 #endif // COINVAULT_ACCOUNTMODEL_H

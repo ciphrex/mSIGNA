@@ -1,17 +1,51 @@
 #!/bin/bash
 
-# Set target platform
-case $1 in
+for OPTION in $@
+do
+    case $OPTION in
+    linux)
+        if [[ ! -z "$OS" ]]; then echo "OS cannot be set twice"; exit 1; fi
+        OS=linux
+    ;;
+
+    mingw64)
+        if [[ ! -z "$OS" ]]; then echo "OS cannot be set twice"; exit 1; fi
+        OS=mingw64
+    ;;
+
+    osx)
+        if [[ ! -z "$OS" ]]; then echo "OS cannot be set twice"; exit 1; fi
+        OS=osx
+    ;;
+
+    debug)
+        if [[ ! -z "$BUILD_TYPE" ]]; then echo "Build type cannot be set twice"; exit 2; fi
+        BUILD_TYPE=debug
+        OPTIONS="DEBUG=1 $OPTIONS"
+    ;;
+
+    release)
+        if [[ ! -z "$BUILD_TYPE" ]]; then echo "Build type cannot be set twice"; exit 2; fi
+        BUILD_TYPE=release
+    ;;
+
+    *)
+        OPTIONS="$OPTIONS $OPTION"
+    esac
+done
+
+
+# Set target platform parameters
+case $OS in
 linux)
-    SPEC=""
 ;;
 
 mingw64)
+    if [[ -z "$QMAKE_PATH" ]]; then QMAKE_PATH="/usr/x86_64-w64-mingw32/host/bin/"; fi
     SPEC="-spec win32-g++"
 ;;
 
 osx)
-    SPEC=""
 ;;
 
 *)
@@ -19,41 +53,32 @@ osx)
     exit
 esac
 
-# Set build type
-case $2 in
-debug)
-    BUILD_TYPE=debug
-    OPTIONS="$OPTIONS DEBUG=1"
-;;
-
-*)
+# Use release as default build type
+if [[ -z "$BUILD_TYPE" ]]
+then
     BUILD_TYPE=release
-esac
-
+fi
 
 CURRENT_DIR=$(pwd)
 
 set -x
 
 cd deps/logger
-make OS=$1 $OPTIONS
+make OS=$OS $OPTIONS
 
 cd ../CoinClasses
-make OS=$1 $OPTIONS
+make OS=$OS $OPTIONS
 
 cd ../CoinQ
-make OS=$1 $OPTIONS
+make OS=$OS $OPTIONS
 
-cd ../sqlite3
-make OS=$1 $OPTIONS
-
+cd ../CoinDB
+make OS=$OS $OPTIONS
 
 cd $CURRENT_DIR
-qmake $SPEC CONFIG+=$BUILD_TYPE && make
+${QMAKE_PATH}qmake $SPEC CONFIG+=$BUILD_TYPE && make $OPTIONS
 
-case $1 in
-osx)
-    macdeployqt $(find ./build/$BUILD_TYPE -name *.app)
-;;
-
-esac
+if [[ "$OS" == "osx" ]]
+then
+    ${MACDEPLOYQT_PATH}macdeployqt $(find ./build/$BUILD_TYPE -name *.app)
+fi

@@ -11,7 +11,7 @@
 #ifndef COINVAULT_ACCOUNTHISTORYDIALOG_H
 #define COINVAULT_ACCOUNTHISTORYDIALOG_H
 
-#include <CoinQ_vault.h>
+#include <Vault.h>
 
 class TxModel;
 class TxView;
@@ -23,7 +23,7 @@ class AccountHistoryDialog : public QDialog
     Q_OBJECT
 
 public:
-    AccountHistoryDialog(CoinQ::Vault::Vault* vault, const QString& accountName, QWidget* parent = NULL);
+    AccountHistoryDialog(CoinDB::Vault* vault, const QString& accountName, QWidget* parent = NULL);
 
 private:
     TxModel* accountHistoryModel;

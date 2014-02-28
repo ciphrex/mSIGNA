@@ -1,6 +1,3 @@
-ODB_DB = \
-    -DDATABASE_SQLITE
-
 CXX_FLAGS = -Wall
 ifdef DEBUG
     CXX_FLAGS += -g
@@ -13,10 +10,14 @@ INCLUDE_PATH = \
     -I../CoinClasses/src \
     -I../logger/src
 
-ODB_INCLUDE_PATH = \
-    -Isrc \
-    -I../CoinClasses/src \
-    -I../logger/src
+ifndef OS
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S), Linux)
+        OS = linux
+    else ifeq ($(UNAME_S), Darwin)
+        OS = osx
+    endif
+endif
 
 ifeq ($(OS), linux)
     CXX = g++
@@ -34,9 +35,6 @@ else ifeq ($(OS), mingw64)
 
     INCLUDE_PATH += -I$(MINGW64_ROOT)/include
 
-    # ODB_INCLUDE_PATH must not contain windows system headers
-    ODB_INCLUDE_PATH += -I$(MINGW64_ROOT)/local/include
-
     ARCHIVER = x86_64-w64-mingw32-ar
 
     EXE_EXT = .exe
@@ -47,15 +45,11 @@ else ifeq ($(OS), osx)
     CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
 
     INCLUDE_PATH += -I/usr/local/include
-    ODB_INCLUDE_PATH += -I/usr/local/include
 
     ARCHIVER = ar
 
-else ifeq ($(OS), cygwin)
-    CXX_FLAGS += -Wno-unused-local-typedefs -std=c++0x
-
-else
-    $(error OS must be set to linux, osx, mingw64, or cygwin)
+else ifneq ($(MAKECMDGOALS), clean)
+    $(error OS must be set to linux, mingw64, or osx)
 endif
 
 OBJS = \
@@ -67,45 +61,14 @@ OBJS = \
     obj/CoinQ_keys.o \
     obj/CoinQ_filter.o
 
-VAULT_OBJS = \
-    obj/CoinQ_vault_db-odb.o \
-    obj/CoinQ_vault.o
 
-
-all: lib/libCoinQ.a lib/libvault.a
+all: lib/libCoinQ.a
 
 lib/libCoinQ.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
 
-lib/libvault.a: $(VAULT_OBJS)
-	$(ARCHIVER) rcs $@ $^
-
-#
-# odb compiled dependencies
-#
-odb/CoinQ_vault_db-odb.hxx: src/CoinQ_vault_db.hxx
-	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema src/CoinQ_vault_db.hxx $(ODB_INCLUDE_PATH)
-
-odb/CoinQ_vault_db-odb.cxx: src/CoinQ_vault_db.hxx
-	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema src/CoinQ_vault_db.hxx $(ODB_INCLUDE_PATH)
-
-#
-# vault dependencies
-#
-obj/CoinQ_vault_db-odb.o: odb/CoinQ_vault_db-odb.cxx odb/CoinQ_vault_db-odb.hxx src/CoinQ_vault_db.hxx
-	$(CXX) $(CXX_FLAGS) -o obj/CoinQ_vault_db-odb.o -c odb/CoinQ_vault_db-odb.cxx $(INCLUDE_PATH)
-
-#
-# vault class
-#
-obj/CoinQ_vault.o: src/CoinQ_vault.cpp src/CoinQ_vault.h odb/CoinQ_vault_db-odb.hxx
-	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(ODB_DB) $(INCLUDE_PATH)
-
-#
-# the remaining targets
-#
 obj/%.o: src/%.cpp
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
 
 clean:
-	-rm -f obj/*.o odb/*-odb.* lib/*.a
+	-rm -f obj/*.o lib/*.a

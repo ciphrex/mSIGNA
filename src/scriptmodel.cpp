@@ -16,7 +16,7 @@
 
 #include <QStandardItemModel>
 
-using namespace CoinQ::Vault;
+using namespace CoinDB;
 using namespace CoinQ::Script;
 using namespace std;
 
@@ -26,7 +26,7 @@ ScriptModel::ScriptModel(QObject* parent)
     initColumns();
 }
 
-ScriptModel::ScriptModel(CoinQ::Vault::Vault* vault, const QString& accountName, QObject* parent)
+ScriptModel::ScriptModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent)
     : QStandardItemModel(parent)
 {
     initColumns();
@@ -41,7 +41,7 @@ void ScriptModel::initColumns()
     setHorizontalHeaderLabels(columns);
 }
 
-void ScriptModel::setVault(CoinQ::Vault::Vault* vault)
+void ScriptModel::setVault(CoinDB::Vault* vault)
 {
     this->vault = vault;
     accountName.clear();
