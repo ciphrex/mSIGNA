@@ -2,3 +2,5 @@
 build/*
 *.Debug
 *.Release
+BuildInfo.h
+.qmake.stash

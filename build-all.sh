@@ -61,6 +61,8 @@ fi
 
 COMMIT_HASH=$(git rev-parse HEAD)
 echo "Building using commit hash $COMMIT_HASH..."
+echo "#pragma once" > BuildInfo.h
+echo "#define COMMIT_HASH \"$COMMIT_HASH\"" >> BuildInfo.h
 
 CURRENT_DIR=$(pwd)
 
@@ -79,7 +81,7 @@ cd ../CoinDB
 make OS=$OS $OPTIONS
 
 cd $CURRENT_DIR
-${QMAKE_PATH}qmake $SPEC CONFIG+=$BUILD_TYPE DEFINES+='COMMIT_HASH=\\\"'$COMMIT_HASH'\\\"' && make $OPTIONS
+${QMAKE_PATH}qmake $SPEC CONFIG+=$BUILD_TYPE && make $OPTIONS
 
 if [[ "$OS" == "osx" ]]
 then
