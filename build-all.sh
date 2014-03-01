@@ -59,6 +59,9 @@ then
     BUILD_TYPE=release
 fi
 
+COMMIT_HASH=$(git rev-parse HEAD)
+echo "Building using commit hash $COMMIT_HASH..."
+
 CURRENT_DIR=$(pwd)
 
 set -x
@@ -76,7 +79,7 @@ cd ../CoinDB
 make OS=$OS $OPTIONS
 
 cd $CURRENT_DIR
-${QMAKE_PATH}qmake $SPEC CONFIG+=$BUILD_TYPE && make $OPTIONS
+${QMAKE_PATH}qmake $SPEC CONFIG+=$BUILD_TYPE DEFINES+='COMMIT_HASH=\\\"'$COMMIT_HASH'\\\"' && make $OPTIONS
 
 if [[ "$OS" == "osx" ]]
 then
