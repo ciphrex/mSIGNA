@@ -61,7 +61,7 @@ public:
     HDKeychain() { }
     HDKeychain(const bytes_t& key, const bytes_t& chain_code, uint32_t child_num = 0, uint32_t parent_fp = 0, uint32_t depth = 0);
     HDKeychain(const bytes_t& extkey);
-    HDKeychain(HDKeychain&& source);
+    HDKeychain(const HDKeychain& source);
 
     HDKeychain& operator=(const HDKeychain& rhs);    
 

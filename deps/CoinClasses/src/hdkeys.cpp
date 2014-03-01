@@ -102,7 +102,7 @@ HDKeychain::HDKeychain(const bytes_t& extkey)
     valid_ = true;
 }
 
-HDKeychain::HDKeychain(HDKeychain&& source)
+HDKeychain::HDKeychain(const HDKeychain& source)
 {
     valid_ = source.valid_;
     if (!valid_) return;
