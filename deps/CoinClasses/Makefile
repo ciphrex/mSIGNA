@@ -1,4 +1,4 @@
-CXX_FLAGS = -Wall
+CXX_FLAGS += -Wall
 ifdef DEBUG
     C_FLAGS += -g
     CXX_FLAGS += -g
