@@ -59,6 +59,11 @@ then
     BUILD_TYPE=release
 fi
 
+COMMIT_HASH=$(git rev-parse HEAD)
+echo "Building using commit hash $COMMIT_HASH..."
+echo "#pragma once" > BuildInfo.h
+echo "#define COMMIT_HASH \"$COMMIT_HASH\"" >> BuildInfo.h
+
 CURRENT_DIR=$(pwd)
 
 set -x

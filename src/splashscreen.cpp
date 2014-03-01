@@ -24,10 +24,13 @@ SplashScreen::SplashScreen()
     QPainter painter(&pixmap);
     QFontMetrics metrics = painter.fontMetrics();
 
+    QString fullVersionText = "(" + SHORT_COMMIT_HASH + ") ";
+    fullVersionText += VERSIONTEXT;
+
     painter.drawText(
-        pixmap.width() - metrics.width(VERSIONTEXT) - VERSIONPADDINGRIGHT,
+        pixmap.width() - metrics.width(fullVersionText) - VERSIONPADDINGRIGHT,
         pixmap.height() - metrics.height() - VERSIONPADDINGBOTTOM,
-        VERSIONTEXT
+        fullVersionText 
     );
 
     painter.drawText(

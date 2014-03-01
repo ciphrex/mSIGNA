@@ -1270,7 +1270,8 @@ void MainWindow::networkSettings()
 void MainWindow::about()
 {
    QMessageBox::about(this, tr("About ") + getDefaultSettings().getAppName(),
-            tr("<b>") + getDefaultSettings().getAppName() + "(TM) " + VERSIONTEXT + "</b><br />" + COPYRIGHTTEXT);
+            tr("<b>") + getDefaultSettings().getAppName() + "(TM) " + VERSIONTEXT + "</b><br />" +
+            "Commit: " + COMMIT_HASH + "<br />" + COPYRIGHTTEXT);
 }
 
 void MainWindow::errorStatus(const QString& message)
