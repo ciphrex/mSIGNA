@@ -45,6 +45,15 @@ Vault::Vault(int argc, char** argv, bool create, uint32_t version)
     if (create) setVersion(version);
 }
 
+#if defined(DATABASE_SQLITE)
+Vault::Vault(const std::string& filename, bool create, uint32_t version)
+    : db_(openDatabase(filename, create))
+{
+    LOGGER(trace) << "Created Vault instance - filename: " << filename << " create: " << (create ? "true" : "false") << " version: " << version << std::endl;
+    if (create) setVersion(version);
+}
+#endif
+
 void Vault::setVersion(uint32_t version)
 {
     LOGGER(trace) << "Vault::setVersion(" << version << ")" << std::endl;

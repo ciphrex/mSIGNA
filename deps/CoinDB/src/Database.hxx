@@ -99,4 +99,38 @@ open_database (int& argc, char* argv[], bool create = false)
   return db;
 }
 
+#if defined(DATABASE_SQLITE)
+inline std::unique_ptr<odb::database>
+openDatabase(const std::string& filename, bool create = false)
+{
+    using namespace odb::core;
+
+    int argc = 3;
+    char prog[] = "prog";
+    char opt[] = "--database";
+    char buf[255];
+    std::strcpy(buf, filename.c_str());
+    char* argv[] = {prog, opt, buf};
+    std::unique_ptr<database> db(new odb::sqlite::database(argc, argv, false, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE));
+
+  // Create the database schema. Due to bugs in SQLite foreign key
+  // support for DDL statements, we need to temporarily disable
+  // foreign keys.
+  //
+    if (create) {
+        connection_ptr c(db->connection ());
+
+        c->execute ("PRAGMA foreign_keys=OFF");
+
+        transaction t (c->begin ());
+        schema_catalog::create_schema (*db);
+        t.commit ();
+
+        c->execute ("PRAGMA foreign_keys=ON");
+    }
+
+    return db;
+}
+#endif
+
 }
