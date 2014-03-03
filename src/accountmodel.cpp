@@ -85,31 +85,15 @@ void AccountModel::update()
 void AccountModel::create(const QString& fileName)
 {
     close ();
-
-    int argc = 3;
-    char prog[] = "prog";
-    char opt[] = "--database";
-    char buf[255];
-    std::strcpy(buf, fileName.toStdString().c_str());
-    char* argv[] = {prog, opt, buf};
-    vault = new Vault(argc, argv, true);
-
+    vault = new Vault(fileName.toStdString(), true);
     emit updateSyncHeight(0);
 }
 
 void AccountModel::load(const QString& fileName)
 {
     close();
-
-    int argc = 3;
-    char prog[] = "prog";
-    char opt[] = "--database";
-    char buf[255];
-    std::strcpy(buf, fileName.toStdString().c_str());
-    char* argv[] = {prog, opt, buf};
-    vault = new Vault(argc, argv, false);
+    vault = new Vault(fileName.toStdString(), false);
     update();
-
     emit updateSyncHeight(vault->getBestHeight());
 }
 

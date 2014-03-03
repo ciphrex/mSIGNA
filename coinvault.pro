@@ -11,7 +11,7 @@ RC_FILE = res/coinvault.rc
 # Application icons for mac
 ICON = res/icons/app_icons/osx.icns
 
-DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
+DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE DATABASE_SQLITE
 CONFIG += c++11 rtti thread
 
 QT += widgets network
