@@ -632,10 +632,10 @@ private:
 
 // Keys, Accounts
 #pragma db object pointer(std::shared_ptr)
-class KeychainRoot
+class KeychainNode
 {
 public:
-    KeychainRoot() { }
+    KeychainNode() { }
 
     void createPrivate(const secure_bytes_t& privkey, const secure_bytes_t& chain_code, uint32_t child_num = 0, uint32_t parent_fp = 0, uint32_t depth = 0);
     void createPublic(const bytes_t& pubkey, const secure_bytes_t& chain_code, uint32_t child_num = 0, uint32_t parent_fp = 0, uint32_t depth = 0);
@@ -652,6 +652,12 @@ public:
 
     void unlockPrivateKey(const secure_bytes_t& lock_key);
     void unlockChainCode(const secure_bytes_t& lock_key);
+
+    secure_bytes_t getSigningPrivateKey(uint32_t i) const;
+    bytes_t getSigningPublicKey(uint32_t i) const;
+
+    KeychainNode getChildNode(uint32_t i, bool get_private = false) const;
+    KeychainNode getChildNode(const std::vector<uint32_t>& v, bool get_private = false) const;
 
     uint32_t depth() const { return depth_; }
     uint32_t parent_fp() const { return parent_fp_; }
@@ -686,36 +692,36 @@ private:
 
 #define CHECK_HDKEYCHAIN
 
-inline void KeychainRoot::createPrivate(const secure_bytes_t& privkey, const secure_bytes_t& chain_code, uint32_t child_num, uint32_t parent_fp, uint32_t depth)
+inline void KeychainNode::createPrivate(const secure_bytes_t& privkey, const secure_bytes_t& chain_code, uint32_t child_num, uint32_t parent_fp, uint32_t depth)
 {
     depth_ = depth;
     parent_fp_ = parent_fp;
     child_num_ = child_num;
     privkey_ = privkey;
 #ifdef CHECK_HDKEYCHAIN
-    Coin::HDKeychain hdkeychain(privkey, chain_code, child_num, parent_fp, depth);
+    Coin::HDKeychain hdkeychain(privkey_, chain_code_, child_num_, parent_fp_, depth_);
     if (!hdkeychain.isPrivate()) throw std::runtime_error("Invalid private key.");
 #endif
 }
 
-inline void KeychainRoot::createPublic(const bytes_t& pubkey, const secure_bytes_t& chain_code, uint32_t child_num, uint32_t parent_fp, uint32_t depth)
+inline void KeychainNode::createPublic(const bytes_t& pubkey, const secure_bytes_t& chain_code, uint32_t child_num, uint32_t parent_fp, uint32_t depth)
 {
     depth_ = depth;
     parent_fp_ = parent_fp;
     child_num_ = child_num;
     pubkey_ = pubkey;
 #ifdef CHECK_HDKEYCHAIN
-    Coin::HDKeychain hdkeychain(pubkey, chain_code, child_num, parent_fp, depth);
+    Coin::HDKeychain hdkeychain(pubkey_, chain_code_, child_num_, parent_fp_, depth_);
     if (hdkeychain.isPrivate()) throw std::runtime_error("Invalid public key.");
 #endif
 }
 
-inline bool KeychainRoot::isPrivate() const
+inline bool KeychainNode::isPrivate() const
 {
     return (!privkey_.empty()) || (!privkey_ciphertext_.empty());
 }
 
-inline void KeychainRoot::setPrivateKeyLockKey(const secure_bytes_t& /*lock_key*/, const bytes_t& salt)
+inline void KeychainNode::setPrivateKeyLockKey(const secure_bytes_t& /*lock_key*/, const bytes_t& salt)
 {
     if (!isPrivate()) throw std::runtime_error("Cannot lock the private key of a public keychain.");
     if (privkey_.empty()) throw std::runtime_error("Key is locked.");
@@ -725,7 +731,7 @@ inline void KeychainRoot::setPrivateKeyLockKey(const secure_bytes_t& /*lock_key*
     privkey_salt_ = salt;
 }
 
-inline void KeychainRoot::setChainCodeLockKey(const secure_bytes_t& /*lock_key*/, const bytes_t& salt)
+inline void KeychainNode::setChainCodeLockKey(const secure_bytes_t& /*lock_key*/, const bytes_t& salt)
 {
     if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
 
@@ -734,23 +740,23 @@ inline void KeychainRoot::setChainCodeLockKey(const secure_bytes_t& /*lock_key*/
     chain_code_salt_ = salt;
 }
 
-inline void KeychainRoot::lockPrivateKey()
+inline void KeychainNode::lockPrivateKey()
 {
     privkey_.clear();
 }
 
-inline void KeychainRoot::lockChainCode()
+inline void KeychainNode::lockChainCode()
 {
     chain_code_.clear();
 }
 
-inline void KeychainRoot::lockAll()
+inline void KeychainNode::lockAll()
 {
     lockPrivateKey();
     lockChainCode();
 }
 
-inline void KeychainRoot::unlockPrivateKey(const secure_bytes_t& lock_key)
+inline void KeychainNode::unlockPrivateKey(const secure_bytes_t& lock_key)
 {
     if (!isPrivate()) throw std::runtime_error("Cannot unlock the private key of a public keychain.");
     if (!privkey_.empty()) return; // Already unlocked
@@ -759,7 +765,7 @@ inline void KeychainRoot::unlockPrivateKey(const secure_bytes_t& lock_key)
     privkey_ = privkey_ciphertext_;    
 }
 
-inline void KeychainRoot::unlockChainCode(const secure_bytes_t& lock_key)
+inline void KeychainNode::unlockChainCode(const secure_bytes_t& lock_key)
 {
     if (chain_code_.empty()) return; // Already unlocked
 
@@ -767,20 +773,65 @@ inline void KeychainRoot::unlockChainCode(const secure_bytes_t& lock_key)
     chain_code_ = chain_code_ciphertext_;
 }
 
-inline secure_bytes_t KeychainRoot::privkey() const
+secure_bytes_t KeychainNode::getSigningPrivateKey(uint32_t i) const
+{
+    if (!isPrivate()) throw std::runtime_error("Cannot get a private signing key from public keychain.");
+    if (privkey_.empty()) throw std::runtime_error("Key is locked.");
+    if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
+
+    Coin::HDKeychain hdkeychain(privkey_, chain_code_, child_num_, parent_fp_, depth_);
+    return hdkeychain.getPrivateSigningKey(i);
+}
+
+bytes_t KeychainNode::getSigningPublicKey(uint32_t i) const
+{
+    if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
+
+    Coin::HDKeychain hdkeychain(pubkey_, chain_code_, child_num_, parent_fp_, depth_);
+    return hdkeychain.getPublicSigningKey(i);
+}
+
+KeychainNode KeychainNode::getChildNode(uint32_t i, bool get_private) const
+{
+    std::vector<uint32_t> v(1, i);
+    return getChildNode(v, get_private);
+}
+
+KeychainNode KeychainNode::getChildNode(const std::vector<uint32_t>& v, bool get_private) const
+{
+    if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private extkey of a public keychain.");
+    if (get_private && privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
+    if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
+
+    secure_bytes_t key = get_private ? privkey_ : pubkey_;
+    Coin::HDKeychain hdkeychain(key, chain_code_, child_num_, parent_fp_, depth_);
+    for (auto i: v) { hdkeychain = hdkeychain.getChildNode(i); }
+
+    KeychainNode keychainNode;
+    if (get_private) {
+        keychainNode.createPrivate(hdkeychain.privkey(), hdkeychain.chain_code(), hdkeychain.child_num(), hdkeychain.parent_fp(), hdkeychain.depth());
+    }
+    else {
+        keychainNode.createPublic(hdkeychain.pubkey(), hdkeychain.chain_code(), hdkeychain.child_num(), hdkeychain.parent_fp(), hdkeychain.depth());
+    }
+
+    return keychainNode;        
+}
+
+inline secure_bytes_t KeychainNode::privkey() const
 {
     if (!isPrivate()) throw std::runtime_error("Keychain is public.");
     if (privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
     return privkey_;
 }
 
-inline secure_bytes_t KeychainRoot::chain_code() const
+inline secure_bytes_t KeychainNode::chain_code() const
 {
     if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
     return chain_code_;
 }
 
-inline secure_bytes_t KeychainRoot::extkey(bool get_private) const
+inline secure_bytes_t KeychainNode::extkey(bool get_private) const
 {
     if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private extkey of a public keychain.");
     if (get_private && privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");

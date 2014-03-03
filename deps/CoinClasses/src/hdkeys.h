@@ -100,14 +100,14 @@ public:
     HDKeychain getChildNode(uint32_t i) const { return getChild(0).getChild(i); }
 
     // Precondition: i >= 1
-    bytes_t getSigningPrivateKey(uint32_t i) const
+    bytes_t getPrivateSigningKey(uint32_t i) const
     {
         if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
         return getChild(i).privkey();
     }
 
     // Precondition: i >= 1
-    bytes_t getSigningPublicKey(uint32_t i) const
+    bytes_t getPublicSigningKey(uint32_t i) const
     {
         if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
         return getChild(i).pubkey();
