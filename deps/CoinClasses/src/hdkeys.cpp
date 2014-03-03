@@ -197,9 +197,7 @@ uint32_t HDKeychain::fp() const
 
 HDKeychain HDKeychain::getPublic() const
 {
-    if (!valid_) {
-        throw std::runtime_error("Keychain is invalid.");
-    }
+    if (!valid_) throw InvalidHDKeychainException();
 
     HDKeychain pub;
     pub.valid_ = valid_;
@@ -214,9 +212,7 @@ HDKeychain HDKeychain::getPublic() const
 
 HDKeychain HDKeychain::getChild(uint32_t i) const
 {
-    if (!valid_) {
-        throw std::runtime_error("Keychain is invalid.");
-    }
+    if (!valid_) throw InvalidHDKeychainException();
 
     bool priv_derivation = 0x80000000 & i;
     if (!isPrivate() && priv_derivation) {
@@ -236,7 +232,7 @@ HDKeychain HDKeychain::getChild(uint32_t i) const
     bytes_t digest = hmac_sha512(chain_code_, data);
     bytes_t left32(digest.begin(), digest.begin() + 32);
     BigInt Il(left32);
-    if (Il >= CURVE_ORDER) return child;
+    if (Il >= CURVE_ORDER) throw InvalidHDKeychainException();
 
     // The following line is used to test behavior for invalid indices
     // if (rand() % 100 < 10) return child;
@@ -245,7 +241,7 @@ HDKeychain HDKeychain::getChild(uint32_t i) const
         BigInt k(key_);
         k += Il;
         k %= CURVE_ORDER;
-        if (k.isZero()) return child;
+        if (k.isZero()) throw InvalidHDKeychainException();
 
         bytes_t child_key = k.getBytes();
         // pad with 0's to make it 33 bytes
@@ -258,7 +254,7 @@ HDKeychain HDKeychain::getChild(uint32_t i) const
         secp256k1_point K;
         K.bytes(pubkey_);
         K.generator_mul(left32);
-        if (K.is_at_infinity()) return child;
+        if (K.is_at_infinity()) throw InvalidHDKeychainException();
 
         child.key_ = child.pubkey_ = K.bytes();
     }

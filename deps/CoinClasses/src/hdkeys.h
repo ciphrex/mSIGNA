@@ -54,6 +54,12 @@ private:
     bytes_t master_chain_code_;
 };
 
+class InvalidHDKeychainException : public std::runtime_error
+{
+public:
+    InvalidHDKeychainException()
+        : std::runtime_error("Keychain is invalid.") { }
+};
 
 class HDKeychain
 {
@@ -91,6 +97,21 @@ public:
 
     HDKeychain getPublic() const;
     HDKeychain getChild(uint32_t i) const;
+    HDKeychain getChildNode(uint32_t i) const { return getChild(0).getChild(i); }
+
+    // Precondition: i >= 1
+    bytes_t getSigningPrivateKey(uint32_t i) const
+    {
+        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
+        return getChild(i).privkey();
+    }
+
+    // Precondition: i >= 1
+    bytes_t getSigningPublicKey(uint32_t i) const
+    {
+        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
+        return getChild(i).pubkey();
+    }
 
     static void setVersions(uint32_t priv_version, uint32_t pub_version) { priv_version_ = priv_version; pub_version_ = pub_version; }
 
