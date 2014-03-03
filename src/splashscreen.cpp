@@ -24,7 +24,7 @@ SplashScreen::SplashScreen()
     QPainter painter(&pixmap);
     QFontMetrics metrics = painter.fontMetrics();
 
-    QString fullVersionText = "(" + SHORT_COMMIT_HASH + ") ";
+    QString fullVersionText = "(" + getShortCommitHash() + ") ";
     fullVersionText += VERSIONTEXT;
 
     painter.drawText(

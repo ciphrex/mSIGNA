@@ -1271,7 +1271,7 @@ void MainWindow::about()
 {
    QMessageBox::about(this, tr("About ") + getDefaultSettings().getAppName(),
             tr("<b>") + getDefaultSettings().getAppName() + "(TM) " + VERSIONTEXT + "</b><br />" +
-            "Commit: " + COMMIT_HASH + "<br />" + COPYRIGHTTEXT);
+            "Commit: " + getCommitHash() + "<br />" + COPYRIGHTTEXT);
 }
 
 void MainWindow::errorStatus(const QString& message)

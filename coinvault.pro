@@ -89,6 +89,7 @@ HEADERS = \
 SOURCES = \
     src/settings.cpp \
     src/filesystem.cpp \
+    src/versioninfo.cpp \
     src/coinparams.cpp \
     src/main.cpp \
     src/splashscreen.cpp \
