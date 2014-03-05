@@ -631,23 +631,20 @@ private:
 
 // Keys, Accounts
 #pragma db object pointer(std::shared_ptr)
-class HDTreeRoot : public std::enable_shared_from_this<HDTreeRoot>
+class HDTreeNode : public std::enable_shared_from_this<HDTreeNode>
 {
 public:
-    HDTreeRoot() { }
-    HDTreeRoot(const HDTreeRoot& source)
-        : depth_(source.depth_), parent_fp_(source.parent_fp_), child_num_(source.child_num_), pubkey_(source.pubkey_), chain_code_(source.chain_code_), chain_code_ciphertext_(source.chain_code_ciphertext_), chain_code_salt_(source.chain_code_salt_), privkey_(source.privkey_), privkey_ciphertext_(source.privkey_ciphertext_), privkey_salt_(source.privkey_salt_), tree_root_(source.tree_root_), derivation_path_(source.derivation_path_) { }
+    HDTreeNode(const std::string& name) : name_(name) { }
+    HDTreeNode(const HDTreeNode& source)
+        : name_(source.name_), depth_(source.depth_), parent_fp_(source.parent_fp_), child_num_(source.child_num_), pubkey_(source.pubkey_), chain_code_(source.chain_code_), chain_code_ciphertext_(source.chain_code_ciphertext_), chain_code_salt_(source.chain_code_salt_), privkey_(source.privkey_), privkey_ciphertext_(source.privkey_ciphertext_), privkey_salt_(source.privkey_salt_), tree_root_(source.tree_root_), derivation_path_(source.derivation_path_) { }
 
-    HDTreeRoot& operator=(const HDTreeRoot& source);
+    HDTreeNode& operator=(const HDTreeNode& source);
 
-    #pragma db transient null
-    std::shared_ptr<HDTreeRoot> tree_root_;
+    std::string name() const { return name_; }
+    void name(const std::string& name) { name_ = name; }
 
-    #pragma db transient
-    std::vector<uint32_t> derivation_path_;
-
-    void setRootNode(std::shared_ptr<HDTreeRoot> tree_root) { tree_root_ = tree_root; }
-    std::shared_ptr<HDTreeRoot> getRootNode() const { return (tree_root_ ? tree_root_ : shared_from_this()); }
+    void setRootNode(std::shared_ptr<HDTreeNode> tree_root) { tree_root_ = tree_root; }
+    std::shared_ptr<HDTreeNode> getRootNode() { return (tree_root_ ? tree_root_ : shared_from_this()); }
 
     const std::vector<uint32_t>& getDerivationPath() const { return derivation_path_; }
 
@@ -673,8 +670,9 @@ public:
     secure_bytes_t getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
     bytes_t getSigningPublicKey(uint32_t i) const;
 
-    HDTreeRoot getChildNode(uint32_t i, bool get_private = false) const;
-    HDTreeRoot getChildNode(const std::vector<uint32_t>& v, bool get_private = false) const;
+    // TODO: getChildNode should be const
+    HDTreeNode getChildNode(uint32_t i, bool get_private = false);
+    HDTreeNode getChildNode(const std::vector<uint32_t>& v, bool get_private = false);
 
     uint32_t depth() const { return depth_; }
     uint32_t parent_fp() const { return parent_fp_; }
@@ -691,8 +689,13 @@ public:
 private:
     friend class odb::access;
 
+    HDTreeNode() { }
+
     #pragma db id auto
     unsigned long id_;
+
+    #pragma db unique
+    std::string name_;
 
     uint32_t depth_;
     uint32_t parent_fp_;
@@ -709,16 +712,14 @@ private:
     bytes_t privkey_ciphertext_;
     bytes_t privkey_salt_;
 
-    #pragma db transient null
-    std::shared_ptr<HDTreeRoot> tree_root_;
-
-    #pragma db transient
+    #pragma db null
+    std::shared_ptr<HDTreeNode> tree_root_;
     std::vector<uint32_t> derivation_path_;
 
     bytes_t hash_;
 };
 
-inline HDTreeRoot& HDTreeRoot::operator=(const HDTreeRoot& source)
+inline HDTreeNode& HDTreeNode::operator=(const HDTreeNode& source)
 {
     depth_ = source.depth_;
     parent_fp_ = source.parent_fp_;
@@ -737,12 +738,16 @@ inline HDTreeRoot& HDTreeRoot::operator=(const HDTreeRoot& source)
 
     derivation_path_ = source.derivation_path_;
 
-    hash_ = ripemd160(sha256(pubkey_ + chain_code_));
+    uchar_vector_secure hashdata = pubkey_;
+    hashdata += chain_code_;
+    hash_ = ripemd160(sha256(hashdata));
+
+    return *this;
 }
 
 #define CHECK_HDKEYCHAIN
 
-inline void HDTreeRoot::createPrivate(const secure_bytes_t& privkey, const secure_bytes_t& chain_code, uint32_t child_num, uint32_t parent_fp, uint32_t depth)
+inline void HDTreeNode::createPrivate(const secure_bytes_t& privkey, const secure_bytes_t& chain_code, uint32_t child_num, uint32_t parent_fp, uint32_t depth)
 {
     depth_ = depth;
     parent_fp_ = parent_fp;
@@ -753,10 +758,12 @@ inline void HDTreeRoot::createPrivate(const secure_bytes_t& privkey, const secur
 
     pubkey_ = hdkeychain.pubkey();
 
-    hash_ = ripemd160(sha256(pubkey_ + chain_code_));
+    uchar_vector_secure hashdata = pubkey_;
+    hashdata += chain_code_;
+    hash_ = ripemd160(sha256(hashdata));
 }
 
-inline void HDTreeRoot::createPublic(const bytes_t& pubkey, const secure_bytes_t& chain_code, uint32_t child_num, uint32_t parent_fp, uint32_t depth)
+inline void HDTreeNode::createPublic(const bytes_t& pubkey, const secure_bytes_t& chain_code, uint32_t child_num, uint32_t parent_fp, uint32_t depth)
 {
     depth_ = depth;
     parent_fp_ = parent_fp;
@@ -767,15 +774,17 @@ inline void HDTreeRoot::createPublic(const bytes_t& pubkey, const secure_bytes_t
     if (hdkeychain.isPrivate()) throw std::runtime_error("Invalid public key.");
 #endif
 
-    hash_ = ripemd160(sha256(pubkey_ + chain_code_));
+    uchar_vector_secure hashdata = pubkey_;
+    hashdata += chain_code_;
+    hash_ = ripemd160(sha256(hashdata));
 }
 
-inline bool HDTreeRoot::isPrivate() const
+inline bool HDTreeNode::isPrivate() const
 {
     return (!privkey_.empty()) || (!privkey_ciphertext_.empty());
 }
 
-inline void HDTreeRoot::setPrivateKeyLockKey(const secure_bytes_t& /*lock_key*/, const bytes_t& salt)
+inline void HDTreeNode::setPrivateKeyLockKey(const secure_bytes_t& /*lock_key*/, const bytes_t& salt)
 {
     if (!isPrivate()) throw std::runtime_error("Cannot lock the private key of a public keychain.");
     if (privkey_.empty()) throw std::runtime_error("Key is locked.");
@@ -785,7 +794,7 @@ inline void HDTreeRoot::setPrivateKeyLockKey(const secure_bytes_t& /*lock_key*/,
     privkey_salt_ = salt;
 }
 
-inline void HDTreeRoot::setChainCodeLockKey(const secure_bytes_t& /*lock_key*/, const bytes_t& salt)
+inline void HDTreeNode::setChainCodeLockKey(const secure_bytes_t& /*lock_key*/, const bytes_t& salt)
 {
     if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
 
@@ -794,34 +803,34 @@ inline void HDTreeRoot::setChainCodeLockKey(const secure_bytes_t& /*lock_key*/, 
     chain_code_salt_ = salt;
 }
 
-inline void HDTreeRoot::lockPrivateKey()
+inline void HDTreeNode::lockPrivateKey()
 {
     privkey_.clear();
 }
 
-inline void HDTreeRoot::lockChainCode()
+inline void HDTreeNode::lockChainCode()
 {
     chain_code_.clear();
 }
 
-inline void HDTreeRoot::lockAll()
+inline void HDTreeNode::lockAll()
 {
     lockPrivateKey();
     lockChainCode();
 }
 
-inline bool HDTreeRoot::isPrivateKeyLocked() const
+inline bool HDTreeNode::isPrivateKeyLocked() const
 {
     if (!isPrivate()) throw std::runtime_error("Keychain is not private.");
     return privkey_.empty();
 }
 
-inline bool HDTreeRoot::isChainCodeLocked() const
+inline bool HDTreeNode::isChainCodeLocked() const
 {
     return chain_code_.empty();
 }
 
-inline void HDTreeRoot::unlockPrivateKey(const secure_bytes_t& lock_key)
+inline void HDTreeNode::unlockPrivateKey(const secure_bytes_t& lock_key)
 {
     if (!isPrivate()) throw std::runtime_error("Cannot unlock the private key of a public keychain.");
     if (!privkey_.empty()) return; // Already unlocked
@@ -830,7 +839,7 @@ inline void HDTreeRoot::unlockPrivateKey(const secure_bytes_t& lock_key)
     privkey_ = privkey_ciphertext_;    
 }
 
-inline void HDTreeRoot::unlockChainCode(const secure_bytes_t& lock_key)
+inline void HDTreeNode::unlockChainCode(const secure_bytes_t& lock_key)
 {
     if (chain_code_.empty()) return; // Already unlocked
 
@@ -838,7 +847,7 @@ inline void HDTreeRoot::unlockChainCode(const secure_bytes_t& lock_key)
     chain_code_ = chain_code_ciphertext_;
 }
 
-secure_bytes_t HDTreeRoot::getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const
+secure_bytes_t HDTreeNode::getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path) const
 {
     if (!isPrivate()) throw std::runtime_error("Cannot get a private signing key from public keychain.");
     if (privkey_.empty()) throw std::runtime_error("Private key is locked.");
@@ -849,7 +858,7 @@ secure_bytes_t HDTreeRoot::getSigningPrivateKey(uint32_t i, const std::vector<ui
     return hdkeychain.getPrivateSigningKey(i);
 }
 
-bytes_t HDTreeRoot::getSigningPublicKey(uint32_t i) const
+bytes_t HDTreeNode::getSigningPublicKey(uint32_t i) const
 {
     if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
 
@@ -857,25 +866,25 @@ bytes_t HDTreeRoot::getSigningPublicKey(uint32_t i) const
     return hdkeychain.getPublicSigningKey(i);
 }
 
-HDTreeRoot HDTreeRoot::getChildNode(uint32_t i, bool get_private) const
+HDTreeNode HDTreeNode::getChildNode(uint32_t i, bool get_private)
 {
     std::vector<uint32_t> v(1, i);
     return getChildNode(v, get_private);
 }
 
-HDTreeRoot HDTreeRoot::getChildNode(const std::vector<uint32_t>& derivation_path, bool get_private) const
+HDTreeNode HDTreeNode::getChildNode(const std::vector<uint32_t>& derivation_path, bool get_private)
 {
     if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private extkey of a public keychain.");
     if (get_private && privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
     if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
 
-    HDTreeRoot keychainNode;
-    keychainNode.setRootNode(shared_from_this());
+    HDTreeNode keychainNode;
+    keychainNode.setRootNode(this->getRootNode());
 
     secure_bytes_t key = get_private ? privkey_ : pubkey_;
     Coin::HDKeychain hdkeychain(key, chain_code_, child_num_, parent_fp_, depth_);
     for (auto i: derivation_path) {
-        keychainNode.derivation_chain_.push_back(i);
+        keychainNode.derivation_path_.push_back(i);
         hdkeychain = hdkeychain.getChildNode(i);
     }
             
@@ -889,20 +898,20 @@ HDTreeRoot HDTreeRoot::getChildNode(const std::vector<uint32_t>& derivation_path
     return keychainNode;        
 }
 
-inline secure_bytes_t HDTreeRoot::privkey() const
+inline secure_bytes_t HDTreeNode::privkey() const
 {
     if (!isPrivate()) throw std::runtime_error("Keychain is public.");
     if (privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
     return privkey_;
 }
 
-inline secure_bytes_t HDTreeRoot::chain_code() const
+inline secure_bytes_t HDTreeNode::chain_code() const
 {
     if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
     return chain_code_;
 }
 
-inline secure_bytes_t HDTreeRoot::extkey(bool get_private) const
+inline secure_bytes_t HDTreeNode::extkey(bool get_private) const
 {
     if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private extkey of a public keychain.");
     if (get_private && privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
@@ -916,14 +925,14 @@ inline secure_bytes_t HDTreeRoot::extkey(bool get_private) const
 class Key
 {
 public:
-    Key(const std::shared_ptr<HDTreeRoot>& keychain_node, uint32_t signing_key_index);
+    Key(const std::shared_ptr<HDTreeNode>& keychain_node, uint32_t signing_key_index);
 
     unsigned long id() const { return id_; }
     bool is_private() const { return is_private_; }
     const bytes_t& pubkey() const { return pubkey_; }
-    secure_bytes_t bytes_t privkey() const;
+    secure_bytes_t privkey() const;
 
-    std::shared_ptr<HDTreeRoot> tree_root() const { return tree_root_; }
+    std::shared_ptr<HDTreeNode> tree_root() const { return tree_root_; }
 
     bool isPrivateKeyLocked() const { return tree_root_->isPrivateKeyLocked(); }
     bool isChainCodeLocked() const { return tree_root_->isChainCodeLocked(); }
@@ -941,17 +950,17 @@ private:
     bytes_t pubkey_;
 
     #pragma db value_not_null
-    std::shared_ptr<HDTreeRoot> tree_root_;
+    std::shared_ptr<HDTreeNode> tree_root_;
 
     std::vector<uint32_t> derivation_path_;
 
     uint32_t signing_key_index_;
 };
 
-inline Key::Key(const std::shared_ptr<HDTreeRoot>& keychain_node, uint32_t signing_key_index)
+inline Key::Key(const std::shared_ptr<HDTreeNode>& keychain_node, uint32_t signing_key_index)
 {
-    is_private_ = keychain_node_->isPrivate();
-    pubkey_ = keychain_node_->getSigningPublicKey(signing_key_index_);
+    is_private_ = keychain_node->isPrivate();
+    pubkey_ = keychain_node->getSigningPublicKey(signing_key_index_);
     tree_root_ = keychain_node->getRootNode();
     derivation_path_ = keychain_node->getDerivationPath();
     signing_key_index_ = signing_key_index;
@@ -963,109 +972,7 @@ inline secure_bytes_t Key::privkey() const
     if (isPrivateKeyLocked()) throw std::runtime_error("Key::privkey - private key is locked.");
     if (isChainCodeLocked()) throw std::runtime_error("Key::privkey - chain code is locked.");
 
-    return tree_root_->getSigningPrivateKey(derivation_path_, signing_key_index_);
-}
-
-#pragma db object pointer(std::shared_ptr)
-class HDTreeNode
-{
-public:
-    HDTreeNode(const std::string& name, const std::shared_ptr<HDTreeRoot>& keychain_node, unsigned long numkeys = 0);
-    //Keychain(const std::string& name, const Coin::HDKeychain& hdkeychain, unsigned long numkeys = 0);
-
-    unsigned long id() const { return id_; }
-
-    void name(const std::string& name) { name_ = name; }
-    const std::string name() const { return name_; }
-
-    type_t type() const { return type_; }
-    std::shared_ptr<HDTreeRoot> tree_root() const { return tree_root_; }
-
-    unsigned long numkeys() const { return keys_.size(); }
-
-    typedef std::vector<std::shared_ptr<Key>> keys_t;
-    const keys_t& keys() const { return keys_; }
-
-    unsigned long numkeys(unsigned long numkeys);
-
-private:
-    friend class odb::access;
-
-    HDTreeNode() { }
-
-    #pragma db id auto
-    unsigned long id_;
-
-    #pragma db unique
-    std::string name_;
-
-    #pragma db value_not_null
-    std::shared_ptr<HDTreeRoot> tree_root_; 
-
-    std::vector<uint32_t> derivation_path_;
-
-    #pragma db value_not_null
-    keys_t keys_;
-};
-
-inline Keychain::Keychain(const std::string& name, const std::shared_ptr<ExtendedKey>& extendedkey, unsigned long numkeys)
-    : name_(name), extendedkey_(extendedkey), numkeys_(0), nextkeyindex_(0), numsavedkeys_(0)
-{
-    type_ = extendedkey_->is_private() ? PRIVATE : PUBLIC;
-    hash_ = sha256_2(extendedkey_->hdkeychain().extkey());
-    this->numkeys(numkeys);
-}
-
-inline void Keychain::add(std::shared_ptr<Key> key)
-{
-    if (is_deterministic()) {
-        throw std::runtime_error("Keychain::add - cannot add new keys to deterministic keychain.");
-    }
-
-    hash_ = sha256(uchar_vector(hash_) + key->pubkey());
-    keys_.push_back(key);
-    numkeys_++;
-}
-
-inline unsigned long Keychain::numkeys(unsigned long numkeys)
-{
-    LOGGER(trace) << "Keychain::numkeys(" << numkeys << ")" << std::endl;
-    if (!is_deterministic()) {
-        throw std::runtime_error("Keychain::numkeys - cannot set numkeys for random wallet.");
-    }
-
-    if (numkeys_ >= numkeys) return numkeys_;
-
-    if (numkeys > 0x7fffffff) {
-        throw std::runtime_error("Keychain::numkeys - cannot have more than 0x7fffffff keys.");
-    }
-
-    Coin::HDKeychain hdkeychain = extendedkey_->hdkeychain();
-
-    for (uint32_t i = numkeys_; i < numkeys; i++) {
-        while (true) {
-            uint32_t childnum = nextkeyindex_++;
-            Coin::HDKeychain child = hdkeychain.getChild(childnum);
-            if (!child) continue;
-            std::shared_ptr<Key> key(new Key(extendedkey_, childnum)); 
-            keys_.push_back(key);
-            break;
-        }
-    }
-    numkeys_ = numkeys;
-    return numkeys_;
-}
-
-inline std::shared_ptr<Keychain> Keychain::child(const std::string& name, uint32_t i, unsigned long numkeys)
-{
-    if (!is_deterministic()) {
-        throw std::runtime_error("Keychain::child - cannot get child key for random keychain.");
-    }
-
-    Coin::HDKeychain parent = extendedkey_->hdkeychain();
-    std::shared_ptr<ExtendedKey> child(new ExtendedKey(parent.getChild(i).extkey()));
-    std::shared_ptr<Keychain> keychain(new Keychain(name, child, numkeys));
-    return keychain;
+    return tree_root_->getSigningPrivateKey(signing_key_index_, derivation_path_);
 }
 
 #pragma db object pointer(std::shared_ptr)
@@ -1100,7 +1007,7 @@ public:
     void addTxOut(std::shared_ptr<TxOut> txout);
 
     void account(std::shared_ptr<Account> account) { account_ = account; }
-    std::shared_ptr<Account> account() const { return account_.lock(); }
+    std::shared_ptr<Account> account() const { return account_; }
 
 private:
     friend class odb::access;
@@ -1119,9 +1026,7 @@ private:
     #pragma db value_not_null inverse(signingscript_)
     Tx::txouts_t txouts_;
 
-    friend class Account;
-    #pragma db not_null inverse(signingscripts_)
-    std::weak_ptr<Account> account_;
+    std::shared_ptr<Account> account_;
 };
 
 inline void SigningScript::addTxOut(std::shared_ptr<TxOut> txout)
@@ -1136,28 +1041,18 @@ class Account : public std::enable_shared_from_this<Account>
 public:
     Account(bool is_ours = true) : is_ours_(is_ours) { }
 
-    typedef std::vector<std::shared_ptr<SigningScript>> signingscripts_t;
-    void set(const std::string& name, unsigned int minsigs, const std::set<bytes_t>& keychain_hashes, const signingscripts_t& scripts, uint32_t time_created = time(NULL));
-
-    typedef std::set<std::shared_ptr<Keychain>> keychains_t;
-    void set(const std::string& name, unsigned int minsigs, const keychains_t& keychains, uint32_t time_created = time(NULL));
-
-    void extend(const keychains_t& keychains);
+    typedef std::set<std::shared_ptr<HDTreeNode>> keychain_roots_t;
+    void set(const std::string& name, unsigned int minsigs, const keychain_roots_t& keychain_roots, uint32_t time_created = time(NULL));
 
     unsigned long id() const { return id_; }
 
+    bool is_ours() const { return is_ours_; }
+
     void name(const std::string& name) { name_ = name; }
     const std::string& name() const { return name_; }
-
     unsigned int minsigs() const { return minsigs_; }
-
+    const keychain_roots_t& keychain_roots() const { return keychain_roots_; }
     uint32_t time_created() const { return time_created_; }
-
-    const std::set<bytes_t>& keychain_hashes() const { return keychain_hashes_; }
-
-    const signingscripts_t& scripts() const { return signingscripts_; }
-
-    bool is_ours() const { return is_ours_; }
 
 private:
     friend class odb::access;
@@ -1165,103 +1060,22 @@ private:
     #pragma db id auto
     unsigned long id_;
 
+    bool is_ours_;
+
     #pragma db unique
     std::string name_;
-
     unsigned int minsigs_;
-
-    #pragma db value_not_null \
-        id_column("account_id") value_column("keychain_hash")
-    std::set<bytes_t> keychain_hashes_;
-
-    #pragma db value_not_null \
-        id_column("account_id") value_column("signingscript_id")
-    signingscripts_t signingscripts_;
-
+    keychain_roots_t keychain_roots_;
     uint32_t time_created_;
-
-    bool is_ours_;
 };
 
 
-inline void Account::set(const std::string& name, unsigned int minsigs, const std::set<bytes_t>& keychain_hashes, const signingscripts_t& scripts, uint32_t time_created)
+inline void Account::set(const std::string& name, unsigned int minsigs, const keychain_roots_t& keychain_roots, uint32_t time_created)
 {
     name_ = name;
     minsigs_ = minsigs;
-    keychain_hashes_ = keychain_hashes;
-    signingscripts_ = scripts;
+    keychain_roots_ = keychain_roots;
     time_created_ = time_created;
-}
-
-inline void Account::set(const std::string& name, unsigned int minsigs, const keychains_t& keychains, uint32_t time_created)
-{
-    // Find the smallest keychain's length. That will be the number of scripts in the account.
-    unsigned long minkeys = 0;
-    for (auto& keychain: keychains) {
-        if (minkeys == 0) {
-            minkeys = keychain->numkeys();
-        }
-        else if (keychain->numkeys() < minkeys) {
-            minkeys = keychain->numkeys();
-        }
-    }
-
-    // Create pubkey tuples. Sort them to hide which pubkey belongs to which keychain and to ensure only one signing script per combination.
-    for (unsigned long i = 0; i < minkeys; i++) {
-        std::vector<bytes_t> pubkeys;
-        for (auto& keychain: keychains) {
-            pubkeys.push_back(keychain->keys()[i]->pubkey());
-        }
-        // Sort the pubkeys to ensure the same set of pubkeys always generates the same multisig
-        std::sort(pubkeys.begin(), pubkeys.end());
-
-        CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, minsigs, pubkeys);
-        std::shared_ptr<SigningScript> signingscript(new SigningScript(script.txinscript(CoinQ::Script::Script::EDIT), script.txoutscript()));
-        signingscripts_.push_back(signingscript);
-        signingscript->account_ = shared_from_this();
-    }
-
-    name_ = name;
-    minsigs_ = minsigs;
-    time_created_ = time_created;
-
-    keychain_hashes_.clear();
-    for (auto& keychain: keychains) {
-        keychain_hashes_.insert(keychain->hash());
-    }
-}
-
-inline void Account::extend(const keychains_t& keychains)
-{
-    // TODO: check keychain hashes
-
-    // Find the smallest keychain's length. That will be the number of scripts in the account.
-    unsigned long minkeys = 0;
-    for (auto& keychain: keychains) {
-        if (minkeys == 0) {
-            minkeys = keychain->numkeys();
-        }
-        else if (keychain->numkeys() < minkeys) {
-            minkeys = keychain->numkeys();
-        }
-    }
-
-    unsigned long numscripts = signingscripts_.size();
-    if (minkeys <= numscripts) return; // the < should never occur or we won't be able to sign! (TODO: assert)
-
-    for (unsigned long i = numscripts; i < minkeys; i++) {
-        std::vector<bytes_t> pubkeys;
-        for (auto& keychain: keychains) {
-            pubkeys.push_back(keychain->keys()[i]->pubkey());
-        }
-        // Sort the pubkeys to ensure the same set of pubkeys always generates the same multisig
-        std::sort(pubkeys.begin(), pubkeys.end());
-
-        CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, minsigs_, pubkeys);
-        std::shared_ptr<SigningScript> signingscript(new SigningScript(script.txinscript(CoinQ::Script::Script::EDIT), script.txoutscript()));
-        signingscripts_.push_back(signingscript);
-        signingscript->account_ = shared_from_this(); 
-   } 
 }
 
 // Views
@@ -1276,14 +1090,14 @@ struct AccountView
 
 #pragma db view \
     object(Account) \
-    table("Account_keychain_hashes" = "t": "t.account_id = " + Account::id_) \
-    object(Keychain: "t.keychain_hash = " + Keychain::hash_)
+    table("Account_keychain_roots" = "t": "t.account_id = " + Account::id_) \
+    object(HDTreeNode: "t.keychain_root = " + HDTreeNode::hash_)
 struct KeychainView
 {
     #pragma db column(Account::name_)
     std::string account_name;
 
-    #pragma db column(Keychain::name_)
+    #pragma db column(HDTreeNode::name_)
     std::string keychain_name;
 };
 
