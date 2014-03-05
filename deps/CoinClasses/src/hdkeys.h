@@ -91,13 +91,17 @@ public:
     bytes_t privkey() const;
     const bytes_t& pubkey() const { return pubkey_; }
 
-    bool isPrivate() const { return ( key_.size() == 33 && key_[0] == 0x00); }
+    bool isPrivate() const { return (key_.size() == 33 && key_[0] == 0x00); }
     bytes_t hash() const; // hash is ripemd160(sha256(pubkey))
     uint32_t fp() const; // fingerprint is first 32 bits of hash
 
     HDKeychain getPublic() const;
     HDKeychain getChild(uint32_t i) const;
-    HDKeychain getChildNode(uint32_t i) const { return getChild(0).getChild(i); }
+    HDKeychain getChildNode(uint32_t i, bool private_derivation = false) const
+    {
+        uint32_t mask = private_derivation ? 0x80000000ull : 0x00000000ull;
+        return getChild(mask).getChild(i);
+    }
 
     // Precondition: i >= 1
     bytes_t getPrivateSigningKey(uint32_t i) const
