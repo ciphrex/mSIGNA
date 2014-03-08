@@ -682,6 +682,9 @@ public:
     secure_bytes_t privkey() const;
     secure_bytes_t chain_code() const;
 
+    const bytes_t& chain_code_ciphertext() const { return chain_code_ciphertext_; }
+    const bytes_t& chain_code_salt() const { return chain_code_salt_; }
+
     // hash = ripemd160(sha256(pubkey + chain_code))
     const bytes_t& hash() const { return hash_; }
 

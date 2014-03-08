@@ -93,48 +93,15 @@ bool Vault::keychainExists(const std::string& keychain_name) const
     LOGGER(trace) << "Vault::keychainExists(" << keychain_name << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
-
     odb::core::transaction t(db_->begin());
- 
     odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
  
     return !r.empty();
 }
 
-void Vault::newKeychain(const std::string& name, unsigned long numkeys)
+void Vault::newKeychain(const std::string& name, std::shared_ptr<Keychain> parent)
 {
-    if (numkeys < 1) {
-        throw std::runtime_error("Vault::newKeychain() - keychain must contain at least one key.");
-    }
-
-    Keychain keychain(name, Keychain::PRIVATE);
-    CoinKey coinkey;
-    {
-        for (unsigned long i = 1; i <= numkeys; i++) {
-            coinkey.generateNewKey();
-            std::shared_ptr<Key> key(new Key(coinkey.getPublicKey(), coinkey.getPrivateKey()));
-            keychain.add(key);
-        }
-    }
-
-    boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::session session;
-    odb::core::transaction t(db_->begin());
-
-    persistKeychain_unwrapped(keychain);
-
-    t.commit();
-}
-
-void Vault::newHDKeychain(const std::string& name, const bytes_t& extkey, unsigned long numkeys)
-{
-    if (numkeys < 1) {
-        throw std::runtime_error("Vault::newKeychain() - keychain must contain at least one key.");
-    }
-
-    std::shared_ptr<ExtendedKey> extendedkey(new ExtendedKey(extkey));
-
-    Keychain keychain(name, extendedkey, numkeys);
+    Keychain keychain(name, parent);
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session session;
@@ -192,81 +159,24 @@ void Vault::renameKeychain(const std::string& old_name, const std::string& new_n
     t.commit();
 }
 
-bytes_t Vault::getExtendedKeyBytes(const std::string& keychain_name, bool get_private, const bytes_t& decryption_key) const
-{
-    boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::session session;
-    odb::core::transaction t(db_->begin());
-
-    odb::result<Keychain> keychain_r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
-    if (keychain_r.empty()) throw std::runtime_error("Keychain not found.");
-
-    std::shared_ptr<Keychain> keychain(keychain_r.begin().load());
-    return keychain->extendedkey()->bytes(get_private, decryption_key);
-}
-
 void Vault::persistKeychain_unwrapped(Keychain& keychain)
 {
-    if (keychain.is_deterministic()) {
-        db_->persist(keychain.extendedkey());
-    }
+    if (keychain->parent())
+        db_->update(keychain->parent());
 
-    auto& keys = keychain.keys();
-    for (auto& key: keys) { db_->persist(*key); }
-    keychain.numsavedkeys(keychain.numkeys());
     db_->persist(keychain);
-}
-
-void Vault::updateKeychain_unwrapped(std::shared_ptr<Keychain> keychain)
-{
-    if (keychain->numsavedkeys() < keychain->numkeys()) {
-        for (uint32_t i = keychain->numsavedkeys(); i < keychain->numkeys(); i++) {
-            db_->persist(*keychain->keys()[i]);
-        }
-        keychain->numsavedkeys(keychain->numkeys());
-        db_->update(keychain);
-    }
-}
-
-std::vector<KeychainInfo> Vault::getKeychains() const
-{
-    std::vector<KeychainInfo> keychains;
-
-    boost::lock_guard<boost::mutex> lock(mutex);
-
-    odb::core::session session;
-
-    odb::core::transaction t(db_->begin());
-
-    odb::result<Keychain> r(db_->query<Keychain>());
-    for (auto& keychain: r) {
-        keychains.push_back(KeychainInfo(
-            keychain.id(),
-            keychain.name(),
-            keychain.type(),
-            keychain.hash(),
-            keychain.numkeys()
-        ));
-    }
-
-    t.commit();
-
-    return keychains;
 }
 
 std::shared_ptr<Keychain> Vault::getKeychain(const std::string& keychain_name) const
 {
     boost::lock_guard<boost::mutex> lock(mutex);
-
     odb::core::transaction t(db_->begin());
-
     odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
     if (r.empty()) {
         throw std::runtime_error("Vault::getKeychain - keychain not found.");
     }
 
     std::shared_ptr<Keychain> keychain(r.begin().load());
-
     return keychain;
 }
 
@@ -278,85 +188,74 @@ inline void write_uint32(std::ofstream& f, uint32_t data)
     f.put(data & 0xff);
 }
 
-bytes_t Vault::exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys) const
+bytes_t Vault::exportKeychain(std::shared_ptr<Keychain>& keychain, const std::string& filepath, bool exportprivkeys) const
 {
+/*
     boost::lock_guard<boost::mutex> lock(mutex);
 
-    odb::core::transaction t(db_->begin());
 
-    odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
-    if (r.empty()) {
-        throw std::runtime_error("Vault::exportKeychain - keychain not found.");
-    }
-
-    std::shared_ptr<Keychain> keychain(r.begin().load());
-    if (exportprivkeys && !keychain->is_private()) {
+    if (exportprivkeys && !keychain->isPrivate()) {
         throw std::runtime_error("Vault::exportKeychain - keychain does not contain private keys.");
     }
 
     uint32_t size;
     std::ofstream f(filepath, std::ofstream::trunc | std::ofstream::binary);
 
-    // write whether this is a deterministic keychain
-    bool deterministic = keychain->is_deterministic();
-    f.put(deterministic);
+    write_uint32(f, keychain->depth());
+    write_uint32(f, keychain->parent_fp());
+    write_uint32(f, keychain->child_num());
 
-    if (deterministic) {
-        // write extended key
-        // TODO: save encrypted bytes
-        bytes_t extkey = keychain->extendedkey()->bytes(exportprivkeys);
-        bytes_t extpubkey;
-        if (keychain->is_private()) {
-            extpubkey = Coin::HDKeychain(extkey).getPublic().extkey();
-            if (!exportprivkeys) {
-                extkey = extpubkey;
-            }
-        }
-        else {
-            extpubkey = extkey;
-        }
+    size = keychain->pubkey().size();
+    write_uint32(f, size);
+    f.write((char*)&keychain->pubkey()[0], size);
 
-        size = extkey.size();
-        write_uint32(f, size);
-        f.write((char*)&extkey[0], size);
-
-        // write number of saved keys using 4 bytes msb first
-        size = keychain->numsavedkeys();
-        write_uint32(f, size);
-
-        // write hash
-        bytes_t hash = sha256_2(extpubkey);
-        size = hash.size();
-        write_uint32(f, size);
-        f.write((char*)&hash[0], size);
-
-        return hash;
+    // If chain code is unlocked, export plaintext. Otherwise, export encrypted chain code
+    bool chain_code_locked = keychain->isChainCodeLocked();
+    f.put(chain_code_locked);
+    if (chain_code_locked) {
+        size = keychain->chain_code_ciphertext().size();
+        write_uint32(f. size);
+        f.write((char*)&keychain->chain_code_ciphertext()[0], size);
     }
     else {
-        // write whether these are private keys
-        f.put(exportprivkeys);
-
-        // write number of keys using 4 bytes msb first
-        size = keychain->keys().size();
+        secure_bytes_t chain_code = keychain->chain_code();
+        size = chain_code.size();
         write_uint32(f, size);
-
-        // write keys and compute hash
-        uchar_vector hash;
-        for (auto& key: keychain->keys()) {
-            hash = sha256(hash + key->pubkey());
-            bytes_t buffer = exportprivkeys ? key->privkey() : key->pubkey();
-            size = buffer.size();
-            write_uint32(f, size);
-            f.write((char*)&buffer[0], size);
-        }
-
-        // write hash
-        size = hash.size();
-        write_uint32(f, size);
-        f.write((char*)&hash[0], size);
-
-        return hash;
+        f.write((char*)&chain_code[0], size);
     }
+
+
+    // write extended key
+    // TODO: save encrypted bytes
+    bytes_t extkey = keychain->extendedkey()->bytes(exportprivkeys);
+    bytes_t extpubkey;
+    if (keychain->is_private()) {
+        extpubkey = Coin::HDKeychain(extkey).getPublic().extkey();
+        if (!exportprivkeys) {
+            extkey = extpubkey;
+        }
+    }
+    else {
+        extpubkey = extkey;
+    }
+
+    size = extkey.size();
+    write_uint32(f, size);
+    f.write((char*)&extkey[0], size);
+
+    // write number of saved keys using 4 bytes msb first
+    size = keychain->numsavedkeys();
+    write_uint32(f, size);
+
+    // write hash
+    bytes_t hash = sha256_2(extpubkey);
+    size = hash.size();
+    write_uint32(f, size);
+    f.write((char*)&hash[0], size);
+
+    return hash;
+*/
+    return bytes_t();
 }
 
 inline uint32_t sizebuf_to_uint(char sizebuf[])
@@ -373,7 +272,7 @@ bytes_t Vault::importKeychain(const std::string& keychain_name, const std::strin
     if (keychainExists(keychain_name)) {
         throw std::runtime_error("Vault::importKeychain - keychain with same name already exists.");
     }
-
+/*
     std::ifstream f(filepath, std::ifstream::binary);
     if (!f) {
         throw std::runtime_error("Vault::importKeychain - file could not be opened.");
@@ -559,6 +458,8 @@ bytes_t Vault::importKeychain(const std::string& keychain_name, const std::strin
 
         return hash;
     }
+*/
+    return bytes_t();
 }
 
 bool Vault::isKeychainFilePrivate(const std::string& filepath) const
