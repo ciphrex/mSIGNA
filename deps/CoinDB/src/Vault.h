@@ -24,52 +24,6 @@ class ChainBlock;
 namespace CoinDB
 {
 
-class KeychainInfo
-{
-public:
-    KeychainInfo(unsigned long id, const std::string name, Keychain::type_t type, const bytes_t& hash, unsigned long numkeys)
-        : id_(id), name_(name), type_(type), hash_(hash), numkeys_(numkeys) { }
-
-    unsigned long id() const { return id_; }
-    const std::string& name() const { return name_; }
-    Keychain::type_t type() const { return type_; }
-    const bytes_t& hash() const { return hash_; }
-    unsigned long numkeys() const { return numkeys_; } 
-
-private:
-    unsigned long id_;
-    std::string name_;
-    Keychain::type_t type_;
-    bytes_t hash_;
-    unsigned long numkeys_;
-};
-
-class AccountInfo
-{
-public:
-    AccountInfo(unsigned long id, const std::string name, unsigned int minsigs, const std::vector<std::string> keychain_names, uint64_t balance = 0, uint64_t pending = 0, unsigned long scripts_remaining = 0, bool is_ours = true)
-        :id_(id), name_(name), minsigs_(minsigs), keychain_names_(keychain_names), balance_(balance), pending_(pending), scripts_remaining_(scripts_remaining), is_ours_(is_ours)  { }
-
-    unsigned long id() const { return id_; }
-    const std::string& name() const { return name_; }
-    unsigned int minsigs() const { return minsigs_; }
-    const std::vector<std::string>& keychain_names() { return keychain_names_; }
-    uint64_t balance() const { return balance_; }
-    uint64_t pending() const { return pending_; }
-    unsigned long scripts_remaining() const { return scripts_remaining_; }
-    bool is_ours() const { return is_ours_; }
-
-private:
-    unsigned long id_;
-    std::string name_;
-    unsigned int minsigs_;
-    std::vector<std::string> keychain_names_;
-    uint64_t balance_;
-    uint64_t pending_;
-    unsigned long scripts_remaining_;
-    bool is_ours_;
-};
-
 class Vault
 {
 public:
@@ -92,17 +46,14 @@ public:
 
     // Keychain operations
     bool keychainExists(const std::string& keychain_name) const;
-    void newKeychain(const std::string& name, unsigned long numkeys);
-    void newHDKeychain(const std::string& name, const bytes_t& extkey, unsigned long numkeys = 100);
+    void newKeychain(const std::string& name, std::shared_ptr<Keychain> parent = nullptr);
     void eraseKeychain(const std::string& keychain_name) const;
     void renameKeychain(const std::string& old_name, const std::string& new_name);
-    bytes_t getExtendedKeyBytes(const std::string& keychain_name, bool get_private = false, const bytes_t& decryption_key = bytes_t()) const;
-    std::vector<KeychainInfo> getKeychains() const;
     std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
-    bytes_t exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
+    bytes_t exportKeychain(std::shared_ptr<Keychain> keychain, const std::string& filepath, bool exportprivkeys = false) const;
     bytes_t importKeychain(const std::string& keychain_name, const std::string& filepath, bool& importprivkeys);
     bool isKeychainFilePrivate(const std::string& filepath) const;
-
+/*
     enum account_ownership_t {
         ACCOUNT_OWNER_US = 0x01,
         ACCOUNT_OWNER_NOT_US = 0x02,
@@ -178,12 +129,13 @@ public:
     // EVENT SUBSCRIPTIONS
     void subscribeAddTx(tx_slot_t slot) { notifyAddTx.connect(slot); }
     void subscribeInsertBlock(chain_block_slot_t slot) { notifyInsertBlock.connect(slot); }
-
+*/
 protected:
     // unwrapped methods must be called from within a session and transaction
     void persistKeychain_unwrapped(Keychain& keychain);
-    void updateKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
+//    void updateKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
 
+/*
     unsigned long generateLookaheadScripts_unwrapped(const std::string& account_name, unsigned long lookahead);
 
     result_t insertTx_unwrapped(std::shared_ptr<Tx>& tx, bool delete_conflicting_txs = false);
@@ -192,7 +144,7 @@ protected:
     bool deleteMerkleBlock_unwrapped(const bytes_t& hash);
     unsigned int updateUnconfirmed_unwrapped(const bytes_t& txhash = bytes_t());
     uint32_t getFirstAccountTimeCreated_unwrapped() const;
-
+*/
     mutable boost::mutex mutex;
 
     CoinQSignal<const Coin::Transaction&> notifyAddTx;

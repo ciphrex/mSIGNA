@@ -11,12 +11,14 @@ endif
 LOGGER = ../logger
 COINCLASSES = ../CoinClasses
 COINQ = ../CoinQ
+CLI = ../cli
 
 INCLUDE_PATH = \
     -Isrc \
     -I$(COINQ)/src \
     -I$(COINCLASSES)/src \
-    -I$(LOGGER)/src
+    -I$(LOGGER)/src \
+    -I$(CLI)/src
 
 ODB_INCLUDE_PATH = \
     -Isrc \
@@ -75,7 +77,9 @@ OBJS = \
     obj/Vault.o
 
 
-all: lib/libCoinDB.a
+all: lib/libCoinDB.a tools/build/coindb$(EXE_EXT)
+
+lib: lib/libCoinDB.a
 
 lib/libCoinDB.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
@@ -101,5 +105,11 @@ obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx src/Schema.hxx
 obj/Vault.o: src/Vault.cpp src/Vault.h odb/Schema-odb.hxx
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(ODB_DB) $(INCLUDE_PATH)
 
+#
+# coindb command line tool
+#
+tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp
+	$(CXX) $(CXX_FLAGS) -o $@ $^ $(INCLUDE_PATH)
+
 clean:
-	-rm -f obj/*.o odb/*-odb.* lib/*.a
+	-rm -f obj/*.o odb/*-odb.* lib/*.a tools/build/*

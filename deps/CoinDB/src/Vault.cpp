@@ -161,8 +161,8 @@ void Vault::renameKeychain(const std::string& old_name, const std::string& new_n
 
 void Vault::persistKeychain_unwrapped(Keychain& keychain)
 {
-    if (keychain->parent())
-        db_->update(keychain->parent());
+    if (keychain.parent())
+        db_->update(keychain.parent());
 
     db_->persist(keychain);
 }
@@ -188,7 +188,7 @@ inline void write_uint32(std::ofstream& f, uint32_t data)
     f.put(data & 0xff);
 }
 
-bytes_t Vault::exportKeychain(std::shared_ptr<Keychain>& keychain, const std::string& filepath, bool exportprivkeys) const
+bytes_t Vault::exportKeychain(std::shared_ptr<Keychain> keychain, const std::string& filepath, bool exportprivkeys) const
 {
 /*
     boost::lock_guard<boost::mutex> lock(mutex);
@@ -478,6 +478,8 @@ bool Vault::isKeychainFilePrivate(const std::string& filepath) const
 
     return exportprivkeys;
 }
+
+/*
 
 void Vault::newAccount(const std::string& name, unsigned int minsigs, const std::vector<std::string>& keychain_names, bool is_ours)
 {
@@ -1815,6 +1817,7 @@ bool Vault::insertMerkleBlock(const ChainMerkleBlock& merkleblock)
     return true;
 }
 
+
 bool Vault::deleteMerkleBlock_unwrapped(const bytes_t& hash)
 {
 /*
@@ -1823,7 +1826,7 @@ bool Vault::deleteMerkleBlock_unwrapped(const bytes_t& hash)
         LOGGER(debug) << "Vault::deleteMerkleBlock_unwrapped - header not found for hash " << uchar_vector(hash).getHex() << std::endl;
         return false;
     }
-*/
+/
 //    std::shared_ptr<BlockHeader> header = blockheader_r.begin().load();
     odb::result<MerkleBlock> merkleblock_r = db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == hash);
     if (merkleblock_r.empty()) {
@@ -1991,4 +1994,4 @@ Coin::BloomFilter Vault::getBloomFilter(double falsePositiveRate, uint32_t nTwea
 
     return bloomfilter;
 }
-
+*/
