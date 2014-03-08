@@ -641,6 +641,8 @@ public:
 
     Keychain& operator=(const Keychain& source);
 
+    unsigned int id() const { return id_; }
+
     std::string name() const { return name_; }
     void name(const std::string& name) { name_ = name; }
 

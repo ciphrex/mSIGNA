@@ -26,6 +26,10 @@ ODB_INCLUDE_PATH = \
     -I$(COINCLASSES)/src \
     -I$(LOGGER)/src
 
+TOOLS_INCLUDE_PATH = \
+    $(INCLUDE_PATH) \
+    -Iodb
+
 TOOLS_LIBPATH = \
     -Llib -lCoinDB \
     -L$(COINQ)/lib -lCoinQ \
@@ -118,7 +122,7 @@ obj/Vault.o: src/Vault.cpp src/Vault.h odb/Schema-odb.hxx
 # coindb command line tool
 #
 tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp lib/libCoinDB.a
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(ODB_DB) $(TOOLS_LIBPATH) $(INCLUDE_PATH)
+	$(CXX) $(CXX_FLAGS) -o $@ $< $(ODB_DB) $(TOOLS_LIBPATH) $(TOOLS_INCLUDE_PATH)
 
 clean:
 	-rm -f obj/*.o odb/*-odb.* lib/*.a tools/build/*
