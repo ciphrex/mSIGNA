@@ -634,17 +634,18 @@ private:
 class Keychain : public std::enable_shared_from_this<Keychain>
 {
 public:
-    Keychain(const std::string& name) : name_(name) { }
+    Keychain(std::shared_ptr<Keychain> parent = nullptr) : parent_(parent) { }
+    Keychain(const std::string& name, std::shared_ptr<Keychain> parent = nullptr) : name_(name), parent_(parent) { }
     Keychain(const Keychain& source)
-        : name_(source.name_), depth_(source.depth_), parent_fp_(source.parent_fp_), child_num_(source.child_num_), pubkey_(source.pubkey_), chain_code_(source.chain_code_), chain_code_ciphertext_(source.chain_code_ciphertext_), chain_code_salt_(source.chain_code_salt_), privkey_(source.privkey_), privkey_ciphertext_(source.privkey_ciphertext_), privkey_salt_(source.privkey_salt_), keychain_root_(source.keychain_root_), derivation_path_(source.derivation_path_) { }
+        : name_(source.name_), depth_(source.depth_), parent_fp_(source.parent_fp_), child_num_(source.child_num_), pubkey_(source.pubkey_), chain_code_(source.chain_code_), chain_code_ciphertext_(source.chain_code_ciphertext_), chain_code_salt_(source.chain_code_salt_), privkey_(source.privkey_), privkey_ciphertext_(source.privkey_ciphertext_), privkey_salt_(source.privkey_salt_), parent_(source.parent_), derivation_path_(source.derivation_path_) { }
 
     Keychain& operator=(const Keychain& source);
 
     std::string name() const { return name_; }
     void name(const std::string& name) { name_ = name; }
 
-    void setRootNode(std::shared_ptr<Keychain> keychain_root) { keychain_root_ = keychain_root; }
-    std::shared_ptr<Keychain> getRootNode() { return (keychain_root_ ? keychain_root_ : shared_from_this()); }
+    std::shared_ptr<Keychain> parent() { return parent_; }
+    std::shared_ptr<Keychain> root() { return (parent_ ? parent_->root() : shared_from_this()); }
 
     const std::vector<uint32_t>& getDerivationPath() const { return derivation_path_; }
 
@@ -670,9 +671,9 @@ public:
     secure_bytes_t getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
     bytes_t getSigningPublicKey(uint32_t i) const;
 
-    // TODO: getChildNode should be const
-    Keychain getChildNode(uint32_t i, bool get_private = false);
-    Keychain getChildNode(const std::vector<uint32_t>& v, bool get_private = false);
+    // TODO: getChildKeychain should be const
+    Keychain getChildKeychain(uint32_t i, bool get_private = false);
+    Keychain getChildKeychain(const std::vector<uint32_t>& v, bool get_private = false);
 
     uint32_t depth() const { return depth_; }
     uint32_t parent_fp() const { return parent_fp_; }
@@ -688,8 +689,6 @@ public:
 
 private:
     friend class odb::access;
-
-    Keychain() { }
 
     #pragma db id auto
     unsigned long id_;
@@ -713,8 +712,11 @@ private:
     bytes_t privkey_salt_;
 
     #pragma db null
-    std::shared_ptr<Keychain> keychain_root_;
+    std::shared_ptr<Keychain> parent_;
     std::vector<uint32_t> derivation_path_;
+
+    #pragma db value_not_null inverse(parent_)
+    std::vector<std::weak_ptr<Keychain>> children_;
 
     bytes_t hash_;
 };
@@ -734,7 +736,7 @@ inline Keychain& Keychain::operator=(const Keychain& source)
     privkey_ciphertext_ = source.privkey_ciphertext_;
     privkey_salt_ = source.privkey_salt_;
 
-    keychain_root_ = source.keychain_root_;
+    parent_ = source.parent_;
 
     derivation_path_ = source.derivation_path_;
 
@@ -854,7 +856,6 @@ secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vector<uint
     if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
 
     Coin::HDKeychain hdkeychain(privkey_, chain_code_, child_num_, parent_fp_, depth_);
-    for (auto child_index: derivation_path) { hdkeychain = hdkeychain.getChildNode(child_index); }
     return hdkeychain.getPrivateSigningKey(i);
 }
 
@@ -866,26 +867,25 @@ bytes_t Keychain::getSigningPublicKey(uint32_t i) const
     return hdkeychain.getPublicSigningKey(i);
 }
 
-Keychain Keychain::getChildNode(uint32_t i, bool get_private)
+Keychain Keychain::getChildKeychain(uint32_t i, bool get_private)
 {
     std::vector<uint32_t> v(1, i);
-    return getChildNode(v, get_private);
+    return getChildKeychain(v, get_private);
 }
 
-Keychain Keychain::getChildNode(const std::vector<uint32_t>& derivation_path, bool get_private)
+Keychain Keychain::getChildKeychain(const std::vector<uint32_t>& derivation_path, bool get_private)
 {
     if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private extkey of a public keychain.");
     if (get_private && privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
     if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
 
-    Keychain keychainNode;
-    keychainNode.setRootNode(this->getRootNode());
+    Keychain keychainNode(shared_from_this());;
 
     secure_bytes_t key = get_private ? privkey_ : pubkey_;
     Coin::HDKeychain hdkeychain(key, chain_code_, child_num_, parent_fp_, depth_);
     for (auto i: derivation_path) {
         keychainNode.derivation_path_.push_back(i);
-        hdkeychain = hdkeychain.getChildNode(i);
+        hdkeychain = hdkeychain.getChild(i);
     }
             
     if (get_private) {
@@ -925,17 +925,17 @@ inline secure_bytes_t Keychain::extkey(bool get_private) const
 class Key
 {
 public:
-    Key(const std::shared_ptr<Keychain>& keychain_node, uint32_t signing_key_index);
+    Key(const std::shared_ptr<Keychain>& keychain, uint32_t signing_key_index);
 
     unsigned long id() const { return id_; }
     bool is_private() const { return is_private_; }
     const bytes_t& pubkey() const { return pubkey_; }
     secure_bytes_t privkey() const;
 
-    std::shared_ptr<Keychain> keychain_root() const { return keychain_root_; }
+    std::shared_ptr<Keychain> keychain() const { return keychain_; }
 
-    bool isPrivateKeyLocked() const { return keychain_root_->isPrivateKeyLocked(); }
-    bool isChainCodeLocked() const { return keychain_root_->isChainCodeLocked(); }
+    bool isPrivateKeyLocked() const { return keychain_->isPrivateKeyLocked(); }
+    bool isChainCodeLocked() const { return keychain_->isChainCodeLocked(); }
 
 private:
     friend class odb::access;
@@ -945,25 +945,24 @@ private:
     #pragma db id auto
     unsigned long id_;
 
-    bool is_private_;
+    #pragma db value_not_null
+    std::shared_ptr<Keychain> keychain_;
+    std::vector<uint32_t> derivation_path_;
+    uint32_t signing_key_index_;
 
+    bool is_private_;
     bytes_t pubkey_;
 
-    #pragma db value_not_null
-    std::shared_ptr<Keychain> keychain_root_;
-
-    std::vector<uint32_t> derivation_path_;
-
-    uint32_t signing_key_index_;
 };
 
-inline Key::Key(const std::shared_ptr<Keychain>& keychain_node, uint32_t signing_key_index)
+inline Key::Key(const std::shared_ptr<Keychain>& keychain, uint32_t signing_key_index)
 {
-    is_private_ = keychain_node->isPrivate();
-    pubkey_ = keychain_node->getSigningPublicKey(signing_key_index_);
-    keychain_root_ = keychain_node->getRootNode();
-    derivation_path_ = keychain_node->getDerivationPath();
+    keychain_ = keychain;
+    derivation_path_ = keychain_->getDerivationPath();
     signing_key_index_ = signing_key_index;
+
+    is_private_ = keychain_->isPrivate();
+    pubkey_ = keychain_->getSigningPublicKey(signing_key_index_);
 }
 
 inline secure_bytes_t Key::privkey() const
@@ -972,7 +971,7 @@ inline secure_bytes_t Key::privkey() const
     if (isPrivateKeyLocked()) throw std::runtime_error("Key::privkey - private key is locked.");
     if (isChainCodeLocked()) throw std::runtime_error("Key::privkey - chain code is locked.");
 
-    return keychain_root_->getSigningPrivateKey(signing_key_index_, derivation_path_);
+    return keychain_->getSigningPrivateKey(signing_key_index_, derivation_path_);
 }
 
 #pragma db object pointer(std::shared_ptr)
