@@ -30,14 +30,6 @@ TOOLS_INCLUDE_PATH = \
     $(INCLUDE_PATH) \
     -Iodb
 
-TOOLS_LIBPATH = \
-    -Llib -lCoinDB \
-    -L$(COINQ)/lib -lCoinQ \
-    -L$(COINCLASSES)/lib -lCoinClasses \
-    -lboost_system \
-    -lcrypto \
-    -lodb-sqlite \
-    -lodb
 
 ifndef OS
     UNAME_S := $(shell uname -s)
@@ -79,11 +71,25 @@ else ifeq ($(OS), osx)
     INCLUDE_PATH += -I/usr/local/include
     ODB_INCLUDE_PATH += -I/usr/local/include
 
+    BOOST_SUFFIX = -mt
+
     ARCHIVER = ar
 
 else ifneq ($(MAKECMDGOALS), clean)
     $(error OS must be set to linux, mingw64, or osx)
 endif
+
+TOOLS_LIBPATH = \
+    -Llib -lCoinDB \
+    -L$(COINQ)/lib -lCoinQ \
+    -L$(COINCLASSES)/lib -lCoinClasses \
+    -lboost_system$(BOOST_SUFFIX) \
+    -lboost_filesystem$(BOOST_SUFFIX) \
+    -lboost_regex$(BOOST_SUFFIX) \
+    -lboost_thread$(BOOST_SUFFIX) \
+    -lcrypto \
+    -lodb-sqlite \
+    -lodb
 
 OBJS = \
     obj/Schema-odb.o \
@@ -110,7 +116,7 @@ odb/Schema-odb.cxx: src/Schema.hxx
 # schema
 #
 obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx src/Schema.hxx
-	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
+	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(ODB_DB) $(INCLUDE_PATH)
 
 #
 # vault class

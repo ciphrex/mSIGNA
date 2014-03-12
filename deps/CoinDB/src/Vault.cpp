@@ -37,23 +37,24 @@ using namespace CoinDB;
 /*
  * class Vault implementation
 */
-
+/*
 Vault::Vault(int argc, char** argv, bool create, uint32_t version)
     : db_(open_database(argc, argv, create))
 {
     LOGGER(trace) << "Created Vault instance" << std::endl;
-    if (create) setVersion(version);
+//    if (create) setVersion(version);
 }
+*/
 
 #if defined(DATABASE_SQLITE)
 Vault::Vault(const std::string& filename, bool create, uint32_t version)
     : db_(openDatabase(filename, create))
 {
     LOGGER(trace) << "Created Vault instance - filename: " << filename << " create: " << (create ? "true" : "false") << " version: " << version << std::endl;
-    if (create) setVersion(version);
+//    if (create) setVersion(version);
 }
 #endif
-
+/*
 void Vault::setVersion(uint32_t version)
 {
     LOGGER(trace) << "Vault::setVersion(" << version << ")" << std::endl;
@@ -87,7 +88,8 @@ uint32_t Vault::getVersion() const
     std::shared_ptr<Version> version_object(r.begin().load());
     return version_object->version();
 }
-
+*/
+/*
 bool Vault::keychainExists(const std::string& keychain_name) const
 {
     LOGGER(trace) << "Vault::keychainExists(" << keychain_name << ")" << std::endl;
@@ -98,7 +100,7 @@ bool Vault::keychainExists(const std::string& keychain_name) const
  
     return !r.empty();
 }
-
+*/
 void Vault::newKeychain(const std::string& name, std::shared_ptr<Keychain> parent)
 {
     Keychain keychain(name, parent);
@@ -269,10 +271,11 @@ inline uint32_t sizebuf_to_uint(char sizebuf[])
 
 bytes_t Vault::importKeychain(const std::string& keychain_name, const std::string& filepath, bool& importprivkeys)
 {
+/*
     if (keychainExists(keychain_name)) {
         throw std::runtime_error("Vault::importKeychain - keychain with same name already exists.");
     }
-/*
+
     std::ifstream f(filepath, std::ifstream::binary);
     if (!f) {
         throw std::runtime_error("Vault::importKeychain - file could not be opened.");
@@ -1820,7 +1823,7 @@ bool Vault::insertMerkleBlock(const ChainMerkleBlock& merkleblock)
 
 bool Vault::deleteMerkleBlock_unwrapped(const bytes_t& hash)
 {
-/*
+/
     odb::result<BlockHeader> blockheader_r = db_->query<BlockHeader>(odb::query<BlockHeader>::hash == hash);
     if (blockheader_r.empty()) {
         LOGGER(debug) << "Vault::deleteMerkleBlock_unwrapped - header not found for hash " << uchar_vector(hash).getHex() << std::endl;

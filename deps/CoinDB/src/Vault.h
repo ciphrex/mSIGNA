@@ -27,7 +27,7 @@ namespace CoinDB
 class Vault
 {
 public:
-    Vault(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION);
+    Vault(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION) {}
 
 #if defined(DATABASE_SQLITE)
     Vault(const std::string& filename, bool create = false, uint32_t version = SCHEMA_VERSION);
@@ -41,11 +41,11 @@ public:
     };
 
     // Global operations
-    void setVersion(uint32_t version);
-    uint32_t getVersion() const;
+//    void setVersion(uint32_t version);
+//    uint32_t getVersion() const;
 
     // Keychain operations
-    bool keychainExists(const std::string& keychain_name) const;
+//    bool keychainExists(const std::string& keychain_name) const;
     void newKeychain(const std::string& name, std::shared_ptr<Keychain> parent = nullptr);
     void eraseKeychain(const std::string& keychain_name) const;
     void renameKeychain(const std::string& old_name, const std::string& new_name);

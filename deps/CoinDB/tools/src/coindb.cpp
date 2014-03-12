@@ -12,10 +12,7 @@
 #include <odb/database.hxx>
 #include <odb/transaction.hxx>
 
-#include <Database.hxx>
 #include <Vault.h>
-
-#include <Schema.hxx>
 #include <Schema-odb.hxx>
 
 #include <iostream>
@@ -30,8 +27,7 @@ cli::result_t cmd_create(bool bHelp, const cli::params_t& params)
         return "create <filename> - create a new vault.";
     }
 
-    Vault* vault = new Vault(params[0], true);
-    delete vault;
+    Vault vault(params[0], true);
 
     std::stringstream ss;
     ss << "Vault " << params[0] << " created.";

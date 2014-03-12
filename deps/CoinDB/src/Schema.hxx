@@ -854,7 +854,7 @@ inline void Keychain::unlockChainCode(const secure_bytes_t& lock_key)
     chain_code_ = chain_code_ciphertext_;
 }
 
-secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path) const
+inline secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path) const
 {
     if (!isPrivate()) throw std::runtime_error("Cannot get a private signing key from public keychain.");
     if (privkey_.empty()) throw std::runtime_error("Private key is locked.");
@@ -864,7 +864,7 @@ secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vector<uint
     return hdkeychain.getPrivateSigningKey(i);
 }
 
-bytes_t Keychain::getSigningPublicKey(uint32_t i) const
+inline bytes_t Keychain::getSigningPublicKey(uint32_t i) const
 {
     if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
 
@@ -872,13 +872,13 @@ bytes_t Keychain::getSigningPublicKey(uint32_t i) const
     return hdkeychain.getPublicSigningKey(i);
 }
 
-Keychain Keychain::getChildKeychain(uint32_t i, bool get_private)
+inline Keychain Keychain::getChildKeychain(uint32_t i, bool get_private)
 {
     std::vector<uint32_t> v(1, i);
     return getChildKeychain(v, get_private);
 }
 
-Keychain Keychain::getChildKeychain(const std::vector<uint32_t>& derivation_path, bool get_private)
+inline Keychain Keychain::getChildKeychain(const std::vector<uint32_t>& derivation_path, bool get_private)
 {
     if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private extkey of a public keychain.");
     if (get_private && privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
