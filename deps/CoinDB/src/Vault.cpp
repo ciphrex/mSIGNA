@@ -37,14 +37,12 @@ using namespace CoinDB;
 /*
  * class Vault implementation
 */
-/*
 Vault::Vault(int argc, char** argv, bool create, uint32_t version)
     : db_(open_database(argc, argv, create))
 {
     LOGGER(trace) << "Created Vault instance" << std::endl;
 //    if (create) setVersion(version);
 }
-*/
 
 #if defined(DATABASE_SQLITE)
 Vault::Vault(const std::string& filename, bool create, uint32_t version)
@@ -54,6 +52,7 @@ Vault::Vault(const std::string& filename, bool create, uint32_t version)
 //    if (create) setVersion(version);
 }
 #endif
+
 /*
 void Vault::setVersion(uint32_t version)
 {
@@ -89,7 +88,7 @@ uint32_t Vault::getVersion() const
     return version_object->version();
 }
 */
-/*
+
 bool Vault::keychainExists(const std::string& keychain_name) const
 {
     LOGGER(trace) << "Vault::keychainExists(" << keychain_name << ")" << std::endl;
@@ -100,7 +99,7 @@ bool Vault::keychainExists(const std::string& keychain_name) const
  
     return !r.empty();
 }
-*/
+
 void Vault::newKeychain(const std::string& name, std::shared_ptr<Keychain> parent)
 {
     Keychain keychain(name, parent);

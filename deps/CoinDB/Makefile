@@ -83,6 +83,7 @@ TOOLS_LIBPATH = \
     -Llib -lCoinDB \
     -L$(COINQ)/lib -lCoinQ \
     -L$(COINCLASSES)/lib -lCoinClasses \
+    -L$(LOGGER)/lib -llogger \
     -lboost_system$(BOOST_SUFFIX) \
     -lboost_filesystem$(BOOST_SUFFIX) \
     -lboost_regex$(BOOST_SUFFIX) \
