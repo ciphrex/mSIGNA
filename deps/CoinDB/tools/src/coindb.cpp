@@ -143,6 +143,41 @@ cli::result_t cmd_listkeychains(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 */
+
+// Account operations
+cli::result_t cmd_accountexists(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 2) {
+        return "accountexists <filename> <account_name> - check if an account exists.";
+    }
+
+    Vault vault(params[0], false);
+    bool bExists = vault.accountExists(params[1]);
+
+    stringstream ss;
+    ss << (bExists ? "true" : "false");
+    return ss.str();
+}
+
+cli::result_t cmd_newaccount(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 4) {
+        return "newaccount <filename> <account_name> <minsigs> <keychain1> [keychain2] [keychain3] ... - create a new account using specified keychains.";
+    }
+
+    uint32_t minsigs = strtoull(params[2].c_str(), NULL, 10);
+    std::vector<std::string> keychain_names;
+    for (size_t i = 3; i < params.size(); i++)
+        keychain_names.push_back(params[i]);
+
+    Vault vault(params[0], false);
+    vault.newAccount(params[1], minsigs, keychain_names);
+
+    stringstream ss;
+    ss << "Added account " << params[1] << " to vault " << params[0] << ".";
+    return ss.str();
+}
+
 int main(int argc, char* argv[])
 {
     cli::command_map cmds("CoinDB by Eric Lombrozo v0.2.0");
@@ -151,11 +186,15 @@ int main(int argc, char* argv[])
     cmds.add("create", &cmd_create);
 
     // Keychain operations
-    cmds.add("keychainexists", & cmd_keychainexists);
+    cmds.add("keychainexists", &cmd_keychainexists);
     cmds.add("newkeychain", &cmd_newkeychain);
     cmds.add("erasekeychain", &cmd_erasekeychain);
     cmds.add("renamekeychain", &cmd_renamekeychain);
     cmds.add("keychaininfo", &cmd_keychaininfo);
+
+    // Account operations
+    cmds.add("accountexists", &cmd_accountexists);
+    cmds.add("newaccount", &cmd_newaccount);
 
     try 
     {

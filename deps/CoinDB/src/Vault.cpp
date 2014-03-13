@@ -520,7 +520,9 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
     {
         odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
         if (r.empty()) {
-            throw std::runtime_error("Vault::newAccount - keychain not found.");
+            std::stringstream ss;
+            ss << "Vault::newAccount - keychain " << keychain_name << " not found.";
+            throw std::runtime_error(ss.str());
         }
         keychains.insert(r.begin().load());
     }
