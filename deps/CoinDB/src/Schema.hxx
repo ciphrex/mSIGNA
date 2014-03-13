@@ -1062,43 +1062,51 @@ inline void SigningScript::addTxOut(std::shared_ptr<TxOut> txout)
 class Account : public std::enable_shared_from_this<Account>
 {
 public:
-    Account(bool is_ours = true) : is_ours_(is_ours) { }
-
-    typedef std::set<std::shared_ptr<Keychain>> keychain_roots_t;
-    void set(const std::string& name, unsigned int minsigs, const keychain_roots_t& keychain_roots, uint32_t time_created = time(NULL));
+    typedef std::set<std::shared_ptr<Keychain>> keychains_t;
+    Account(const std::string& name, unsigned int minsigs, const keychains_t& keychains, uint32_t time_created = time(NULL))
+        : name_(name), minsigs_(minsigs), keychains_(keychains), time_created_(time_created), script_count_(0) { }
 
     unsigned long id() const { return id_; }
-
-    bool is_ours() const { return is_ours_; }
 
     void name(const std::string& name) { name_ = name; }
     const std::string& name() const { return name_; }
     unsigned int minsigs() const { return minsigs_; }
-    const keychain_roots_t& keychain_roots() const { return keychain_roots_; }
+    keychains_t& keychains() { return keychains_; }
     uint32_t time_created() const { return time_created_; }
+    uint32_t script_count() const { return script_count_; }
+
+    std::shared_ptr<SigningScript> newSigningScript();
 
 private:
     friend class odb::access;
 
+    Account() { }
+
     #pragma db id auto
     unsigned long id_;
-
-    bool is_ours_;
 
     #pragma db unique
     std::string name_;
     unsigned int minsigs_;
-    keychain_roots_t keychain_roots_;
+    keychains_t keychains_;
     uint32_t time_created_;
+    uint32_t script_count_;
 };
 
-
-inline void Account::set(const std::string& name, unsigned int minsigs, const keychain_roots_t& keychain_roots, uint32_t time_created)
+inline std::shared_ptr<SigningScript> Account::newSigningScript()
 {
-    name_ = name;
-    minsigs_ = minsigs;
-    keychain_roots_ = keychain_roots;
-    time_created_ = time_created;
+    script_count_++;
+    std::vector<bytes_t> pubkeys;
+    for (auto& keychain: keychains_)
+        pubkeys.push_back(keychain->getSigningPublicKey(script_count_));
+
+    // sort keys into canonical order
+    std::sort(pubkeys.begin(), pubkeys.end());
+
+    CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, minsigs_, pubkeys);
+    std::shared_ptr<SigningScript> signingscript(new SigningScript(script.txinscript(CoinQ::Script::Script::EDIT), script.txoutscript()));
+    signingscript->account(shared_from_this());
+    return signingscript;
 }
 
 // Views
@@ -1108,7 +1116,6 @@ struct AccountView
     unsigned long id;
     std::string name;
     unsigned int minsigs;
-    bool is_ours;
 };
 
 #pragma db view \
@@ -1163,9 +1170,6 @@ struct TxOutView
 
     #pragma db column(Account::name_)
     std::string account_name;
-
-    #pragma db column(Account::is_ours_)
-    bool account_is_ours;
 
     #pragma db column(SigningScript::id_)
     unsigned long signingscript_id;
@@ -1235,9 +1239,6 @@ struct SigningScriptView
     #pragma db column(Account::name_)
     std::string account_name;
 
-    #pragma db column(Account::is_ours_)
-    bool account_is_ours;
-
     #pragma db column(SigningScript::id_)
     unsigned long id;
 
@@ -1304,9 +1305,6 @@ struct AccountTxOutView
 
     #pragma db column(Account::name_)
     std::string account_name;
-
-    #pragma db column(Account::is_ours_)
-    bool account_is_ours;
 
     #pragma db column(TxOut::script_)
     bytes_t script;

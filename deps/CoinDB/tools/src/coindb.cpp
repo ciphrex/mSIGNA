@@ -15,6 +15,8 @@
 #include <Vault.h>
 #include <Schema-odb.hxx>
 
+#include <random.h>
+
 #include <iostream>
 #include <sstream>
 
@@ -58,7 +60,7 @@ cli::result_t cmd_newkeychain(bool bHelp, const cli::params_t& params)
     }
 
     Vault vault(params[0], false);
-    vault.newKeychain(params[1], uchar_vector("12345678"));
+    vault.newKeychain(params[1], random_bytes(32));
 
     stringstream ss;
     ss << "Added keychain " << params[1] << " to vault " << params[0] << ".";
