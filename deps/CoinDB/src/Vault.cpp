@@ -495,6 +495,7 @@ bool Vault::isKeychainFilePrivate(const std::string& filepath) const
     return exportprivkeys;
 }
 
+// Account operations
 bool Vault::accountExists(const std::string& account_name) const
 {
     LOGGER(trace) << "Vault::accountExists(" << account_name << ")" << std::endl;
@@ -525,7 +526,23 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
     }
 
     std::shared_ptr<Account> account(new Account(account_name, minsigs, keychains, unused_pool_size, time_created));
+
+    typedef odb::query<ScriptCountView> query;
+    odb::result<ScriptCountView> scriptcount_r(db_->query<ScriptCountView>(query::Account::name == account_name && query::SigningScript::status == SigningScript::UNUSED));
+    uint32_t count = 0;
+    if (!scriptcount_r.empty())
+        count = scriptcount_r.begin().load()->count;
+
     db_->persist(account);
+
+    for (uint32_t i = count; i < account->unused_pool_size(); i++)
+    {
+        std::shared_ptr<SigningScript> signingscript = account->newSigningScript();
+        db_->persist(signingscript);
+    }
+    db_->update(account);
+
+    t.commit();
 }
 
 void Vault::eraseAccount(const std::string& account_name) const
@@ -534,6 +551,23 @@ void Vault::eraseAccount(const std::string& account_name) const
 
 void Vault::renameAccount(const std::string& old_name, const std::string& new_name)
 {
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session session;
+    odb::core::transaction t(db_->begin());
+
+    odb::result<Account> account_r(db_->query<Account>(odb::query<Account>::name == old_name));
+    if (account_r.empty()) throw std::runtime_error("Account not found.");
+
+    if (old_name == new_name) return;
+
+    odb::result<Account> new_account_r(db_->query<Account>(odb::query<Account>::name == new_name));
+    if (!new_account_r.empty()) throw std::runtime_error("An account with that name already exists.");
+
+    std::shared_ptr<Account> account(account_r.begin().load());
+    account->name(new_name);
+
+    db_->update(account);
+    t.commit();
 }
 
 std::shared_ptr<Account> Vault::getAccount(const std::string& account_name) const
@@ -594,9 +628,10 @@ uint32_t Vault::refillAccountPool(const std::string& account_name)
     {
         std::shared_ptr<SigningScript> signingscript = account->newSigningScript();
         db_->persist(signingscript);
-        db_->update(account);
     }
+    db_->update(account);
 
+    t.commit();
     return account->unused_pool_size() - count;
 }
 
