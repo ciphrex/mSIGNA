@@ -1063,8 +1063,8 @@ class Account : public std::enable_shared_from_this<Account>
 {
 public:
     typedef std::set<std::shared_ptr<Keychain>> keychains_t;
-    Account(const std::string& name, unsigned int minsigs, const keychains_t& keychains, uint32_t time_created = time(NULL))
-        : name_(name), minsigs_(minsigs), keychains_(keychains), time_created_(time_created), script_count_(0) { }
+    Account(const std::string& name, unsigned int minsigs, const keychains_t& keychains, uint32_t unused_pool_size = 100, uint32_t time_created = time(NULL))
+        : name_(name), minsigs_(minsigs), keychains_(keychains), time_created_(time_created), script_count_(0), unused_pool_size_(unused_pool_size) { }
 
     unsigned long id() const { return id_; }
 
@@ -1074,6 +1074,7 @@ public:
     keychains_t& keychains() { return keychains_; }
     uint32_t time_created() const { return time_created_; }
     uint32_t script_count() const { return script_count_; }
+    uint32_t unused_pool_size() const { return unused_pool_size_; }
 
     std::shared_ptr<SigningScript> newSigningScript();
 
@@ -1091,6 +1092,7 @@ private:
     keychains_t keychains_;
     uint32_t time_created_;
     uint32_t script_count_;
+    uint32_t unused_pool_size_; // how many unused scripts we want in our lookahead
 };
 
 inline std::shared_ptr<SigningScript> Account::newSigningScript()

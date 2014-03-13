@@ -495,6 +495,111 @@ bool Vault::isKeychainFilePrivate(const std::string& filepath) const
     return exportprivkeys;
 }
 
+bool Vault::accountExists(const std::string& account_name) const
+{
+    LOGGER(trace) << "Vault::accountExists(" << account_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    odb::result<Account> r(db_->query<Account>(odb::query<Account>::name == account_name));
+
+    return !r.empty(); 
+}
+
+void Vault::newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size, uint32_t time_created)
+{
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    odb::result<Account> r(db_->query<Account>(odb::query<Account>::name == account_name));
+    if (!r.empty())
+        throw std::runtime_error("Vault::newAccount - account with that name already exists.");
+
+    Account::keychains_t keychains;
+    for (auto& keychain_name: keychain_names)
+    {
+        odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
+        if (r.empty()) {
+            throw std::runtime_error("Vault::newAccount - keychain not found.");
+        }
+        keychains.insert(r.begin().load());
+    }
+
+    std::shared_ptr<Account> account(new Account(account_name, minsigs, keychains, unused_pool_size, time_created));
+    db_->persist(account);
+}
+
+void Vault::eraseAccount(const std::string& account_name) const
+{
+}
+
+void Vault::renameAccount(const std::string& old_name, const std::string& new_name)
+{
+}
+
+std::shared_ptr<Account> Vault::getAccount(const std::string& account_name) const
+{
+    LOGGER(trace) << "Vault::getAccount(" << account_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    odb::result<Account> r(db_->query<Account>(odb::query<Account>::name == account_name));
+    if (r.empty()) {
+        throw std::runtime_error("Vault::getAccount - account not found.");
+    }
+
+    std::shared_ptr<Account> account(r.begin().load());
+    return account;    
+}
+
+uint32_t Vault::getCurrentAccountPoolSize(const std::string& account_name) const
+{
+    LOGGER(trace) << "Vault::getCurrentAccountPoolSize(" << account_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    odb::result<Account> account_r(db_->query<Account>(odb::query<Account>::name == account_name));
+    if (account_r.empty()) {
+        throw std::runtime_error("Vault::getAccount - account not found.");
+    }
+
+    typedef odb::query<ScriptCountView> query;
+    odb::result<ScriptCountView> scriptcount_r(db_->query<ScriptCountView>(query::Account::name == account_name && query::SigningScript::status == SigningScript::UNUSED));
+    uint32_t count = 0;
+    if (!scriptcount_r.empty())
+        count = scriptcount_r.begin().load()->count;
+
+    return count;
+}
+
+uint32_t Vault::refillAccountPool(const std::string& account_name)
+{
+    LOGGER(trace) << "Vault::getCurrentAccountPoolSize(" << account_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    odb::result<Account> account_r(db_->query<Account>(odb::query<Account>::name == account_name));
+    if (account_r.empty()) {
+        throw std::runtime_error("Vault::getAccount - account not found.");
+    }
+
+    std::shared_ptr<Account> account(account_r.begin().load());
+
+    typedef odb::query<ScriptCountView> query;
+    odb::result<ScriptCountView> scriptcount_r(db_->query<ScriptCountView>(query::Account::name == account_name && query::SigningScript::status == SigningScript::UNUSED));
+    uint32_t count = 0;
+    if (!scriptcount_r.empty())
+        count = scriptcount_r.begin().load()->count;
+
+    for (uint32_t i = count; i < account->unused_pool_size(); i++)
+    {
+        std::shared_ptr<SigningScript> signingscript = account->newSigningScript();
+        db_->persist(signingscript);
+        db_->update(account);
+    }
+
+    return account->unused_pool_size() - count;
+}
+
 /*
 
 void Vault::newAccount(const std::string& name, unsigned int minsigs, const std::vector<std::string>& keychain_names, bool is_ours)
