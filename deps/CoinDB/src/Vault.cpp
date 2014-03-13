@@ -115,6 +115,7 @@ void Vault::newKeychain(const std::string& name, std::shared_ptr<Keychain> paren
 
 void Vault::eraseKeychain(const std::string& name) const
 {
+    throw std::runtime_error("Vault::eraseKeychain - method not yet implemented.");
     // TODO: erase individual keys - for now, this method is commented out
 /*
     boost::lock_guard<boost::mutex> lock(mutex);
