@@ -58,7 +58,7 @@ cli::result_t cmd_newkeychain(bool bHelp, const cli::params_t& params)
     }
 
     Vault vault(params[0], false);
-    vault.newKeychain(params[1]);
+    vault.newKeychain(params[1], uchar_vector("12345678"));
 
     stringstream ss;
     ss << "Added keychain " << params[1] << " to vault " << params[0] << ".";
@@ -106,8 +106,13 @@ cli::result_t cmd_keychaininfo(bool bHelp, const cli::params_t& params)
     shared_ptr<Keychain> keychain = vault.getKeychain(params[1]);
 
     stringstream ss;
-    ss << "Keychain " << params[1] << ":" << endl
-       << "  Name: " << keychain->name();
+    ss << "id:        " << keychain->id() << endl
+       << "name:      " << keychain->name() << endl
+       << "depth:     " << keychain->depth() << endl
+       << "parent_fp: " << keychain->parent_fp() << endl
+       << "child_num: " << keychain->child_num() << endl
+       << "pubkey:    " << uchar_vector(keychain->pubkey()).getHex() << endl
+       << "hash:      " << uchar_vector(keychain->hash()).getHex();
     return ss.str();
 }
 

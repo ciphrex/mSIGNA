@@ -635,6 +635,7 @@ class Keychain : public std::enable_shared_from_this<Keychain>
 {
 public:
     Keychain(std::shared_ptr<Keychain> parent = nullptr) : parent_(parent) { }
+    Keychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t()); // Creates a new root keychain
     Keychain(const std::string& name, std::shared_ptr<Keychain> parent = nullptr) : name_(name), parent_(parent) { }
     Keychain(const Keychain& source)
         : name_(source.name_), depth_(source.depth_), parent_fp_(source.parent_fp_), child_num_(source.child_num_), pubkey_(source.pubkey_), chain_code_(source.chain_code_), chain_code_ciphertext_(source.chain_code_ciphertext_), chain_code_salt_(source.chain_code_salt_), privkey_(source.privkey_), privkey_ciphertext_(source.privkey_ciphertext_), privkey_salt_(source.privkey_salt_), parent_(source.parent_), derivation_path_(source.derivation_path_) { }
@@ -657,8 +658,8 @@ public:
     bool isPrivate() const;
 
     // Lock keys must be set before persisting
-    void setPrivateKeyLockKey(const secure_bytes_t& lock_key = bytes_t(), const bytes_t& salt = bytes_t());
-    void setChainCodeLockKey(const secure_bytes_t& lock_key = bytes_t(), const bytes_t& salt = bytes_t());
+    void setPrivateKeyLockKey(const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
+    void setChainCodeLockKey(const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
 
     void lockPrivateKey();
     void lockChainCode();
@@ -725,6 +726,24 @@ private:
 
     bytes_t hash_;
 };
+
+inline Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lock_key, const bytes_t& salt)
+    : name_(name)
+{
+    Coin::HDSeed hdSeed(entropy);
+    Coin::HDKeychain hdKeychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
+
+    depth_ = (uint32_t)hdKeychain.depth();
+    parent_fp_ = hdKeychain.parent_fp();
+    child_num_ = hdKeychain.child_num();
+    chain_code_ = hdKeychain.chain_code();
+    privkey_ = hdKeychain.key();
+    pubkey_ = hdKeychain.pubkey();
+    hash_ = hdKeychain.hash();
+
+    setPrivateKeyLockKey(lock_key, salt);
+    setChainCodeLockKey(lock_key, salt);
+}
 
 inline Keychain& Keychain::operator=(const Keychain& source)
 {

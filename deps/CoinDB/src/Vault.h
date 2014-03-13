@@ -46,6 +46,7 @@ public:
 
     // Keychain operations
     bool keychainExists(const std::string& keychain_name) const;
+    void newKeychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
     void newKeychain(const std::string& name, std::shared_ptr<Keychain> parent = nullptr);
     void eraseKeychain(const std::string& keychain_name) const;
     void renameKeychain(const std::string& old_name, const std::string& new_name);

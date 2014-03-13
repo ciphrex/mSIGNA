@@ -100,6 +100,19 @@ bool Vault::keychainExists(const std::string& keychain_name) const
     return !r.empty();
 }
 
+void Vault::newKeychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey, const bytes_t& salt)
+{
+    Keychain keychain(name, entropy, lockKey, salt);
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session session;
+    odb::core::transaction t(db_->begin());
+
+    persistKeychain_unwrapped(keychain);
+
+    t.commit();
+}
+
 void Vault::newKeychain(const std::string& name, std::shared_ptr<Keychain> parent)
 {
     Keychain keychain(name, parent);
