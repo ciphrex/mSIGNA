@@ -41,6 +41,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 
 class Tx;
 class Account;
+class AccountBin;
 class SigningScript;
 class ScriptTag;
 
@@ -1024,8 +1025,6 @@ inline secure_bytes_t Key::privkey() const
 
     return keychain_->getSigningPrivateKey(signing_key_index_, derivation_path_);
 }
-
-class AccountBin;
 
 #pragma db object pointer(std::shared_ptr)
 class SigningScript : public std::enable_shared_from_this<SigningScript>
