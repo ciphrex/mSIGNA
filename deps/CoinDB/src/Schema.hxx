@@ -261,6 +261,7 @@ inline Coin::TxIn TxIn::toCoinClasses() const
 {
     Coin::TxIn coin_txin;
     coin_txin.previousOut = Coin::OutPoint(outhash_, outindex_);
+    script_count_++;
     coin_txin.scriptSig = script_;
     coin_txin.sequence = sequence_;
     return coin_txin;
@@ -647,8 +648,9 @@ public:
     std::string name() const { return name_; }
     void name(const std::string& name) { name_ = name; }
 
-    std::shared_ptr<Keychain> parent() { return parent_; }
-    std::shared_ptr<Keychain> root() { return (parent_ ? parent_->root() : shared_from_this()); }
+    std::shared_ptr<Keychain> root() const { return (parent_ ? parent_->root() : shared_from_this()); }
+    std::shared_ptr<Keychain> parent() const { return parent_; }
+    std::shared_ptr<Keychain> child(uint32_t i, bool get_private = false) const;
 
     const std::vector<uint32_t>& getDerivationPath() const { return derivation_path_; }
 
@@ -727,6 +729,8 @@ private:
     bytes_t hash_;
 };
 
+typedef std::set<std::shared_ptr<Keychain>> KeychainSet;
+
 inline Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lock_key, const bytes_t& salt)
     : name_(name)
 {
@@ -803,6 +807,29 @@ inline void Keychain::createPublic(const bytes_t& pubkey, const secure_bytes_t& 
     uchar_vector_secure hashdata = pubkey_;
     hashdata += chain_code_;
     hash_ = ripemd160(sha256(hashdata));
+}
+    
+inline std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private = false) const
+{
+    if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private child from public keychain.");
+    if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
+    if (get_private)
+    {
+        if (privkey_.empty()) throw std::runtime_error("Private key is locked.");
+        Coin::HDKeychain hdkeychain(privkey_, chain_code_, child_num_, parent_fp_, depth_);
+        hdkeychain.getChild(i);
+        Keychain keychainNode(shared_from_this());
+        keychainNode.createPrivate(hdkeychain.privkey(), hdkeychain.chain_code(), hdkeychain.child_num(), hdkeychain.parent_fp(), hdkeychain.depth());
+        return keychain;
+    }
+    else
+    {
+        Coin::HDKeychain hdkeychain(pubkey_, chain_code_, child_num_, parent_fp_, depth_);
+        hdkeychain.getChild(i);
+        Keychain keychainNode(shared_from_this());
+        keychainNode.createPublic(hdkeychain.pubkey(), hdkeychain.chain_code(), hdkeychain.child_num(), hdkeychain.parent_fp(), hdkeychain.depth());
+        return keychain;
+    }
 }
 
 inline bool Keychain::isPrivate() const
@@ -903,7 +930,7 @@ inline Keychain Keychain::getChildKeychain(const std::vector<uint32_t>& derivati
     if (get_private && privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
     if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
 
-    Keychain keychainNode(shared_from_this());;
+    Keychain keychainNode(shared_from_this());
 
     secure_bytes_t key = get_private ? privkey_ : pubkey_;
     Coin::HDKeychain hdkeychain(key, chain_code_, child_num_, parent_fp_, depth_);
@@ -998,6 +1025,8 @@ inline secure_bytes_t Key::privkey() const
     return keychain_->getSigningPrivateKey(signing_key_index_, derivation_path_);
 }
 
+class AccountBin;
+
 #pragma db object pointer(std::shared_ptr)
 class SigningScript : public std::enable_shared_from_this<SigningScript>
 {
@@ -1014,8 +1043,8 @@ public:
         }
     }
 
-    SigningScript(const bytes_t& txinscript, const bytes_t& txoutscript, const std::string& label = "", status_t status = UNUSED)
-        : label_(label), status_(status), txinscript_(txinscript), txoutscript_(txoutscript) { }
+    SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index, const bytes_t& txinscript, const bytes_t& txoutscript, const std::string& label = "", status_t status = UNUSED)
+        : account_bin_(account_bin), index_(index), label_(label), status_(status), txinscript_(txinscript), txoutscript_(txoutscript) { }
 
     unsigned long id() const { return id_; }
     void label(const std::string& label) { label_ = label; }
@@ -1032,6 +1061,12 @@ public:
     void account(std::shared_ptr<Account> account) { account_ = account; }
     std::shared_ptr<Account> account() const { return account_; }
 
+    // 0 is reserved for subaccounts, 1 is reserved for change addresses, 2 is reserved for the default bin.
+    uint32_t account_bin() const { return account_bin_; }
+
+    void bin_index(uint32_t bin_index) { bin_index_ = bin_index; }
+    uint32_t bin_index() const { return bin_index_; }
+
 private:
     friend class odb::access;
 
@@ -1039,6 +1074,10 @@ private:
 
     #pragma db id auto
     unsigned long id_;
+
+    #pragma db value_not_null
+    std::shared_ptr<AccountBin> account_bin_;
+    uint32_t index_;
 
     std::string label_;
     status_t status_;
@@ -1048,8 +1087,6 @@ private:
 
     #pragma db value_not_null inverse(signingscript_)
     Tx::txouts_t txouts_;
-
-    std::shared_ptr<Account> account_;
 };
 
 inline void SigningScript::addTxOut(std::shared_ptr<TxOut> txout)
@@ -1059,11 +1096,82 @@ inline void SigningScript::addTxOut(std::shared_ptr<TxOut> txout)
 }
 
 #pragma db object pointer(std::shared_ptr)
+class AccountBin : public std::enable_shared_from_this<AccountBin>
+{
+public:
+    AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name);
+
+    std::shared_ptr<Account> account() const { return account_; }
+    uint32_t index() const { return index_; }
+
+    void name(const std::string& name) { name_ = name; }
+    std::string name() const { return name_; }
+
+    uint32_t script_count() const { return script_count_; }
+
+    std::shared_ptr<SigningScript> newSigningScript();
+
+private:
+    friend class odb::access:
+    AccountBin() { }
+
+    bool loadKeychains();
+
+    #pragma db id auto
+    unsigned long id_;
+
+    #pragma db value_not_null
+    std::shared_ptr<Account> account_;
+    uint32_t index_;
+    std::string name_;
+
+    uint32_t script_count_;
+
+    #pragma db transient
+    KeychainSet keychains_;    
+};
+
+
+inline AccountBin::AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name)
+    : account_(account), index_(index), name_(name), script_count_(0)
+{
+}
+
+inline bool AccountBin::loadKeychains()
+{
+    if (!keychains_.empty()) return false;
+    for (auto& keychain: account_->keychains())
+        keychains_.insert(keychain->child(index_));
+    return true;
+}
+
+inline std::shared_ptr<SigningScript> AccountBin::newSigningScript()
+{
+    loadKeychains();
+
+    std::vector<bytes_t> pubkeys;
+    for (auto& keychain: keychains_)
+        pubkeys.push_back(keychain->getSigningPublicKey(script_count_));
+
+    // sort keys into canonical order
+    std::sort(pubkeys.begin(), pubkeys.end());
+
+    CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, minsigs_, pubkeys);
+    std::shared_ptr<SigningScript> signingscript(new SigningScript(
+        shared_from_this(),
+        script_count,
+        script.txinscript(CoinQ::Script::Script::EDIT),
+        script.txoutscript()
+    ));
+    script_count_++;
+    return signingscript;
+}
+
+#pragma db object pointer(std::shared_ptr)
 class Account : public std::enable_shared_from_this<Account>
 {
 public:
-    typedef std::set<std::shared_ptr<Keychain>> keychains_t;
-    Account(const std::string& name, unsigned int minsigs, const keychains_t& keychains, uint32_t unused_pool_size = 100, uint32_t time_created = time(NULL))
+    Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = 100, uint32_t time_created = time(NULL))
         : name_(name), minsigs_(minsigs), keychains_(keychains), time_created_(time_created), script_count_(0), unused_pool_size_(unused_pool_size) { }
 
     unsigned long id() const { return id_; }
@@ -1071,12 +1179,13 @@ public:
     void name(const std::string& name) { name_ = name; }
     const std::string& name() const { return name_; }
     unsigned int minsigs() const { return minsigs_; }
-    keychains_t& keychains() { return keychains_; }
+    KeychainSet& keychains() { return keychains_; }
     uint32_t time_created() const { return time_created_; }
-    uint32_t script_count() const { return script_count_; }
     uint32_t unused_pool_size() const { return unused_pool_size_; }
 
-    std::shared_ptr<SigningScript> newSigningScript();
+    std::shared_ptr<AccountBin> addBin(const std::string& name);
+
+    uint32_t bin_count() const { return bins_.size(); }
 
 private:
     friend class odb::access;
@@ -1089,26 +1198,21 @@ private:
     #pragma db unique
     std::string name_;
     unsigned int minsigs_;
-    keychains_t keychains_;
+    KeychainSet keychains_;
     uint32_t time_created_;
-    uint32_t script_count_;
+
+    #pragma db value_not_null inverse(account_)
+    std::vector<std::weak_ptr<AccountBin>> bins_;
+
     uint32_t unused_pool_size_; // how many unused scripts we want in our lookahead
 };
 
-inline std::shared_ptr<SigningScript> Account::newSigningScript()
+inline std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
 {
-    script_count_++;
-    std::vector<bytes_t> pubkeys;
-    for (auto& keychain: keychains_)
-        pubkeys.push_back(keychain->getSigningPublicKey(script_count_));
-
-    // sort keys into canonical order
-    std::sort(pubkeys.begin(), pubkeys.end());
-
-    CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, minsigs_, pubkeys);
-    std::shared_ptr<SigningScript> signingscript(new SigningScript(script.txinscript(CoinQ::Script::Script::EDIT), script.txoutscript()));
-    signingscript->account(shared_from_this());
-    return signingscript;
+    uint32_t index = bins_.size() + 1;
+    std::shared_ptr<AccountBin> bin(new AccountBin(shared_from_this(), index, name));
+    bins_.push_back(bin);
+    return bin;
 }
 
 // Views
