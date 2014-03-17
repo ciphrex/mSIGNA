@@ -26,15 +26,15 @@ uchar_vector opPushData(uint32_t nBytes)
     }
     else if (nBytes <= 0xffff) {
         rval.push_back(0x4d);
-        rval.push_back((unsigned char)(nBytes >> 8));
         rval.push_back((unsigned char)(nBytes & 0xff));
+        rval.push_back((unsigned char)(nBytes >> 8));
     }
     else {
         rval.push_back(0x4e);
-        rval.push_back((unsigned char)(nBytes >> 24));
-        rval.push_back((unsigned char)((nBytes >> 16) & 0xff));
-        rval.push_back((unsigned char)((nBytes >> 8) & 0xff));
         rval.push_back((unsigned char)(nBytes & 0xff));
+        rval.push_back((unsigned char)((nBytes >> 8) & 0xff));
+        rval.push_back((unsigned char)((nBytes >> 16) & 0xff));
+        rval.push_back((unsigned char)(nBytes >> 24));
     }
 
     return rval;
@@ -60,18 +60,18 @@ uint32_t getDataLength(const uchar_vector& script, uint& pos)
         if (pos + 1 >= script.size()) {
             throw std::runtime_error("Script pos past end.");
         }
-        uint32_t rval = (uint32_t)script[pos++] << 8;
-        rval         += (uint32_t)script[pos++];
+        uint32_t rval = (uint32_t)script[pos++];
+        rval         += (uint32_t)script[pos++] << 8;;
         return rval;
     }
     else if (op == 0x4e) {
         if (pos + 3 >= script.size()) {
             throw std::runtime_error("Script pos past end.");
         }
-        uint32_t rval = (uint32_t)script[pos++] << 24;
-        rval         += (uint32_t)script[pos++] << 16;
+        uint32_t rval = (uint32_t)script[pos++];
         rval         += (uint32_t)script[pos++] << 8;
-        rval         += (uint32_t)script[pos++];
+        rval         += (uint32_t)script[pos++] << 16;
+        rval         += (uint32_t)script[pos++] << 24;
         return rval;
     }
     else {
