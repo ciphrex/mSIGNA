@@ -139,7 +139,7 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
     if (!r.empty())
         throw std::runtime_error("Vault::newAccount - account with that name already exists.");
 
-    Account::keychains_t keychains;
+    KeychainSet keychains;
     for (auto& keychain_name: keychain_names)
     {
         odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
@@ -153,21 +153,7 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
 
     std::shared_ptr<Account> account(new Account(account_name, minsigs, keychains, unused_pool_size, time_created));
 
-    typedef odb::query<ScriptCountView> query;
-    odb::result<ScriptCountView> scriptcount_r(db_->query<ScriptCountView>(query::Account::name == account_name && query::SigningScript::status == SigningScript::UNUSED));
-    uint32_t count = 0;
-    if (!scriptcount_r.empty())
-        count = scriptcount_r.begin().load()->count;
-
     db_->persist(account);
-
-    for (uint32_t i = count; i < account->unused_pool_size(); i++)
-    {
-        std::shared_ptr<SigningScript> signingscript = account->newSigningScript();
-        db_->persist(signingscript);
-    }
-    db_->update(account);
-
     t.commit();
 }
 

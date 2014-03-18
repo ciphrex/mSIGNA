@@ -66,7 +66,7 @@ cli::result_t cmd_newkeychain(bool bHelp, const cli::params_t& params)
     ss << "Added keychain " << params[1] << " to vault " << params[0] << ".";
     return ss.str();
 }
-
+/*
 cli::result_t cmd_erasekeychain(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2) {
@@ -83,7 +83,7 @@ cli::result_t cmd_erasekeychain(bool bHelp, const cli::params_t& params)
     ss << "Keychain " << params[1] << " erased.";
     return ss.str();
 }
-
+*/
 cli::result_t cmd_renamekeychain(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 3) {
@@ -188,7 +188,7 @@ int main(int argc, char* argv[])
     // Keychain operations
     cmds.add("keychainexists", &cmd_keychainexists);
     cmds.add("newkeychain", &cmd_newkeychain);
-    cmds.add("erasekeychain", &cmd_erasekeychain);
+    //cmds.add("erasekeychain", &cmd_erasekeychain);
     cmds.add("renamekeychain", &cmd_renamekeychain);
     cmds.add("keychaininfo", &cmd_keychaininfo);
 
