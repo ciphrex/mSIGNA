@@ -1170,7 +1170,7 @@ inline std::shared_ptr<SigningScript> AccountBin::newSigningScript()
 class Account : public std::enable_shared_from_this<Account>
 {
 public:
-    Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = 100, uint32_t time_created = time(NULL))
+    Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL))
         : name_(name), minsigs_(minsigs), keychains_(keychains), time_created_(time_created), script_count_(0), unused_pool_size_(unused_pool_size) { }
 
     unsigned long id() const { return id_; }

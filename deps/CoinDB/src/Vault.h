@@ -63,12 +63,12 @@ public:
 */        
     // Account operations
     bool accountExists(const std::string& account_name) const;
-    void newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size = 100, uint32_t time_created = time(NULL));
+    void newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL));
     void eraseAccount(const std::string& name) const;
     void renameAccount(const std::string& old_name, const std::string& new_name);
     std::shared_ptr<Account> getAccount(const std::string& account_name) const;
-    uint32_t getCurrentAccountPoolSize(const std::string& account_name) const;
-    uint32_t refillAccountPool(const std::string& account_name);
+    void addAccountBin(const std::string& account_name, const std::string& bin_name);
+    
 /*
     std::vector<AccountInfo> getAccounts(account_ownership_t ownership = ACCOUNT_OWNER_US) const;
     std::shared_ptr<Account> getAccount(const std::string& name) const;
