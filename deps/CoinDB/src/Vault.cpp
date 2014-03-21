@@ -151,9 +151,28 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
         keychains.insert(r.begin().load());
     }
 
-    std::shared_ptr<Account> account(new Account(account_name, minsigs, keychains, unused_pool_size, time_created));
+    for (auto& keychain: keychains)
+    {
+        keychain->unlockChainCode(secure_bytes_t());
+    }
 
+    std::shared_ptr<Account> account(new Account(account_name, minsigs, keychains, unused_pool_size, time_created));
     db_->persist(account);
+
+    std::shared_ptr<AccountBin> changeAccountBin= account->addBin("@change");
+    db_->persist(changeAccountBin);
+
+    std::shared_ptr<AccountBin> defaultAccountBin = account->addBin("@default");
+    db_->persist(defaultAccountBin);
+
+    for (uint32_t i = 0; i < unused_pool_size; i++)
+    {
+        db_->persist(changeAccountBin->newSigningScript(""));
+        db_->persist(defaultAccountBin->newSigningScript(""));
+    }
+    db_->update(changeAccountBin);
+    db_->update(defaultAccountBin);
+    db_->update(account);
     t.commit();
 }
 

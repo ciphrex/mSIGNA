@@ -77,7 +77,7 @@ public:
     void unlockChainCode(const secure_bytes_t& lock_key);
 
     secure_bytes_t getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
-    bytes_t getSigningPublicKey(uint32_t i) const;
+    bytes_t getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
 
     uint32_t depth() const { return depth_; }
     uint32_t parent_fp() const { return parent_fp_; }
@@ -285,14 +285,16 @@ inline secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vect
     if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
 
     Coin::HDKeychain hdkeychain(privkey_, chain_code_, child_num_, parent_fp_, depth_);
+    for (auto k: derivation_path) { hdkeychain = hdkeychain.getChild(k); }
     return hdkeychain.getPrivateSigningKey(i);
 }
 
-inline bytes_t Keychain::getSigningPublicKey(uint32_t i) const
+inline bytes_t Keychain::getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path) const
 {
     if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
 
     Coin::HDKeychain hdkeychain(pubkey_, chain_code_, child_num_, parent_fp_, depth_);
+    for (auto k: derivation_path) { hdkeychain = hdkeychain.getChild(k); }
     return hdkeychain.getPublicSigningKey(i);
 }
 
@@ -323,17 +325,17 @@ inline secure_bytes_t Keychain::extkey(bool get_private) const
 class Key
 {
 public:
-    Key(const std::shared_ptr<Keychain>& keychain, uint32_t signing_key_index);
+    Key(const std::shared_ptr<Keychain>& keychain, uint32_t index);
 
     unsigned long id() const { return id_; }
-    bool is_private() const { return is_private_; }
     const bytes_t& pubkey() const { return pubkey_; }
     secure_bytes_t privkey() const;
+    bool isPrivate() const { return is_private_; }
 
-    std::shared_ptr<Keychain> keychain() const { return keychain_; }
 
-    bool isPrivateKeyLocked() const { return keychain_->isPrivateKeyLocked(); }
-    bool isChainCodeLocked() const { return keychain_->isChainCodeLocked(); }
+    std::shared_ptr<Keychain> root_keychain() const { return root_keychain_; }
+    std::vector<uint32_t> derivation_path() const { return derivation_path_; }
+    uint32_t index() const { return index_; }
 
 private:
     friend class odb::access;
@@ -344,32 +346,33 @@ private:
     unsigned long id_;
 
     #pragma db value_not_null
-    std::shared_ptr<Keychain> keychain_;
+    std::shared_ptr<Keychain> root_keychain_;
     std::vector<uint32_t> derivation_path_;
-    uint32_t signing_key_index_;
+    uint32_t index_;
 
-    bool is_private_;
     bytes_t pubkey_;
-
+    bool is_private_;
 };
 
-inline Key::Key(const std::shared_ptr<Keychain>& keychain, uint32_t signing_key_index)
-{
-    keychain_ = keychain;
-    derivation_path_ = keychain_->derivation_path();
-    signing_key_index_ = signing_key_index;
+typedef std::vector<std::shared_ptr<Key>> KeyVector;
 
-    is_private_ = keychain_->isPrivate();
-    pubkey_ = keychain_->getSigningPublicKey(signing_key_index_);
+inline Key::Key(const std::shared_ptr<Keychain>& keychain, uint32_t index)
+{
+    root_keychain_ = keychain->root();
+    derivation_path_ = keychain->derivation_path();
+    index_ = index;
+
+    is_private_ = root_keychain_->isPrivate();
+    pubkey_ = keychain->getSigningPublicKey(index_);
 }
 
 inline secure_bytes_t Key::privkey() const
 {
     if (!is_private_) throw std::runtime_error("Key::privkey - cannot get private key from nonprivate key object.");
-    if (isPrivateKeyLocked()) throw std::runtime_error("Key::privkey - private key is locked.");
-    if (isChainCodeLocked()) throw std::runtime_error("Key::privkey - chain code is locked.");
+    if (root_keychain_->isPrivateKeyLocked()) throw std::runtime_error("Key::privkey - private key is locked.");
+    if (root_keychain_->isChainCodeLocked()) throw std::runtime_error("Key::privkey - chain code is locked.");
 
-    return keychain_->getSigningPrivateKey(signing_key_index_, derivation_path_);
+    return root_keychain_->getSigningPrivateKey(index_, derivation_path_);
 }
 
 #pragma db object pointer(std::shared_ptr)
@@ -388,11 +391,12 @@ public:
 
     std::shared_ptr<SigningScript> newSigningScript(const std::string& label = "");
 
+    bool loadKeychains();
+    KeychainSet keychains() const { return keychains_; }
+
 private:
     friend class odb::access;
     AccountBin() { }
-
-    bool loadKeychains();
 
     #pragma db id auto
     unsigned long id_;
@@ -486,6 +490,8 @@ public:
         }
     }
 
+    SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index, const std::string& label = "", status_t status = UNUSED);
+
     SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index, const bytes_t& txinscript, const bytes_t& txoutscript, const std::string& label = "", status_t status = UNUSED)
         : account_(account_bin->account()), account_bin_(account_bin), index_(index), label_(label), status_(status), txinscript_(txinscript), txoutscript_(txoutscript) { }
 
@@ -505,6 +511,8 @@ public:
     std::shared_ptr<AccountBin> account_bin() const { return account_bin_; }
 
     uint32_t index() const { return index_; }
+
+    KeyVector& keys() { return keys_; }
 
 private:
     friend class odb::access;
@@ -526,10 +534,36 @@ private:
 
     bytes_t txinscript_; // unsigned (0 byte length placeholders are used for signatures)
     bytes_t txoutscript_;
+
+    KeyVector keys_;
 };
+
+inline SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index, const std::string& label, status_t status)
+    : account_(account_bin->account()), account_bin_(account_bin), index_(index), label_(label), status_(status)
+{
+    account_bin_->loadKeychains();
+    for (auto& keychain: account_bin_->keychains())
+    {
+        std::shared_ptr<Key> key(new Key(keychain, index));
+        keys_.push_back(key);
+    }
+
+    // sort keys into canonical order
+    std::sort(keys_.begin(), keys_.end(), [](std::shared_ptr<Key> key1, std::shared_ptr<Key> key2) { return key1->pubkey() < key2->pubkey(); });
+
+    std::vector<bytes_t> pubkeys;
+    for (auto& key: keys_) { pubkeys.push_back(key->pubkey()); }
+    CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, account_->minsigs(), pubkeys);
+    txinscript_ = script.txinscript(CoinQ::Script::Script::EDIT);
+    txoutscript_ = script.txoutscript();
+}
 
 inline std::shared_ptr<SigningScript> AccountBin::newSigningScript(const std::string& label)
 {
+    std::shared_ptr<SigningScript> signingscript(new SigningScript(shared_from_this(), script_count_++, label));
+    return signingscript;
+}
+/*    
     loadKeychains();
 
     std::vector<bytes_t> pubkeys;
@@ -550,6 +584,7 @@ inline std::shared_ptr<SigningScript> AccountBin::newSigningScript(const std::st
     script_count_++;
     return signingscript;
 }
+*/
 
 }
 
