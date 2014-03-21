@@ -134,6 +134,7 @@ bool Vault::accountExists(const std::string& account_name) const
 void Vault::newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size, uint32_t time_created)
 {
     boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
     odb::core::transaction t(db_->begin());
     odb::result<Account> r(db_->query<Account>(odb::query<Account>::name == account_name));
     if (!r.empty())
@@ -167,8 +168,13 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
 
     for (uint32_t i = 0; i < unused_pool_size; i++)
     {
-        db_->persist(changeAccountBin->newSigningScript(""));
-        db_->persist(defaultAccountBin->newSigningScript(""));
+        std::shared_ptr<SigningScript> changeSigningScript = changeAccountBin->newSigningScript();
+        for (auto& key: changeSigningScript->keys()) { db_->persist(key); } 
+        db_->persist(changeSigningScript);
+
+        std::shared_ptr<SigningScript> defaultSigningScript = defaultAccountBin->newSigningScript();
+        for (auto& key: defaultSigningScript->keys()) { db_->persist(key); }
+        db_->persist(defaultSigningScript);
     }
     db_->update(changeAccountBin);
     db_->update(defaultAccountBin);

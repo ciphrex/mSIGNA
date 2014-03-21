@@ -31,6 +31,8 @@
 namespace CoinDB
 {
 
+#pragma db value(bytes_t) type("BLOB")
+
 const unsigned int SCHEMA_VERSION = 3;
 
 class Account;
@@ -272,7 +274,7 @@ inline void Keychain::unlockPrivateKey(const secure_bytes_t& lock_key)
 
 inline void Keychain::unlockChainCode(const secure_bytes_t& lock_key)
 {
-    if (chain_code_.empty()) return; // Already unlocked
+    if (!chain_code_.empty()) return; // Already unlocked
 
     // TODO: decrypt
     chain_code_ = chain_code_ciphertext_;
@@ -469,7 +471,10 @@ inline bool AccountBin::loadKeychains()
 {
     if (!keychains_.empty()) return false;
     for (auto& keychain: account_->keychains())
-        keychains_.insert(keychain->child(index_));
+    {
+        std::shared_ptr<Keychain> child(keychain->child(index_));
+        keychains_.insert(child);
+    }
     return true;
 }
 
