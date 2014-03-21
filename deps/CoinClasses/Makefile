@@ -74,7 +74,7 @@ all: lib/libCoinClasses.a $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
 lib/libCoinClasses.a: $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
 	$(ARCHIVER) rcs $@ $^
 
-obj/%.o: src/%.cpp
+obj/%.o: src/%.cpp src/%.h
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
 
 src/scrypt/obj/scrypt.o: src/scrypt/scrypt.cpp

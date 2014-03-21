@@ -106,14 +106,14 @@ public:
     // Precondition: i >= 1
     bytes_t getPrivateSigningKey(uint32_t i) const
     {
-        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
+//        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
         return getChild(i).privkey();
     }
 
     // Precondition: i >= 1
     bytes_t getPublicSigningKey(uint32_t i) const
     {
-        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
+//        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
         return getChild(i).pubkey();
     }
 
