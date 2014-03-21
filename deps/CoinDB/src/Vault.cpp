@@ -154,6 +154,7 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
 
     for (auto& keychain: keychains)
     {
+        // TODO: pass lock key
         keychain->unlockChainCode(secure_bytes_t());
     }
 
