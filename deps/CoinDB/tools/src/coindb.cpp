@@ -224,6 +224,19 @@ cli::result_t cmd_accountinfo(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_newaccountbin(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 3)
+        return "newaccountbin <filename> <account_name> <bin_name> - add new account bin.";
+
+    Vault vault(params[0], false);
+    vault.addAccountBin(params[1], params[2]);
+
+    stringstream ss;
+    ss << "Account bin " << params[2] << " added to account " << params[1] << ".";
+    return ss.str(); 
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -244,6 +257,7 @@ int main(int argc, char* argv[])
     cmds.add("newaccount", &cmd_newaccount);
     cmds.add("renameaccount", &cmd_renameaccount);
     cmds.add("accountinfo", &cmd_accountinfo);
+    cmds.add("newaccountbin", &cmd_newaccountbin);
 
     try 
     {

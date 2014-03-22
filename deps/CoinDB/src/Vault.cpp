@@ -238,10 +238,17 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
     LOGGER(trace) << "Vault::addAccountBin(" << account_name << ", " << bin_name << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
 
-    std::shared_ptr<AccountBin> bin = account->addBin("@default");
+    // TODO: pass unlock key
+    for (auto& keychain: account->keychains())
+    {
+        keychain->unlockChainCode(secure_bytes_t());
+    }
+
+    std::shared_ptr<AccountBin> bin = account->addBin(bin_name);
     db_->persist(bin);
 
     for (uint32_t i = 0; i < account->unused_pool_size(); i++)
