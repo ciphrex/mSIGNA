@@ -190,35 +190,36 @@ cli::result_t cmd_accountinfo(bool bHelp, const cli::params_t& params)
         return "accountinfo <filename> <account_name> - display account info.";
 
     Vault vault(params[0], false);
-    std::shared_ptr<Account> account = vault.getAccount(params[1]);
+    AccountInfo accountInfo = vault.getAccountInfo(params[1]);
 
-    std::string keychain_list;
+    // TODO: add the following list generating routine to a general utils library
     bool addComma = false;
-    for (auto& keychain: account->keychains())
+    std::string keychain_list;
+    for (auto& keychain_name: accountInfo.keychain_names())
     {
-        if (addComma) keychain_list += ", ";
-        else addComma = true;
+        if (addComma)   keychain_list += ", ";
+        else            addComma = true;
 
-        keychain_list += keychain->name();
+        keychain_list += keychain_name;
     }
 
-    std::string bin_list;
     addComma = false;
-    for (auto& bin: account->bins())
+    std::string bin_list;
+    for (auto& bin_name: accountInfo.bin_names())
     {
-        if (addComma) keychain_list += ", ";
-        else addComma = true;
+        if (addComma)   bin_list += ", ";
+        else            addComma = true;
 
-        bin_list += bin->name();
+        bin_list += bin_name;
     }
 
     stringstream ss;
-    ss << "id:               " << account->id() << endl
-       << "name:             " << account->name() << endl
-       << "minsigs:          " << account->minsigs() << endl
+    ss << "id:               " << accountInfo.id() << endl
+       << "name:             " << accountInfo.name() << endl
+       << "minsigs:          " << accountInfo.minsigs() << endl
        << "keychains:        " << keychain_list << endl
-       << "unused_pool_size: " << account->unused_pool_size() << endl
-       << "time_created:     " << account->time_created() << endl
+       << "unused_pool_size: " << accountInfo.unused_pool_size() << endl
+       << "time_created:     " << accountInfo.time_created() << endl
        << "bins:             " << bin_list;
     return ss.str();
 }

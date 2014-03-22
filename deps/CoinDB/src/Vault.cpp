@@ -222,6 +222,17 @@ std::shared_ptr<Account> Vault::getAccount(const std::string& account_name) cons
     return getAccount_unwrapped(account_name);
 }
 
+AccountInfo Vault::getAccountInfo(const std::string& account_name) const
+{
+    LOGGER(trace) << "Vault::getAccountInfo(" << account_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
+    return account->accountInfo();
+}
+
 std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name, const std::string& bin_name)
 {
     LOGGER(trace) << "Vault::addAccountBin(" << account_name << ", " << bin_name << ")" << std::endl;

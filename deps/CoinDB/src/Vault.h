@@ -48,6 +48,7 @@ public:
     //void eraseAccount(const std::string& name) const;
     void renameAccount(const std::string& old_name, const std::string& new_name);
     std::shared_ptr<Account> getAccount(const std::string& account_name) const;
+    AccountInfo getAccountInfo(const std::string& account_name) const;
     std::shared_ptr<AccountBin> addAccountBin(const std::string& account_name, const std::string& bin_name);
 //    std::shared_ptr<TxOut> newTxOut(const std::string& account_name, const std::string& label, uint64_t value = 0, uint32_t bin_id = AccountBin::DEFAULT);
 

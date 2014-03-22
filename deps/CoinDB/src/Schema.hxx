@@ -420,12 +420,76 @@ private:
 typedef std::vector<std::shared_ptr<AccountBin>> AccountBinVector;
 typedef std::vector<std::weak_ptr<AccountBin>> WeakAccountBinVector;
 
+// Immutable object containng keychain and bin names as strings
+class AccountInfo
+{
+public:
+    AccountInfo(
+        unsigned long id,
+        const std::string& name,
+        unsigned int minsigs,
+        const std::vector<std::string>& keychain_names,
+        uint32_t unused_pool_size,
+        uint32_t time_created,
+        const std::vector<std::string>& bin_names
+    ) :
+        id_(id),
+        name_(name),
+        minsigs_(minsigs),
+        keychain_names_(keychain_names),
+        unused_pool_size_(unused_pool_size),
+        time_created_(time_created),
+        bin_names_(bin_names)
+    { }
+
+    AccountInfo(const AccountInfo& source) :
+        id_(source.id_),
+        name_(source.name_),
+        minsigs_(source.minsigs_),
+        keychain_names_(source.keychain_names_),
+        unused_pool_size_(source.unused_pool_size_),
+        time_created_(source.time_created_),
+        bin_names_(source.bin_names_)
+    { }
+
+    AccountInfo& operator=(const AccountInfo& source)
+    {
+        id_ = source.id_;
+        name_ = source.name_;
+        minsigs_ = source.minsigs_;
+        keychain_names_ = source.keychain_names_;
+        unused_pool_size_ = source.unused_pool_size_;
+        time_created_ = source.time_created_;
+        bin_names_ = source.bin_names_;
+        return *this;
+    }
+
+    unsigned int                        id() const { return id_; }
+    const std::string&                  name() const { return name_; }
+    unsigned int                        minsigs() const { return minsigs_; }
+    const std::vector<std::string>&     keychain_names() const { return keychain_names_; }
+    uint32_t                            unused_pool_size() const { return unused_pool_size_; }
+    uint32_t                            time_created() const { return time_created_; }
+    const std::vector<std::string>&     bin_names() const { return bin_names_; }
+
+private:
+    unsigned long               id_;
+    std::string                 name_;
+    unsigned int                minsigs_;
+    std::vector<std::string>    keychain_names_;
+    uint32_t                    unused_pool_size_;
+    uint32_t                    time_created_;
+    std::vector<std::string>    bin_names_;
+};
+
 #pragma db object pointer(std::shared_ptr)
 class Account : public std::enable_shared_from_this<Account>
 {
 public:
     Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL))
         : name_(name), minsigs_(minsigs), keychains_(keychains), unused_pool_size_(unused_pool_size), time_created_(time_created) { }
+
+    AccountInfo accountInfo() const;
 
     unsigned long id() const { return id_; }
 
@@ -459,6 +523,17 @@ private:
     #pragma db value_not_null inverse(account_)
     WeakAccountBinVector bins_;
 };
+
+inline AccountInfo Account::accountInfo() const
+{
+    std::vector<std::string> keychain_names;
+    for (auto& keychain: keychains_) { keychain_names.push_back(keychain->name()); }
+
+    std::vector<std::string> bin_names;
+    for (auto& bin: bins()) { bin_names.push_back(bin->name()); }
+
+    return AccountInfo(id_, name_, minsigs_, keychain_names, unused_pool_size_, time_created_, bin_names);
+}
 
 inline AccountBinVector Account::bins() const
 {
