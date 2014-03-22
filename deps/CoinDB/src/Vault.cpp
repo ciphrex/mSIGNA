@@ -64,17 +64,17 @@ bool Vault::keychainExists(const std::string& keychain_name) const
     return !r.empty();
 }
 
-void Vault::newKeychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey, const bytes_t& salt)
+std::shared_ptr<Keychain> Vault::newKeychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey, const bytes_t& salt)
 {
-    Keychain keychain(name, entropy, lockKey, salt);
+    std::shared_ptr<Keychain> keychain(new Keychain(name, entropy, lockKey, salt));
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session session;
     odb::core::transaction t(db_->begin());
-
     persistKeychain_unwrapped(keychain);
-
     t.commit();
+
+    return keychain;
 }
 
 void Vault::renameKeychain(const std::string& old_name, const std::string& new_name)
@@ -98,10 +98,10 @@ void Vault::renameKeychain(const std::string& old_name, const std::string& new_n
     t.commit();
 }
 
-void Vault::persistKeychain_unwrapped(Keychain& keychain)
+void Vault::persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain)
 {
-    if (keychain.parent())
-        db_->update(keychain.parent());
+    if (keychain->parent())
+        db_->update(keychain->parent());
 
     db_->persist(keychain);
 }
@@ -204,18 +204,36 @@ void Vault::renameAccount(const std::string& old_name, const std::string& new_na
     t.commit();
 }
 
+std::shared_ptr<Account> Vault::getAccount_unwrapped(const std::string& account_name) const
+{
+    odb::result<Account> r(db_->query<Account>(odb::query<Account>::name == account_name));
+    if (r.empty()) throw AccountNotFoundException(account_name);
+
+    std::shared_ptr<Account> account(r.begin().load());
+    return account;
+}
+
 std::shared_ptr<Account> Vault::getAccount(const std::string& account_name) const
 {
     LOGGER(trace) << "Vault::getAccount(" << account_name << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
-    odb::result<Account> r(db_->query<Account>(odb::query<Account>::name == account_name));
-    if (r.empty()) {
-        throw std::runtime_error("Vault::getAccount - account not found.");
-    }
-
-    std::shared_ptr<Account> account(r.begin().load());
-    return account;
+    return getAccount_unwrapped(account_name);
 }
 
+std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name, const std::string& bin_name)
+{
+    LOGGER(trace) << "Vault::addAccountBin(" << account_name << ", " << bin_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
+    return account->addBin(bin_name);
+}
+
+/*
+std::shared_ptr<TxOut> Vault::newTxOut(const std::string& account_name, const std::string& label, uint64_t value = 0, uint32_t bin_id = AccountBin::DEFAULT)
+{
+}
+*/

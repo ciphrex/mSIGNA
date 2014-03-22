@@ -381,6 +381,9 @@ inline secure_bytes_t Key::privkey() const
 class AccountBin : public std::enable_shared_from_this<AccountBin>
 {
 public:
+    static const uint32_t CHANGE = 1;
+    static const uint32_t DEFAULT = 2;
+
     AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name);
 
     std::shared_ptr<Account> account() const { return account_; }

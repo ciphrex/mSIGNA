@@ -10,6 +10,7 @@
 #pragma once
 
 #include "Schema.hxx"
+#include "VaultExceptions.h"
 
 #include <CoinQ_signals.h>
 #include <CoinQ_slots.h>
@@ -33,7 +34,7 @@ public:
 
     // Keychain operations
     bool keychainExists(const std::string& keychain_name) const;
-    void newKeychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
+    std::shared_ptr<Keychain> newKeychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
     //void eraseKeychain(const std::string& keychain_name) const;
     void renameKeychain(const std::string& old_name, const std::string& new_name);
     std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
@@ -47,10 +48,15 @@ public:
     //void eraseAccount(const std::string& name) const;
     void renameAccount(const std::string& old_name, const std::string& new_name);
     std::shared_ptr<Account> getAccount(const std::string& account_name) const;
-    void addAccountBin(const std::string& account_name, const std::string& bin_name);
+    std::shared_ptr<AccountBin> addAccountBin(const std::string& account_name, const std::string& bin_name);
+//    std::shared_ptr<TxOut> newTxOut(const std::string& account_name, const std::string& label, uint64_t value = 0, uint32_t bin_id = AccountBin::DEFAULT);
 
 protected:
-    void persistKeychain_unwrapped(Keychain& keychain);
+    // Keychain operations
+    void persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
+
+    // Account operations
+    std::shared_ptr<Account> getAccount_unwrapped(const std::string& account_name) const;
 
     mutable boost::mutex mutex;
 
