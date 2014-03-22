@@ -277,19 +277,31 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
     return bin;
 }
 
-std::shared_ptr<TxOut> Vault::newTxOut(const std::string& account_name, const std::string& label, uint64_t value, const std::string& bin_name)
+std::shared_ptr<TxOut> Vault::newTxOut_unwrapped(const std::string& account_name, const std::string& label, uint64_t value, const std::string& bin_name)
 {
-    LOGGER(trace) << "Vault::getAccountBin(" << account_name << ", " << bin_name << ")" << std::endl;
-
-    boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::session s;
-    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
     std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
 
+    // Replenish unused script pool for bin
+    typedef odb::query<ScriptCountView> count_query;
+    odb::result<ScriptCountView> count_result(db_->query<ScriptCountView>(count_query::AccountBin::id == bin->id() && count_query::SigningScript::status == SigningScript::UNUSED));
+    uint32_t count = 0;
+    if (count_result.empty()) count = count_result.begin().load()->count;
+
+    for (uint32_t i = count; i <= account->unused_pool_size(); i++)
+    {
+        std::shared_ptr<SigningScript> script = bin->newSigningScript();
+        for (auto& key: script->keys()) { db_->persist(key); }
+        db_->persist(script); 
+    } 
+    db_->update(bin);
+    db_->update(account);
+
+    // Get the next available unused signing script
     typedef odb::query<SigningScriptView> view_query;
     odb::result<SigningScriptView> view_result(db_->query<SigningScriptView>((view_query::AccountBin::id == bin->id() && view_query::SigningScript::status == SigningScript::UNUSED) +
         "ORDER BY" + view_query::SigningScript::id + "LIMIT 1"));
-    if (view_result.empty()) throw std::runtime_error("No scripts available."); // TODO: Replenish pool first
+    if (view_result.empty()) throw std::runtime_error("No scripts available."); // This should never happen
 
     std::shared_ptr<SigningScriptView> view(view_result.begin().load());
 
@@ -299,10 +311,21 @@ std::shared_ptr<TxOut> Vault::newTxOut(const std::string& account_name, const st
     script->label(label);
     script->status(SigningScript::REQUESTED);
     db_->update(script);
-    t.commit();
 
     std::shared_ptr<TxOut> txout(new TxOut(value, script->txoutscript()));
     return txout; 
+}
+
+std::shared_ptr<TxOut> Vault::newTxOut(const std::string& account_name, const std::string& label, uint64_t value, const std::string& bin_name)
+{
+    LOGGER(trace) << "Vault::getAccountBin(" << account_name << ", " << bin_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<TxOut> txout = newTxOut_unwrapped(account_name, label, value, bin_name);
+    t.commit();
+    return txout;
 }
 
 // AccountBin operations

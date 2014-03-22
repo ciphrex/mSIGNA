@@ -61,6 +61,7 @@ protected:
 
     // Account operations
     std::shared_ptr<Account> getAccount_unwrapped(const std::string& account_name) const;
+    std::shared_ptr<TxOut> newTxOut_unwrapped(const std::string& account_name, const std::string& label, uint64_t value, const std::string& bin_name);
 
     // AccountBin operations
     std::shared_ptr<AccountBin> getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;

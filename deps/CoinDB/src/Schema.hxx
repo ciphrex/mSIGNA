@@ -740,6 +740,16 @@ struct SigningScriptView
     bytes_t txoutscript;
 };
 
+#pragma db view \
+    object(SigningScript) \
+    object(Account: SigningScript::account_) \
+    object(AccountBin: SigningScript::account_bin_)
+struct ScriptCountView
+{
+    #pragma db column("count(" + SigningScript::id_ + ")")
+    uint32_t count;
+};
+
 
 /////////////////////////////
 // BLOCKS AND TRANSACTIONS //
