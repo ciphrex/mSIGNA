@@ -282,6 +282,9 @@ std::shared_ptr<TxOut> Vault::newTxOut_unwrapped(const std::string& account_name
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
     std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
 
+    // TODO: pass unlock key
+    for (auto& keychain: account->keychains()) { keychain->unlockChainCode(secure_bytes_t()); }
+
     // Replenish unused script pool for bin
     typedef odb::query<ScriptCountView> count_query;
     odb::result<ScriptCountView> count_result(db_->query<ScriptCountView>(count_query::AccountBin::id == bin->id() && count_query::SigningScript::status == SigningScript::UNUSED));
