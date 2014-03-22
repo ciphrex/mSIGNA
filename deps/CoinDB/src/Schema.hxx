@@ -417,6 +417,8 @@ private:
     KeychainSet keychains_;
 };
 
+typedef std::vector<std::shared_ptr<AccountBin>> AccountBinVector;
+typedef std::vector<std::weak_ptr<AccountBin>> WeakAccountBinVector;
 
 #pragma db object pointer(std::shared_ptr)
 class Account : public std::enable_shared_from_this<Account>
@@ -430,9 +432,10 @@ public:
     void name(const std::string& name) { name_ = name; }
     const std::string& name() const { return name_; }
     unsigned int minsigs() const { return minsigs_; }
-    KeychainSet& keychains() { return keychains_; }
-    uint32_t time_created() const { return time_created_; }
+    KeychainSet keychains() const { return keychains_; }
     uint32_t unused_pool_size() const { return unused_pool_size_; }
+    uint32_t time_created() const { return time_created_; }
+    AccountBinVector bins() const;
 
     std::shared_ptr<AccountBin> addBin(const std::string& name);
 
@@ -454,8 +457,15 @@ private:
     uint32_t time_created_;
 
     #pragma db value_not_null inverse(account_)
-    std::vector<std::weak_ptr<AccountBin>> bins_;
+    WeakAccountBinVector bins_;
 };
+
+inline AccountBinVector Account::bins() const
+{
+    AccountBinVector bins;
+    for (auto& bin: bins_) { bins.push_back(bin.lock()); }
+    return bins;
+}
 
 inline std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
 {

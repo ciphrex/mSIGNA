@@ -27,9 +27,8 @@ using namespace CoinDB;
 // Vault operations
 cli::result_t cmd_create(bool bHelp, const cli::params_t& params)
 {
-    if (bHelp || params.size() != 1) {
+    if (bHelp || params.size() != 1)
         return "create <filename> - create a new vault.";
-    }
 
     Vault vault(params[0], true);
 
@@ -41,9 +40,8 @@ cli::result_t cmd_create(bool bHelp, const cli::params_t& params)
 // Keychain operations
 cli::result_t cmd_keychainexists(bool bHelp, const cli::params_t& params)
 {
-    if (bHelp || params.size() != 2) {
+    if (bHelp || params.size() != 2)
         return "keychainexists <filename> <keychain_name> - check if a keychain exists.";
-    }
 
     Vault vault(params[0], false);
     bool bExists = vault.keychainExists(params[1]);
@@ -55,9 +53,8 @@ cli::result_t cmd_keychainexists(bool bHelp, const cli::params_t& params)
 
 cli::result_t cmd_newkeychain(bool bHelp, const cli::params_t& params)
 {
-    if (bHelp || params.size() != 2) {
+    if (bHelp || params.size() != 2)
         return "newkeychain <filename> <keychain_name> - create a new keychain.";
-    }
 
     Vault vault(params[0], false);
     vault.newKeychain(params[1], random_bytes(32));
@@ -86,9 +83,8 @@ cli::result_t cmd_erasekeychain(bool bHelp, const cli::params_t& params)
 */
 cli::result_t cmd_renamekeychain(bool bHelp, const cli::params_t& params)
 {
-    if (bHelp || params.size() != 3) {
+    if (bHelp || params.size() != 3)
         return "renamekeychain <filename> <oldname> <newname> - rename a keychain.";
-    }
 
     Vault vault(params[0], false);
     vault.renameKeychain(params[1], params[2]);
@@ -100,9 +96,8 @@ cli::result_t cmd_renamekeychain(bool bHelp, const cli::params_t& params)
 
 cli::result_t cmd_keychaininfo(bool bHelp, const cli::params_t& params)
 {
-    if (bHelp || params.size() != 2) {
+    if (bHelp || params.size() != 2)
         return "keychaininfo <filename> <keychain_name> - display keychain information.";
-    }
 
     Vault vault(params[0], false);
     shared_ptr<Keychain> keychain = vault.getKeychain(params[1]);
@@ -147,9 +142,8 @@ cli::result_t cmd_listkeychains(bool bHelp, const cli::params_t& params)
 // Account operations
 cli::result_t cmd_accountexists(bool bHelp, const cli::params_t& params)
 {
-    if (bHelp || params.size() != 2) {
+    if (bHelp || params.size() != 2)
         return "accountexists <filename> <account_name> - check if an account exists.";
-    }
 
     Vault vault(params[0], false);
     bool bExists = vault.accountExists(params[1]);
@@ -161,9 +155,8 @@ cli::result_t cmd_accountexists(bool bHelp, const cli::params_t& params)
 
 cli::result_t cmd_newaccount(bool bHelp, const cli::params_t& params)
 {
-    if (bHelp || params.size() < 4) {
+    if (bHelp || params.size() < 4)
         return "newaccount <filename> <account_name> <minsigs> <keychain1> [keychain2] [keychain3] ... - create a new account using specified keychains.";
-    }
 
     uint32_t minsigs = strtoull(params[2].c_str(), NULL, 10);
     std::vector<std::string> keychain_names;
@@ -177,6 +170,59 @@ cli::result_t cmd_newaccount(bool bHelp, const cli::params_t& params)
     ss << "Added account " << params[1] << " to vault " << params[0] << ".";
     return ss.str();
 }
+
+cli::result_t cmd_renameaccount(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 3)
+        return "renameaccount <filename> <old_account_name> <new_account_name> - rename an account.";
+
+    Vault vault(params[0], false);
+    vault.renameAccount(params[1], params[2]);
+
+    stringstream ss;
+    ss << "Renamed account " << params[1] << " to " << params[2] << ".";
+    return ss.str();
+}
+
+cli::result_t cmd_accountinfo(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 2)
+        return "accountinfo <filename> <account_name> - display account info.";
+
+    Vault vault(params[0], false);
+    std::shared_ptr<Account> account = vault.getAccount(params[1]);
+
+    std::string keychain_list;
+    bool addComma = false;
+    for (auto& keychain: account->keychains())
+    {
+        if (addComma) keychain_list += ", ";
+        else addComma = true;
+
+        keychain_list += keychain->name();
+    }
+
+    std::string bin_list;
+    addComma = false;
+    for (auto& bin: account->bins())
+    {
+        if (addComma) keychain_list += ", ";
+        else addComma = true;
+
+        bin_list += bin->name();
+    }
+
+    stringstream ss;
+    ss << "id:               " << account->id() << endl
+       << "name:             " << account->name() << endl
+       << "minsigs:          " << account->minsigs() << endl
+       << "keychains:        " << keychain_list << endl
+       << "unused_pool_size: " << account->unused_pool_size() << endl
+       << "time_created:     " << account->time_created() << endl
+       << "bins:             " << bin_list;
+    return ss.str();
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -195,6 +241,8 @@ int main(int argc, char* argv[])
     // Account operations
     cmds.add("accountexists", &cmd_accountexists);
     cmds.add("newaccount", &cmd_newaccount);
+    cmds.add("renameaccount", &cmd_renameaccount);
+    cmds.add("accountinfo", &cmd_accountinfo);
 
     try 
     {

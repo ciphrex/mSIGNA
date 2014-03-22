@@ -229,7 +229,21 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
-    return account->addBin(bin_name);
+
+    std::shared_ptr<AccountBin> bin = account->addBin("@default");
+    db_->persist(bin);
+
+    for (uint32_t i = 0; i < account->unused_pool_size(); i++)
+    {
+        std::shared_ptr<SigningScript> script = bin->newSigningScript();
+        for (auto& key: script->keys()) { db_->persist(key); }
+        db_->persist(script);
+    }
+    db_->update(bin);
+    db_->update(account);
+    t.commit();
+
+    return bin;
 }
 
 /*
