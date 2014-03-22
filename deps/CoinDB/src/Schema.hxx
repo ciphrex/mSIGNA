@@ -679,6 +679,24 @@ inline std::shared_ptr<SigningScript> AccountBin::newSigningScript(const std::st
 }
 */
 
+
+// Views
+#pragma db view \
+    object(AccountBin) \
+    object(Account: AccountBin::account_)
+struct AccountBinView
+{
+    #pragma db column(Account::id_)
+    unsigned long account_id;
+    #pragma db column(Account::name_)
+    std::string account_name;
+
+    #pragma db column(AccountBin::id_)
+    unsigned long bin_id; 
+    #pragma db column(AccountBin::name_)
+    std::string bin_name;
+};
+
 }
 
 #endif // COINDB_SCHEMA_HXX

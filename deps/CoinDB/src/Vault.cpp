@@ -240,6 +240,19 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
+
+    bool binExists = true;
+    try
+    {
+        getAccountBin_unwrapped(account_name, bin_name);
+    }
+    catch (const AccountBinNotFoundException& e)
+    {
+        binExists = false;
+    }
+
+    if (binExists) throw AccountBinAlreadyExistsException(account_name, bin_name);
+
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
 
     // TODO: pass unlock key
@@ -269,3 +282,26 @@ std::shared_ptr<TxOut> Vault::newTxOut(const std::string& account_name, const st
 {
 }
 */
+
+// AccountBin operations
+std::shared_ptr<AccountBin> Vault::getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const
+{
+    typedef odb::query<AccountBinView> query;
+    odb::result<AccountBinView> r(db_->query<AccountBinView>(query::Account::name == account_name && query::AccountBin::name == bin_name));
+    if (r.empty()) throw AccountBinNotFoundException(account_name, bin_name);
+
+    unsigned long bin_id = r.begin().load()->bin_id;
+    std::shared_ptr<AccountBin> bin(db_->load<AccountBin>(bin_id));
+    return bin;
+}
+
+std::shared_ptr<AccountBin> Vault::getAccountBin(const std::string& account_name, const std::string& bin_name) const
+{
+    LOGGER(trace) << "Vault::getAccountBin(" << account_name << ", " << bin_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
+    return bin; 
+}
