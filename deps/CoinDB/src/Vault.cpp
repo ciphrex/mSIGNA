@@ -277,11 +277,33 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
     return bin;
 }
 
-/*
-std::shared_ptr<TxOut> Vault::newTxOut(const std::string& account_name, const std::string& label, uint64_t value = 0, uint32_t bin_id = AccountBin::DEFAULT)
+std::shared_ptr<TxOut> Vault::newTxOut(const std::string& account_name, const std::string& label, uint64_t value, const std::string& bin_name)
 {
+    LOGGER(trace) << "Vault::getAccountBin(" << account_name << ", " << bin_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
+
+    typedef odb::query<SigningScriptView> view_query;
+    odb::result<SigningScriptView> view_result(db_->query<SigningScriptView>((view_query::AccountBin::id == bin->id() && view_query::SigningScript::status == SigningScript::UNUSED) +
+        "ORDER BY" + view_query::SigningScript::id + "LIMIT 1"));
+    if (view_result.empty()) throw std::runtime_error("No scripts available."); // TODO: Replenish pool first
+
+    std::shared_ptr<SigningScriptView> view(view_result.begin().load());
+
+    typedef odb::query<SigningScript> script_query;
+    odb::result<SigningScript> script_result(db_->query<SigningScript>(script_query::id == view->id));
+    std::shared_ptr<SigningScript> script(script_result.begin().load());
+    script->label(label);
+    script->status(SigningScript::REQUESTED);
+    db_->update(script);
+    t.commit();
+
+    std::shared_ptr<TxOut> txout(new TxOut(value, script->txoutscript()));
+    return txout; 
 }
-*/
 
 // AccountBin operations
 std::shared_ptr<AccountBin> Vault::getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const

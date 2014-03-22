@@ -417,6 +417,8 @@ public:
 
     AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name);
 
+    unsigned long id() const { return id_; }
+
     std::shared_ptr<Account> account() const { return account_; }
     uint32_t index() const { return index_; }
 
@@ -601,14 +603,14 @@ inline bool AccountBin::loadKeychains()
 class SigningScript : public std::enable_shared_from_this<SigningScript>
 {
 public:
-    enum status_t { UNUSED = 1, CHANGE = 2, REQUEST = 4, RECEIPT = 8, ALL = 15 };
+    enum status_t { UNUSED = 1, CHANGE = 2, REQUESTED = 4, RECEIVED = 8, ALL = 15 };
     static std::string getStatusString(int status)
     {
         switch (status) {
         case UNUSED: return "UNUSED";
         case CHANGE: return "CHANGE";
-        case REQUEST: return "REQUEST";
-        case RECEIPT: return "RECEIPT";
+        case REQUESTED: return "REQUESTED";
+        case RECEIVED: return "RECEIVED";
         default: return "UNKNOWN";
         }
     }
@@ -702,6 +704,40 @@ struct AccountBinView
     unsigned long bin_id; 
     #pragma db column(AccountBin::name_)
     std::string bin_name;
+};
+
+#pragma db view \
+    object(SigningScript) \
+    object(Account: SigningScript::account_) \
+    object(AccountBin: SigningScript::account_bin_)
+struct SigningScriptView
+{
+    #pragma db column(Account::id_)
+    unsigned long account_id;
+
+    #pragma db column(Account::name_)
+    std::string account_name;
+
+    #pragma db column(AccountBin::id_)
+    unsigned long account_bin_id;
+
+    #pragma db column(AccountBin::name_)
+    std::string account_bin_name;
+
+    #pragma db column(SigningScript::id_)
+    unsigned long id;
+
+    #pragma db column(SigningScript::label_)
+    std::string label;
+
+    #pragma db column(SigningScript::status_)
+    SigningScript::status_t status;
+
+    #pragma db column(SigningScript::txinscript_)
+    bytes_t txinscript;
+
+    #pragma db column(SigningScript::txoutscript_)
+    bytes_t txoutscript;
 };
 
 
