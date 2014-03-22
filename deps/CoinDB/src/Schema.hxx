@@ -31,9 +31,40 @@
 namespace CoinDB
 {
 
+typedef odb::nullable<unsigned long> null_id_t;
+
 #pragma db value(bytes_t) type("BLOB")
 
-const unsigned int SCHEMA_VERSION = 3;
+////////////////////
+// SCHEMA VERSION //
+////////////////////
+
+const uint32_t SCHEMA_VERSION = 3;
+
+#pragma db object pointer(std::shared_ptr)
+class Version
+{
+public:
+    Version(uint32_t version = SCHEMA_VERSION) : version_(version) { }
+
+    unsigned long id() const { return id_; }
+
+    void version(uint32_t version) { version_ = version; }
+    uint32_t version() const { return version_; }
+
+private:
+    friend class odb::access;
+
+    #pragma db id auto
+    unsigned long id_;
+
+    uint32_t version_;
+};
+
+
+////////////////////////////
+// KEYCHAINS AND ACCOUNTS //
+////////////////////////////
 
 class Account;
 class AccountBin;
@@ -507,7 +538,6 @@ public:
 
 private:
     friend class odb::access;
-
     Account() { }
 
     #pragma db id auto
@@ -609,7 +639,6 @@ public:
 
 private:
     friend class odb::access;
-
     SigningScript() { }
 
     #pragma db id auto
@@ -656,28 +685,6 @@ inline std::shared_ptr<SigningScript> AccountBin::newSigningScript(const std::st
     std::shared_ptr<SigningScript> signingscript(new SigningScript(shared_from_this(), script_count_++, label));
     return signingscript;
 }
-/*    
-    loadKeychains();
-
-    std::vector<bytes_t> pubkeys;
-    for (auto& keychain: keychains_)
-        pubkeys.push_back(keychain->getSigningPublicKey(script_count_));
-
-    // sort keys into canonical order
-    std::sort(pubkeys.begin(), pubkeys.end());
-
-    CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, account_->minsigs(), pubkeys);
-    std::shared_ptr<SigningScript> signingscript(new SigningScript(
-        shared_from_this(),
-        script_count_,
-        script.txinscript(CoinQ::Script::Script::EDIT),
-        script.txoutscript(),
-        label
-    ));
-    script_count_++;
-    return signingscript;
-}
-*/
 
 
 // Views
@@ -696,6 +703,571 @@ struct AccountBinView
     #pragma db column(AccountBin::name_)
     std::string bin_name;
 };
+
+
+/////////////////////////////
+// BLOCKS AND TRANSACTIONS //
+/////////////////////////////
+
+class Tx;
+
+#pragma db object pointer(std::shared_ptr)
+class BlockHeader
+{
+public:
+    BlockHeader() { }
+
+    BlockHeader(const Coin::CoinBlockHeader& blockheader, uint32_t height = 0xffffffff) { fromCoinClasses(blockheader, height); }
+
+    BlockHeader(const bytes_t& hash, uint32_t height, uint32_t version, const bytes_t& prevhash, const bytes_t& merkleroot, uint32_t timestamp, uint32_t bits, uint32_t nonce)
+    : hash_(hash), height_(height), version_(version), prevhash_(prevhash), merkleroot_(merkleroot), timestamp_(timestamp), bits_(bits), nonce_(nonce) { }
+
+    void fromCoinClasses(const Coin::CoinBlockHeader& blockheader, uint32_t height = 0xffffffff);
+    Coin::CoinBlockHeader toCoinClasses() const;
+
+    unsigned long id() const { return id_; }
+    bytes_t hash() const { return hash_; }
+    uint32_t height() const { return height_; }
+    uint32_t version() const { return version_; }
+    bytes_t prevhash() const { return prevhash_; }
+    bytes_t merkleroot() const { return merkleroot_; }
+    uint32_t timestamp() const { return timestamp_; }
+    uint32_t bits() const { return bits_; }
+    uint32_t nonce() const { return nonce_; }
+
+private:
+    friend class odb::access;
+
+    #pragma db id auto
+    unsigned long id_;
+
+    #pragma db unique
+    bytes_t hash_;
+
+    #pragma db unique
+    uint32_t height_;
+
+    uint32_t version_;
+    bytes_t prevhash_;
+    bytes_t merkleroot_;
+    uint32_t timestamp_;
+    uint32_t bits_;
+    uint32_t nonce_;
+};
+
+inline void BlockHeader::fromCoinClasses(const Coin::CoinBlockHeader& blockheader, uint32_t height)
+{
+    hash_ = blockheader.getHashLittleEndian();
+    height_ = height;
+    version_ = blockheader.version;
+    prevhash_ = blockheader.prevBlockHash;
+    merkleroot_ = blockheader.merkleRoot;
+    timestamp_ = blockheader.timestamp;
+    bits_ = blockheader.bits;
+    nonce_ = blockheader.nonce;
+}
+
+inline Coin::CoinBlockHeader BlockHeader::toCoinClasses() const
+{
+    return Coin::CoinBlockHeader(version_, timestamp_, bits_, nonce_, prevhash_, merkleroot_);
+}
+
+
+#pragma db object pointer(std::shared_ptr)
+class MerkleBlock
+{
+public:
+    MerkleBlock() { }
+
+    MerkleBlock(const std::shared_ptr<BlockHeader>& blockheader, uint32_t txcount, const std::vector<bytes_t>& hashes, const bytes_t& flags)
+        : blockheader_(blockheader), txcount_(txcount), hashes_(hashes), flags_(flags) { }
+
+    void fromCoinClasses(const Coin::MerkleBlock& merkleblock, uint32_t height = 0xffffffff);
+    Coin::MerkleBlock toCoinClasses() const;
+
+    unsigned long id() const { return id_; }
+
+    // The logic of blockheader management and persistence is handled by the user of this class.
+    void blockheader(const std::shared_ptr<BlockHeader>& blockheader) { blockheader_ = blockheader; }
+    std::shared_ptr<BlockHeader> blockheader() const { return blockheader_; }
+
+    void txcount(uint32_t txcount) { txcount_ = txcount; }
+    uint32_t txcount() const { return txcount_; }
+
+    void hashes(const std::vector<bytes_t>& hashes) { hashes_ = hashes; }
+    const std::vector<bytes_t>& hashes() const { return hashes_; }
+
+    void flags(const bytes_t& flags) { flags_ = flags; }
+    const bytes_t& flags() const { return flags_; }
+
+private:
+    friend class odb::access;
+
+    #pragma db id auto
+    unsigned long id_;
+
+    #pragma db not_null
+    std::shared_ptr<BlockHeader> blockheader_;
+
+    uint32_t txcount_;
+
+    #pragma db value_not_null \
+        id_column("object_id") value_column("value")
+    std::vector<bytes_t> hashes_;
+
+    bytes_t flags_;
+};
+
+inline void MerkleBlock::fromCoinClasses(const Coin::MerkleBlock& merkleblock, uint32_t height)
+{
+    blockheader_ = std::shared_ptr<BlockHeader>(new BlockHeader(merkleblock.blockHeader, height));
+    txcount_ = merkleblock.nTxs;
+    hashes_.assign(merkleblock.hashes.begin(), merkleblock.hashes.end());
+    flags_ = merkleblock.flags;
+}
+
+inline Coin::MerkleBlock MerkleBlock::toCoinClasses() const
+{
+    Coin::MerkleBlock merkleblock;
+    merkleblock.blockHeader = blockheader_->toCoinClasses();
+    merkleblock.nTxs = txcount_;
+    merkleblock.hashes.assign(hashes_.begin(), hashes_.end());
+    merkleblock.flags = flags_;
+    return merkleblock;
+}
+
+
+#pragma db object pointer(std::shared_ptr)
+class TxIn
+{
+public:
+    TxIn(const bytes_t& outhash, uint32_t outindex, const bytes_t& script, uint32_t sequence)
+        : outhash_(outhash), outindex_(outindex), script_(script), sequence_(sequence) { }
+
+    TxIn(const Coin::TxIn& coin_txin);
+    TxIn(const bytes_t& raw);
+
+    Coin::TxIn toCoinClasses() const;
+
+    unsigned long id() const { return id_; }
+    const bytes_t& outhash() const { return outhash_; }
+    uint32_t outindex() const { return outindex_; }
+
+    void script(const bytes_t& script) { script_ = script; }
+    const bytes_t& script() const { return script_; }
+
+    uint32_t sequence() const { return sequence_; }
+    bytes_t raw() const;
+
+    void tx(std::shared_ptr<Tx> tx) { tx_ = tx; }
+    const std::shared_ptr<Tx> tx() const { return tx_; }
+
+    void txindex(unsigned int txindex) { txindex_ = txindex; }
+    uint32_t txindex() const { return txindex_; }
+
+private:
+    friend class odb::access;
+    TxIn() { }
+
+    #pragma db id auto
+    unsigned long id_;
+
+    bytes_t outhash_;
+    uint32_t outindex_;
+    bytes_t script_;
+    uint32_t sequence_;
+
+    #pragma db null
+    std::shared_ptr<Tx> tx_;
+
+    uint32_t txindex_;
+};
+
+typedef std::vector<std::shared_ptr<TxIn>> txins_t;
+
+inline TxIn::TxIn(const Coin::TxIn& coin_txin)
+{
+    outhash_ = coin_txin.getOutpointHash();
+    outindex_ = coin_txin.getOutpointIndex();
+    script_ = coin_txin.scriptSig;
+    sequence_ = coin_txin.sequence;
+}
+
+inline TxIn::TxIn(const bytes_t& raw)
+{
+    Coin::TxIn coin_txin(raw);
+    outhash_ = coin_txin.getOutpointHash();
+    outindex_ = coin_txin.getOutpointIndex();
+    script_ = coin_txin.scriptSig;
+    sequence_ = coin_txin.sequence;
+}
+
+inline Coin::TxIn TxIn::toCoinClasses() const
+{
+    Coin::TxIn coin_txin;
+    coin_txin.previousOut = Coin::OutPoint(outhash_, outindex_);
+    coin_txin.scriptSig = script_;
+    coin_txin.sequence = sequence_;
+    return coin_txin;
+}
+
+inline bytes_t TxIn::raw() const
+{
+    return toCoinClasses().getSerialized();
+}
+
+
+#pragma db object pointer(std::shared_ptr)
+class TxOut
+{
+public:
+    enum type_t { NONE = 1, CHANGE = 2, DEBIT = 4, CREDIT = 8, ALL = 15 };
+
+    TxOut(uint64_t value, const bytes_t& script, const null_id_t& account_id = null_id_t(), type_t type = NONE)
+        : value_(value), script_(script), account_id_(account_id), type_(type) { }
+
+    TxOut(const Coin::TxOut& coin_txout, const null_id_t& account_id = null_id_t(), type_t type = NONE);
+    TxOut(const bytes_t& raw, const null_id_t& account_id = null_id_t(), type_t type = NONE);
+
+    Coin::TxOut toCoinClasses() const;
+
+    unsigned long id() const { return id_; }
+    uint64_t value() const { return value_; }
+    const bytes_t& script() const { return script_; }
+    bytes_t raw() const;
+
+    void tx(std::shared_ptr<Tx> tx) { tx_ = tx; }
+    const std::shared_ptr<Tx> tx() const { return tx_; }
+
+    void txindex(uint32_t txindex) { txindex_ = txindex; }
+    uint32_t txindex() const { return txindex_; }
+
+    void spent(std::shared_ptr<TxIn> spent) { spent_ = spent; }
+    const std::shared_ptr<TxIn> spent() const { return spent_; }
+
+    void signingscript(std::shared_ptr<SigningScript> signingscript) { signingscript_ = signingscript; }
+    const std::shared_ptr<SigningScript> signingscript() const { return signingscript_; }
+
+    void account_id(const null_id_t& account_id) { account_id_ = account_id; }
+    const null_id_t& account_id() const { return account_id_; }
+
+    void type(type_t type) { type_ = type; }
+    type_t type() const { return type_; }
+
+private:
+    friend class odb::access;
+    TxOut() { }
+
+    #pragma db id auto
+    unsigned long id_;
+
+    uint64_t value_;
+    bytes_t script_;
+
+    #pragma db null
+    std::shared_ptr<Tx> tx_;
+    uint32_t txindex_;
+
+    #pragma db null
+    std::shared_ptr<TxIn> spent_;
+
+    #pragma db null
+    std::shared_ptr<SigningScript> signingscript_;
+
+    null_id_t account_id_;
+
+    type_t type_;
+};
+
+typedef std::vector<std::shared_ptr<TxOut>> txouts_t;
+
+inline TxOut::TxOut(const Coin::TxOut& coin_txout, const null_id_t& account_id, type_t type)
+{
+    value_ = coin_txout.value;
+    script_ = coin_txout.scriptPubKey;
+    account_id_ = account_id;
+    type_ = type;
+}
+
+inline TxOut::TxOut(const bytes_t& raw, const null_id_t& account_id, type_t type)
+{
+    Coin::TxOut coin_txout(raw);
+    value_ = coin_txout.value;
+    script_ = coin_txout.scriptPubKey;
+    account_id_ = account_id;
+    type_ = type;
+}
+
+inline Coin::TxOut TxOut::toCoinClasses() const
+{
+    Coin::TxOut coin_txout;
+    coin_txout.value = value_;
+    coin_txout.scriptPubKey = script_;
+    return coin_txout;
+}
+
+inline bytes_t TxOut::raw() const
+{
+    return toCoinClasses().getSerialized();
+}
+
+
+#pragma db object pointer(std::shared_ptr)
+class Tx : public std::enable_shared_from_this<Tx>
+{
+public:
+    enum status_t { UNSIGNED = 1, UNSENT = 2, SENT = 4, RECEIVED = 8, ALL = 15 };
+    /*
+     * UNSIGNED - created in the vault, not yet signed.
+     * UNSENT   - signed but not yet broadcast to network.
+     * SENT     - broadcast to network by us.
+     * RECEIVED - received from network.
+     *
+     * If status is UNSIGNED, remove all txinscripts before hashing so hash
+     * is unchanged by adding signatures until fully signed. Then compute
+     * normal hash and transition to one of the other states.
+     *
+     * Note: Status is always set to RECEIVED when we get it from verifier
+     *  node even if we sent it.
+     */
+
+    Tx(uint32_t version = 1, uint32_t locktime = 0, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED)
+        : version_(version), locktime_(locktime), timestamp_(timestamp), status_(status), have_fee_(false), fee_(0) { }
+
+    void set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED);
+    void set(const Coin::Transaction& coin_tx, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED);
+    void set(const bytes_t& raw, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED);
+
+    Coin::Transaction toCoinClasses() const;
+
+    void setBlock(std::shared_ptr<BlockHeader> blockheader, uint32_t blockindex);
+
+    unsigned long id() const { return id_; }
+    const bytes_t& hash() const { return hash_; }
+    bytes_t unsigned_hash() const { return unsigned_hash_; }
+    txins_t txins() const;
+    txouts_t txouts() const;
+    uint32_t locktime() const { return locktime_; }
+    bytes_t raw() const;
+
+    void timestamp(uint32_t timestamp) { timestamp_ = timestamp; }
+    uint32_t timestamp() const { return timestamp_; }
+
+    void status(status_t status);
+    status_t status() const { return status_; }
+
+    void fee(uint64_t fee) { have_fee_ = true; fee_ = fee; }
+    uint64_t fee() const { return fee_; }
+
+    bool have_fee() const { return have_fee_; }
+
+    void block(std::shared_ptr<BlockHeader> header, uint32_t index) { blockheader_ = header, blockindex_ = index; }
+
+    void blockheader(std::shared_ptr<BlockHeader> blockheader) { blockheader_ = blockheader; }
+    std::shared_ptr<BlockHeader> blockheader() const { return blockheader_; }
+
+    void shuffle_txins();
+    void shuffle_txouts();
+
+    void updateUnsignedHash();
+    void updateHash();
+
+private:
+    friend class odb::access;
+
+    void fromCoinClasses(const Coin::Transaction& coin_tx);
+
+    #pragma db id auto
+    unsigned long id_;
+
+    #pragma db unique
+    bytes_t hash_;
+
+    #pragma db unique
+    bytes_t unsigned_hash_;
+
+    uint32_t version_;
+
+    #pragma db value_not_null inverse(tx_)
+    std::vector<std::weak_ptr<TxIn>> txins_;
+
+    #pragma db value_not_null inverse(tx_)
+    std::vector<std::weak_ptr<TxOut>> txouts_;
+
+    uint32_t locktime_;
+
+    // Timestamp should be set each time we modify the transaction.
+    // Once status is RECEIVED the timestamp is fixed.
+    // Timestamp defaults to 0xffffffff
+    uint32_t timestamp_;
+
+    status_t status_;
+
+    // Due to issue with odb::nullable<uint64_t> in mingw-w64, we use a second bool variable.
+    bool have_fee_;
+    uint64_t fee_;
+
+    #pragma db null
+    std::shared_ptr<BlockHeader> blockheader_;
+
+    #pragma db null
+    odb::nullable<uint32_t> blockindex_;
+};
+
+inline void Tx::updateHash()
+{
+    if (status_ != UNSIGNED) {
+        hash_ = sha256_2(raw());
+        std::reverse(hash_.begin(), hash_.end());
+    }
+    else {
+        // TODO: should be nullable unique.
+        hash_ = unsigned_hash_;
+    }
+}
+
+inline void Tx::updateUnsignedHash()
+{
+    Coin::Transaction coin_tx = toCoinClasses();
+    coin_tx.clearScriptSigs();
+    unsigned_hash_ = coin_tx.getHashLittleEndian();
+}
+
+inline void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp, status_t status)
+{
+    version_ = version;
+
+    int i = 0;
+    txins_.clear();
+    for (auto& txin: txins)
+    {
+        txin->tx(shared_from_this());
+        txin->txindex(i++);
+        txins_.push_back(txin);
+    }
+
+    i = 0;
+    txouts_.clear();
+    for (auto& txout: txouts)
+    {
+        txout->tx(shared_from_this());
+        txout->txindex(i++);
+        txouts_.push_back(txout);
+    }
+
+    locktime_ = locktime;
+
+    timestamp_ = timestamp;
+    status_ = status;
+
+    updateUnsignedHash();
+    updateHash();
+}
+
+inline void Tx::set(const Coin::Transaction& coin_tx, uint32_t timestamp, status_t status)
+{
+    LOGGER(trace) << "Tx::set - fromCoinClasses(coin_tx);" << std::endl;
+    fromCoinClasses(coin_tx);
+
+    timestamp_ = timestamp;
+    status_ = status;
+
+    updateUnsignedHash();
+    updateHash();
+}
+
+inline void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
+{
+    Coin::Transaction coin_tx(raw);
+    fromCoinClasses(coin_tx);
+    timestamp_ = timestamp;
+    status_ = status;
+
+    updateUnsignedHash();
+    updateHash();
+}
+
+inline void Tx::status(status_t status)
+{
+    if (status_ != status) {
+        status_ = status;
+        //updateHash();
+    }
+}
+
+inline Coin::Transaction Tx::toCoinClasses() const
+{
+    Coin::Transaction coin_tx;
+    coin_tx.version = version_;
+    for (auto& txin:  txins()) { coin_tx.inputs.push_back(txin->toCoinClasses()); }
+    for (auto& txout: txouts()) { coin_tx.outputs.push_back(txout->toCoinClasses()); }
+    coin_tx.lockTime = locktime_;
+    return coin_tx;
+}
+
+inline void Tx::setBlock(std::shared_ptr<BlockHeader> blockheader, uint32_t blockindex)
+{
+    blockheader_ = blockheader;
+    blockindex_ = blockindex;
+}
+
+inline txins_t Tx::txins() const
+{
+    txins_t txins;
+    for (auto& txin: txins_) { txins.push_back(txin.lock()); }
+    return txins;
+}
+
+inline txouts_t Tx::txouts() const
+{
+    txouts_t txouts;
+    for (auto& txout: txouts_) { txouts.push_back(txout.lock()); }
+    return txouts;
+}
+
+inline bytes_t Tx::raw() const
+{
+    return toCoinClasses().getSerialized();
+}
+
+inline void Tx::shuffle_txins()
+{
+    int i = 0;
+    std::random_shuffle(txins_.begin(), txins_.end());
+    for (auto& txin: txins()) { txin->txindex(i++); }
+}
+
+inline void Tx::shuffle_txouts()
+{
+    int i = 0;
+    std::random_shuffle(txouts_.begin(), txouts_.end());
+    for (auto& txout: txouts()) { txout->txindex(i++); }
+}
+
+inline void Tx::fromCoinClasses(const Coin::Transaction& coin_tx)
+{
+    version_ = coin_tx.version;
+
+    int i = 0;
+    txins_.clear();
+    for (auto& coin_txin: coin_tx.inputs) {
+        std::shared_ptr<TxIn> txin(new TxIn(coin_txin));
+        txin->tx(shared_from_this());
+        txin->txindex(i++);
+        txins_.push_back(txin);
+    }
+
+    i = 0;
+    txouts_.clear();
+    for (auto& coin_txout: coin_tx.outputs) {
+        std::shared_ptr<TxOut> txout(new TxOut(coin_txout));
+        txout->tx(shared_from_this());
+        txout->txindex(i++);
+        txouts_.push_back(txout);
+    }
+
+    locktime_ = coin_tx.lockTime;
+}
 
 }
 
