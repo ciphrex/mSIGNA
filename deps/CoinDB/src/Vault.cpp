@@ -399,7 +399,7 @@ std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, con
     LOGGER(trace) << "Vault::getTxOutViews(" << account_name << ", " << bin_name << ", " << (unspent_only ? "unspent" : "all") << ")" << std::endl;
 
     typedef odb::query<TxOutView> query_t;
-    query_t query;
+    query_t query(query_t::Account::id != 0);
     if (unspent_only)           query = (query && query_t::TxOut::spent.is_null());
     if (account_name != "@all") query = (query && query_t::Account::name == account_name);
     if (bin_name != "@all")     query = (query && query_t::AccountBin::name == bin_name);

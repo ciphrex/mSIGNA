@@ -306,6 +306,38 @@ cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 1 || params.size() > 4)
+        return "listtxouts <filename> [account_name = @all] [bin_name = @all] [unspent_only = true] - display list of transaction outputs.";
+
+    std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
+    std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
+    bool unspent_only = params.size() > 3 ? (params[3] == "true") : true; 
+    
+    Vault vault(params[0], false);
+    vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name, unspent_only);
+
+    using namespace CoinQ::Script;
+    stringstream ss;
+    bool newLine = false;
+    for (auto& txOutView: txOutViews)
+    {
+        if (newLine)    ss << endl;
+        else            newLine = true;
+
+        std::string address;
+        payee_t payee = getScriptPubKeyPayee(txOutView.script);
+        if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
+            address = toBase58Check(payee.second, PAY_TO_SCRIPT_HASH_VERSION);
+        else
+            address = "N/A";
+
+        ss << "account: " << left << setw(15) << txOutView.account_name << " | bin: " << left << setw(15) << txOutView.account_bin_name << " | script: " << left << setw(50) << uchar_vector(txOutView.script).getHex() << " | address: " << left << setw(36) << address << " | value: " << left << setw(15) << txOutView.value;
+    }
+    return ss.str();
+}
+
 cli::result_t cmd_insertrawtx(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
@@ -357,6 +389,7 @@ int main(int argc, char* argv[])
     cmds.add("newaccountbin", &cmd_newaccountbin);
     cmds.add("newscript", &cmd_newscript);
     cmds.add("listscripts", &cmd_listscripts);
+    cmds.add("listtxouts", &cmd_listtxouts);
 
     // Tx operations
     cmds.add("insertrawtx", &cmd_insertrawtx);
