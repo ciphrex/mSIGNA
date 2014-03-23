@@ -502,6 +502,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 
     // If we get here it means we've either never seen this transaction before or it doesn't affect our accounts.
 
+    std::set<std::shared_ptr<Tx>> conflicting_txs;
     std::set<std::shared_ptr<TxOut>> updated_txouts;
 
     // Check inputs
@@ -510,7 +511,144 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
     uint64_t input_total = 0;
     std::shared_ptr<Account> signing_account;
 
-    // CONTINUE HERE
+    for (auto& txin: tx->txins())
+    {
+        // Check if inputs connect
+        tx_r = db_->query<Tx>(odb::query<Tx>::hash == txin->outhash());
+        if (tx_r.empty())
+        {
+            have_all_outpoints = false;
+        }
+        else
+        {
+            std::shared_ptr<Tx> spent_tx(tx_r.begin().load());
+            txouts_t outpoints = spent_tx->txouts();
+            uint32_t outindex = txin->outindex();
+            if (outpoints.size() <= outindex) throw std::runtime_error("Vault::insertTx_unwrapped - outpoint out of range.");
+            std::shared_ptr<TxOut>& outpoint = outpoints[outindex];
+
+            // Check for double spend, track conflicted transaction so we can update status if necessary later.
+            std::shared_ptr<TxIn> conflict_txin = outpoint->spent();
+            if (conflict_txin)
+            {
+                LOGGER(debug) << "Vault::insertTx_unwrapped - Discovered conflicting transaction. Double spend. hash: " << uchar_vector(conflict_txin->tx()->hash()).getHex() << std::endl;
+                conflicting_txs.insert(conflict_txin->tx());
+            } 
+
+            input_total += outpoint->value();
+
+            // Was this transaction signed using one of our accounts?
+            odb::result<SigningScript> script_r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == outpoint->script()));
+            if (!script_r.empty())
+            {
+                sent_from_vault = true;
+                outpoint->spent(txin);
+                updated_txouts.insert(outpoint);
+                if (!signing_account)
+                {
+                    // Assuming all inputs belong to the same account
+                    // TODO: Allow coin mixing
+                    std::shared_ptr<SigningScript> script(script_r.begin().load());
+                    signing_account = script->account();
+                }
+            }
+        }
+    }
+
+    std::set<std::shared_ptr<SigningScript>> scripts;
+
+    // Check outputs
+    bool sent_to_vault = false; // whether any of the outputs are spendable by accounts in vault
+    uint64_t output_total = 0;
+
+    for (auto& txout: tx->txouts())
+    {
+        output_total += txout->value();
+        odb::result<SigningScript> script_r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == txout->script()));
+        if (!script_r.empty())
+        {
+            // This output is spendable from an account in the vault
+            sent_to_vault = true;
+            std::shared_ptr<SigningScript> script(script_r.begin().load());
+            txout->account(script->account());
+            txout->signingscript(script);
+
+            // Update the signing script and txout status
+            switch (script->status())
+            {
+            case SigningScript::UNUSED:
+                if (sent_from_vault && script->account_bin()->isChange())
+                {
+                    script->status(SigningScript::CHANGE);
+                    txout->type(TxOut::CHANGE);
+                }
+                else
+                {
+                    script->status(SigningScript::RECEIVED);
+                    txout->type(TxOut::CREDIT);
+                }
+                scripts.insert(script);
+                // TODO: refillAccountBinUnusedPool_unwrapped(script->account_bin());
+                break;
+
+            case SigningScript::CHANGE:
+                txout->type(TxOut::CHANGE);
+                break;
+
+            case SigningScript::PENDING:
+                script->status(SigningScript::RECEIVED);
+                txout->type(TxOut::CREDIT);
+                scripts.insert(script);
+                break;
+
+            case SigningScript::RECEIVED:
+                txout->type(TxOut::CREDIT);
+                break;
+
+            default:
+                break;
+            }
+
+            // Check if the output has already been spent (transactions inserted out of order)
+            odb::result<TxIn> txin_r(db_->query<TxIn>(odb::query<TxIn>::outhash == tx->hash() && odb::query<TxIn>::outindex == txout->txindex()));
+            if (!txin_r.empty())
+            {
+                std::shared_ptr<TxIn> txin(txin_r.begin().load());
+                txout->spent(txin);
+            }
+        }
+        else if (signing_account)
+        {
+            // Again, assume all inputs sent from same account.
+            // TODO: Allow coin mixing.
+            txout->account(signing_account);
+            txout->type(TxOut::DEBIT);
+        }
+    }
+
+    if (!conflicting_txs.empty())
+    {
+        tx->status(Tx::CONFLICTED);
+        for (auto& tx: conflicting_txs)
+        {
+            if (tx->status() != Tx::CONFIRMED) { tx->status(Tx::CONFLICTED); }
+        }
+    }
+
+    if (sent_from_vault || sent_to_vault)
+    {
+        for (auto& txin:    tx->txins())    { db_->persist(*txin); }
+        for (auto& txout:   tx->txouts())   { db_->persist(*txout); }
+        for (auto& script:  scripts)        { db_->update(*script); }
+        if (have_all_outpoints) { tx->fee(input_total - output_total); }
+        db_->persist(*tx);
+
+        for (auto& txout:   updated_txouts) { db_->update(txout); }
+
+        // TODO: updateConfirmations_unwrapped(tx);
+        return tx;
+    }
+
     return nullptr; 
 }
 

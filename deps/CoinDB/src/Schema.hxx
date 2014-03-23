@@ -436,6 +436,9 @@ public:
     bool loadKeychains();
     KeychainSet keychains() const { return keychains_; }
 
+    bool isChange() const { return index_ == CHANGE; }
+    bool isDefault() const { return index_ == DEFAULT; }
+
 private:
     friend class odb::access;
     AccountBin() { }
@@ -1091,11 +1094,11 @@ class TxOut
 public:
     enum type_t { NONE = 1, CHANGE = 2, DEBIT = 4, CREDIT = 8, ALL = 15 };
 
-    TxOut(uint64_t value, const bytes_t& script, const null_id_t& account_id = null_id_t(), type_t type = NONE)
-        : value_(value), script_(script), account_id_(account_id), type_(type) { }
+    TxOut(uint64_t value, const bytes_t& script, std::shared_ptr<Account> account = nullptr, type_t type = NONE)
+        : value_(value), script_(script), account_(account), type_(type) { }
 
-    TxOut(const Coin::TxOut& coin_txout, const null_id_t& account_id = null_id_t(), type_t type = NONE);
-    TxOut(const bytes_t& raw, const null_id_t& account_id = null_id_t(), type_t type = NONE);
+    TxOut(const Coin::TxOut& coin_txout, std::shared_ptr<Account> account = nullptr, type_t type = NONE);
+    TxOut(const bytes_t& raw, std::shared_ptr<Account> account = nullptr, type_t type = NONE);
 
     Coin::TxOut toCoinClasses() const;
 
@@ -1116,8 +1119,8 @@ public:
     void signingscript(std::shared_ptr<SigningScript> signingscript) { signingscript_ = signingscript; }
     const std::shared_ptr<SigningScript> signingscript() const { return signingscript_; }
 
-    void account_id(const null_id_t& account_id) { account_id_ = account_id; }
-    const null_id_t& account_id() const { return account_id_; }
+    void account(std::shared_ptr<Account>  account) { account_ = account; }
+    std::shared_ptr<Account> account() const { return account_; }
 
     void type(type_t type) { type_ = type; }
     type_t type() const { return type_; }
@@ -1142,27 +1145,28 @@ private:
     #pragma db null
     std::shared_ptr<SigningScript> signingscript_;
 
-    null_id_t account_id_;
+    #pragma db null
+    std::shared_ptr<Account> account_;
 
     type_t type_;
 };
 
 typedef std::vector<std::shared_ptr<TxOut>> txouts_t;
 
-inline TxOut::TxOut(const Coin::TxOut& coin_txout, const null_id_t& account_id, type_t type)
+inline TxOut::TxOut(const Coin::TxOut& coin_txout, std::shared_ptr<Account> account, type_t type)
 {
     value_ = coin_txout.value;
     script_ = coin_txout.scriptPubKey;
-    account_id_ = account_id;
+    account_ = account;
     type_ = type;
 }
 
-inline TxOut::TxOut(const bytes_t& raw, const null_id_t& account_id, type_t type)
+inline TxOut::TxOut(const bytes_t& raw, std::shared_ptr<Account> account, type_t type)
 {
     Coin::TxOut coin_txout(raw);
     value_ = coin_txout.value;
     script_ = coin_txout.scriptPubKey;
-    account_id_ = account_id;
+    account_ = account;
     type_ = type;
 }
 
