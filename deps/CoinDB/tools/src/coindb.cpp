@@ -245,10 +245,10 @@ cli::result_t cmd_newaccountbin(bool bHelp, const cli::params_t& params)
 // TODO: Get from config file
 const unsigned char PAY_TO_SCRIPT_HASH_VERSION = 0x05;
 
-cli::result_t cmd_newaddress(bool bHelp, const cli::params_t& params)
+cli::result_t cmd_newscript(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 2 || params.size() > 4)
-        return "newaddress <filename> <account_name> [bin_name = @default] [label = null] - get a new signing script.";
+        return "newscript <filename> <account_name> [bin_name = @default] [label = null] - get a new signing script.";
 
     Vault vault(params[0], false);
     std::string bin_name = params.size() > 2 ? params[2] : std::string("@default");
@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
     cmds.add("accountinfo", &cmd_accountinfo);
     cmds.add("listaccounts", &cmd_listaccounts);
     cmds.add("newaccountbin", &cmd_newaccountbin);
-    cmds.add("newaddress", &cmd_newaddress);
+    cmds.add("newscript", &cmd_newscript);
 
     try 
     {
