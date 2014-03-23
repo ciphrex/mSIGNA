@@ -477,7 +477,6 @@ public:
         bin_names_(bin_names)
     {
         std::sort(keychain_names_.begin(), keychain_names_.end());
-        std::sort(bin_names_.begin(), bin_names_.end());
     }
 
     AccountInfo(const AccountInfo& source) :
@@ -608,7 +607,7 @@ inline bool AccountBin::loadKeychains()
 class SigningScript : public std::enable_shared_from_this<SigningScript>
 {
 public:
-    enum status_t { UNUSED = 1, CHANGE = 2, PENDING = 4, RECEIVED = 8, ALL = 15 };
+    enum status_t { UNUSED = 1, CHANGE = 2, PENDING = 4, RECEIVED = 8, CANCELED = 16, ALL = 31 };
     static std::string getStatusString(int status)
     {
         std::vector<std::string> flags;
@@ -616,6 +615,7 @@ public:
         if (status & CHANGE) flags.push_back("CHANGE");
         if (status & PENDING) flags.push_back("PENDING");
         if (status & RECEIVED) flags.push_back("RECEIVED");
+        if (status & CANCELED) flags.push_back("CANCELED");
         if (flags.empty()) return "UNKNOWN";
 
         return stdutils::delimited_list(flags, " | ");
@@ -628,6 +628,7 @@ public:
         if (status & CHANGE) flags.push_back(CHANGE);
         if (status & PENDING) flags.push_back(PENDING);
         if (status & RECEIVED) flags.push_back(RECEIVED);
+        if (status & CANCELED) flags.push_back(CANCELED);
         return flags;
     }
 

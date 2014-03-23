@@ -97,9 +97,11 @@ OBJS = \
     obj/Vault.o
 
 
-all: lib/libCoinDB.a tools/build/coindb$(EXE_EXT)
+all: lib tools
 
 lib: lib/libCoinDB.a
+
+tools: tools/build/coindb$(EXE_EXT)
 
 lib/libCoinDB.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^

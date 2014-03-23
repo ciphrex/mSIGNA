@@ -275,7 +275,7 @@ cli::result_t cmd_newscript(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 1 || params.size() > 4)
-        return "listscripts <filename> [account_name = ALL] [bin_name = ALL] [flags = PENDING | RECEIVED] - display list of signing script. (flags: UNUSED=1, CHANGE=2, PENDING=4, RECEIVED=8)";
+        return "listscripts <filename> [account_name = ALL] [bin_name = ALL] [flags = PENDING | RECEIVED] - display list of signing script. (flags: UNUSED=1, CHANGE=2, PENDING=4, RECEIVED=8, CANCELED=16)";
 
     std::string account_name;
     if (params.size() > 1) account_name = params[1];
