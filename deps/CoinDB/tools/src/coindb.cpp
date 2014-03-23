@@ -18,6 +18,9 @@
 
 #include <random.h>
 
+// TODO: create separate library
+#include <stdutils/stringutils.h>
+
 #include <iostream>
 #include <sstream>
 
@@ -193,35 +196,36 @@ cli::result_t cmd_accountinfo(bool bHelp, const cli::params_t& params)
     Vault vault(params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
 
-    // TODO: add the following list generating routine to a general utils library
-    bool addComma = false;
-    std::string keychain_list;
-    for (auto& keychain_name: accountInfo.keychain_names())
-    {
-        if (addComma)   keychain_list += ", ";
-        else            addComma = true;
-
-        keychain_list += keychain_name;
-    }
-
-    addComma = false;
-    std::string bin_list;
-    for (auto& bin_name: accountInfo.bin_names())
-    {
-        if (addComma)   bin_list += ", ";
-        else            addComma = true;
-
-        bin_list += bin_name;
-    }
-
+    using namespace stdutils;
     stringstream ss;
     ss << "id:               " << accountInfo.id() << endl
        << "name:             " << accountInfo.name() << endl
        << "minsigs:          " << accountInfo.minsigs() << endl
-       << "keychains:        " << keychain_list << endl
+       << "keychains:        " << delimited_list(accountInfo.keychain_names(), ", ") << endl
        << "unused_pool_size: " << accountInfo.unused_pool_size() << endl
        << "time_created:     " << accountInfo.time_created() << endl
-       << "bins:             " << bin_list;
+       << "bins:             " << delimited_list(accountInfo.bin_names(), ", ");
+    return ss.str();
+}
+
+cli::result_t cmd_listaccounts(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 1)
+        return "listaccounts <filename> - display list of accounts.";
+
+    Vault vault(params[0], false);
+    vector<AccountInfo> accounts = vault.getAllAccountInfo();
+
+    using namespace stdutils;
+    stringstream ss;
+    bool newLine = false;
+    for (auto& account: accounts)
+    {
+        if (newLine)    ss << endl;
+        else            newLine = true;
+
+        ss << "name: " << account.name() << " | id: " << account.id() << " | policy: " << account.minsigs() << " of " << delimited_list(account.keychain_names(), ", ");
+    }
     return ss.str();
 }
 
@@ -289,6 +293,7 @@ int main(int argc, char* argv[])
     cmds.add("newaccount", &cmd_newaccount);
     cmds.add("renameaccount", &cmd_renameaccount);
     cmds.add("accountinfo", &cmd_accountinfo);
+    cmds.add("listaccounts", &cmd_listaccounts);
     cmds.add("newaccountbin", &cmd_newaccountbin);
     cmds.add("newtxout", &cmd_newtxout);
 

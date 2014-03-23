@@ -473,7 +473,10 @@ public:
         unused_pool_size_(unused_pool_size),
         time_created_(time_created),
         bin_names_(bin_names)
-    { }
+    {
+        std::sort(keychain_names_.begin(), keychain_names_.end());
+        std::sort(bin_names_.begin(), bin_names_.end());
+    }
 
     AccountInfo(const AccountInfo& source) :
         id_(source.id_),

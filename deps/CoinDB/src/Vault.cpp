@@ -233,6 +233,19 @@ AccountInfo Vault::getAccountInfo(const std::string& account_name) const
     return account->accountInfo();
 }
 
+std::vector<AccountInfo> Vault::getAllAccountInfo() const
+{
+    LOGGER(trace) << "Vault::getAllAccountInfo()" << std::endl;
+ 
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    odb::result<Account> r(db_->query<Account>());
+    std::vector<AccountInfo> accountInfoVector;
+    for (auto& account: r) { accountInfoVector.push_back(account.accountInfo()); }
+    return accountInfoVector;
+}
+
 std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name, const std::string& bin_name)
 {
     LOGGER(trace) << "Vault::addAccountBin(" << account_name << ", " << bin_name << ")" << std::endl;
