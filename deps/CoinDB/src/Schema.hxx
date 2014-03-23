@@ -1030,7 +1030,7 @@ public:
     bytes_t raw() const;
 
     void tx(std::shared_ptr<Tx> tx) { tx_ = tx; }
-    const std::shared_ptr<Tx> tx() const { return tx_; }
+    const std::shared_ptr<Tx> tx() const { return tx_.lock(); }
 
     void txindex(unsigned int txindex) { txindex_ = txindex; }
     uint32_t txindex() const { return txindex_; }
@@ -1047,8 +1047,8 @@ private:
     bytes_t script_;
     uint32_t sequence_;
 
-    #pragma db null
-    std::shared_ptr<Tx> tx_;
+    #pragma db not_null
+    std::weak_ptr<Tx> tx_;
 
     uint32_t txindex_;
 };
@@ -1107,7 +1107,7 @@ public:
     bytes_t raw() const;
 
     void tx(std::shared_ptr<Tx> tx) { tx_ = tx; }
-    const std::shared_ptr<Tx> tx() const { return tx_; }
+    const std::shared_ptr<Tx> tx() const { return tx_.lock(); }
 
     void txindex(uint32_t txindex) { txindex_ = txindex; }
     uint32_t txindex() const { return txindex_; }
@@ -1134,8 +1134,8 @@ private:
     uint64_t value_;
     bytes_t script_;
 
-    #pragma db null
-    std::shared_ptr<Tx> tx_;
+    #pragma db not_null
+    std::weak_ptr<Tx> tx_;
     uint32_t txindex_;
 
     #pragma db null
@@ -1222,8 +1222,8 @@ public:
     unsigned long id() const { return id_; }
     const bytes_t& hash() const { return hash_; }
     bytes_t unsigned_hash() const { return unsigned_hash_; }
-    txins_t txins() const;
-    txouts_t txouts() const;
+    txins_t txins() const { return txins_; }
+    txouts_t txouts() const { return txouts_; }
     uint32_t locktime() const { return locktime_; }
     bytes_t raw() const;
 
@@ -1271,10 +1271,10 @@ private:
     uint32_t version_;
 
     #pragma db value_not_null inverse(tx_)
-    std::vector<std::weak_ptr<TxIn>> txins_;
+    txins_t txins_;
 
     #pragma db value_not_null inverse(tx_)
-    std::vector<std::weak_ptr<TxOut>> txouts_;
+    txouts_t txouts_;
 
     uint32_t locktime_;
 
@@ -1392,8 +1392,8 @@ inline Coin::Transaction Tx::toCoinClasses() const
 {
     Coin::Transaction coin_tx;
     coin_tx.version = version_;
-    for (auto& txin:  txins()) { coin_tx.inputs.push_back(txin->toCoinClasses()); }
-    for (auto& txout: txouts()) { coin_tx.outputs.push_back(txout->toCoinClasses()); }
+    for (auto& txin:  txins_) { coin_tx.inputs.push_back(txin->toCoinClasses()); }
+    for (auto& txout: txouts_) { coin_tx.outputs.push_back(txout->toCoinClasses()); }
     coin_tx.lockTime = locktime_;
     return coin_tx;
 }
@@ -1402,20 +1402,6 @@ inline void Tx::setBlock(std::shared_ptr<BlockHeader> blockheader, uint32_t bloc
 {
     blockheader_ = blockheader;
     blockindex_ = blockindex;
-}
-
-inline txins_t Tx::txins() const
-{
-    txins_t txins;
-    for (auto& txin: txins_) { txins.push_back(txin.lock()); }
-    return txins;
-}
-
-inline txouts_t Tx::txouts() const
-{
-    txouts_t txouts;
-    for (auto& txout: txouts_) { txouts.push_back(txout.lock()); }
-    return txouts;
 }
 
 inline bytes_t Tx::raw() const
@@ -1427,30 +1413,24 @@ inline void Tx::shuffle_txins()
 {
     int i = 0;
     std::random_shuffle(txins_.begin(), txins_.end());
-    for (auto& txin: txins()) { txin->txindex(i++); }
+    for (auto& txin: txins_) { txin->txindex(i++); }
 }
 
 inline void Tx::shuffle_txouts()
 {
     int i = 0;
     std::random_shuffle(txouts_.begin(), txouts_.end());
-    for (auto& txout: txouts()) { txout->txindex(i++); }
+    for (auto& txout: txouts_) { txout->txindex(i++); }
 }
 
 inline void Tx::fromCoinClasses(const Coin::Transaction& coin_tx)
 {
-    LOGGER(trace) << "before version_ = coin_tx.version" << std::endl;
     version_ = coin_tx.version;
-    LOGGER(trace) << "after version_ = coin_tx.version" << std::endl;
 
     int i = 0;
-    LOGGER(trace) << "before txins_.clear()" << std::endl;
-//    txins_.clear();
-    LOGGER(trace) << "after txins_.clear()" << std::endl;
-return;
+    txins_.clear();
     for (auto& coin_txin: coin_tx.inputs)
     {
-        LOGGER(trace) << "new TxIn" << std::endl;
         std::shared_ptr<TxIn> txin(new TxIn(coin_txin));
         txin->tx(shared_from_this());
         txin->txindex(i++);
@@ -1461,7 +1441,6 @@ return;
     txouts_.clear();
     for (auto& coin_txout: coin_tx.outputs)
     {
-        LOGGER(trace) << "new TxOut" << std::endl;
         std::shared_ptr<TxOut> txout(new TxOut(coin_txout));
         txout->tx(shared_from_this());
         txout->txindex(i++);
@@ -1476,7 +1455,7 @@ inline unsigned int Tx::missingSigCount() const
     // Assume for now all inputs belong to the same account.
     using namespace CoinQ::Script;
     unsigned int count = 0;
-    for (auto& txin: txins())
+    for (auto& txin: txins_)
     {
         Script script(txin->script());
         unsigned int sigsneeded = script.sigsneeded();
@@ -1489,7 +1468,7 @@ inline std::set<bytes_t> Tx::missingSigPubkeys() const
 {
     using namespace CoinQ::Script;
     std::set<bytes_t> pubkeys;
-    for (auto& txin: txins())
+    for (auto& txin: txins_)
     {
         Script script(txin->script());
         std::vector<bytes_t> txinpubkeys = script.missingsigs();

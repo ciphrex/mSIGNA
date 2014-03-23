@@ -317,10 +317,10 @@ cli::result_t cmd_insertrawtx(bool bHelp, const cli::params_t& params)
     if (bHelp || params.size() != 2)
         return "insertrawtx <filename> <raw tx hex> - inserts a raw transaction into vault.";
 
-    std::shared_ptr<Tx> tx;
-    tx->set(uchar_vector(params[1]));
-
     Vault vault(params[0], false);
+
+    std::shared_ptr<Tx> tx(new Tx());
+    tx->set(uchar_vector(params[1]));
     tx = vault.insertTx(tx);
 
     stringstream ss;
