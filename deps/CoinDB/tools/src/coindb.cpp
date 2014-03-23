@@ -272,6 +272,43 @@ cli::result_t cmd_newscript(bool bHelp, const cli::params_t& params)
     return ss.str(); 
 }
 
+cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 1 || params.size() > 4)
+        return "listscripts <filename> [account_name = ALL] [bin_name = ALL] [flags = ALL] - display list of signing script. (flags: UNUSED=1, CHANGE=2, REQUESTED=4, RECEIVED=8)";
+
+    std::string account_name;
+    if (params.size() > 1) account_name = params[1];
+
+    std::string bin_name;
+    if (params.size() > 2) bin_name = params[2];
+
+    int flags = params.size() > 3 ? (int)strtoul(params[3].c_str(), NULL, 0) : (int)SigningScript::ALL;
+    
+    Vault vault(params[0], false);
+    vector<SigningScriptView> scriptViews = vault.getSigningScriptViews(account_name, bin_name, flags);
+
+    using namespace CoinQ::Script;
+    stringstream ss;
+    bool newLine = false;
+    for (auto& scriptView: scriptViews)
+    {
+        if (newLine)    ss << endl;
+        else            newLine = true;
+
+        std::string address;
+        payee_t payee = getScriptPubKeyPayee(scriptView.txoutscript);
+        if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
+            address = toBase58Check(payee.second, PAY_TO_SCRIPT_HASH_VERSION);
+        else
+            address = "N/A";
+
+        ss << "account: " << left << setw(15) << scriptView.account_name << " | bin: " << left << setw(15) << scriptView.account_bin_name << " | script: " << left << setw(50) << uchar_vector(scriptView.txoutscript).getHex() << " | address: " << left << setw(36) << address << " | status: " << SigningScript::getStatusString(scriptView.status);
+    }
+    return ss.str();
+}
+
+
 int main(int argc, char* argv[])
 {
     cli::command_map cmds("CoinDB by Eric Lombrozo v0.2.0");
@@ -295,6 +332,7 @@ int main(int argc, char* argv[])
     cmds.add("listaccounts", &cmd_listaccounts);
     cmds.add("newaccountbin", &cmd_newaccountbin);
     cmds.add("newscript", &cmd_newscript);
+    cmds.add("listscripts", &cmd_listscripts);
 
     try 
     {

@@ -19,6 +19,8 @@
 #include <CoinNodeData.h>
 #include <hdkeys.h>
 
+#include <stdutils/stringutils.h>
+
 #include <odb/core.hxx>
 #include <odb/nullable.hxx>
 #include <odb/database.hxx>
@@ -609,13 +611,24 @@ public:
     enum status_t { UNUSED = 1, CHANGE = 2, REQUESTED = 4, RECEIVED = 8, ALL = 15 };
     static std::string getStatusString(int status)
     {
-        switch (status) {
-        case UNUSED: return "UNUSED";
-        case CHANGE: return "CHANGE";
-        case REQUESTED: return "REQUESTED";
-        case RECEIVED: return "RECEIVED";
-        default: return "UNKNOWN";
-        }
+        std::vector<std::string> flags;
+        if (status & UNUSED) flags.push_back("UNUSED");
+        if (status & CHANGE) flags.push_back("CHANGE");
+        if (status & REQUESTED) flags.push_back("REQUESTED");
+        if (status & RECEIVED) flags.push_back("RECEIVED");
+        if (flags.empty()) return "UNKNOWN";
+
+        return stdutils::delimited_list(flags, " | ");
+    }
+
+    static std::vector<status_t> getStatusFlags(int status)
+    {
+        std::vector<status_t> flags;
+        if (status & UNUSED) flags.push_back(UNUSED);
+        if (status & CHANGE) flags.push_back(CHANGE);
+        if (status & REQUESTED) flags.push_back(REQUESTED);
+        if (status & RECEIVED) flags.push_back(RECEIVED);
+        return flags;
     }
 
     SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index, const std::string& label = "", status_t status = UNUSED);

@@ -370,6 +370,28 @@ std::shared_ptr<SigningScript> Vault::newSigningScript(const std::string& accoun
     return script;
 }
 
+std::vector<SigningScriptView> Vault::getSigningScriptViews(const std::string& account_name, const std::string& bin_name, int flags) const
+{
+    LOGGER(trace) << "Vault::getSigningScriptViews(" << account_name << ", " << bin_name << ", " << SigningScript::getStatusString(flags) << ")" << std::endl;
+
+    std::vector<SigningScript::status_t> statusRange = SigningScript::getStatusFlags(flags);
+
+    typedef odb::query<SigningScriptView> query_t;
+    query_t query(query_t::SigningScript::status.in_range(statusRange.begin(), statusRange.end()));
+    if (!account_name.empty()) query += query_t::Account::name == account_name;
+    if (!bin_name.empty()) query += query_t::AccountBin::name == bin_name;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+
+    std::vector<SigningScriptView> views;
+    odb::result<SigningScriptView> r(db_->query<SigningScriptView>(query));
+    for (auto& view: r) { views.push_back(view); }
+    return views;
+}
+
+
 // AccountBin operations
 std::shared_ptr<AccountBin> Vault::getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const
 {

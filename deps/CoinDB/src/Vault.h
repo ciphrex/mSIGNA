@@ -32,7 +32,9 @@ public:
     Vault(const std::string& filename, bool create = false, uint32_t version = SCHEMA_VERSION);
 #endif
 
-    // Keychain operations
+    /////////////////////////
+    // KEYCHAIN OPERATIONS //
+    /////////////////////////
     bool keychainExists(const std::string& keychain_name) const;
     std::shared_ptr<Keychain> newKeychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
     //void eraseKeychain(const std::string& keychain_name) const;
@@ -43,7 +45,9 @@ public:
     //bytes_t importKeychain(const std::string& keychain_name, const std::string& filepath, bool& importprivkeys);
     //bool isKeychainFilePrivate(const std::string& filepath) const;
 
-    // Account operations
+    ////////////////////////
+    // ACCOUNT OPERATIONS //
+    ////////////////////////
     bool accountExists(const std::string& account_name) const;
     void newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL));
     //void eraseAccount(const std::string& name) const;
@@ -55,7 +59,12 @@ public:
     std::shared_ptr<AccountBin> addAccountBin(const std::string& account_name, const std::string& bin_name);
     std::shared_ptr<SigningScript> newSigningScript(const std::string& account_name, const std::string& bin_name = "@default", const std::string& label = "");
 
-    // AccountBin operations
+    // empty account_name or bin_name means do not filter on those fields
+    std::vector<SigningScriptView> getSigningScriptViews(const std::string& account_name = "", const std::string& bin_name = "", int flags = SigningScript::ALL) const;
+
+    ////////////////////////////
+    // ACCOUNT BIN OPERATIONS //
+    ////////////////////////////
     std::shared_ptr<AccountBin> getAccountBin(const std::string& account_name, const std::string& bin_name) const;
 
 protected:
