@@ -1184,13 +1184,18 @@ inline bytes_t TxOut::raw() const
 class Tx : public std::enable_shared_from_this<Tx>
 {
 public:
-    enum status_t { UNSIGNED = 1, UNSENT = 2, SENT = 4, RECEIVED = 8, ALL = 15 };
+    enum status_t
+    {
+        UNSIGNED    = 1,      // still missing signatures
+        UNSENT      = 1 << 1, // signed but not yet broadcast to network
+        SENT        = 1 << 2, // sent to at least one peer but possibly not propagated
+        RECEIVED    = 1 << 3, // received from at least one peer
+        CONFIRMED   = 1 << 4, // exists in blockchain
+        CONFLICTED  = 1 << 5, // unconfirmed and spends the same output as another transaction
+        CANCELED    = 1 << 6, // either will never be broadcast or will never confirm
+        ALL         = (1 << 7) - 1
+    };
     /*
-     * UNSIGNED - created in the vault, not yet signed.
-     * UNSENT   - signed but not yet broadcast to network.
-     * SENT     - broadcast to network by us.
-     * RECEIVED - received from network.
-     *
      * If status is UNSIGNED, remove all txinscripts before hashing so hash
      * is unchanged by adding signatures until fully signed. Then compute
      * normal hash and transition to one of the other states.
@@ -1237,8 +1242,12 @@ public:
     void shuffle_txins();
     void shuffle_txouts();
 
+    void updateStatus();
     void updateUnsignedHash();
     void updateHash();
+
+    unsigned int missingSigCount() const;
+    std::set<bytes_t> missingSigPubkeys() const;
 
 private:
     friend class odb::access;
@@ -1248,9 +1257,10 @@ private:
     #pragma db id auto
     unsigned long id_;
 
-    #pragma db unique
+    // hash stays empty until transaction is fully signed.
     bytes_t hash_;
 
+    // We'll use the unsigned hash as a unique identifier to avoid malleability issues.
     #pragma db unique
     bytes_t unsigned_hash_;
 
@@ -1282,15 +1292,18 @@ private:
     odb::nullable<uint32_t> blockindex_;
 };
 
+inline void Tx::updateStatus()
+{
+    // TODO: check for conflicts
+    if (missingSigCount() > 0) status_ = UNSIGNED;
+}
+
 inline void Tx::updateHash()
 {
+    // Leave hash blank until fully signed
     if (status_ != UNSIGNED) {
         hash_ = sha256_2(raw());
         std::reverse(hash_.begin(), hash_.end());
-    }
-    else {
-        // TODO: should be nullable unique.
-        hash_ = unsigned_hash_;
     }
 }
 
@@ -1328,6 +1341,7 @@ inline void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txou
     timestamp_ = timestamp;
     status_ = status;
 
+    updateStatus();
     updateUnsignedHash();
     updateHash();
 }
@@ -1340,6 +1354,7 @@ inline void Tx::set(const Coin::Transaction& coin_tx, uint32_t timestamp, status
     timestamp_ = timestamp;
     status_ = status;
 
+    updateStatus();
     updateUnsignedHash();
     updateHash();
 }
@@ -1351,10 +1366,12 @@ inline void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
     timestamp_ = timestamp;
     status_ = status;
 
+    updateStatus();
     updateUnsignedHash();
     updateHash();
 }
 
+// TODO: Status updates should occur automatically
 inline void Tx::status(status_t status)
 {
     if (status_ != status) {
@@ -1437,6 +1454,31 @@ inline void Tx::fromCoinClasses(const Coin::Transaction& coin_tx)
     locktime_ = coin_tx.lockTime;
 }
 
+inline unsigned int Tx::missingSigCount() const
+{
+    // Assume for now all inputs belong to the same account.
+    using namespace CoinQ::Script;
+    unsigned int count = 0;
+    for (auto& txin: txins())
+    {
+        Script script(txin->script());
+        unsigned int sigsneeded = script.sigsneeded();
+        if (sigsneeded > count) count = sigsneeded;
+    }
+    return count;
+}
+
+inline std::set<bytes_t> Tx::missingSigPubkeys() const
+{
+    using namespace CoinQ::Script;
+    std::set<bytes_t> pubkeys;
+    for (auto& txin: txins())
+    {
+        Script script(txin->script());
+        std::vector<bytes_t> txinpubkeys = script.missingsigs();
+        for (auto& txinpubkey: txinpubkeys) { pubkeys.insert(txinpubkey); }
+    } 
+    return pubkeys;}
 }
 
 #endif // COINDB_SCHEMA_HXX
