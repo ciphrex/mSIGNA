@@ -58,4 +58,10 @@ public:
     }
 };
 
+class InsufficientFundsException : public std::runtime_error
+{
+public:
+    InsufficientFundsException() : std::runtime_error("Insufficient funds.") { }
+};
+
 }

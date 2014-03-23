@@ -72,7 +72,7 @@ public:
     // TX OPERATIONS //
     ///////////////////
     std::shared_ptr<Tx> insertTx(std::shared_ptr<Tx> tx); // Inserts transaction only if it affects one of our accounts. Returns transaction in vault if change occured. Otherwise returns nullptr.
-    std::shared_ptr<Tx> createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t payment_txouts, uint64_t fee, unsigned int maxchangeouts) const;
+    std::shared_ptr<Tx> createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
 
 protected:
     // Keychain operations
@@ -88,6 +88,7 @@ protected:
 
     // Tx operations
     std::shared_ptr<Tx> insertTx_unwrapped(std::shared_ptr<Tx> tx);
+    std::shared_ptr<Tx> createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
 
     mutable boost::mutex mutex;
 

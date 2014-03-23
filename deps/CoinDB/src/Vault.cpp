@@ -695,9 +695,59 @@ std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx)
     return tx;
 }
 
-std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t payment_txouts, uint64_t fee, unsigned int maxchangeouts) const
+std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int /*maxchangeouts*/)
+{
+    // TODO: Better fee calculation heuristics
+    uint64_t desired_total = fee;
+    for (auto& txout: txouts) { desired_total += txout->value(); }
+
+    std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
+
+    // TODO: Better coin selection
+    typedef odb::query<TxOutView> query_t;
+    odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(query_t::TxOut::spent.is_null() && query_t::Account::id == account->id()));
+    std::vector<TxOutView> utxoviews;
+    for (auto& utxoview: utxoview_r) { utxoviews.push_back(utxoview); }
+   
+    std::random_shuffle(utxoviews.begin(), utxoviews.end());
+
+    txins_t txins;
+    int i = 0;
+    uint64_t total = 0;
+    for (auto& utxoview: utxoviews)
+    {
+        total += utxoview.value;
+        std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+        txins.push_back(txin);
+        i++;
+        if (total >= desired_total) break;
+    }
+    if (total < desired_total) throw InsufficientFundsException(); 
+
+    utxoviews.resize(i);
+    uint64_t change = total - desired_total;
+
+    if (change > 0)
+    {
+        std::shared_ptr<SigningScript> changescript = newSigningScript_unwrapped(account_name, "@change");
+
+        // TODO: Allow adding multiple change outputs
+        std::shared_ptr<TxOut> txout(new TxOut(change, changescript->txoutscript()));
+        txouts.push_back(txout);
+    }
+    std::random_shuffle(txouts.begin(), txouts.end());
+
+    std::shared_ptr<Tx> tx(new Tx());
+    tx->set(tx_version, txins, txouts, tx_locktime, time(NULL), Tx::UNSIGNED);
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts)
 {
     LOGGER(trace) << "Vault::createTx(" << account_name << ", ...)" << std::endl;
 
-    return nullptr;
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    return createTx_unwrapped(account_name, tx_version, tx_locktime, txouts, fee, maxchangeouts);
 }
