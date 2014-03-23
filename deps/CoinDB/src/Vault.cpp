@@ -441,7 +441,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
             if (tx->status() != Tx::UNSIGNED)
             {
                 // The transaction we received is a signed version of the one we had unsigned, so replace
-                LOGGER(debug) << "Vault::insertTx_unwrapped - Replacing old unsigned transaction with new signed transaction. hash: " << uchar_vector(tx->hash()).getHex() << std::endl; 
+                LOGGER(debug) << "Vault::insertTx_unwrapped - REPLACING OLD UNSIGNED TRANSACTION WITH NEW SIGNED TRANSACTION. hash: " << uchar_vector(tx->hash()).getHex() << std::endl; 
                 std::size_t i = 0;
                 txins_t txins = tx->txins();
                 for (auto& txin: stored_tx->txins())
@@ -468,7 +468,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                     unsigned int sigsadded = stored_script.mergesigs(new_script);
                     if (sigsadded > 0)
                     {
-                        LOGGER(debug) << "Vault::insertTx_unwrapped - Added " << sigsadded << " new signature(s) to input " << i << std::endl;
+                        LOGGER(debug) << "Vault::insertTx_unwrapped - ADDED " << sigsadded << " NEW SIGNATURE(S) TO INPUT " << i << std::endl;
                         txin->script(stored_script.txinscript(Script::EDIT));
                         db_->update(txin);
                         updated = true;
@@ -485,7 +485,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
             {
                 if (tx->status() > stored_tx->status())
                 {
-                    LOGGER(debug) << "Vault::insertTx_unwrapped - Updating transaction status from " << stored_tx->status() << " to " << tx->status() << ". hash: " << uchar_vector(stored_tx->hash()).getHex() << std::endl;
+                    LOGGER(debug) << "Vault::insertTx_unwrapped - UPDATING TRANSACTION STATUS FROM " << stored_tx->status() << " TO " << tx->status() << ". hash: " << uchar_vector(stored_tx->hash()).getHex() << std::endl;
                     stored_tx->status(tx->status());
                     db_->update(stored_tx);
                     return stored_tx;
@@ -633,26 +633,32 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
     if (!conflicting_txs.empty())
     {
         tx->status(Tx::CONFLICTED);
-        for (auto& tx: conflicting_txs)
+        for (auto& conflicting_tx: conflicting_txs)
         {
-            if (tx->status() != Tx::CONFIRMED) { tx->status(Tx::CONFLICTED); }
+            if (conflicting_tx->status() != Tx::CONFIRMED)
+            {
+                conflicting_tx->status(Tx::CONFLICTED);
+                db_->update(conflicting_tx);
+            }
         }
     }
 
     if (sent_from_vault || sent_to_vault)
     {
-        for (auto& txin:    tx->txins())    { db_->persist(*txin); }
-        for (auto& txout:   tx->txouts())   { db_->persist(*txout); }
-        for (auto& script:  scripts)        { db_->update(*script); }
+        LOGGER(debug) << "Vault::insertTx_unwrapped - INSERTING NEW TRANSACTION. hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
         if (have_all_outpoints) { tx->fee(input_total - output_total); }
         db_->persist(*tx);
 
+        for (auto& txin:    tx->txins())    { db_->persist(*txin); }
+        for (auto& txout:   tx->txouts())   { db_->persist(*txout); }
+        for (auto& script:  scripts)        { db_->update(*script); }
         for (auto& txout:   updated_txouts) { db_->update(txout); }
 
         // TODO: updateConfirmations_unwrapped(tx);
         return tx;
     }
 
+    LOGGER(debug) << "Vault::insertTx_unwrapped - transaction not inserted." << std::endl;
     return nullptr; 
 }
 

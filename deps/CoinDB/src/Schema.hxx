@@ -1366,16 +1366,12 @@ inline void Tx::set(const Coin::Transaction& coin_tx, uint32_t timestamp, status
 inline void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
 {
     Coin::Transaction coin_tx(raw);
-    LOGGER(trace) << "Tx::set - fromCoinClasses(coin_tx);" << std::endl;
     fromCoinClasses(coin_tx);
     timestamp_ = timestamp;
     status_ = status;
 
-    LOGGER(trace) << "Tx::set - updateStatus();" << std::endl;
     updateStatus();
-    LOGGER(trace) << "Tx::set - updateUnsignedHash();" << std::endl;
     updateUnsignedHash();
-    LOGGER(trace) << "Tx::set - updateHash();" << std::endl;
     updateHash();
 }
 
