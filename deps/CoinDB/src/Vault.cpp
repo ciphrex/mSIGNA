@@ -742,12 +742,19 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
     return tx;
 }
 
-std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts)
+std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts, bool insert)
 {
-    LOGGER(trace) << "Vault::createTx(" << account_name << ", ...)" << std::endl;
+    LOGGER(trace) << "Vault::createTx(" << account_name << ", " << tx_version << ", " << tx_locktime << ", " << txouts.size() << " txout(s), " << fee << ", " << maxchangeouts << ", " << (insert ? "insert" : "no insert") << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
-    return createTx_unwrapped(account_name, tx_version, tx_locktime, txouts, fee, maxchangeouts);
+    std::shared_ptr<Tx> tx = createTx_unwrapped(account_name, tx_version, tx_locktime, txouts, fee, maxchangeouts);
+    if (insert)
+    {
+        tx = insertTx_unwrapped(tx);
+        if (tx) t.commit();
+    } 
+    return tx;
 }
+
