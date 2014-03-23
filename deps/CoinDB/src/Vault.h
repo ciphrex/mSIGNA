@@ -53,7 +53,7 @@ public:
     std::vector<AccountInfo> getAllAccountInfo() const;
 
     std::shared_ptr<AccountBin> addAccountBin(const std::string& account_name, const std::string& bin_name);
-    std::shared_ptr<TxOut> newTxOut(const std::string& account_name, const std::string& label, uint64_t value = 0, const std::string& bin_name = "@default");
+    std::shared_ptr<SigningScript> newSigningScript(const std::string& account_name, const std::string& bin_name = "@default", const std::string& label = "");
 
     // AccountBin operations
     std::shared_ptr<AccountBin> getAccountBin(const std::string& account_name, const std::string& bin_name) const;
@@ -65,7 +65,7 @@ protected:
 
     // Account operations
     std::shared_ptr<Account> getAccount_unwrapped(const std::string& account_name) const;
-    std::shared_ptr<TxOut> newTxOut_unwrapped(const std::string& account_name, const std::string& label, uint64_t value, const std::string& bin_name);
+    std::shared_ptr<SigningScript> newSigningScript_unwrapped(const std::string& account_name, const std::string& bin_name = "@default", const std::string& label = "");
 
     // AccountBin operations
     std::shared_ptr<AccountBin> getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;

@@ -70,7 +70,6 @@ class Account;
 class AccountBin;
 class SigningScript;
 
-
 #pragma db object pointer(std::shared_ptr)
 class Keychain : public std::enable_shared_from_this<Keychain>
 {

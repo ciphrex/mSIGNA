@@ -318,7 +318,7 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
     return bin;
 }
 
-std::shared_ptr<TxOut> Vault::newTxOut_unwrapped(const std::string& account_name, const std::string& label, uint64_t value, const std::string& bin_name)
+std::shared_ptr<SigningScript> Vault::newSigningScript_unwrapped(const std::string& account_name, const std::string& bin_name, const std::string& label)
 {
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
     std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
@@ -355,21 +355,19 @@ std::shared_ptr<TxOut> Vault::newTxOut_unwrapped(const std::string& account_name
     script->label(label);
     script->status(SigningScript::REQUESTED);
     db_->update(script);
-
-    std::shared_ptr<TxOut> txout(new TxOut(value, script->txoutscript()));
-    return txout; 
+    return script;
 }
 
-std::shared_ptr<TxOut> Vault::newTxOut(const std::string& account_name, const std::string& label, uint64_t value, const std::string& bin_name)
+std::shared_ptr<SigningScript> Vault::newSigningScript(const std::string& account_name, const std::string& bin_name, const std::string& label)
 {
-    LOGGER(trace) << "Vault::getAccountBin(" << account_name << ", " << bin_name << ")" << std::endl;
+    LOGGER(trace) << "Vault::newSigningScript(" << account_name << ", " << bin_name << ", " << label << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
-    std::shared_ptr<TxOut> txout = newTxOut_unwrapped(account_name, label, value, bin_name);
+    std::shared_ptr<SigningScript> script = newSigningScript_unwrapped(account_name, bin_name, label);
     t.commit();
-    return txout;
+    return script;
 }
 
 // AccountBin operations

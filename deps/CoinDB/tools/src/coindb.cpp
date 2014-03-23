@@ -245,20 +245,19 @@ cli::result_t cmd_newaccountbin(bool bHelp, const cli::params_t& params)
 // TODO: Get from config file
 const unsigned char PAY_TO_SCRIPT_HASH_VERSION = 0x05;
 
-cli::result_t cmd_newtxout(bool bHelp, const cli::params_t& params)
+cli::result_t cmd_newaddress(bool bHelp, const cli::params_t& params)
 {
-    if (bHelp || params.size() < 2 || params.size() > 5)
-        return "newtxout <filename> <account_name> [bin_name = @default] [value = 0] [label = \"\"] - get a new payment txout.";
+    if (bHelp || params.size() < 2 || params.size() > 4)
+        return "newaddress <filename> <account_name> [bin_name = @default] [label = null] - get a new signing script.";
 
     Vault vault(params[0], false);
     std::string bin_name = params.size() > 2 ? params[2] : std::string("@default");
-    uint64_t value = params.size() > 3 ? strtoull(params[3].c_str(), NULL, 0) : 0;
-    std::string label = params.size() > 4 ? params[4] : std::string("");
-    std::shared_ptr<TxOut> txout = vault.newTxOut(params[1], label, value, bin_name);
+    std::string label = params.size() > 3 ? params[3] : std::string("");
+    std::shared_ptr<SigningScript> script = vault.newSigningScript(params[1], bin_name, label);
 
     using namespace CoinQ::Script;
     std::string address;
-    payee_t payee = getScriptPubKeyPayee(txout->script());
+    payee_t payee = getScriptPubKeyPayee(script->txoutscript());
     if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
         address = toBase58Check(payee.second, PAY_TO_SCRIPT_HASH_VERSION);
     else
@@ -267,9 +266,8 @@ cli::result_t cmd_newtxout(bool bHelp, const cli::params_t& params)
     stringstream ss;
     ss << "account:     " << params[1] << endl
        << "account bin: " << bin_name << endl
-       << "value:       " << value << endl
        << "label:       " << label << endl
-       << "script:      " << uchar_vector(txout->script()).getHex() << endl
+       << "script:      " << uchar_vector(script->txoutscript()).getHex() << endl
        << "address:     " << address;
     return ss.str(); 
 }
@@ -296,7 +294,7 @@ int main(int argc, char* argv[])
     cmds.add("accountinfo", &cmd_accountinfo);
     cmds.add("listaccounts", &cmd_listaccounts);
     cmds.add("newaccountbin", &cmd_newaccountbin);
-    cmds.add("newtxout", &cmd_newtxout);
+    cmds.add("newaddress", &cmd_newaddress);
 
     try 
     {
