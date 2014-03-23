@@ -380,6 +380,7 @@ std::vector<SigningScriptView> Vault::getSigningScriptViews(const std::string& a
     query_t query(query_t::SigningScript::status.in_range(statusRange.begin(), statusRange.end()));
     if (!account_name.empty()) query += query_t::Account::name == account_name;
     if (!bin_name.empty()) query += query_t::AccountBin::name == bin_name;
+    query += "ORDER BY" + query_t::Account::name + "ASC," + query_t::AccountBin::name + "ASC," + query_t::SigningScript::status + "DESC";
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
