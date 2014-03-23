@@ -169,6 +169,8 @@ typedef std::set<std::shared_ptr<Keychain>> KeychainSet;
 inline Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lock_key, const bytes_t& salt)
     : name_(name)
 {
+    if (name.empty() || name[0] == '@') throw std::runtime_error("Invalid keychain name.");
+
     Coin::HDSeed hdSeed(entropy);
     Coin::HDKeychain hdKeychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
 
@@ -524,7 +526,12 @@ class Account : public std::enable_shared_from_this<Account>
 {
 public:
     Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL))
-        : name_(name), minsigs_(minsigs), keychains_(keychains), unused_pool_size_(unused_pool_size), time_created_(time_created) { }
+        : name_(name), minsigs_(minsigs), keychains_(keychains), unused_pool_size_(unused_pool_size), time_created_(time_created)
+    {
+        if (name_.empty() || name[0] == '@') throw std::runtime_error("Invalid account name.");
+        if (keychains_.size() > 15) throw std::runtime_error("Account can use at most 15 keychains.");
+        if (minsigs > keychains_.size()) throw std::runtime_error("Account minimum signatures cannot exceed number of keychains.");
+    }
 
     AccountInfo accountInfo() const;
 
@@ -580,6 +587,7 @@ inline AccountBinVector Account::bins() const
 
 inline std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
 {
+    if (name.empty() || name[0] == '@') throw std::runtime_error("Invalid account bin name.");
     uint32_t index = bins_.size() + 1;
     std::shared_ptr<AccountBin> bin(new AccountBin(shared_from_this(), index, name));
     bins_.push_back(bin);
