@@ -275,7 +275,7 @@ cli::result_t cmd_newscript(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 1 || params.size() > 4)
-        return "listscripts <filename> [account_name = ALL] [bin_name = ALL] [flags = REQUESTED | RECEIVED] - display list of signing script. (flags: UNUSED=1, CHANGE=2, REQUESTED=4, RECEIVED=8)";
+        return "listscripts <filename> [account_name = ALL] [bin_name = ALL] [flags = PENDING | RECEIVED] - display list of signing script. (flags: UNUSED=1, CHANGE=2, PENDING=4, RECEIVED=8)";
 
     std::string account_name;
     if (params.size() > 1) account_name = params[1];
@@ -283,7 +283,7 @@ cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
     std::string bin_name;
     if (params.size() > 2) bin_name = params[2];
 
-    int flags = params.size() > 3 ? (int)strtoul(params[3].c_str(), NULL, 0) : ((int)SigningScript::REQUESTED | (int)SigningScript::RECEIVED);
+    int flags = params.size() > 3 ? (int)strtoul(params[3].c_str(), NULL, 0) : ((int)SigningScript::PENDING | (int)SigningScript::RECEIVED);
     
     Vault vault(params[0], false);
     vector<SigningScriptView> scriptViews = vault.getSigningScriptViews(account_name, bin_name, flags);

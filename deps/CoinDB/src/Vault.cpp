@@ -353,7 +353,7 @@ std::shared_ptr<SigningScript> Vault::newSigningScript_unwrapped(const std::stri
     odb::result<SigningScript> script_result(db_->query<SigningScript>(script_query::id == view->id));
     std::shared_ptr<SigningScript> script(script_result.begin().load());
     script->label(label);
-    script->status(SigningScript::REQUESTED);
+    script->status(SigningScript::PENDING);
     db_->update(script);
     return script;
 }

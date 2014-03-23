@@ -608,13 +608,13 @@ inline bool AccountBin::loadKeychains()
 class SigningScript : public std::enable_shared_from_this<SigningScript>
 {
 public:
-    enum status_t { UNUSED = 1, CHANGE = 2, REQUESTED = 4, RECEIVED = 8, ALL = 15 };
+    enum status_t { UNUSED = 1, CHANGE = 2, PENDING = 4, RECEIVED = 8, ALL = 15 };
     static std::string getStatusString(int status)
     {
         std::vector<std::string> flags;
         if (status & UNUSED) flags.push_back("UNUSED");
         if (status & CHANGE) flags.push_back("CHANGE");
-        if (status & REQUESTED) flags.push_back("REQUESTED");
+        if (status & PENDING) flags.push_back("PENDING");
         if (status & RECEIVED) flags.push_back("RECEIVED");
         if (flags.empty()) return "UNKNOWN";
 
@@ -626,7 +626,7 @@ public:
         std::vector<status_t> flags;
         if (status & UNUSED) flags.push_back(UNUSED);
         if (status & CHANGE) flags.push_back(CHANGE);
-        if (status & REQUESTED) flags.push_back(REQUESTED);
+        if (status & PENDING) flags.push_back(PENDING);
         if (status & RECEIVED) flags.push_back(RECEIVED);
         return flags;
     }
