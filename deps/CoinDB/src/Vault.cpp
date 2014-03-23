@@ -66,6 +66,8 @@ bool Vault::keychainExists(const std::string& keychain_name) const
 
 std::shared_ptr<Keychain> Vault::newKeychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey, const bytes_t& salt)
 {
+    LOGGER(trace) << "Vault::newKeychain(" << name << ", ...)" << std::endl;
+
     std::shared_ptr<Keychain> keychain(new Keychain(name, entropy, lockKey, salt));
 
     boost::lock_guard<boost::mutex> lock(mutex);
@@ -79,6 +81,8 @@ std::shared_ptr<Keychain> Vault::newKeychain(const std::string& name, const secu
 
 void Vault::renameKeychain(const std::string& old_name, const std::string& new_name)
 {
+    LOGGER(trace) << "Vault::renameKeychain(" << old_name << ", " << new_name << ")" << std::endl;
+
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session session;
     odb::core::transaction t(db_->begin());
@@ -106,18 +110,42 @@ void Vault::persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain)
     db_->persist(keychain);
 }
 
-std::shared_ptr<Keychain> Vault::getKeychain(const std::string& keychain_name) const
+std::shared_ptr<Keychain> Vault::getKeychain_unwrapped(const std::string& keychain_name) const
 {
-    boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::transaction t(db_->begin());
     odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
     if (r.empty()) {
         throw std::runtime_error("Vault::getKeychain - keychain not found.");
     }
-
     std::shared_ptr<Keychain> keychain(r.begin().load());
     return keychain;
 }
+
+std::shared_ptr<Keychain> Vault::getKeychain(const std::string& keychain_name) const
+{
+    LOGGER(trace) << "Vault::getKeychain(" << keychain_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    return getKeychain_unwrapped(keychain_name);
+}
+
+std::vector<std::shared_ptr<Keychain>> Vault::getAllKeychains(bool root_only) const
+{
+    LOGGER(trace) << "Vault::getAllKeychains()" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    odb::result<Keychain> r;
+    if (root_only)
+        r = db_->query<Keychain>(odb::query<Keychain>::parent.is_null());
+    else
+        r = db_->query<Keychain>();
+
+    std::vector<std::shared_ptr<Keychain>> keychains;
+    for (auto& keychain: r) { keychains.push_back(keychain.get_shared_ptr()); }
+    return keychains;
+}
+
 
 // Account operations
 bool Vault::accountExists(const std::string& account_name) const

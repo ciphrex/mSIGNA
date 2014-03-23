@@ -70,6 +70,7 @@ class Account;
 class AccountBin;
 class SigningScript;
 
+
 #pragma db object pointer(std::shared_ptr)
 class Keychain : public std::enable_shared_from_this<Keychain>
 {
@@ -752,6 +753,103 @@ struct ScriptCountView
     #pragma db column("count(" + SigningScript::id_ + ")")
     uint32_t count;
 };
+
+
+/*
+class KeychainInfo
+{
+public:
+    KeychainInfo(
+        unsigned long id,
+        const std::string& name,
+        uint32_t depth,
+        uint32_t parent_fp,
+        uint32_t child_num,
+        bytes_t pubkey,
+        bytes_t hash,
+        const std::string& root_name,
+        const std::vector<uint32_t> derivation_path,
+        const secure_bytes_t& chain_code,
+        const secure_bytes_t& privkey,
+        const secure_bytes_t extkey
+    ) :
+        id_(id),
+        name_(name),
+        depth_(depth),
+        parent_fp_(parent_fp),
+        child_num_(child_num),
+        pubkey_(pubkey),
+        hash_(hash),
+        root_name_(root_name),
+        derivation_path_(derivation_path),
+        chain_code_(chain_code),
+        privkey_(privkey),
+        extkey_(extkey)
+    { }
+
+    KeychainInfo(const KeychainInfo& source) :
+        id_(source.id_),
+        name_(source.name_),
+        depth_(source.depth_),
+        parent_fp_(source.parent_fp_),
+        child_num_(source.child_num_),
+        pubkey_(source.pubkey_),
+        hash_(source.hash_),
+        root_name_(source.root_name_),
+        derivation_path_(source.derivation_path_),
+        chain_code_(source.chain_code_),
+        privkey_(source.privkey_),
+        extkey_(source.extkey_)
+    { }
+
+    KeychainInfo& operator=(const KeychainInfo& source)
+    {
+        id_ = source.id_;
+        name_ = source.name_;
+        depth_ = source.depth_;
+        parent_fp_ = source.parent_fp_;
+        child_num_ = source.child_num_;
+        pubkey_ = source.pubkey_;
+        hash_ = source.hash_;
+        root_name_ = source.root_name_;
+        derivation_path_ = source.derivation_path_;
+        chain_code_ = source.chain_code_;
+        privkey_ = source.privkey_;
+        extkey_ = source.extkey_;
+    }
+
+    unsigned long                   id() const { return id_; }
+    const std::string&              name() const { return name_; }
+    uint32_t                        depth() const { return depth_; }
+    uint32_t                        parent_fp() const { return parent_fp_; }
+    uint32_t                        child_num() const { return child_num_; }
+    const bytes_t&                  pubkey() const { return pubkey_; }
+    const bytes_t&                  hash() const { return hash_; }
+
+    const std::string&              root_name() const { return root_name_; }
+    const std::vector<uint32_t>&    derivation_path() const { return derivation_path_; }
+
+    const secure_bytes_t&           chain_code() const { return chain_code_; }
+    const secure_bytes_t&           privkey() const { return privkey_; }
+    const secure_bytes_t&           extkey() const { return extkey_; } 
+
+private:
+    unsigned long                   id_;
+    std::string                     name_;
+    uint32_t                        depth_;
+    uint32_t                        parent_fp_;
+    uint32_t                        child_num_;
+    bytes_t                         pubkey_;
+    bytes_t                         hash_;
+
+    std::string                     root_name_;
+    std::vector<uint32_t>           derivation_path_;
+
+    secure_bytes_t                  chain_code_;
+    secure_bytes_t                  privkey_;
+    secure_bytes_t                  extkey_;
+};
+*/
 
 
 /////////////////////////////

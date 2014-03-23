@@ -38,6 +38,7 @@ public:
     //void eraseKeychain(const std::string& keychain_name) const;
     void renameKeychain(const std::string& old_name, const std::string& new_name);
     std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
+    std::vector<std::shared_ptr<Keychain>> getAllKeychains(bool root_only = false) const;
     //bytes_t exportKeychain(std::shared_ptr<Keychain> keychain, const std::string& filepath, bool exportprivkeys = false) const;
     //bytes_t importKeychain(const std::string& keychain_name, const std::string& filepath, bool& importprivkeys);
     //bool isKeychainFilePrivate(const std::string& filepath) const;
@@ -59,6 +60,7 @@ public:
 
 protected:
     // Keychain operations
+    std::shared_ptr<Keychain> getKeychain_unwrapped(const std::string& keychain_name) const;
     void persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
 
     // Account operations

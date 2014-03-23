@@ -117,31 +117,27 @@ cli::result_t cmd_keychaininfo(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
-/*
 cli::result_t cmd_listkeychains(bool bHelp, const cli::params_t& params)
 {
-    if (bHelp || params.size() != 1) {
-        return "listkeychains <filename> - list all keychains in vault.";
-    }
+    if (bHelp || params.size() < 1 || params.size() > 2)
+        return "listkeychains <filename> [root_only = false] - display list of keychains.";
 
-    stringstream ss;
+    bool root_only = params.size() > 1 ? (params[1] == "true") : false;
 
     Vault vault(params[0], false);
-    std::vector<KeychainInfo> keychains = vault.getKeychains();
-    bool first = true;
-    for (auto& keychain: keychains) {
-        if (first) {
-            first = false;
-        }
-        else {
-            ss << endl;
-        }
-        ss << "id: " << keychain.id() << " name: " << keychain.name() << " hash: " << uchar_vector(keychain.hash()).getHex() << " numkeys: " << keychain.numkeys();
-    }
+    vector<shared_ptr<Keychain>> keychains = vault.getAllKeychains(root_only);
 
+    stringstream ss;
+    bool newLine = false;
+    for (auto& keychain: keychains)
+    {
+        if (newLine)    ss << endl;
+        else            newLine = true;
+
+        ss << "name: " << left << setw(20) << keychain->name() << " | id: " << left << setw(5) << keychain->id() << " | hash: " << uchar_vector(keychain->hash()).getHex();
+    }
     return ss.str();
 }
-*/
 
 // Account operations
 cli::result_t cmd_accountexists(bool bHelp, const cli::params_t& params)
@@ -163,6 +159,10 @@ cli::result_t cmd_newaccount(bool bHelp, const cli::params_t& params)
         return "newaccount <filename> <account_name> <minsigs> <keychain1> [keychain2] [keychain3] ... - create a new account using specified keychains.";
 
     uint32_t minsigs = strtoull(params[2].c_str(), NULL, 10);
+    size_t keychain_count = params.size() - 3;
+    if (keychain_count > 15) throw std::runtime_error("Maximum number of keychains supported is 15.");
+    if (minsigs > keychain_count) throw std::runtime_error("Minimum signatures cannot exceed number of keychains.");
+
     std::vector<std::string> keychain_names;
     for (size_t i = 3; i < params.size(); i++)
         keychain_names.push_back(params[i]);
@@ -224,7 +224,7 @@ cli::result_t cmd_listaccounts(bool bHelp, const cli::params_t& params)
         if (newLine)    ss << endl;
         else            newLine = true;
 
-        ss << "name: " << account.name() << " | id: " << account.id() << " | policy: " << account.minsigs() << " of " << delimited_list(account.keychain_names(), ", ");
+        ss << "name: " << left << setw(20) << account.name() << " | id: " << left << setw(5) << account.id() << " | policy: " << account.minsigs() << " of " << delimited_list(account.keychain_names(), ", ");
     }
     return ss.str();
 }
@@ -248,7 +248,7 @@ const unsigned char PAY_TO_SCRIPT_HASH_VERSION = 0x05;
 cli::result_t cmd_newtxout(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 2 || params.size() > 5)
-        return "newtxout <filename> <account_name> [bin_name = @default] [value = 0] [label = ""] - get a new payment txout.";
+        return "newtxout <filename> <account_name> [bin_name = @default] [value = 0] [label = \"\"] - get a new payment txout.";
 
     Vault vault(params[0], false);
     std::string bin_name = params.size() > 2 ? params[2] : std::string("@default");
@@ -287,6 +287,7 @@ int main(int argc, char* argv[])
     //cmds.add("erasekeychain", &cmd_erasekeychain);
     cmds.add("renamekeychain", &cmd_renamekeychain);
     cmds.add("keychaininfo", &cmd_keychaininfo);
+    cmds.add("listkeychains", &cmd_listkeychains);
 
     // Account operations
     cmds.add("accountexists", &cmd_accountexists);
