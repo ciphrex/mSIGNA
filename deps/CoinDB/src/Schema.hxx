@@ -218,7 +218,7 @@ inline std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private)
     {
         if (privkey_.empty()) throw std::runtime_error("Private key is locked.");
         Coin::HDKeychain hdkeychain(privkey_, chain_code_, child_num_, parent_fp_, depth_);
-        hdkeychain.getChild(i);
+        hdkeychain = hdkeychain.getChild(i);
         std::shared_ptr<Keychain> child(new Keychain());;
         child->parent_ = get_shared_ptr();
         child->privkey_ = hdkeychain.privkey();
@@ -235,7 +235,7 @@ inline std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private)
     else
     {
         Coin::HDKeychain hdkeychain(pubkey_, chain_code_, child_num_, parent_fp_, depth_);
-        hdkeychain.getChild(i);
+        hdkeychain = hdkeychain.getChild(i);
         std::shared_ptr<Keychain> child(new Keychain());;
         child->parent_ = get_shared_ptr();
         child->pubkey_ = hdkeychain.pubkey();
