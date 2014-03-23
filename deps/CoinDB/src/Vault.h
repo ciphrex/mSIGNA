@@ -67,6 +67,11 @@ public:
     ////////////////////////////
     std::shared_ptr<AccountBin> getAccountBin(const std::string& account_name, const std::string& bin_name) const;
 
+    ///////////////////
+    // TX OPERATIONS //
+    ///////////////////
+    std::shared_ptr<Tx> insertTx(std::shared_ptr<Tx> tx); // Inserts transaction only if it affects one of our accounts. Returns transaction in vault if change occured. Otherwise returns nullptr.
+
 protected:
     // Keychain operations
     std::shared_ptr<Keychain> getKeychain_unwrapped(const std::string& keychain_name) const;
@@ -78,6 +83,9 @@ protected:
 
     // AccountBin operations
     std::shared_ptr<AccountBin> getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;
+
+    // Tx operations
+    std::shared_ptr<Tx> insertTx_unwrapped(std::shared_ptr<Tx> tx);
 
     mutable boost::mutex mutex;
 

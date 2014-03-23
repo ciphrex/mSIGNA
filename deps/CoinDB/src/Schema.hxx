@@ -1190,9 +1190,9 @@ public:
         UNSENT      = 1 << 1, // signed but not yet broadcast to network
         SENT        = 1 << 2, // sent to at least one peer but possibly not propagated
         RECEIVED    = 1 << 3, // received from at least one peer
-        CONFIRMED   = 1 << 4, // exists in blockchain
-        CONFLICTED  = 1 << 5, // unconfirmed and spends the same output as another transaction
-        CANCELED    = 1 << 6, // either will never be broadcast or will never confirm
+        CONFLICTED  = 1 << 4, // unconfirmed and spends the same output as another transaction
+        CANCELED    = 1 << 5, // either will never be broadcast or will never confirm
+        CONFIRMED   = 1 << 6, // exists in blockchain
         ALL         = (1 << 7) - 1
     };
     /*
@@ -1200,8 +1200,9 @@ public:
      * is unchanged by adding signatures until fully signed. Then compute
      * normal hash and transition to one of the other states.
      *
-     * Note: Status is always set to RECEIVED when we get it from verifier
-     *  node even if we sent it.
+     * The states are ordered such that transitions are generally from smaller values to larger values.
+     * Blockchain reorgs are the exception where it's possible that a CONFIRMED state reverts to an
+     * earlier state.
      */
 
     Tx(uint32_t version = 1, uint32_t locktime = 0, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED)
