@@ -380,8 +380,8 @@ std::vector<SigningScriptView> Vault::getSigningScriptViews(const std::string& a
 
     typedef odb::query<SigningScriptView> query_t;
     query_t query(query_t::SigningScript::status.in_range(statusRange.begin(), statusRange.end()));
-    if (!account_name.empty()) query = (query && query_t::Account::name == account_name);
-    if (!bin_name.empty()) query = (query && query_t::AccountBin::name == bin_name);
+    if (account_name != "@all") query = (query && query_t::Account::name == account_name);
+    if (bin_name != "@all")     query = (query && query_t::AccountBin::name == bin_name);
     query += "ORDER BY" + query_t::Account::name + "ASC," + query_t::AccountBin::name + "ASC," + query_t::SigningScript::status + "DESC";
 
     boost::lock_guard<boost::mutex> lock(mutex);
@@ -390,6 +390,27 @@ std::vector<SigningScriptView> Vault::getSigningScriptViews(const std::string& a
 
     std::vector<SigningScriptView> views;
     odb::result<SigningScriptView> r(db_->query<SigningScriptView>(query));
+    for (auto& view: r) { views.push_back(view); }
+    return views;
+}
+
+std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, const std::string& bin_name, bool unspent_only) const
+{
+    LOGGER(trace) << "Vault::getTxOutViews(" << account_name << ", " << bin_name << ", " << (unspent_only ? "unspent" : "all") << ")" << std::endl;
+
+    typedef odb::query<TxOutView> query_t;
+    query_t query;
+    if (unspent_only)           query = (query && query_t::TxOut::spent.is_null());
+    if (account_name != "@all") query = (query && query_t::Account::name == account_name);
+    if (bin_name != "@all")     query = (query && query_t::AccountBin::name == bin_name);
+    query += "ORDER BY" + query_t::Tx::timestamp + "DESC," + query_t::Account::name + "ASC," + query_t::AccountBin::name + "ASC";
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+
+    std::vector<TxOutView> views;
+    odb::result<TxOutView> r(db_->query<TxOutView>(query));
     for (auto& view: r) { views.push_back(view); }
     return views;
 }
@@ -665,10 +686,18 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx)
 {
     LOGGER(trace) << "Vault::insertTx(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
+
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     tx = insertTx_unwrapped(tx);
     if (tx) t.commit();
     return tx;
+}
+
+std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t payment_txouts, uint64_t fee, unsigned int maxchangeouts) const
+{
+    LOGGER(trace) << "Vault::createTx(" << account_name << ", ...)" << std::endl;
+
+    return nullptr;
 }

@@ -60,7 +60,8 @@ public:
     std::shared_ptr<SigningScript> newSigningScript(const std::string& account_name, const std::string& bin_name = "@default", const std::string& label = "");
 
     // empty account_name or bin_name means do not filter on those fields
-    std::vector<SigningScriptView> getSigningScriptViews(const std::string& account_name = "", const std::string& bin_name = "", int flags = SigningScript::ALL) const;
+    std::vector<SigningScriptView> getSigningScriptViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int flags = SigningScript::ALL) const;
+    std::vector<TxOutView> getTxOutViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", bool unspent_only = true) const;
 
     ////////////////////////////
     // ACCOUNT BIN OPERATIONS //
@@ -71,6 +72,7 @@ public:
     // TX OPERATIONS //
     ///////////////////
     std::shared_ptr<Tx> insertTx(std::shared_ptr<Tx> tx); // Inserts transaction only if it affects one of our accounts. Returns transaction in vault if change occured. Otherwise returns nullptr.
+    std::shared_ptr<Tx> createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t payment_txouts, uint64_t fee, unsigned int maxchangeouts) const;
 
 protected:
     // Keychain operations

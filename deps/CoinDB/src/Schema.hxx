@@ -1470,7 +1470,64 @@ inline std::set<bytes_t> Tx::missingSigPubkeys() const
         std::vector<bytes_t> txinpubkeys = script.missingsigs();
         for (auto& txinpubkey: txinpubkeys) { pubkeys.insert(txinpubkey); }
     } 
-    return pubkeys;}
+    return pubkeys;
+}
+
+// Views
+#pragma db view \
+    object(TxOut) \
+    object(Tx: TxOut::tx_) \
+    object(SigningScript: TxOut::signingscript_) \
+    object(Account: SigningScript::account_) \
+    object(AccountBin: SigningScript::account_bin_)
+struct TxOutView
+{
+    #pragma db column(Account::id_)
+    unsigned long account_id;
+
+    #pragma db column(Account::name_)
+    std::string account_name;
+
+    #pragma db column(AccountBin::id_)
+    unsigned long account_bin_id;
+
+    #pragma db column(AccountBin::name_)
+    std::string account_bin_name;
+
+    #pragma db column(SigningScript::id_)
+    unsigned long signingscript_id;
+
+    #pragma db column(SigningScript::label_)
+    std::string signingscript_label;
+
+    #pragma db column(SigningScript::status_)
+    SigningScript::status_t signingscript_status;
+
+    #pragma db column(SigningScript::txinscript_)
+    bytes_t signingscript_txinscript;
+
+    #pragma db column(TxOut::script_)
+    bytes_t script;
+
+    #pragma db column(TxOut::value_)
+    uint64_t value;
+
+    #pragma db column(Tx::unsigned_hash_)
+    bytes_t tx_unsigned_hash;
+
+    #pragma db column(Tx::hash_)
+    bytes_t tx_hash;
+
+    #pragma db column(Tx::timestamp_)
+    uint32_t tx_timestamp;
+
+    #pragma db column(Tx::status_)
+    Tx::status_t tx_status;
+
+    #pragma db column(TxOut::txindex_)
+    uint32_t tx_index;
+};
+
 }
 
 #endif // COINDB_SCHEMA_HXX
