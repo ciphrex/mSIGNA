@@ -590,7 +590,6 @@ inline AccountBinVector Account::bins() const
 
 inline std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
 {
-    if (name.empty() || name[0] == '@') throw std::runtime_error("Invalid account bin name.");
     uint32_t index = bins_.size() + 1;
     std::shared_ptr<AccountBin> bin(new AccountBin(shared_from_this(), index, name));
     bins_.push_back(bin);
@@ -1367,12 +1366,16 @@ inline void Tx::set(const Coin::Transaction& coin_tx, uint32_t timestamp, status
 inline void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
 {
     Coin::Transaction coin_tx(raw);
+    LOGGER(trace) << "Tx::set - fromCoinClasses(coin_tx);" << std::endl;
     fromCoinClasses(coin_tx);
     timestamp_ = timestamp;
     status_ = status;
 
+    LOGGER(trace) << "Tx::set - updateStatus();" << std::endl;
     updateStatus();
+    LOGGER(trace) << "Tx::set - updateUnsignedHash();" << std::endl;
     updateUnsignedHash();
+    LOGGER(trace) << "Tx::set - updateHash();" << std::endl;
     updateHash();
 }
 
@@ -1436,11 +1439,18 @@ inline void Tx::shuffle_txouts()
 
 inline void Tx::fromCoinClasses(const Coin::Transaction& coin_tx)
 {
+    LOGGER(trace) << "before version_ = coin_tx.version" << std::endl;
     version_ = coin_tx.version;
+    LOGGER(trace) << "after version_ = coin_tx.version" << std::endl;
 
     int i = 0;
-    txins_.clear();
-    for (auto& coin_txin: coin_tx.inputs) {
+    LOGGER(trace) << "before txins_.clear()" << std::endl;
+//    txins_.clear();
+    LOGGER(trace) << "after txins_.clear()" << std::endl;
+return;
+    for (auto& coin_txin: coin_tx.inputs)
+    {
+        LOGGER(trace) << "new TxIn" << std::endl;
         std::shared_ptr<TxIn> txin(new TxIn(coin_txin));
         txin->tx(shared_from_this());
         txin->txindex(i++);
@@ -1449,7 +1459,9 @@ inline void Tx::fromCoinClasses(const Coin::Transaction& coin_tx)
 
     i = 0;
     txouts_.clear();
-    for (auto& coin_txout: coin_tx.outputs) {
+    for (auto& coin_txout: coin_tx.outputs)
+    {
+        LOGGER(trace) << "new TxOut" << std::endl;
         std::shared_ptr<TxOut> txout(new TxOut(coin_txout));
         txout->tx(shared_from_this());
         txout->txindex(i++);

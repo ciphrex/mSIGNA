@@ -21,6 +21,8 @@
 // TODO: create separate library
 #include <stdutils/stringutils.h>
 
+#include "logger.h"
+
 #include <iostream>
 #include <sstream>
 
@@ -310,9 +312,35 @@ cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_insertrawtx(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 2)
+        return "insertrawtx <filename> <raw tx hex> - inserts a raw transaction into vault.";
+
+    std::shared_ptr<Tx> tx;
+    tx->set(uchar_vector(params[1]));
+
+    Vault vault(params[0], false);
+    tx = vault.insertTx(tx);
+
+    stringstream ss;
+    if (tx)
+    {
+        ss << "Tx inserted. unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex();
+        if (tx->status() != Tx::UNSIGNED)
+            ss << " hash: " << uchar_vector(tx->hash()).getHex();
+    }
+    else
+    {
+        ss << "Tx not inserted.";
+    }
+    return ss.str();
+}
 
 int main(int argc, char* argv[])
 {
+    INIT_LOGGER("debug.log");
+
     cli::command_map cmds("CoinDB by Eric Lombrozo v0.2.0");
 
     // Vault operations
@@ -335,6 +363,9 @@ int main(int argc, char* argv[])
     cmds.add("newaccountbin", &cmd_newaccountbin);
     cmds.add("newscript", &cmd_newscript);
     cmds.add("listscripts", &cmd_listscripts);
+
+    // Tx operations
+    cmds.add("insertrawtx", &cmd_insertrawtx);
 
     try 
     {

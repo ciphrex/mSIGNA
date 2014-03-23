@@ -278,6 +278,8 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
 {
     LOGGER(trace) << "Vault::addAccountBin(" << account_name << ", " << bin_name << ")" << std::endl;
 
+    if (bin_name.empty() || bin_name[0] == '@') throw std::runtime_error("Invalid account bin name.");
+
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
@@ -420,6 +422,8 @@ std::shared_ptr<AccountBin> Vault::getAccountBin(const std::string& account_name
 // Tx operations
 std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 {
+    // TODO: Validate signatures
+
     tx->updateStatus();
     tx->updateHash();
 
@@ -655,7 +659,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx)
 {
     LOGGER(trace) << "Vault::insertTx(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
-
+return nullptr;
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
