@@ -68,6 +68,8 @@ public:
     std::shared_ptr<AccountBin> addAccountBin(const std::string& account_name, const std::string& bin_name);
     std::shared_ptr<SigningScript> newSigningScript(const std::string& account_name, const std::string& bin_name = "@default", const std::string& label = "");
 
+    void refillAccountScriptPools(const std::string& account_name);
+
     // empty account_name or bin_name means do not filter on those fields
     std::vector<SigningScriptView> getSigningScriptViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int flags = SigningScript::ALL) const;
     std::vector<TxOutView> getTxOutViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", bool unspent_only = true) const;
@@ -92,8 +94,11 @@ protected:
     std::shared_ptr<Account> getAccount_unwrapped(const std::string& account_name) const;
     std::shared_ptr<SigningScript> newSigningScript_unwrapped(const std::string& account_name, const std::string& bin_name = "@default", const std::string& label = "");
 
+    void refillAccountScriptPools_unwrapped(const std::string& account_name);
+
     // AccountBin operations
     std::shared_ptr<AccountBin> getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;
+    void refillAccountBinScriptPool_unwrapped(const std::string& account_name, const std::string& bin_name);
 
     // Tx operations
     std::shared_ptr<Tx> insertTx_unwrapped(std::shared_ptr<Tx> tx);

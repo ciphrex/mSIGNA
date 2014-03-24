@@ -93,4 +93,10 @@ public:
     AccountBinAlreadyExistsException(const std::string& account_name, const std::string& bin_name) : AccountBinException("Account bin already exists.", account_name, bin_name) { }
 };
 
+class AccountBinOutOfScriptsException : public AccountBinException
+{
+public:
+    AccountBinOutOfScriptsException(const std::string& account_name, const std::string& bin_name) : AccountBinException("Account bin out of scripts.", account_name, bin_name) { }
+};
+
 }
