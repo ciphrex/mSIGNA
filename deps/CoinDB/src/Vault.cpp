@@ -761,7 +761,7 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
         i++;
         if (total >= desired_total) break;
     }
-    if (total < desired_total) throw InsufficientFundsException(); 
+    if (total < desired_total) throw AccountInsufficientFundsException(account_name); 
 
     utxoviews.resize(i);
     uint64_t change = total - desired_total;

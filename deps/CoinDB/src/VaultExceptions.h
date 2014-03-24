@@ -14,6 +14,7 @@
 namespace CoinDB
 {
 
+// KEYCHAIN EXCEPTIONS
 class KeychainException : public std::runtime_error
 {
 public:
@@ -31,17 +32,31 @@ public:
     KeychainNotFoundException(const std::string& keychain_name) : KeychainException("Keychain not found.", keychain_name) { }
 };
 
-class AccountNotFoundException : public std::runtime_error
+// ACCOUNT EXCEPTIONS
+class AccountException : public std::runtime_error
 {
 public:
-    AccountNotFoundException(const std::string& account_name) : std::runtime_error("Account not found."), account_name_(account_name) { }
-
     const std::string& account_name() const { return account_name_; }
 
-private:
+protected:
+    AccountException(const std::string& what, const std::string& account_name) : std::runtime_error(what), account_name_(account_name) { }
+
     std::string account_name_;
 };
 
+class AccountNotFoundException : public AccountException
+{
+public:
+    AccountNotFoundException(const std::string& account_name) : AccountException("Account not found.", account_name) { }
+};
+
+class AccountInsufficientFundsException : public AccountException
+{
+public:
+    AccountInsufficientFundsException(const std::string& account_name) : AccountException("Insufficient funds.", account_name) { }
+};
+
+// ACCOUNT BIN EXCEPTIONS
 class AccountBinException : public std::runtime_error
 {
 public:
@@ -49,7 +64,7 @@ public:
     const std::string& bin_name() const { return bin_name_; }
 
 protected:
-    AccountBinException(const std::string& what) : std::runtime_error(what) { }
+    AccountBinException(const std::string& what, const std::string& account_name, const std::string& bin_name) : std::runtime_error(what), account_name_(account_name), bin_name_(bin_name) { }
 
     std::string account_name_;
     std::string bin_name_;
@@ -58,27 +73,13 @@ protected:
 class AccountBinNotFoundException : public AccountBinException
 {
 public:
-    AccountBinNotFoundException(const std::string& account_name, const std::string& bin_name) : AccountBinException("Account bin not found.")
-    {
-        account_name_ = account_name;
-        bin_name_ = bin_name;
-    }
+    AccountBinNotFoundException(const std::string& account_name, const std::string& bin_name) : AccountBinException("Account bin not found.", account_name, bin_name) { }
 };
 
 class AccountBinAlreadyExistsException : public AccountBinException
 {
 public:
-    AccountBinAlreadyExistsException(const std::string& account_name, const std::string& bin_name) : AccountBinException("Account bin already exists.")
-    {
-        account_name_ = account_name;
-        bin_name_ = bin_name;
-    }
-};
-
-class InsufficientFundsException : public std::runtime_error
-{
-public:
-    InsufficientFundsException() : std::runtime_error("Insufficient funds.") { }
+    AccountBinAlreadyExistsException(const std::string& account_name, const std::string& bin_name) : AccountBinException("Account bin already exists.", account_name, bin_name) { }
 };
 
 }
