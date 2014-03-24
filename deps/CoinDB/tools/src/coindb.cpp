@@ -242,6 +242,9 @@ cli::result_t cmd_newaccountbin(bool bHelp, const cli::params_t& params)
         return "newaccountbin <filename> <account_name> <bin_name> - add new account bin.";
 
     Vault vault(params[0], false);
+    std::shared_ptr<Account> account = vault.getAccount(params[1]);
+    for (auto& keychain: account->keychains())
+        vault.unlockKeychainChainCode(keychain->name(), secure_bytes_t());
     vault.addAccountBin(params[1], params[2]);
 
     stringstream ss;
@@ -340,6 +343,23 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_refillaccountpool(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 1 || params.size() != 2 )
+        return "refillaccountpool <filename> <account_name> - refill signing script pool for account.";
+
+    Vault vault(params[0], false);
+    std::shared_ptr<Account> account = vault.getAccount(params[1]);
+    for (auto& keychain: account->keychains())
+        vault.unlockKeychainChainCode(keychain->name(), secure_bytes_t());
+
+    vault.refillAccountPool(params[1]);
+
+    stringstream ss;
+    ss << "Refilled account pool for account " << params[1] << ".";
+    return ss.str();
+}
+
 cli::result_t cmd_insertrawtx(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
@@ -428,6 +448,7 @@ int main(int argc, char* argv[])
     cmds.add("newscript", &cmd_newscript);
     cmds.add("listscripts", &cmd_listscripts);
     cmds.add("listtxouts", &cmd_listtxouts);
+    cmds.add("refillaccountpool", &cmd_refillaccountpool);
 
     // Tx operations
     cmds.add("insertrawtx", &cmd_insertrawtx);

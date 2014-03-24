@@ -384,7 +384,7 @@ std::shared_ptr<SigningScript> Vault::newAccountBinSigningScript_unwrapped(std::
 {
     try
     {
-        refillAccountBinScriptPool_unwrapped(bin);
+        refillAccountBinPool_unwrapped(bin);
     }
     catch (const AccountChainCodeLockedException& e)
     {
@@ -422,24 +422,24 @@ std::shared_ptr<SigningScript> Vault::newSigningScript(const std::string& accoun
     return script;
 }
 
-void Vault::refillAccountScriptPools_unwrapped(std::shared_ptr<Account> account)
+void Vault::refillAccountPool_unwrapped(std::shared_ptr<Account> account)
 {
-    for (auto& bin: account->bins()) { refillAccountBinScriptPool_unwrapped(bin); }
+    for (auto& bin: account->bins()) { refillAccountBinPool_unwrapped(bin); }
 }
 
-void Vault::refillAccountScriptPools(const std::string& account_name)
+void Vault::refillAccountPool(const std::string& account_name)
 {
-    LOGGER(trace) << "Vault::refillAccountScriptPools(" << account_name << ")" << std::endl;
+    LOGGER(trace) << "Vault::refillAccountPool(" << account_name << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
-    refillAccountScriptPools_unwrapped(account);
+    refillAccountPool_unwrapped(account);
     t.commit();
 }
 
-void Vault::refillAccountBinScriptPool_unwrapped(std::shared_ptr<AccountBin> bin)
+void Vault::refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin)
 {
     tryUnlockAccountChainCodes_unwrapped(bin->account());
 
@@ -699,7 +699,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                     txout->type(TxOut::CREDIT);
                 }
                 scripts.insert(script);
-                refillAccountBinScriptPool_unwrapped(script->account_bin());
+                refillAccountBinPool_unwrapped(script->account_bin());
                 break;
 
             case SigningScript::CHANGE:
