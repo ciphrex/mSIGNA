@@ -436,7 +436,7 @@ void Vault::refillAccountBinScriptPool_unwrapped(const std::string& account_name
     typedef odb::query<ScriptCountView> count_query;
     odb::result<ScriptCountView> count_result(db_->query<ScriptCountView>(count_query::AccountBin::id == bin->id() && count_query::SigningScript::status == SigningScript::UNUSED));
     uint32_t count = 0;
-    if (count_result.empty()) count = count_result.begin().load()->count;
+    if (!count_result.empty()) count = count_result.begin().load()->count;
 
     for (uint32_t i = count; i <= account->unused_pool_size(); i++)
     {
