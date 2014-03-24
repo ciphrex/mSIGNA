@@ -395,7 +395,7 @@ std::shared_ptr<SigningScript> Vault::newAccountBinSigningScript_unwrapped(std::
     typedef odb::query<SigningScriptView> view_query;
     odb::result<SigningScriptView> view_result(db_->query<SigningScriptView>(
         (view_query::AccountBin::id == bin->id() && view_query::SigningScript::status == SigningScript::UNUSED) +
-        "ORDER BY" + view_query::SigningScript::id + "LIMIT 1"));
+        "ORDER BY" + view_query::SigningScript::index + "LIMIT 1"));
     if (view_result.empty()) throw AccountBinOutOfScriptsException(bin->account()->name(), bin->name());
 
     std::shared_ptr<SigningScriptView> view(view_result.begin().load());

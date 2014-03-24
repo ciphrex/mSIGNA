@@ -242,9 +242,9 @@ cli::result_t cmd_newaccountbin(bool bHelp, const cli::params_t& params)
         return "newaccountbin <filename> <account_name> <bin_name> - add new account bin.";
 
     Vault vault(params[0], false);
-    std::shared_ptr<Account> account = vault.getAccount(params[1]);
-    for (auto& keychain: account->keychains())
-        vault.unlockKeychainChainCode(keychain->name(), secure_bytes_t());
+    AccountInfo accountInfo = vault.getAccountInfo(params[1]);
+    for (auto& keychain_name: accountInfo.keychain_names())
+        vault.unlockKeychainChainCode(keychain_name, secure_bytes_t());
     vault.addAccountBin(params[1], params[2]);
 
     stringstream ss;
@@ -349,9 +349,9 @@ cli::result_t cmd_refillaccountpool(bool bHelp, const cli::params_t& params)
         return "refillaccountpool <filename> <account_name> - refill signing script pool for account.";
 
     Vault vault(params[0], false);
-    std::shared_ptr<Account> account = vault.getAccount(params[1]);
-    for (auto& keychain: account->keychains())
-        vault.unlockKeychainChainCode(keychain->name(), secure_bytes_t());
+    AccountInfo accountInfo = vault.getAccountInfo(params[1]);
+    for (auto& keychain_name: accountInfo.keychain_names())
+        vault.unlockKeychainChainCode(keychain_name, secure_bytes_t());
 
     vault.refillAccountPool(params[1]);
 
