@@ -756,6 +756,9 @@ struct SigningScriptView
     #pragma db column(SigningScript::id_)
     unsigned long id;
 
+    #pragma db column(SigningScript::index_)
+    uint32_t index;
+
     #pragma db column(SigningScript::label_)
     std::string label;
 

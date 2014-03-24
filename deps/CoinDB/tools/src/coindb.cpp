@@ -303,7 +303,7 @@ cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
         else
             address = "N/A";
 
-        ss << "account: " << left << setw(15) << scriptView.account_name << " | bin: " << left << setw(15) << scriptView.account_bin_name << " | script: " << left << setw(50) << uchar_vector(scriptView.txoutscript).getHex() << " | address: " << left << setw(36) << address << " | status: " << SigningScript::getStatusString(scriptView.status);
+        ss << "account: " << left << setw(15) << scriptView.account_name << " | bin: " << left << setw(15) << scriptView.account_bin_name << " | index: " << right << setw(5) << scriptView.index << " | script: " << left << setw(50) << uchar_vector(scriptView.txoutscript).getHex() << " | address: " << left << setw(36) << address << " | status: " << SigningScript::getStatusString(scriptView.status);
     }
     return ss.str();
 }
