@@ -108,8 +108,8 @@ public:
     bool isPrivateKeyLocked() const;
     bool isChainCodeLocked() const;
 
-    void unlockPrivateKey(const secure_bytes_t& lock_key);
-    void unlockChainCode(const secure_bytes_t& lock_key);
+    bool unlockPrivateKey(const secure_bytes_t& lock_key);
+    bool unlockChainCode(const secure_bytes_t& lock_key);
 
     secure_bytes_t getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
     bytes_t getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
@@ -298,21 +298,23 @@ inline bool Keychain::isChainCodeLocked() const
     return chain_code_.empty();
 }
 
-inline void Keychain::unlockPrivateKey(const secure_bytes_t& lock_key)
+inline bool Keychain::unlockPrivateKey(const secure_bytes_t& lock_key)
 {
     if (!isPrivate()) throw std::runtime_error("Cannot unlock the private key of a public keychain.");
-    if (!privkey_.empty()) return; // Already unlocked
+    if (!privkey_.empty()) return true; // Already unlocked
 
     // TODO: decrypt
     privkey_ = privkey_ciphertext_;
+    return true;
 }
 
-inline void Keychain::unlockChainCode(const secure_bytes_t& lock_key)
+inline bool Keychain::unlockChainCode(const secure_bytes_t& lock_key)
 {
-    if (!chain_code_.empty()) return; // Already unlocked
+    if (!chain_code_.empty()) return true; // Already unlocked
 
     // TODO: decrypt
     chain_code_ = chain_code_ciphertext_;
+    return true;
 }
 
 inline secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path) const

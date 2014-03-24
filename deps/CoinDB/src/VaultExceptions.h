@@ -56,6 +56,17 @@ public:
     AccountInsufficientFundsException(const std::string& account_name) : AccountException("Insufficient funds.", account_name) { }
 };
 
+class AccountChainCodeLockedException : public AccountException
+{
+public:
+    AccountChainCodeLockedException(const std::string& account_name, const std::set<std::string>& locked_keychains) : AccountException("Chain code is locked.", account_name), locked_keychains_(locked_keychains) { }
+
+    const std::set<std::string>& locked_keychains() const { return locked_keychains_; }
+
+protected:
+    std::set<std::string> locked_keychains_;
+};
+
 // ACCOUNT BIN EXCEPTIONS
 class AccountBinException : public std::runtime_error
 {

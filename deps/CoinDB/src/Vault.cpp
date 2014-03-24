@@ -163,6 +163,14 @@ void Vault::lockKeychainChainCode(const std::string& keychain_name)
 
 void Vault::unlockKeychainChainCode(const std::string& keychain_name, const secure_bytes_t& unlock_key)
 {
+    LOGGER(trace) << "Vault::unlockKeychainChainCode(" << keychain_name << ", ?)" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
+    if (keychain->unlockChainCode(unlock_key))
+        mapChainCodeUnlock[keychain_name] = unlock_key;
 }
  
 void Vault::lockAllKeychainPrivateKeys()
@@ -211,19 +219,28 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
     for (auto& keychain_name: keychain_names)
     {
         odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
-        if (r.empty()) {
-            std::stringstream ss;
-            ss << "Vault::newAccount - keychain " << keychain_name << " not found.";
-            throw std::runtime_error(ss.str());
-        }
+        if (r.empty()) throw KeychainNotFoundException(keychain_name);
         keychains.insert(r.begin().load());
     }
 
+    std::set<std::string> locked_keychains;
     for (auto& keychain: keychains)
     {
-        // TODO: pass lock key
-        keychain->unlockChainCode(secure_bytes_t());
+        const auto& it = mapChainCodeUnlock.find(keychain->name());
+        if (it == mapChainCodeUnlock.end())
+        {
+            locked_keychains.insert(keychain->name());
+        }
+        else
+        {
+            if (!keychain->unlockChainCode(it->second))
+            {
+                mapChainCodeUnlock.erase(keychain->name());
+                locked_keychains.insert(keychain->name());
+            }
+        }
     }
+    if (!locked_keychains.empty()) throw AccountChainCodeLockedException(account_name, locked_keychains);
 
     std::shared_ptr<Account> account(new Account(account_name, minsigs, keychains, unused_pool_size, time_created));
     db_->persist(account);
