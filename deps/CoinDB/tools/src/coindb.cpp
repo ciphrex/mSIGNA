@@ -26,6 +26,9 @@
 #include <iostream>
 #include <sstream>
 
+// TODO: Get this from a config file
+const unsigned char BASE58_VERSIONS[] = { 0x00, 0x05 };
+
 using namespace std;
 using namespace odb::core;
 using namespace CoinDB;
@@ -244,9 +247,6 @@ cli::result_t cmd_newaccountbin(bool bHelp, const cli::params_t& params)
     return ss.str(); 
 }
 
-// TODO: Get from config file
-const unsigned char PAY_TO_SCRIPT_HASH_VERSION = 0x05;
-
 cli::result_t cmd_newscript(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 2 || params.size() > 4)
@@ -261,7 +261,7 @@ cli::result_t cmd_newscript(bool bHelp, const cli::params_t& params)
     std::string address;
     payee_t payee = getScriptPubKeyPayee(script->txoutscript());
     if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
-        address = toBase58Check(payee.second, PAY_TO_SCRIPT_HASH_VERSION);
+        address = toBase58Check(payee.second, BASE58_VERSIONS[1]);
     else
         address = "N/A";
 
@@ -297,7 +297,7 @@ cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
         std::string address;
         payee_t payee = getScriptPubKeyPayee(scriptView.txoutscript);
         if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
-            address = toBase58Check(payee.second, PAY_TO_SCRIPT_HASH_VERSION);
+            address = toBase58Check(payee.second, BASE58_VERSIONS[1]);
         else
             address = "N/A";
 
@@ -329,7 +329,7 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
         std::string address;
         payee_t payee = getScriptPubKeyPayee(txOutView.script);
         if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
-            address = toBase58Check(payee.second, PAY_TO_SCRIPT_HASH_VERSION);
+            address = toBase58Check(payee.second, BASE58_VERSIONS[1]);
         else
             address = "N/A";
 
@@ -363,6 +363,42 @@ cli::result_t cmd_insertrawtx(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_newrawtx(bool bHelp, const cli::params_t& params)
+{
+    if (!bHelp && params.size() >= 4)
+    {
+        while (true)
+        {
+            Vault vault(params[0], false);
+
+            // Get outputs
+            using namespace CoinQ::Script;
+            const size_t MAX_VERSION_LEN = 2;
+            size_t i = 2;
+            txouts_t txouts;
+            do
+            {
+                bytes_t txoutscript  = getTxOutScriptForAddress(params[i++], BASE58_VERSIONS);
+                uint64_t value = strtoull(params[i++].c_str(), NULL, 0);
+                std::shared_ptr<TxOut> txout(new TxOut(value, txoutscript));
+                txouts.push_back(txout);
+                 
+            } while (i < (params.size() - 1) && params[i].size() > MAX_VERSION_LEN);
+
+            uint64_t fee = i < params.size() ? strtoull(params[i++].c_str(), NULL, 0) : 0;
+            uint32_t version = i < params.size() ? strtoul(params[i++].c_str(), NULL, 0) : 1;
+            uint32_t locktime = i < params.size() ? strtoul(params[i++].c_str(), NULL, 0) : 0xffffffff;
+            if (i < params.size()) break;
+
+            std::shared_ptr<Tx> tx = vault.createTx(params[1], version, locktime, txouts, fee, 1, false);
+            return uchar_vector(tx->raw()).getHex();
+        }
+    }
+
+    return "newrawtx <filename> <account> <address 1> <value 1> [address 2] [value 2] ... [version = 1] [locktime = 0xffffffff] - create a new raw transaction.";
+}
+
+
 int main(int argc, char* argv[])
 {
     INIT_LOGGER("debug.log");
@@ -393,6 +429,7 @@ int main(int argc, char* argv[])
 
     // Tx operations
     cmds.add("insertrawtx", &cmd_insertrawtx);
+    cmds.add("newrawtx", &cmd_newrawtx);
 
     try 
     {
