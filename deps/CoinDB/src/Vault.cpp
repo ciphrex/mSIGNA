@@ -113,9 +113,8 @@ void Vault::persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain)
 std::shared_ptr<Keychain> Vault::getKeychain_unwrapped(const std::string& keychain_name) const
 {
     odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
-    if (r.empty()) {
-        throw std::runtime_error("Vault::getKeychain - keychain not found.");
-    }
+    if (r.empty()) throw KeychainNotFoundException(keychain_name);
+
     std::shared_ptr<Keychain> keychain(r.begin().load());
     return keychain;
 }
@@ -144,6 +143,46 @@ std::vector<std::shared_ptr<Keychain>> Vault::getAllKeychains(bool root_only) co
     std::vector<std::shared_ptr<Keychain>> keychains;
     for (auto& keychain: r) { keychains.push_back(keychain.get_shared_ptr()); }
     return keychains;
+}
+
+void Vault::lockAllKeychainChainCodes()
+{
+    LOGGER(trace) << "Vault::lockAllKeychainChainCodes()" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    mapChainCodeUnlock.clear();
+}
+
+void Vault::lockKeychainChainCode(const std::string& keychain_name)
+{
+    LOGGER(trace) << "Vault::lockKeychainChainCode(" << keychain_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    mapChainCodeUnlock.erase(keychain_name);
+}
+
+void Vault::unlockKeychainChainCode(const std::string& keychain_name, const secure_bytes_t& unlock_key)
+{
+}
+ 
+void Vault::lockAllKeychainPrivateKeys()
+{
+    LOGGER(trace) << "Vault::lockAllKeychainPrivateKeys()" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    mapPrivateKeyUnlock.clear();
+}
+
+void Vault::lockKeychainPrivateKey(const std::string& keychain_name)
+{
+    LOGGER(trace) << "Vault::lockKeychainPrivateKey(" << keychain_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    mapPrivateKeyUnlock.erase(keychain_name);
+}
+
+void unlockKeychainPrivateKey(const std::string& keychain_name, const secure_bytes_t& unlock_key)
+{
 }
 
 

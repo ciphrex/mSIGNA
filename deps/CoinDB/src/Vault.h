@@ -41,6 +41,15 @@ public:
     void renameKeychain(const std::string& old_name, const std::string& new_name);
     std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
     std::vector<std::shared_ptr<Keychain>> getAllKeychains(bool root_only = false) const;
+
+    void lockAllKeychainChainCodes();
+    void lockKeychainChainCode(const std::string& keychain_name);
+    void unlockKeychainChainCode(const std::string& keychain_name, const secure_bytes_t& unlock_key);
+
+    void lockAllKeychainPrivateKeys();
+    void lockKeychainPrivateKey(const std::string& keychain_name);
+    void unlockKeychainPrivateKey(const std::string& keychain_name, const secure_bytes_t& unlock_key);
+
     //bytes_t exportKeychain(std::shared_ptr<Keychain> keychain, const std::string& filepath, bool exportprivkeys = false) const;
     //bytes_t importKeychain(const std::string& keychain_name, const std::string& filepath, bool& importprivkeys);
     //bool isKeychainFilePrivate(const std::string& filepath) const;
@@ -90,10 +99,12 @@ protected:
     std::shared_ptr<Tx> insertTx_unwrapped(std::shared_ptr<Tx> tx);
     std::shared_ptr<Tx> createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
 
-    mutable boost::mutex mutex;
-
 private:
+    mutable boost::mutex mutex;
     std::shared_ptr<odb::core::database> db_;
+
+    std::map<std::string, secure_bytes_t> mapChainCodeUnlock;
+    std::map<std::string, secure_bytes_t> mapPrivateKeyUnlock;
 };
 
 }

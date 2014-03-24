@@ -14,6 +14,23 @@
 namespace CoinDB
 {
 
+class KeychainException : public std::runtime_error
+{
+public:
+    const std::string& keychain_name() const { return keychain_name_; }
+
+protected:
+    KeychainException(const std::string& what, const std::string& keychain_name) : std::runtime_error(what), keychain_name_(keychain_name) { }
+
+    std::string keychain_name_;
+};
+
+class KeychainNotFoundException : public KeychainException
+{
+public:
+    KeychainNotFoundException(const std::string& keychain_name) : KeychainException("Keychain not found.", keychain_name) { }
+};
+
 class AccountNotFoundException : public std::runtime_error
 {
 public:
