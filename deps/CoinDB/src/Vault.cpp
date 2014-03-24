@@ -68,6 +68,7 @@ std::shared_ptr<Keychain> Vault::newKeychain(const std::string& name, const secu
 {
     LOGGER(trace) << "Vault::newKeychain(" << name << ", ...)" << std::endl;
 
+    if (keychainExists(name)) throw KeychainAlreadyExistsException(name);
     std::shared_ptr<Keychain> keychain(new Keychain(name, entropy, lockKey, salt));
 
     boost::lock_guard<boost::mutex> lock(mutex);
@@ -230,12 +231,13 @@ bool Vault::accountExists(const std::string& account_name) const
 
 void Vault::newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size, uint32_t time_created)
 {
+    LOGGER(trace) << "Vault::newAccount(" << account_name << ", [" << stdutils::delimited_list(keychain_names, ", ") << ", " << unused_pool_size << ", " << time_created << ")" << std::endl;
+
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     odb::result<Account> r(db_->query<Account>(odb::query<Account>::name == account_name));
-    if (!r.empty())
-        throw std::runtime_error("Vault::newAccount - account with that name already exists.");
+    if (!r.empty()) throw AccountAlreadyExistsException(account_name);
 
     KeychainSet keychains;
     for (auto& keychain_name: keychain_names)

@@ -32,6 +32,12 @@ public:
     KeychainNotFoundException(const std::string& keychain_name) : KeychainException("Keychain not found.", keychain_name) { }
 };
 
+class KeychainAlreadyExistsException : public KeychainException
+{
+public:
+    KeychainAlreadyExistsException(const std::string& keychain_name) : KeychainException("Keychain already exists.", keychain_name) { }
+};
+
 // ACCOUNT EXCEPTIONS
 class AccountException : public std::runtime_error
 {
@@ -48,6 +54,12 @@ class AccountNotFoundException : public AccountException
 {
 public:
     AccountNotFoundException(const std::string& account_name) : AccountException("Account not found.", account_name) { }
+};
+
+class AccountAlreadyExistsException : public AccountException
+{
+public:
+    AccountAlreadyExistsException(const std::string& account_name) : AccountException("Account already exists.", account_name) { }
 };
 
 class AccountInsufficientFundsException : public AccountException
