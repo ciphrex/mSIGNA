@@ -449,7 +449,7 @@ void Vault::refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin)
     if (!count_result.empty()) count = count_result.begin().load()->count;
 
     uint32_t unused_pool_size = bin->account()->unused_pool_size();
-    for (uint32_t i = count; i <= unused_pool_size; i++)
+    for (uint32_t i = count; i < unused_pool_size; i++)
     {
         std::shared_ptr<SigningScript> script = bin->newSigningScript();
         for (auto& key: script->keys()) { db_->persist(key); }
