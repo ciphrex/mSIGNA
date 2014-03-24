@@ -173,6 +173,8 @@ cli::result_t cmd_newaccount(bool bHelp, const cli::params_t& params)
         keychain_names.push_back(params[i]);
 
     Vault vault(params[0], false);
+    for (auto& keychain_name: keychain_names)
+        vault.unlockKeychainChainCode(keychain_name, secure_bytes_t());
     vault.newAccount(params[1], minsigs, keychain_names);
 
     stringstream ss;
