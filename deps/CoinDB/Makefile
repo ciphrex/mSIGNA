@@ -110,7 +110,7 @@ lib/libCoinDB.a: $(OBJS)
 # odb compiled dependencies
 #
 odb/Schema-odb.hxx: src/Schema.hxx
-	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema $< $(ODB_INCLUDE_PATH)
+	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema $(ODB_INCLUDE_PATH) $<
 
 #odb/Schema-odb.cxx: src/Schema.hxx
 #	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema $< $(ODB_INCLUDE_PATH)
@@ -120,19 +120,19 @@ odb/Schema-odb.cxx: odb/Schema-odb.hxx
 # schema
 #
 obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx src/Schema.hxx
-	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(ODB_DB) $(INCLUDE_PATH)
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
 # vault class
 #
 obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/Schema.hxx odb/Schema-odb.hxx src/Database.hxx
-	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(ODB_DB) $(INCLUDE_PATH)
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
 # coindb command line tool
 #
 tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp lib/libCoinDB.a
-	$(CXX) $(CXX_FLAGS) -o $@ $< $(ODB_DB) $(TOOLS_LIBPATH) $(TOOLS_INCLUDE_PATH)
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(TOOLS_INCLUDE_PATH) $< $(TOOLS_LIBPATH) -o $@
 
 clean:
 	-rm -f obj/*.o odb/*-odb.* lib/*.a tools/build/*
