@@ -40,7 +40,7 @@ using namespace CoinDB;
 Vault::Vault(int argc, char** argv, bool create, uint32_t version)
     : db_(open_database(argc, argv, create))
 {
-    LOGGER(trace) << "Created Vault instance" << std::endl;
+    LOGGER(trace) << "Opened Vault" << std::endl;
 //    if (create) setVersion(version);
 }
 
@@ -48,7 +48,7 @@ Vault::Vault(int argc, char** argv, bool create, uint32_t version)
 Vault::Vault(const std::string& filename, bool create, uint32_t version)
     : db_(openDatabase(filename, create))
 {
-    LOGGER(trace) << "Created Vault instance - filename: " << filename << " create: " << (create ? "true" : "false") << " version: " << version << std::endl;
+    LOGGER(trace) << "Opened Vault - filename: " << filename << " create: " << (create ? "true" : "false") << " version: " << version << std::endl;
 //    if (create) setVersion(version);
 }
 #endif
@@ -64,16 +64,17 @@ bool Vault::keychainExists(const std::string& keychain_name) const
     return !r.empty();
 }
 
-std::shared_ptr<Keychain> Vault::newKeychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey, const bytes_t& salt)
+std::shared_ptr<Keychain> Vault::newKeychain(const std::string& keychain_name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey, const bytes_t& salt)
 {
-    LOGGER(trace) << "Vault::newKeychain(" << name << ", ...)" << std::endl;
-
-    if (keychainExists(name)) throw KeychainAlreadyExistsException(name);
-    std::shared_ptr<Keychain> keychain(new Keychain(name, entropy, lockKey, salt));
+    LOGGER(trace) << "Vault::newKeychain(" << keychain_name << ", ...)" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session session;
     odb::core::transaction t(db_->begin());
+    odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
+    if (!r.empty()) throw KeychainAlreadyExistsException(keychain_name);
+
+    std::shared_ptr<Keychain> keychain(new Keychain(keychain_name, entropy, lockKey, salt));
     persistKeychain_unwrapped(keychain);
     t.commit();
 
@@ -231,7 +232,7 @@ bool Vault::accountExists(const std::string& account_name) const
 
 void Vault::newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size, uint32_t time_created)
 {
-    LOGGER(trace) << "Vault::newAccount(" << account_name << ", [" << stdutils::delimited_list(keychain_names, ", ") << ", " << unused_pool_size << ", " << time_created << ")" << std::endl;
+    LOGGER(trace) << "Vault::newAccount(" << account_name << ", " << minsigs << " of [" << stdutils::delimited_list(keychain_names, ", ") << "], " << unused_pool_size << ", " << time_created << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;

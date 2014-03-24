@@ -537,9 +537,11 @@ public:
     Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL))
         : name_(name), minsigs_(minsigs), keychains_(keychains), unused_pool_size_(unused_pool_size), time_created_(time_created)
     {
+        // TODO: Use exception classes
         if (name_.empty() || name[0] == '@') throw std::runtime_error("Invalid account name.");
         if (keychains_.size() > 15) throw std::runtime_error("Account can use at most 15 keychains.");
         if (minsigs > keychains_.size()) throw std::runtime_error("Account minimum signatures cannot exceed number of keychains.");
+        if (minsigs < 1) throw std::runtime_error("Account must require at least one signature.");
     }
 
     AccountInfo accountInfo() const;
