@@ -252,10 +252,10 @@ cli::result_t cmd_newaccountbin(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_newscript(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 2 || params.size() > 4)
-        return "newscript <filename> <account_name> [bin_name = @default] [label = null] - get a new signing script.";
+        return std::string("newscript <filename> <account_name> [bin_name = ") + DEFAULT_BIN_NAME + "] [label = null] - get a new signing script.";
 
     Vault vault(params[0], false);
-    std::string bin_name = params.size() > 2 ? params[2] : std::string("@default");
+    std::string bin_name = params.size() > 2 ? params[2] : std::string(DEFAULT_BIN_NAME);
     std::string label = params.size() > 3 ? params[3] : std::string("");
     std::shared_ptr<SigningScript> script = vault.newSigningScript(params[1], bin_name, label);
 

@@ -414,12 +414,16 @@ inline secure_bytes_t Key::privkey() const
     return root_keychain_->getSigningPrivateKey(index_, derivation_path_);
 }
 
+
+const std::string CHANGE_BIN_NAME = "@change";
+const std::string DEFAULT_BIN_NAME = "@default";
+
 #pragma db object pointer(std::shared_ptr)
 class AccountBin : public std::enable_shared_from_this<AccountBin>
 {
 public:
-    static const uint32_t CHANGE = 1;
-    static const uint32_t DEFAULT = 2;
+    static const uint32_t CHANGE_INDEX = 1;
+    static const uint32_t DEFAULT_INDEX = 2;
 
     AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name);
 
@@ -438,8 +442,8 @@ public:
     bool loadKeychains();
     KeychainSet keychains() const { return keychains_; }
 
-    bool isChange() const { return index_ == CHANGE; }
-    bool isDefault() const { return index_ == DEFAULT; }
+    bool isChange() const { return index_ == CHANGE_INDEX; }
+    bool isDefault() const { return index_ == DEFAULT_INDEX; }
 
 private:
     friend class odb::access;
@@ -601,6 +605,9 @@ inline std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
 inline AccountBin::AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name)
     : account_(account), index_(index), name_(name), script_count_(0)
 {
+    if (index == 0) throw std::runtime_error("Account bin index cannot be zero.");
+    if (index == CHANGE_INDEX && name != CHANGE_BIN_NAME) throw std::runtime_error("Account bin index reserved for change.");
+    if (index == DEFAULT_INDEX && name != DEFAULT_BIN_NAME) throw std::runtime_error("Account bin index reserved for default."); 
 }
 
 inline bool AccountBin::loadKeychains()

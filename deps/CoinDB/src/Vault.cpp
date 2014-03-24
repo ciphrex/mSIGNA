@@ -110,6 +110,28 @@ void Vault::persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain)
     db_->persist(keychain);
 }
 
+void Vault::tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account)
+{
+    std::set<std::string> locked_keychains;
+    for (auto& keychain: account->keychains())
+    {
+        const auto& it = mapChainCodeUnlock.find(keychain->name());
+        if (it == mapChainCodeUnlock.end())
+        {
+            locked_keychains.insert(keychain->name());
+        }
+        else
+        {
+            if (!keychain->unlockChainCode(it->second))
+            {
+                mapChainCodeUnlock.erase(keychain->name());
+                locked_keychains.insert(keychain->name());
+            }
+        }
+    }
+    if (!locked_keychains.empty()) throw AccountChainCodeLockedException(account->name(), locked_keychains);
+}
+
 std::shared_ptr<Keychain> Vault::getKeychain_unwrapped(const std::string& keychain_name) const
 {
     odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
@@ -223,32 +245,16 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
         keychains.insert(r.begin().load());
     }
 
-    std::set<std::string> locked_keychains;
-    for (auto& keychain: keychains)
-    {
-        const auto& it = mapChainCodeUnlock.find(keychain->name());
-        if (it == mapChainCodeUnlock.end())
-        {
-            locked_keychains.insert(keychain->name());
-        }
-        else
-        {
-            if (!keychain->unlockChainCode(it->second))
-            {
-                mapChainCodeUnlock.erase(keychain->name());
-                locked_keychains.insert(keychain->name());
-            }
-        }
-    }
-    if (!locked_keychains.empty()) throw AccountChainCodeLockedException(account_name, locked_keychains);
-
     std::shared_ptr<Account> account(new Account(account_name, minsigs, keychains, unused_pool_size, time_created));
+    tryUnlockAccountChainCodes_unwrapped(account);
     db_->persist(account);
 
-    std::shared_ptr<AccountBin> changeAccountBin= account->addBin("@change");
+    // The first bin we create must be the change bin.
+    std::shared_ptr<AccountBin> changeAccountBin= account->addBin(CHANGE_BIN_NAME);
     db_->persist(changeAccountBin);
 
-    std::shared_ptr<AccountBin> defaultAccountBin = account->addBin("@default");
+    // The second bin we create must be the default bin.
+    std::shared_ptr<AccountBin> defaultAccountBin = account->addBin(DEFAULT_BIN_NAME);
     db_->persist(defaultAccountBin);
 
     for (uint32_t i = 0; i < unused_pool_size; i++)
@@ -353,12 +359,7 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
     if (binExists) throw AccountBinAlreadyExistsException(account_name, bin_name);
 
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
-
-    // TODO: pass unlock key
-    for (auto& keychain: account->keychains())
-    {
-        keychain->unlockChainCode(secure_bytes_t());
-    }
+    tryUnlockAccountChainCodes_unwrapped(account);
 
     std::shared_ptr<AccountBin> bin = account->addBin(bin_name);
     db_->persist(bin);
@@ -376,15 +377,23 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
     return bin;
 }
 
-std::shared_ptr<SigningScript> Vault::newSigningScript_unwrapped(const std::string& account_name, const std::string& bin_name, const std::string& label)
+std::shared_ptr<SigningScript> Vault::newAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> bin, const std::string& label)
 {
-    refillAccountBinScriptPool_unwrapped(account_name, bin_name);
+    try
+    {
+        refillAccountBinScriptPool_unwrapped(bin);
+    }
+    catch (const AccountChainCodeLockedException& e)
+    {
+        LOGGER(debug) << "Vault::newAccountBinSigningScript_unwrapped(" << bin->account()->name() << "::" << bin->name() << ", " << label << ") - Chain code is locked so pool cannot be replenished." << std::endl;
+    }
 
     // Get the next available unused signing script
     typedef odb::query<SigningScriptView> view_query;
-    odb::result<SigningScriptView> view_result(db_->query<SigningScriptView>((view_query::Account::name == account_name && view_query::AccountBin::name == bin_name && view_query::SigningScript::status == SigningScript::UNUSED) +
+    odb::result<SigningScriptView> view_result(db_->query<SigningScriptView>(
+        (view_query::AccountBin::id == bin->id() && view_query::SigningScript::status == SigningScript::UNUSED) +
         "ORDER BY" + view_query::SigningScript::id + "LIMIT 1"));
-    if (view_result.empty()) throw AccountBinOutOfScriptsException(account_name, bin_name);
+    if (view_result.empty()) throw AccountBinOutOfScriptsException(bin->account()->name(), bin->name());
 
     std::shared_ptr<SigningScriptView> view(view_result.begin().load());
 
@@ -404,13 +413,15 @@ std::shared_ptr<SigningScript> Vault::newSigningScript(const std::string& accoun
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
-    std::shared_ptr<SigningScript> script = newSigningScript_unwrapped(account_name, bin_name, label);
+    std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
+    std::shared_ptr<SigningScript> script = newAccountBinSigningScript_unwrapped(bin, label);
     t.commit();
     return script;
 }
 
-void Vault::refillAccountScriptPools_unwrapped(const std::string& account_name)
+void Vault::refillAccountScriptPools_unwrapped(std::shared_ptr<Account> account)
 {
+    for (auto& bin: account->bins()) { refillAccountBinScriptPool_unwrapped(bin); }
 }
 
 void Vault::refillAccountScriptPools(const std::string& account_name)
@@ -420,32 +431,28 @@ void Vault::refillAccountScriptPools(const std::string& account_name)
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
-    refillAccountScriptPools_unwrapped(account_name);
+    std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
+    refillAccountScriptPools_unwrapped(account);
     t.commit();
 }
 
-void Vault::refillAccountBinScriptPool_unwrapped(const std::string& account_name, const std::string& bin_name)
+void Vault::refillAccountBinScriptPool_unwrapped(std::shared_ptr<AccountBin> bin)
 {
-    std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
-    std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
+    tryUnlockAccountChainCodes_unwrapped(bin->account());
 
-    // TODO: pass unlock key
-    for (auto& keychain: account->keychains()) { keychain->unlockChainCode(secure_bytes_t()); }
-
-    // Replenish unused script pool for bin
     typedef odb::query<ScriptCountView> count_query;
     odb::result<ScriptCountView> count_result(db_->query<ScriptCountView>(count_query::AccountBin::id == bin->id() && count_query::SigningScript::status == SigningScript::UNUSED));
     uint32_t count = 0;
     if (!count_result.empty()) count = count_result.begin().load()->count;
 
-    for (uint32_t i = count; i <= account->unused_pool_size(); i++)
+    uint32_t unused_pool_size = bin->account()->unused_pool_size();
+    for (uint32_t i = count; i <= unused_pool_size; i++)
     {
         std::shared_ptr<SigningScript> script = bin->newSigningScript();
         for (auto& key: script->keys()) { db_->persist(key); }
         db_->persist(script); 
     } 
     db_->update(bin);
-    db_->update(account);
 }
 
 std::vector<SigningScriptView> Vault::getSigningScriptViews(const std::string& account_name, const std::string& bin_name, int flags) const
@@ -689,7 +696,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                     txout->type(TxOut::CREDIT);
                 }
                 scripts.insert(script);
-                // TODO: refillAccountBinUnusedPool_unwrapped(script->account_bin());
+                refillAccountBinScriptPool_unwrapped(script->account_bin());
                 break;
 
             case SigningScript::CHANGE:
@@ -805,7 +812,8 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
 
     if (change > 0)
     {
-        std::shared_ptr<SigningScript> changescript = newSigningScript_unwrapped(account_name, "@change");
+        std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, CHANGE_BIN_NAME);
+        std::shared_ptr<SigningScript> changescript = newAccountBinSigningScript_unwrapped(bin);
 
         // TODO: Allow adding multiple change outputs
         std::shared_ptr<TxOut> txout(new TxOut(change, changescript->txoutscript()));

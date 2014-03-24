@@ -42,6 +42,8 @@ public:
     std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
     std::vector<std::shared_ptr<Keychain>> getAllKeychains(bool root_only = false) const;
 
+    // The following chain code and private key lock/unlock methods do not maintain a database session open so they only
+    // store and erase the unlock keys in member maps to be used by the other class methods.
     void lockAllKeychainChainCodes();
     void lockKeychainChainCode(const std::string& keychain_name);
     void unlockKeychainChainCode(const std::string& keychain_name, const secure_bytes_t& unlock_key);
@@ -66,7 +68,7 @@ public:
     std::vector<AccountInfo> getAllAccountInfo() const;
 
     std::shared_ptr<AccountBin> addAccountBin(const std::string& account_name, const std::string& bin_name);
-    std::shared_ptr<SigningScript> newSigningScript(const std::string& account_name, const std::string& bin_name = "@default", const std::string& label = "");
+    std::shared_ptr<SigningScript> newSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "");
 
     void refillAccountScriptPools(const std::string& account_name);
 
@@ -92,13 +94,13 @@ protected:
 
     // Account operations
     std::shared_ptr<Account> getAccount_unwrapped(const std::string& account_name) const;
-    std::shared_ptr<SigningScript> newSigningScript_unwrapped(const std::string& account_name, const std::string& bin_name = "@default", const std::string& label = "");
-
-    void refillAccountScriptPools_unwrapped(const std::string& account_name);
+    void tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account);
+    void refillAccountScriptPools_unwrapped(std::shared_ptr<Account> account);
 
     // AccountBin operations
     std::shared_ptr<AccountBin> getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;
-    void refillAccountBinScriptPool_unwrapped(const std::string& account_name, const std::string& bin_name);
+    std::shared_ptr<SigningScript> newAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> account_bin, const std::string& label = "");
+    void refillAccountBinScriptPool_unwrapped(std::shared_ptr<AccountBin> bin);
 
     // Tx operations
     std::shared_ptr<Tx> insertTx_unwrapped(std::shared_ptr<Tx> tx);
