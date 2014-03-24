@@ -395,7 +395,7 @@ cli::result_t cmd_newrawtx(bool bHelp, const cli::params_t& params)
         }
     }
 
-    return "newrawtx <filename> <account> <address 1> <value 1> [address 2] [value 2] ... [version = 1] [locktime = 0xffffffff] - create a new raw transaction.";
+    return "newrawtx <filename> <account> <address 1> <value 1> [address 2] [value 2] ... [fee = 0] [version = 1] [locktime = 0xffffffff] - create a new raw transaction.";
 }
 
 
