@@ -315,6 +315,57 @@ cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+enum txout_type_t { SEND, RECEIVE };
+
+string formattedTxOutHeader()
+{
+    stringstream ss;
+    ss << left << setw(15) << "account name" << " | "
+       << left << setw(15) << "bin name" << " | "
+       << left << setw(10) << "type" << " | "
+       << left << setw(15) << "value" << " | "
+       << left << setw(50) << "script" << " | "
+       << left << setw(36) << "address" << " | "
+       << left << setw(8)  << "status" << " | "
+       << left << setw(64) << "tx hash";
+
+    size_t header_length = ss.str().size();
+    ss << endl;
+    for (size_t i = 0; i < header_length; i++)
+        ss << "=";
+
+    return ss.str();
+}
+
+string formattedTxOut(
+    const string& account_name,
+    const string& bin_name,
+    txout_type_t type,
+    uint64_t value,
+    const bytes_t& script,
+    bool is_tx_signed,
+    const bytes_t& tx_hash
+)
+{
+    std::string address;
+    payee_t payee = getScriptPubKeyPayee(script);
+    if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
+        address = toBase58Check(payee.second, BASE58_VERSIONS[1]);
+    else
+        address = "N/A";
+
+    stringstream ss;
+    ss << left << setw(15) << account_name << " | "
+       << left << setw(15) << bin_name << " | "
+       << left << setw(10) << (type == SEND ? "send" : "receive") << " | "
+       << left << setw(15) << value << " | "
+       << left << setw(50) << uchar_vector(script).getHex() << " | "
+       << left << setw(36) << address << " | "
+       << left << setw(6)  << (is_tx_signed ? "signed" : "unsigned") << " | "
+       << left << setw(64) << uchar_vector(tx_hash).getHex();
+    return ss.str();
+}
+
 cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 1 || params.size() > 4)
@@ -328,21 +379,31 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
 
     using namespace CoinQ::Script;
     stringstream ss;
-    bool newLine = false;
+    ss << formattedTxOutHeader();
     for (auto& txOutView: txOutViews)
     {
-        if (newLine)    ss << endl;
-        else            newLine = true;
+        bool is_tx_signed = !txOutView.tx_hash.empty();
+        bytes_t tx_hash = is_tx_signed ? txOutView.tx_hash : txOutView.tx_unsigned_hash;
 
-        std::string address;
-        payee_t payee = getScriptPubKeyPayee(txOutView.script);
-        if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
-            address = toBase58Check(payee.second, BASE58_VERSIONS[1]);
-        else
-            address = "N/A";
+        if (!txOutView.receiving_account_name.empty())
+            ss << endl << formattedTxOut(
+                txOutView.receiving_account_name,
+                txOutView.bin_name,
+                RECEIVE,
+                txOutView.value,
+                txOutView.script,
+                is_tx_signed,
+                tx_hash);                
 
-        ss << "account: " << left << setw(15) << txOutView.account_name << " | bin: " << left << setw(15) << txOutView.account_bin_name << " | script: " << left << setw(50) << uchar_vector(txOutView.script).getHex() << " | address: " << left << setw(36) << address << " | value: " << left << setw(15) << txOutView.value << endl << "    tx unsigned hash: " << left << setw(64) << uchar_vector(txOutView.tx_unsigned_hash).getHex();
-        if (!txOutView.tx_hash.empty()) ss << " | tx hash: " << left << setw(64) << uchar_vector(txOutView.tx_hash).getHex();
+        if (!txOutView.sending_account_name.empty())
+            ss << endl << formattedTxOut(
+                txOutView.sending_account_name,
+                "",
+                SEND,
+                txOutView.value,
+                txOutView.script,
+                is_tx_signed,
+                tx_hash);                
     }
     return ss.str();
 }
