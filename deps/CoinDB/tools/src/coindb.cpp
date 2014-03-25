@@ -318,14 +318,13 @@ cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 1 || params.size() > 4)
-        return "listtxouts <filename> [account_name = @all] [bin_name = @all] [unspent_only = true] - display list of transaction outputs.";
+        return "listtxouts <filename> [account_name = @all] [bin_name = @all] - display list of transaction outputs.";
 
     std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
     std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
-    bool unspent_only = params.size() > 3 ? (params[3] == "true") : true; 
     
     Vault vault(params[0], false);
-    vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name, unspent_only);
+    vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name);
 
     using namespace CoinQ::Script;
     stringstream ss;
@@ -342,7 +341,8 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
         else
             address = "N/A";
 
-        ss << "account: " << left << setw(15) << txOutView.account_name << " | bin: " << left << setw(15) << txOutView.account_bin_name << " | script: " << left << setw(50) << uchar_vector(txOutView.script).getHex() << " | address: " << left << setw(36) << address << " | value: " << left << setw(15) << txOutView.value;
+        ss << "account: " << left << setw(15) << txOutView.account_name << " | bin: " << left << setw(15) << txOutView.account_bin_name << " | script: " << left << setw(50) << uchar_vector(txOutView.script).getHex() << " | address: " << left << setw(36) << address << " | value: " << left << setw(15) << txOutView.value << endl << "    tx unsigned hash: " << left << setw(64) << uchar_vector(txOutView.tx_unsigned_hash).getHex();
+        if (!txOutView.tx_hash.empty()) ss << " | tx hash: " << left << setw(64) << uchar_vector(txOutView.tx_hash).getHex();
     }
     return ss.str();
 }

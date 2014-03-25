@@ -498,19 +498,29 @@ std::vector<SigningScriptView> Vault::getSigningScriptViews(const std::string& a
     return views;
 }
 
-std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, const std::string& bin_name, bool unspent_only) const
+std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, const std::string& bin_name, int spent_status_flags, int txout_type_flags, int tx_status_flags) const
 {
-    LOGGER(trace) << "Vault::getTxOutViews(" << account_name << ", " << bin_name << ", " << (unspent_only ? "unspent" : "all") << ")" << std::endl;
+    LOGGER(trace) << "Vault::getTxOutViews(" << account_name << ", " << bin_name << ", " << TxOut::getSpentString(spent_status_flags) << ", " << TxOut::getTypeString(txout_type_flags) << ", " << Tx::getStatusString(tx_status_flags) << ")" << std::endl;
 
     typedef odb::query<TxOutView> query_t;
     query_t query(query_t::Account::id != 0);
-    if (unspent_only)           query = (query && query_t::TxOut::spent.is_null());
-    if (account_name != "@all") query = (query && query_t::Account::name == account_name);
-    if (bin_name != "@all")     query = (query && query_t::AccountBin::name == bin_name);
-    query += "ORDER BY" + query_t::Tx::timestamp + "DESC," + query_t::Account::name + "ASC," + query_t::AccountBin::name + "ASC";
+    if (account_name != "@all")                 query = (query && query_t::Account::name == account_name);
+    if (bin_name != "@all")                     query = (query && query_t::AccountBin::name == bin_name);
+    if (spent_status_flags == TxOut::SPENT)     query = (query && query_t::TxOut::spent.is_not_null());
+    if (spent_status_flags == TxOut::UNSPENT)   query = (query && query_t::TxOut::spent.is_null());
+    if (txout_type_flags != TxOut::ALL)
+    {
+        std::vector<TxOut::type_t> txout_types  = TxOut::getTypeFlags(txout_type_flags);
+        query = (query && query_t::TxOut::type.in_range(txout_types.begin(), txout_types.end()));
+    }
+    if (tx_status_flags != Tx::ALL)
+    {
+        std::vector<Tx::status_t> tx_statuses   = Tx::getStatusFlags(tx_status_flags);
+        query = (query && query_t::Tx::status.in_range(tx_statuses.begin(), tx_statuses.end()));
+    } 
+    query += "ORDER BY" + query_t::BlockHeader::height + "DESC," + query_t::Tx::timestamp + "DESC," + query_t::Account::name + "ASC," + query_t::AccountBin::name + "ASC";
 
     boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::session s;
     odb::core::transaction t(db_->begin());
 
     std::vector<TxOutView> views;

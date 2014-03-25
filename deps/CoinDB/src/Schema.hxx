@@ -1106,6 +1106,44 @@ class TxOut
 {
 public:
     enum type_t { NONE = 1, CHANGE = 2, DEBIT = 4, CREDIT = 8, ALL = 15 };
+    static std::string getTypeString(int flags)
+    {
+        std::vector<std::string> str_flags;
+        if (flags & NONE) str_flags.push_back("NONE");
+        if (flags & CHANGE) str_flags.push_back("CHANGE");
+        if (flags & DEBIT) str_flags.push_back("DEBIT");
+        if (flags & CREDIT) str_flags.push_back("CREDIT");
+        if (str_flags.empty()) return "UNKNOWN";
+        return stdutils::delimited_list(str_flags, " | ");
+    }
+
+    static std::vector<type_t> getTypeFlags(int flags)
+    {
+        std::vector<type_t> vflags;
+        if (flags & NONE) vflags.push_back(NONE);
+        if (flags & CHANGE) vflags.push_back(CHANGE);
+        if (flags & DEBIT) vflags.push_back(DEBIT);
+        if (flags & CREDIT) vflags.push_back(CREDIT);
+        return vflags;
+    }
+
+    enum spent_status_t { NEITHER = 0, UNSPENT = 1, SPENT = 2, BOTH = 3 };
+    static std::string getSpentString(int flags)
+    {
+        std::vector<std::string> str_flags;
+        if (flags & UNSPENT) str_flags.push_back("UNSPENT");
+        if (flags & SPENT) str_flags.push_back("SPENT");
+        if (str_flags.empty()) return "NEITHER";
+        return stdutils::delimited_list(str_flags, " | ");
+    }
+
+    static std::vector<spent_status_t> getSpentFlags(int flags)
+    {
+        std::vector<spent_status_t> vflags;
+        if (flags & UNSPENT) vflags.push_back(UNSPENT);
+        if (flags & SPENT) vflags.push_back(SPENT);
+        return vflags;
+    }
 
     TxOut(uint64_t value, const bytes_t& script, std::shared_ptr<Account> account = nullptr, type_t type = NONE)
         : value_(value), script_(script), account_(account), type_(type) { }
@@ -1221,6 +1259,32 @@ public:
      * Blockchain reorgs are the exception where it's possible that a CONFIRMED state reverts to an
      * earlier state.
      */
+    static std::string getStatusString(int status)
+    {
+        std::vector<std::string> flags;
+        if (status & UNSIGNED) flags.push_back("UNSIGNED");
+        if (status & UNSENT) flags.push_back("UNSENT");
+        if (status & SENT) flags.push_back("SENT");
+        if (status & RECEIVED) flags.push_back("RECEIVED");
+        if (status & CONFLICTED) flags.push_back("CONFLICTED");
+        if (status & CANCELED) flags.push_back("CANCELED");
+        if (status & CONFIRMED) flags.push_back("CONFIRMED");
+        if (flags.empty()) return "UNKNOWN";
+        return stdutils::delimited_list(flags, " | ");
+    }
+
+    static std::vector<status_t> getStatusFlags(int status)
+    {
+        std::vector<status_t> flags;
+        if (status & UNSIGNED) flags.push_back(UNSIGNED);
+        if (status & UNSENT) flags.push_back(UNSENT);
+        if (status & SENT) flags.push_back(SENT);
+        if (status & RECEIVED) flags.push_back(RECEIVED);
+        if (status & CONFLICTED) flags.push_back(CONFLICTED);
+        if (status & CANCELED) flags.push_back(CANCELED);
+        if (status & CONFIRMED) flags.push_back(CONFIRMED);
+        return flags;
+    }
 
     Tx(uint32_t version = 1, uint32_t locktime = 0, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED)
         : version_(version), locktime_(locktime), timestamp_(timestamp), status_(status), have_fee_(false), fee_(0) { }
@@ -1526,6 +1590,9 @@ struct TxOutView
 
     #pragma db column(TxOut::value_)
     uint64_t value;
+
+    #pragma db column(TxOut::type_)
+    TxOut::type_t type;
 
     #pragma db column(Tx::unsigned_hash_)
     bytes_t tx_unsigned_hash;
