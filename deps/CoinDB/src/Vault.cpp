@@ -866,6 +866,52 @@ std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx
     return tx;
 }
 
+void Vault::deleteTx_unwrapped(std::shared_ptr<Tx> tx)
+{
+    // NOTE: signingscript statuses are not updated. once received always received.
+
+    // delete txins
+    for (auto& txin: tx->txins())
+    {
+        // unspend spent outpoints first
+        odb::result<TxOut> txout_r(db_->query<TxOut>(odb::query<TxOut>::spent == txin->id()));
+        if (!txout_r.empty())
+        {
+            std::shared_ptr<TxOut> txout(txout_r.begin().load());
+            txout->spent(nullptr);
+            db_->update(txout);
+        }
+        db_->erase(txin);
+    }
+
+    // delete txouts
+    for (auto& txout: tx->txouts())
+    {
+        // recursively delete any transactions that depend on this one first
+        if (txout->spent()) { deleteTx_unwrapped(txout->spent()->tx()); }
+        db_->erase(txout);
+    }
+
+    // delete tx
+    db_->erase(tx);
+}
+
+void Vault::deleteTx(const bytes_t& tx_hash)
+{
+    LOGGER(trace) << "Vault::deleteTx(" << uchar_vector(tx_hash).getHex() << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == tx_hash || odb::query<Tx>::unsigned_hash == tx_hash));
+    if (r.empty()) throw TxNotFoundException(tx_hash);
+
+    std::shared_ptr<Tx> tx(r.begin().load());
+    deleteTx_unwrapped(tx);
+    t.commit();
+}
+
+
 // Block operations
 uint32_t Vault::getBestHeight() const
 {

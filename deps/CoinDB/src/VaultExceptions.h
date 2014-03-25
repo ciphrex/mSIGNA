@@ -111,4 +111,22 @@ public:
     AccountBinOutOfScriptsException(const std::string& account_name, const std::string& bin_name) : AccountBinException("Account bin out of scripts.", account_name, bin_name) { }
 };
 
+// TX EXCEPTIONS
+class TxException : public std::runtime_error
+{
+public:
+    const bytes_t& hash() const { return hash_; }
+
+protected:
+    TxException(const std::string& what, const bytes_t& hash) : std::runtime_error(what), hash_(hash) { }
+
+    bytes_t hash_;
+};
+
+class TxNotFoundException : public TxException
+{
+public:
+    TxNotFoundException(const bytes_t& hash) : TxException("Transaction not found.", hash) { }
+};
+
 }

@@ -496,6 +496,20 @@ cli::result_t cmd_newrawtx(bool bHelp, const cli::params_t& params)
     return "newrawtx <filename> <account> <address 1> <value 1> [address 2] [value 2] ... [fee = 0] [version = 1] [locktime = 0xffffffff] - create a new raw transaction.";
 }
 
+cli::result_t cmd_deletetx(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 2)
+        return "deletetx <filename> <tx hash> - deletes transaction by hash.";
+
+    Vault vault(params[0], false);
+    uchar_vector hash(params[1]);
+    vault.deleteTx(hash);
+
+    stringstream ss;
+    ss << "Tx deleted. hash: " << hash.getHex();
+    return ss.str();
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -529,6 +543,7 @@ int main(int argc, char* argv[])
     // Tx operations
     cmds.add("insertrawtx", &cmd_insertrawtx);
     cmds.add("newrawtx", &cmd_newrawtx);
+    cmds.add("deletetx", &cmd_deletetx);
 
     try 
     {
