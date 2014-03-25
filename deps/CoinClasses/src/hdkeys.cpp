@@ -189,6 +189,13 @@ bytes_t HDKeychain::hash() const
     return ripemd160(sha256(pubkey_));
 }
 
+bytes_t HDKeychain::full_hash() const
+{
+    uchar_vector_secure data(pubkey_);
+    data += chain_code_;
+    return ripemd160(sha256(data));
+}
+
 uint32_t HDKeychain::fp() const
 {
     bytes_t hash = this->hash();

@@ -94,6 +94,7 @@ public:
     bool isPrivate() const { return (key_.size() == 33 && key_[0] == 0x00); }
     bytes_t hash() const; // hash is ripemd160(sha256(pubkey))
     uint32_t fp() const; // fingerprint is first 32 bits of hash
+    bytes_t full_hash() const; // full_hash is ripemd160(sha256(pubkey + chain_code))
 
     HDKeychain getPublic() const;
     HDKeychain getChild(uint32_t i) const;
