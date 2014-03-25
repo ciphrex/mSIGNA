@@ -652,6 +652,8 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
         tx_r = db_->query<Tx>(odb::query<Tx>::hash == txin->outhash());
         if (tx_r.empty())
         {
+            // TODO: If the txinscript is in one of our accounts but we don't have the outpoint it means this transaction is orphaned.
+            //       We should have an orphaned flag for the transaction. Otherwise out-of-order insertions will result in inconsistent state.
             have_all_outpoints = false;
         }
         else
@@ -909,6 +911,33 @@ void Vault::deleteTx(const bytes_t& tx_hash)
     std::shared_ptr<Tx> tx(r.begin().load());
     deleteTx_unwrapped(tx);
     t.commit();
+}
+
+SigningRequest Vault::getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx) const
+{
+    unsigned int sigs_needed = tx->missingSigCount();
+    std::set<bytes_t> pubkeys = tx->missingSigPubkeys();
+    std::set<bytes_t> keychain_hashes;
+    odb::result<Key> key_r(db_->query<Key>(odb::query<Key>::pubkey.in_range(pubkeys.begin(), pubkeys.end())));
+    for (auto& keychain: key_r) { keychain_hashes.insert(keychain.root_keychain()->hash()); }
+
+    bytes_t rawtx;
+    if (include_raw_tx) rawtx = tx->raw();
+    return SigningRequest(sigs_needed, keychain_hashes, rawtx);
+}
+
+SigningRequest Vault::getSigningRequest(const bytes_t& unsigned_hash, bool include_raw_tx) const
+{
+    LOGGER(trace) << "Vault::getSigningRequest(" << uchar_vector(unsigned_hash).getHex() << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::unsigned_hash == unsigned_hash));
+    if (r.empty()) throw TxNotFoundException(unsigned_hash);
+
+    std::shared_ptr<Tx> tx(r.begin().load());
+    return getSigningRequest_unwrapped(tx, include_raw_tx);
 }
 
 

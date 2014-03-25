@@ -125,7 +125,7 @@ obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx src/Schema.hxx
 #
 # vault class
 #
-obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/Schema.hxx odb/Schema-odb.hxx src/Database.hxx
+obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/SigningRequest.h src/Schema.hxx odb/Schema-odb.hxx src/Database.hxx
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
