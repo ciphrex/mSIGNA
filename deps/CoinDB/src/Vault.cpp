@@ -794,6 +794,9 @@ std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx)
 
 std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int /*maxchangeouts*/)
 {
+    // TODO: Better rng seeding
+    std::srand(std::time(0));
+
     // TODO: Better fee calculation heuristics
     uint64_t desired_total = fee;
     for (auto& txout: txouts) { desired_total += txout->value(); }
@@ -806,7 +809,7 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
     std::vector<TxOutView> utxoviews;
     for (auto& utxoview: utxoview_r) { utxoviews.push_back(utxoview); }
    
-    std::random_shuffle(utxoviews.begin(), utxoviews.end());
+    std::random_shuffle(utxoviews.begin(), utxoviews.end(), [](int i) { return std::rand() % i; });
 
     txins_t txins;
     int i = 0;
@@ -833,7 +836,7 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
         std::shared_ptr<TxOut> txout(new TxOut(change, changescript));
         txouts.push_back(txout);
     }
-    std::random_shuffle(txouts.begin(), txouts.end());
+    std::random_shuffle(txouts.begin(), txouts.end(), [](int i) { return std::rand() % i; });
 
     std::shared_ptr<Tx> tx(new Tx());
     tx->set(tx_version, txins, txouts, tx_locktime, time(NULL), Tx::UNSIGNED);
