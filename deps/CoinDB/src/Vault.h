@@ -67,7 +67,7 @@ public:
     AccountInfo getAccountInfo(const std::string& account_name) const;
     std::vector<AccountInfo> getAllAccountInfo() const;
 
-    uint64_t getAccountBalance(const std::string& account_name, unsigned int min_confirmations = 1) const;
+    uint64_t getAccountBalance(const std::string& account_name, unsigned int min_confirmations = 1, int tx_flags = Tx::ALL) const;
 
     std::shared_ptr<AccountBin> addAccountBin(const std::string& account_name, const std::string& bin_name);
     std::shared_ptr<SigningScript> newSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "");

@@ -339,14 +339,16 @@ std::vector<AccountInfo> Vault::getAllAccountInfo() const
     return accountInfoVector;
 }
 
-uint64_t Vault::getAccountBalance(const std::string& account_name, unsigned int min_confirmations) const
+uint64_t Vault::getAccountBalance(const std::string& account_name, unsigned int min_confirmations, int tx_flags) const
 {
     LOGGER(trace) << "Vault::getAccountBalance(" << account_name << ", " << min_confirmations << ")" << std::endl;
+
+    std::vector<Tx::status_t> tx_statuses = Tx::getStatusFlags(tx_flags);
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
     typedef odb::query<BalanceView> query_t;
-    query_t query(query_t::Account::name == account_name && query_t::TxOut::status == TxOut::UNSPENT && (query_t::Tx::status == Tx::RECEIVED || query_t::Tx::status == Tx::CONFIRMED));
+    query_t query(query_t::Account::name == account_name && query_t::TxOut::status == TxOut::UNSPENT && query_t::Tx::status.in_range(tx_statuses.begin(), tx_statuses.end()));
     if (min_confirmations > 0)
     {
         odb::result<BestHeightView> height_r(db_->query<BestHeightView>());
