@@ -519,8 +519,6 @@ std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, con
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
-    t.tracer(odb::stderr_tracer);
-
     std::vector<TxOutView> views;
     odb::result<TxOutView> r(db_->query<TxOutView>(query));
     for (auto& view: r) { views.push_back(view); }
