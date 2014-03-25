@@ -320,14 +320,15 @@ enum txout_type_t { SEND, RECEIVE };
 string formattedTxOutHeader()
 {
     stringstream ss;
-    ss << left << setw(15) << "account name" << " | "
-       << left << setw(15) << "bin name" << " | "
-       << left << setw(10) << "type" << " | "
-       << left << setw(15) << "value" << " | "
-       << left << setw(50) << "script" << " | "
-       << left << setw(36) << "address" << " | "
-       << left << setw(8)  << "status" << " | "
-       << left << setw(64) << "tx hash";
+    ss << " ";
+    ss << left  << setw(15) << "account name" << " | "
+       << left  << setw(15) << "bin name" << " | "
+       << left  << setw(10) << "type" << " | "
+       << left  << setw(15) << "value" << " | "
+       << left  << setw(50) << "script" << " | "
+       << left  << setw(36) << "address" << " | "
+       << left  << setw(6)  << "status" << " | "
+       << left  << setw(64) << "tx hash";
 
     size_t header_length = ss.str().size();
     ss << endl;
@@ -356,14 +357,15 @@ string formattedTxOut(
         address = "N/A";
 
     stringstream ss;
-    ss << left << setw(15) << account_name << " | "
-       << left << setw(15) << bin_name << " | "
-       << left << setw(10) << (type == SEND ? "send" : "receive") << " | "
-       << left << setw(15) << value << " | "
-       << left << setw(50) << uchar_vector(script).getHex() << " | "
-       << left << setw(36) << address << " | "
-       << left << setw(6)  << (is_tx_signed ? "signed" : "unsigned") << " | "
-       << left << setw(64) << uchar_vector(tx_hash).getHex();
+    ss << " ";
+    ss << left  << setw(15) << account_name << " | "
+       << left  << setw(15) << bin_name << " | "
+       << left  << setw(10) << (type == SEND ? "send" : "receive") << " | "
+       << right << setw(15) << value << " | "
+       << left  << setw(50) << uchar_vector(script).getHex() << " | "
+       << left  << setw(36) << address << " | "
+       << left  << setw(6)  << (is_tx_signed ? "signed" : "unsigned") << " | "
+       << left  << setw(64) << uchar_vector(tx_hash).getHex();
     return ss.str();
 }
 
