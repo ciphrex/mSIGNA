@@ -868,6 +868,13 @@ std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx
     return tx;
 }
 
+void Vault::updateTx_unwrapped(std::shared_ptr<Tx> tx)
+{
+    for (auto& txin: tx->txins()) { db_->update(txin); }
+    for (auto& txout: tx->txouts()) { db_->update(txout); }
+    db_->update(tx); 
+}
+
 void Vault::deleteTx_unwrapped(std::shared_ptr<Tx> tx)
 {
     // NOTE: signingscript statuses are not updated. once received always received.
@@ -944,14 +951,29 @@ SigningRequest Vault::getSigningRequest(const bytes_t& unsigned_hash, bool inclu
     return getSigningRequest_unwrapped(tx, include_raw_tx);
 }
 
-std::shared_ptr<Tx> Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
+bool Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
 {
-    return nullptr;
+    return false;
 }
 
 bool Vault::signTx(const bytes_t& unsigned_hash, const std::string& keychain_name, const secure_bytes_t& unlock_key, bool update)
 {
-    return false;
+    LOGGER(trace) << "Vault::signTx(" << uchar_vector(unsigned_hash).getHex() << ", " << keychain_name << "..., " << (update ? "update" : "no update") << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+
+    odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::unsigned_hash == unsigned_hash));
+    if (tx_r.empty()) throw TxNotFoundException(unsigned_hash);
+    std::shared_ptr<Tx> tx(tx_r.begin().load());
+
+    std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
+    if (!keychain->unlockPrivateKey(unlock_key)) throw KeychainPrivateKeyUnlockFailedException(keychain_name);
+
+    bool rval = signTx_unwrapped(tx);
+    if (rval && update) updateTx_unwrapped(tx);
+    return rval;
 }
 
 // Block operations

@@ -117,8 +117,9 @@ protected:
     std::shared_ptr<Tx> insertTx_unwrapped(std::shared_ptr<Tx> tx);
     std::shared_ptr<Tx> createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
     void deleteTx_unwrapped(std::shared_ptr<Tx> tx);
+    void updateTx_unwrapped(std::shared_ptr<Tx> tx);
     SigningRequest getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
-    std::shared_ptr<Tx> signTx_unwrapped(std::shared_ptr<Tx> tx); // Tries to sign as many as it can with the unlocked keychains.
+    bool signTx_unwrapped(std::shared_ptr<Tx> tx); // Tries to sign as many as it can with the unlocked keychains.
 
 private:
     mutable boost::mutex mutex;
