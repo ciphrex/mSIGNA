@@ -1127,8 +1127,8 @@ public:
         return vflags;
     }
 
-    enum spent_status_t { NEITHER = 0, UNSPENT = 1, SPENT = 2, BOTH = 3 };
-    static std::string getSpentString(int flags)
+    enum status_t { NEITHER = 0, UNSPENT = 1, SPENT = 2, BOTH = 3 };
+    static std::string getStatusString(int flags)
     {
         std::vector<std::string> str_flags;
         if (flags & UNSPENT) str_flags.push_back("UNSPENT");
@@ -1137,19 +1137,19 @@ public:
         return stdutils::delimited_list(str_flags, " | ");
     }
 
-    static std::vector<spent_status_t> getSpentFlags(int flags)
+    static std::vector<status_t> getStatusFlags(int flags)
     {
-        std::vector<spent_status_t> vflags;
+        std::vector<status_t> vflags;
         if (flags & UNSPENT) vflags.push_back(UNSPENT);
         if (flags & SPENT) vflags.push_back(SPENT);
         return vflags;
     }
 
-    TxOut(uint64_t value, const bytes_t& script, std::shared_ptr<Account> account = nullptr, type_t type = NONE)
-        : value_(value), script_(script), account_(account), type_(type) { }
+    TxOut(uint64_t value, const bytes_t& script, std::shared_ptr<Account> account = nullptr, std::shared_ptr<AccountBin> account_bin = nullptr, type_t type = NONE)
+        : value_(value), script_(script), account_(account), account_bin_(account_bin), type_(type), status_(UNSPENT) { }
 
-    TxOut(const Coin::TxOut& coin_txout, std::shared_ptr<Account> account = nullptr, type_t type = NONE);
-    TxOut(const bytes_t& raw, std::shared_ptr<Account> account = nullptr, type_t type = NONE);
+    TxOut(const Coin::TxOut& coin_txout, std::shared_ptr<Account> account = nullptr, std::shared_ptr<AccountBin> account_bin = nullptr, type_t type = NONE);
+    TxOut(const bytes_t& raw, std::shared_ptr<Account> account = nullptr, std::shared_ptr<AccountBin> account_bin = nullptr, type_t type = NONE);
 
     Coin::TxOut toCoinClasses() const;
 
@@ -1164,7 +1164,7 @@ public:
     void txindex(uint32_t txindex) { txindex_ = txindex; }
     uint32_t txindex() const { return txindex_; }
 
-    void spent(std::shared_ptr<TxIn> spent) { spent_ = spent; }
+    void spent(std::shared_ptr<TxIn> spent) { spent_ = spent; status_ = spent ? SPENT : UNSPENT; }
     const std::shared_ptr<TxIn> spent() const { return spent_; }
 
     void signingscript(std::shared_ptr<SigningScript> signingscript) { signingscript_ = signingscript; }
@@ -1173,8 +1173,13 @@ public:
     void account(std::shared_ptr<Account>  account) { account_ = account; }
     std::shared_ptr<Account> account() const { return account_; }
 
+    void account_bin(std::shared_ptr<AccountBin>  account_bin) { account_bin_ = account_bin; }
+    std::shared_ptr<AccountBin> account_bin() const { return account_bin_; }
+
     void type(type_t type) { type_ = type; }
     type_t type() const { return type_; }
+
+    status_t status() const { return status_; }
 
 private:
     friend class odb::access;
@@ -1199,26 +1204,37 @@ private:
     #pragma db null
     std::shared_ptr<Account> account_;
 
+    #pragma db null
+    std::shared_ptr<AccountBin> account_bin_;
+
     type_t type_;
+
+    // status == SPENT if spent_ is not null. Otherwise UNSPENT.
+    // Redundant but convenient for view queries.
+    status_t status_;
 };
 
 typedef std::vector<std::shared_ptr<TxOut>> txouts_t;
 
-inline TxOut::TxOut(const Coin::TxOut& coin_txout, std::shared_ptr<Account> account, type_t type)
+inline TxOut::TxOut(const Coin::TxOut& coin_txout, std::shared_ptr<Account> account, std::shared_ptr<AccountBin> account_bin, type_t type)
 {
     value_ = coin_txout.value;
     script_ = coin_txout.scriptPubKey;
     account_ = account;
+    account_bin_ = account_bin;
     type_ = type;
+    status_ = UNSPENT;
 }
 
-inline TxOut::TxOut(const bytes_t& raw, std::shared_ptr<Account> account, type_t type)
+inline TxOut::TxOut(const bytes_t& raw, std::shared_ptr<Account> account, std::shared_ptr<AccountBin> account_bin, type_t type)
 {
     Coin::TxOut coin_txout(raw);
     value_ = coin_txout.value;
     script_ = coin_txout.scriptPubKey;
     account_ = account;
+    account_bin_ = account_bin;
     type_ = type;
+    status_ = UNSPENT;
 }
 
 inline Coin::TxOut TxOut::toCoinClasses() const
