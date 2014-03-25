@@ -39,6 +39,9 @@
 
 #include "typedefs.h"
 
+namespace CoinCrypto
+{
+
 bool static inline EC_KEY_regenerate_key(EC_KEY* eckey, BIGNUM* priv_key)
 {
     if (!eckey) return false;
@@ -340,5 +343,7 @@ private:
     EC_POINT* point;
     BN_CTX*   ctx;    
 };
+
+}
 
 #endif // __SECP256K1_H_1

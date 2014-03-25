@@ -39,6 +39,7 @@
 // #include <cstdlib>
 
 using namespace Coin;
+using namespace CoinCrypto;
 
 const uchar_vector CURVE_ORDER_BYTES("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
 const BigInt CURVE_ORDER(CURVE_ORDER_BYTES);
