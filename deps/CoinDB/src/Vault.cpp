@@ -944,6 +944,15 @@ SigningRequest Vault::getSigningRequest(const bytes_t& unsigned_hash, bool inclu
     return getSigningRequest_unwrapped(tx, include_raw_tx);
 }
 
+std::shared_ptr<Tx> Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
+{
+    return nullptr;
+}
+
+bool Vault::signTx(const bytes_t& unsigned_hash, const std::string& keychain_name, const secure_bytes_t& unlock_key, bool update)
+{
+    return false;
+}
 
 // Block operations
 uint32_t Vault::getBestHeight() const

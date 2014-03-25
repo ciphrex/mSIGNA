@@ -520,13 +520,18 @@ cli::result_t cmd_getsigningrequest(bool bHelp, const cli::params_t& params)
 
     SigningRequest req = vault.getSigningRequest(hash, true);
     vector<string>keychain_names;
-    for (auto& keychain_pair: req.keychain_info()) { keychain_names.push_back(keychain_pair.first); }
-    std::sort(keychain_names.begin(), keychain_names.end());
+    vector<string>keychain_hashes;
+    for (auto& keychain_pair: req.keychain_info())
+    {
+        keychain_names.push_back(keychain_pair.first);
+        keychain_hashes.push_back(uchar_vector(keychain_pair.second).getHex());
+    }
     string rawtx_str = uchar_vector(req.rawtx()).getHex();
 
     stringstream ss;
     ss << "signatures needed: " << req.sigs_needed() << endl
-       << "keychain:          " << stdutils::delimited_list(keychain_names, ", ") << endl
+       << "keychain names:    " << stdutils::delimited_list(keychain_names, ", ") << endl
+       << "keychain hashes:   " << stdutils::delimited_list(keychain_hashes, ", ") << endl
        << "raw tx:            " << rawtx_str;
     return ss.str();
 }

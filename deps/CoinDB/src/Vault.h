@@ -91,6 +91,7 @@ public:
     std::shared_ptr<Tx> createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
     void deleteTx(const bytes_t& tx_hash); // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     SigningRequest getSigningRequest(const bytes_t& unsigned_hash, bool include_raw_tx = false) const; // Tries only unsigned hashes. Throws TxNotFoundException.
+    bool signTx(const bytes_t& unsigned_hash, const std::string& keychain_name, const secure_bytes_t& unlock_key, bool update = false); // Tries only unsigned hashes. Throws TxNotFoundException.
 
     //////////////////////
     // BLOCK OPERATIONS //
@@ -117,6 +118,7 @@ protected:
     std::shared_ptr<Tx> createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
     void deleteTx_unwrapped(std::shared_ptr<Tx> tx);
     SigningRequest getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
+    std::shared_ptr<Tx> signTx_unwrapped(std::shared_ptr<Tx> tx); // Tries to sign as many as it can with the unlocked keychains.
 
 private:
     mutable boost::mutex mutex;

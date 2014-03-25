@@ -369,6 +369,7 @@ public:
     unsigned long id() const { return id_; }
     const bytes_t& pubkey() const { return pubkey_; }
     secure_bytes_t privkey() const;
+    secure_bytes_t try_privkey() const;
     bool isPrivate() const { return is_private_; }
 
 
@@ -406,6 +407,13 @@ inline Key::Key(const std::shared_ptr<Keychain>& keychain, uint32_t index)
 }
 
 inline secure_bytes_t Key::privkey() const
+{
+    if (!is_private_ || root_keychain_->isPrivateKeyLocked() || root_keychain_->isChainCodeLocked()) return secure_bytes_t();
+    return root_keychain_->getSigningPrivateKey(index_, derivation_path_);
+}
+
+// and a version that throws exceptions
+inline secure_bytes_t Key::try_privkey() const
 {
     if (!is_private_) throw std::runtime_error("Key::privkey - cannot get private key from nonprivate key object.");
     if (root_keychain_->isPrivateKeyLocked()) throw std::runtime_error("Key::privkey - private key is locked.");
