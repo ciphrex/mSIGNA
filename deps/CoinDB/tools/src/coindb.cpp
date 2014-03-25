@@ -510,6 +510,27 @@ cli::result_t cmd_deletetx(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_getsigningrequest(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 2)
+        return "deletetx <filename> <tx hash> - gets signing request for transaction with missing signatures.";
+
+    Vault vault(params[0], false);
+    uchar_vector hash(params[1]);
+
+    SigningRequest req = vault.getSigningRequest(hash, true);
+    vector<string>keychain_names;
+    for (auto& keychain_pair: req.keychain_info()) { keychain_names.push_back(keychain_pair.first); }
+    std::sort(keychain_names.begin(), keychain_names.end());
+    string rawtx_str = uchar_vector(req.rawtx()).getHex();
+
+    stringstream ss;
+    ss << "signatures needed: " << req.sigs_needed() << endl
+       << "keychain:          " << stdutils::delimited_list(keychain_names, ", ") << endl
+       << "raw tx:            " << rawtx_str;
+    return ss.str();
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -544,6 +565,7 @@ int main(int argc, char* argv[])
     cmds.add("insertrawtx", &cmd_insertrawtx);
     cmds.add("newrawtx", &cmd_newrawtx);
     cmds.add("deletetx", &cmd_deletetx);
+    cmds.add("getsigningrequest", &cmd_getsigningrequest);
 
     try 
     {

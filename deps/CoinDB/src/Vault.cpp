@@ -917,13 +917,17 @@ SigningRequest Vault::getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool i
 {
     unsigned int sigs_needed = tx->missingSigCount();
     std::set<bytes_t> pubkeys = tx->missingSigPubkeys();
-    std::set<bytes_t> keychain_hashes;
+    std::set<SigningRequest::keychain_info_t> keychain_info;
     odb::result<Key> key_r(db_->query<Key>(odb::query<Key>::pubkey.in_range(pubkeys.begin(), pubkeys.end())));
-    for (auto& keychain: key_r) { keychain_hashes.insert(keychain.root_keychain()->hash()); }
+    for (auto& keychain: key_r)
+    {
+        std::shared_ptr<Keychain> root_keychain(keychain.root_keychain());
+        keychain_info.insert(std::make_pair(root_keychain->name(), root_keychain->hash()));
+    }
 
     bytes_t rawtx;
     if (include_raw_tx) rawtx = tx->raw();
-    return SigningRequest(sigs_needed, keychain_hashes, rawtx);
+    return SigningRequest(sigs_needed, keychain_info, rawtx);
 }
 
 SigningRequest Vault::getSigningRequest(const bytes_t& unsigned_hash, bool include_raw_tx) const
