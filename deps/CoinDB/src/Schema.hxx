@@ -1105,28 +1105,6 @@ inline bytes_t TxIn::raw() const
 class TxOut
 {
 public:
-    enum type_t { NONE = 1, CHANGE = 2, DEBIT = 4, CREDIT = 8, ALL = 15 };
-    static std::string getTypeString(int flags)
-    {
-        std::vector<std::string> str_flags;
-        if (flags & NONE) str_flags.push_back("NONE");
-        if (flags & CHANGE) str_flags.push_back("CHANGE");
-        if (flags & DEBIT) str_flags.push_back("DEBIT");
-        if (flags & CREDIT) str_flags.push_back("CREDIT");
-        if (str_flags.empty()) return "UNKNOWN";
-        return stdutils::delimited_list(str_flags, " | ");
-    }
-
-    static std::vector<type_t> getTypeFlags(int flags)
-    {
-        std::vector<type_t> vflags;
-        if (flags & NONE) vflags.push_back(NONE);
-        if (flags & CHANGE) vflags.push_back(CHANGE);
-        if (flags & DEBIT) vflags.push_back(DEBIT);
-        if (flags & CREDIT) vflags.push_back(CREDIT);
-        return vflags;
-    }
-
     enum status_t { NEITHER = 0, UNSPENT = 1, SPENT = 2, BOTH = 3 };
     static std::string getStatusString(int flags)
     {
@@ -1145,11 +1123,14 @@ public:
         return vflags;
     }
 
-    TxOut(uint64_t value, const bytes_t& script, std::shared_ptr<Account> account = nullptr, std::shared_ptr<AccountBin> account_bin = nullptr, type_t type = NONE)
-        : value_(value), script_(script), account_(account), account_bin_(account_bin), type_(type), status_(UNSPENT) { }
+    TxOut(uint64_t value, const bytes_t& script)
+        : value_(value), script_(script), status_(UNSPENT) { }
 
-    TxOut(const Coin::TxOut& coin_txout, std::shared_ptr<Account> account = nullptr, std::shared_ptr<AccountBin> account_bin = nullptr, type_t type = NONE);
-    TxOut(const bytes_t& raw, std::shared_ptr<Account> account = nullptr, std::shared_ptr<AccountBin> account_bin = nullptr, type_t type = NONE);
+    // Constructor for change and transfers
+    TxOut(uint64_t value, std::shared_ptr<SigningScript> signingscript);
+
+    TxOut(const Coin::TxOut& coin_txout);
+    TxOut(const bytes_t& raw);
 
     Coin::TxOut toCoinClasses() const;
 
@@ -1164,20 +1145,18 @@ public:
     void txindex(uint32_t txindex) { txindex_ = txindex; }
     uint32_t txindex() const { return txindex_; }
 
-    void spent(std::shared_ptr<TxIn> spent) { spent_ = spent; status_ = spent ? SPENT : UNSPENT; }
+    void spent(std::shared_ptr<TxIn> spent);
     const std::shared_ptr<TxIn> spent() const { return spent_; }
 
-    void signingscript(std::shared_ptr<SigningScript> signingscript) { signingscript_ = signingscript; }
+    void sending_account(std::shared_ptr<Account> sending_account) { sending_account_ = sending_account; }
+    const std::shared_ptr<Account> sending_account() const { return sending_account_; }
+
+    const std::shared_ptr<Account> receiving_account() const { return receiving_account_; }
+
+    const std::shared_ptr<AccountBin> account_bin() const { return account_bin_; }
+
+    void signingscript(std::shared_ptr<SigningScript> signingscript);
     const std::shared_ptr<SigningScript> signingscript() const { return signingscript_; }
-
-    void account(std::shared_ptr<Account>  account) { account_ = account; }
-    std::shared_ptr<Account> account() const { return account_; }
-
-    void account_bin(std::shared_ptr<AccountBin>  account_bin) { account_bin_ = account_bin; }
-    std::shared_ptr<AccountBin> account_bin() const { return account_bin_; }
-
-    void type(type_t type) { type_ = type; }
-    type_t type() const { return type_; }
 
     status_t status() const { return status_; }
 
@@ -1199,15 +1178,17 @@ private:
     std::shared_ptr<TxIn> spent_;
 
     #pragma db null
-    std::shared_ptr<SigningScript> signingscript_;
+    std::shared_ptr<Account> sending_account_;
 
     #pragma db null
-    std::shared_ptr<Account> account_;
+    std::shared_ptr<Account> receiving_account_;
 
+    // account_bin and signingscript are only for receiving account
     #pragma db null
     std::shared_ptr<AccountBin> account_bin_;
 
-    type_t type_;
+    #pragma db null
+    std::shared_ptr<SigningScript> signingscript_;
 
     // status == SPENT if spent_ is not null. Otherwise UNSPENT.
     // Redundant but convenient for view queries.
@@ -1216,25 +1197,39 @@ private:
 
 typedef std::vector<std::shared_ptr<TxOut>> txouts_t;
 
-inline TxOut::TxOut(const Coin::TxOut& coin_txout, std::shared_ptr<Account> account, std::shared_ptr<AccountBin> account_bin, type_t type)
+inline TxOut::TxOut(uint64_t value, std::shared_ptr<SigningScript> signingscript)
+    : value_(value)
 {
-    value_ = coin_txout.value;
-    script_ = coin_txout.scriptPubKey;
-    account_ = account;
-    account_bin_ = account_bin;
-    type_ = type;
-    status_ = UNSPENT;
+    this->signingscript(signingscript);
 }
 
-inline TxOut::TxOut(const bytes_t& raw, std::shared_ptr<Account> account, std::shared_ptr<AccountBin> account_bin, type_t type)
+inline TxOut::TxOut(const Coin::TxOut& coin_txout)
+    : value_(coin_txout.value), script_(coin_txout.scriptPubKey), status_(UNSPENT)
+{
+}
+
+inline TxOut::TxOut(const bytes_t& raw)
 {
     Coin::TxOut coin_txout(raw);
     value_ = coin_txout.value;
     script_ = coin_txout.scriptPubKey;
-    account_ = account;
-    account_bin_ = account_bin;
-    type_ = type;
     status_ = UNSPENT;
+}
+
+inline void TxOut::spent(std::shared_ptr<TxIn> spent)
+{
+    spent_ = spent;
+    status_ = spent ? SPENT : UNSPENT;
+}
+
+inline void TxOut::signingscript(std::shared_ptr<SigningScript> signingscript)
+{
+    if (!signingscript) throw std::runtime_error("TxOut::signingscript - null signingscript.");
+
+    script_ = signingscript->txoutscript();
+    receiving_account_ = signingscript->account();
+    account_bin_ = signingscript->account_bin();
+    signingscript_ = signingscript;
 }
 
 inline Coin::TxOut TxOut::toCoinClasses() const
@@ -1572,16 +1567,23 @@ inline std::set<bytes_t> Tx::missingSigPubkeys() const
     object(TxOut) \
     object(Tx: TxOut::tx_) \
     object(BlockHeader: Tx::blockheader_) \
-    object(SigningScript: TxOut::signingscript_) \
-    object(Account: SigningScript::account_) \
-    object(AccountBin: SigningScript::account_bin_)
+    object(Account = sending_account: TxOut::sending_account_) \
+    object(Account = receiving_account: TxOut::receiving_account_) \
+    object(AccountBin: TxOut::account_bin_) \
+    object(SigningScript: TxOut::signingscript_)
 struct TxOutView
 {
-    #pragma db column(Account::id_)
-    unsigned long account_id;
+    #pragma db column(sending_account::id_)
+    unsigned long sending_account_id;
 
-    #pragma db column(Account::name_)
-    std::string account_name;
+    #pragma db column(sending_account::name_)
+    std::string sending_account_name;
+
+    #pragma db column(receiving_account::id_)
+    unsigned long receiving_account_id;
+
+    #pragma db column(receiving_account::name_)
+    std::string receiving_account_name;
 
     #pragma db column(AccountBin::id_)
     unsigned long account_bin_id;
@@ -1607,8 +1609,8 @@ struct TxOutView
     #pragma db column(TxOut::value_)
     uint64_t value;
 
-    #pragma db column(TxOut::type_)
-    TxOut::type_t type;
+    #pragma db column(TxOut::status_)
+    TxOut::status_t status;
 
     #pragma db column(Tx::unsigned_hash_)
     bytes_t tx_unsigned_hash;
@@ -1631,8 +1633,8 @@ struct TxOutView
     object(Tx: TxOut::tx_) \
     object(BlockHeader: Tx::blockheader_) \
     object(SigningScript: TxOut::signingscript_) \
-    object(Account: SigningScript::account_) \
-    object(AccountBin: SigningScript::account_bin_)
+    object(Account: TxOut::account_) \
+    object(AccountBin: TxOut::account_bin_)
 struct BalanceView
 {
     #pragma db column("sum(" + TxOut::value_ + ")")

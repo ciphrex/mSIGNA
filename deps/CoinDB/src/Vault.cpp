@@ -498,27 +498,22 @@ std::vector<SigningScriptView> Vault::getSigningScriptViews(const std::string& a
     return views;
 }
 
-std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, const std::string& bin_name, int spent_status_flags, int txout_type_flags, int tx_status_flags) const
+std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, const std::string& bin_name, int txout_status_flags, int tx_status_flags) const
 {
-    LOGGER(trace) << "Vault::getTxOutViews(" << account_name << ", " << bin_name << ", " << TxOut::getSpentString(spent_status_flags) << ", " << TxOut::getTypeString(txout_type_flags) << ", " << Tx::getStatusString(tx_status_flags) << ")" << std::endl;
+    LOGGER(trace) << "Vault::getTxOutViews(" << account_name << ", " << bin_name << ", " << TxOut::getStatusString(txout_status_flags) << ", " << ", " << Tx::getStatusString(tx_status_flags) << ")" << std::endl;
 
     typedef odb::query<TxOutView> query_t;
-    query_t query(query_t::Account::id != 0);
-    if (account_name != "@all")                 query = (query && query_t::Account::name == account_name);
+    query_t query(query_t::receiving_account.is_not_null() || query_t::sending_account.is_not_null());
+    if (account_name != "@all")                 query = (query && (query_t::sending_account::name == account_name || query_t::receiving_account == account_name));
     if (bin_name != "@all")                     query = (query && query_t::AccountBin::name == bin_name);
-    if (spent_status_flags == TxOut::SPENT)     query = (query && query_t::TxOut::spent.is_not_null());
-    if (spent_status_flags == TxOut::UNSPENT)   query = (query && query_t::TxOut::spent.is_null());
-    if (txout_type_flags != TxOut::ALL)
-    {
-        std::vector<TxOut::type_t> txout_types  = TxOut::getTypeFlags(txout_type_flags);
-        query = (query && query_t::TxOut::type.in_range(txout_types.begin(), txout_types.end()));
-    }
-    if (tx_status_flags != Tx::ALL)
-    {
-        std::vector<Tx::status_t> tx_statuses   = Tx::getStatusFlags(tx_status_flags);
-        query = (query && query_t::Tx::status.in_range(tx_statuses.begin(), tx_statuses.end()));
-    } 
-    query += "ORDER BY" + query_t::BlockHeader::height + "DESC," + query_t::Tx::timestamp + "DESC," + query_t::Account::name + "ASC," + query_t::AccountBin::name + "ASC";
+
+    std::vector<TxOut::status_t> txout_statuses = TxOut::getStatusFlags(txout_status_flags);
+    query = (query && query_t::TxOut::status.in_range(txout_statuses.begin(), txout_statuses.end()));
+
+    std::vector<Tx::status_t> tx_statuses = Tx::getStatusFlags(tx_status_flags);
+    query = (query && query_t::Tx::status.in_range(tx_statuses.begin(), tx_statuses.end()));
+
+    query += "ORDER BY" + query_t::BlockHeader::height + "DESC," + query_t::Tx::timestamp + "DESC," + query_t::Tx::id + "DESC";
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
@@ -649,7 +644,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
     bool sent_from_vault = false; // whether any of the inputs belong to vault
     bool have_all_outpoints = true; // whether we have all outpoints (for fee calculation)
     uint64_t input_total = 0;
-    std::shared_ptr<Account> signing_account;
+    std::shared_ptr<Account> sending_account;
 
     for (auto& txin: tx->txins())
     {
@@ -684,12 +679,12 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                 sent_from_vault = true;
                 outpoint->spent(txin);
                 updated_txouts.insert(outpoint);
-                if (!signing_account)
+                if (!sending_account)
                 {
                     // Assuming all inputs belong to the same account
                     // TODO: Allow coin mixing
                     std::shared_ptr<SigningScript> script(script_r.begin().load());
-                    signing_account = script->account();
+                    sending_account = script->account();
                 }
             }
         }
@@ -710,7 +705,6 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
             // This output is spendable from an account in the vault
             sent_to_vault = true;
             std::shared_ptr<SigningScript> script(script_r.begin().load());
-            txout->account(script->account());
             txout->signingscript(script);
 
             // Update the signing script and txout status
@@ -720,29 +714,18 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                 if (sent_from_vault && script->account_bin()->isChange())
                 {
                     script->status(SigningScript::CHANGE);
-                    txout->type(TxOut::CHANGE);
                 }
                 else
                 {
                     script->status(SigningScript::RECEIVED);
-                    txout->type(TxOut::CREDIT);
                 }
                 scripts.insert(script);
                 refillAccountBinPool_unwrapped(script->account_bin());
                 break;
 
-            case SigningScript::CHANGE:
-                txout->type(TxOut::CHANGE);
-                break;
-
             case SigningScript::PENDING:
                 script->status(SigningScript::RECEIVED);
-                txout->type(TxOut::CREDIT);
                 scripts.insert(script);
-                break;
-
-            case SigningScript::RECEIVED:
-                txout->type(TxOut::CREDIT);
                 break;
 
             default:
@@ -757,12 +740,11 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                 txout->spent(txin);
             }
         }
-        else if (signing_account)
+        else if (sending_account)
         {
             // Again, assume all inputs sent from same account.
             // TODO: Allow coin mixing.
-            txout->account(signing_account);
-            txout->type(TxOut::DEBIT);
+            txout->sending_account(sending_account);
         }
     }
 
@@ -785,9 +767,9 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
         if (have_all_outpoints) { tx->fee(input_total - output_total); }
         db_->persist(*tx);
 
-        for (auto& txin:    tx->txins())    { db_->persist(*txin); }
-        for (auto& txout:   tx->txouts())   { db_->persist(*txout); }
-        for (auto& script:  scripts)        { db_->update(*script); }
+        for (auto& txin:    tx->txins())    { db_->persist(txin); }
+        for (auto& txout:   tx->txouts())   { db_->persist(txout); }
+        for (auto& script:  scripts)        { db_->update(script); }
         for (auto& txout:   updated_txouts) { db_->update(txout); }
 
         // TODO: updateConfirmations_unwrapped(tx);
@@ -820,7 +802,7 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
 
     // TODO: Better coin selection
     typedef odb::query<TxOutView> query_t;
-    odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(query_t::TxOut::spent.is_null() && query_t::Account::id == account->id()));
+    odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id()));
     std::vector<TxOutView> utxoviews;
     for (auto& utxoview: utxoview_r) { utxoviews.push_back(utxoview); }
    
@@ -848,7 +830,7 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
         std::shared_ptr<SigningScript> changescript = newAccountBinSigningScript_unwrapped(bin);
 
         // TODO: Allow adding multiple change outputs
-        std::shared_ptr<TxOut> txout(new TxOut(change, changescript->txoutscript()));
+        std::shared_ptr<TxOut> txout(new TxOut(change, changescript));
         txouts.push_back(txout);
     }
     std::random_shuffle(txouts.begin(), txouts.end());

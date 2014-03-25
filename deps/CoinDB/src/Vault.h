@@ -76,7 +76,7 @@ public:
 
     // empty account_name or bin_name means do not filter on those fields
     std::vector<SigningScriptView> getSigningScriptViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int flags = SigningScript::ALL) const;
-    std::vector<TxOutView> getTxOutViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int spent_status_flags = TxOut::ALL, int txout_type_flags = TxOut::ALL, int tx_status_flags = Tx::ALL) const;
+    std::vector<TxOutView> getTxOutViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int txout_status_flags = TxOut::BOTH, int tx_status_flags = Tx::ALL) const;
 
     ////////////////////////////
     // ACCOUNT BIN OPERATIONS //
