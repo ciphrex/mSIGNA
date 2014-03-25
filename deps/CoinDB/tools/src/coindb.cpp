@@ -202,16 +202,20 @@ cli::result_t cmd_accountinfo(bool bHelp, const cli::params_t& params)
 
     Vault vault(params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
+    uint64_t balance = vault.getAccountBalance(params[1], 0);
+    uint64_t confirmed_balance = vault.getAccountBalance(params[1], 1);
 
     using namespace stdutils;
     stringstream ss;
-    ss << "id:               " << accountInfo.id() << endl
-       << "name:             " << accountInfo.name() << endl
-       << "minsigs:          " << accountInfo.minsigs() << endl
-       << "keychains:        " << delimited_list(accountInfo.keychain_names(), ", ") << endl
-       << "unused_pool_size: " << accountInfo.unused_pool_size() << endl
-       << "time_created:     " << accountInfo.time_created() << endl
-       << "bins:             " << delimited_list(accountInfo.bin_names(), ", ");
+    ss << "id:                " << accountInfo.id() << endl
+       << "name:              " << accountInfo.name() << endl
+       << "minsigs:           " << accountInfo.minsigs() << endl
+       << "keychains:         " << delimited_list(accountInfo.keychain_names(), ", ") << endl
+       << "unused_pool_size:  " << accountInfo.unused_pool_size() << endl
+       << "time_created:      " << accountInfo.time_created() << endl
+       << "bins:              " << delimited_list(accountInfo.bin_names(), ", ") << endl
+       << "balance:           " << balance << endl
+       << "confirmed balance: " << confirmed_balance;
     return ss.str();
 }
 

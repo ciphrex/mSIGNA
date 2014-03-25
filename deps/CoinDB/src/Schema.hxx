@@ -1491,6 +1491,7 @@ inline std::set<bytes_t> Tx::missingSigPubkeys() const
 #pragma db view \
     object(TxOut) \
     object(Tx: TxOut::tx_) \
+    object(BlockHeader: Tx::blockheader_) \
     object(SigningScript: TxOut::signingscript_) \
     object(Account: SigningScript::account_) \
     object(AccountBin: SigningScript::account_bin_)
@@ -1540,6 +1541,27 @@ struct TxOutView
 
     #pragma db column(TxOut::txindex_)
     uint32_t tx_index;
+};
+
+#pragma db view \
+    object(TxOut) \
+    object(Tx: TxOut::tx_) \
+    object(BlockHeader: Tx::blockheader_) \
+    object(SigningScript: TxOut::signingscript_) \
+    object(Account: SigningScript::account_) \
+    object(AccountBin: SigningScript::account_bin_)
+struct BalanceView
+{
+    #pragma db column("sum(" + TxOut::value_ + ")")
+    uint64_t balance;
+};
+
+#pragma db view \
+    object(BlockHeader)
+struct BestHeightView
+{
+    #pragma db column("max(" + BlockHeader::height_ + ")")
+    uint32_t best_height;
 };
 
 }

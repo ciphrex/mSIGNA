@@ -90,12 +90,12 @@ void Vault::renameKeychain(const std::string& old_name, const std::string& new_n
     odb::core::transaction t(db_->begin());
 
     odb::result<Keychain> keychain_r(db_->query<Keychain>(odb::query<Keychain>::name == old_name));
-    if (keychain_r.empty()) throw std::runtime_error("Keychain not found.");
+    if (keychain_r.empty()) throw KeychainNotFoundException(old_name);
 
     if (old_name == new_name) return;
 
     odb::result<Keychain> new_keychain_r(db_->query<Keychain>(odb::query<Keychain>::name == new_name));
-    if (!new_keychain_r.empty()) throw std::runtime_error("A keychain with that name already exists.");
+    if (!new_keychain_r.empty()) throw KeychainAlreadyExistsException(new_name);
 
     std::shared_ptr<Keychain> keychain(keychain_r.begin().load());
     keychain->name(new_name);
@@ -339,6 +339,25 @@ std::vector<AccountInfo> Vault::getAllAccountInfo() const
     return accountInfoVector;
 }
 
+uint64_t Vault::getAccountBalance(const std::string& account_name, unsigned int min_confirmations) const
+{
+    LOGGER(trace) << "Vault::getAccountBalance(" << account_name << ", " << min_confirmations << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    typedef odb::query<BalanceView> query_t;
+    query_t query(query_t::Account::name == account_name && query_t::TxOut::spent.is_null() && (query_t::Tx::status == Tx::RECEIVED || query_t::Tx::status == Tx::CONFIRMED));
+    if (min_confirmations > 0)
+    {
+        odb::result<BestHeightView> height_r(db_->query<BestHeightView>());
+        uint32_t best_height = height_r.empty() ? 0 : height_r.begin().load()->best_height;
+        if (min_confirmations > best_height) return 0;
+        query = (query && query_t::BlockHeader::height <= best_height + 1 - min_confirmations);
+    }
+    odb::result<BalanceView> r(db_->query<BalanceView>(query));
+    return r.empty() ? 0 : r.begin().load()->balance;
+}
+
 std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name, const std::string& bin_name)
 {
     LOGGER(trace) << "Vault::addAccountBin(" << account_name << ", " << bin_name << ")" << std::endl;
@@ -445,8 +464,7 @@ void Vault::refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin)
 
     typedef odb::query<ScriptCountView> count_query;
     odb::result<ScriptCountView> count_result(db_->query<ScriptCountView>(count_query::AccountBin::id == bin->id() && count_query::SigningScript::status == SigningScript::UNUSED));
-    uint32_t count = 0;
-    if (!count_result.empty()) count = count_result.begin().load()->count;
+    uint32_t count = count_result.empty() ? 0 : count_result.begin().load()->count;
 
     uint32_t unused_pool_size = bin->account()->unused_pool_size();
     for (uint32_t i = count; i < unused_pool_size; i++)
