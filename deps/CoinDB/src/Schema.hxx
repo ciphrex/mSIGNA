@@ -1632,9 +1632,9 @@ struct TxOutView
     object(TxOut) \
     object(Tx: TxOut::tx_) \
     object(BlockHeader: Tx::blockheader_) \
-    object(SigningScript: TxOut::signingscript_) \
-    object(Account: TxOut::account_) \
-    object(AccountBin: TxOut::account_bin_)
+    object(Account: TxOut::receiving_account_) \
+    object(AccountBin: TxOut::account_bin_) \
+    object(SigningScript: TxOut::signingscript_)
 struct BalanceView
 {
     #pragma db column("sum(" + TxOut::value_ + ")")

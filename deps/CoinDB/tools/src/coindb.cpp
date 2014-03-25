@@ -347,6 +347,7 @@ string formattedTxOut(
     const bytes_t& tx_hash
 )
 {
+    using namespace CoinQ::Script;
     std::string address;
     payee_t payee = getScriptPubKeyPayee(script);
     if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
@@ -377,7 +378,6 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
     Vault vault(params[0], false);
     vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name);
 
-    using namespace CoinQ::Script;
     stringstream ss;
     ss << formattedTxOutHeader();
     for (auto& txOutView: txOutViews)
@@ -388,7 +388,7 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
         if (!txOutView.receiving_account_name.empty())
             ss << endl << formattedTxOut(
                 txOutView.receiving_account_name,
-                txOutView.bin_name,
+                txOutView.account_bin_name,
                 RECEIVE,
                 txOutView.value,
                 txOutView.script,

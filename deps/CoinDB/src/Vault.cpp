@@ -346,7 +346,7 @@ uint64_t Vault::getAccountBalance(const std::string& account_name, unsigned int 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
     typedef odb::query<BalanceView> query_t;
-    query_t query(query_t::Account::name == account_name && query_t::TxOut::spent.is_null() && (query_t::Tx::status == Tx::RECEIVED || query_t::Tx::status == Tx::CONFIRMED));
+    query_t query(query_t::Account::name == account_name && query_t::TxOut::status == TxOut::UNSPENT && (query_t::Tx::status == Tx::RECEIVED || query_t::Tx::status == Tx::CONFIRMED));
     if (min_confirmations > 0)
     {
         odb::result<BestHeightView> height_r(db_->query<BestHeightView>());
@@ -503,8 +503,8 @@ std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, con
     LOGGER(trace) << "Vault::getTxOutViews(" << account_name << ", " << bin_name << ", " << TxOut::getStatusString(txout_status_flags) << ", " << ", " << Tx::getStatusString(tx_status_flags) << ")" << std::endl;
 
     typedef odb::query<TxOutView> query_t;
-    query_t query(query_t::receiving_account.is_not_null() || query_t::sending_account.is_not_null());
-    if (account_name != "@all")                 query = (query && (query_t::sending_account::name == account_name || query_t::receiving_account == account_name));
+    query_t query(query_t::receiving_account::id != 0 || query_t::sending_account::id != 0);
+    if (account_name != "@all")                 query = (query && (query_t::sending_account::name == account_name || query_t::receiving_account::name == account_name));
     if (bin_name != "@all")                     query = (query && query_t::AccountBin::name == bin_name);
 
     std::vector<TxOut::status_t> txout_statuses = TxOut::getStatusFlags(txout_status_flags);
