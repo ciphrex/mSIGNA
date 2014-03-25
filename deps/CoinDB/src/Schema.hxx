@@ -180,7 +180,7 @@ inline Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy
     chain_code_ = hdKeychain.chain_code();
     privkey_ = hdKeychain.key();
     pubkey_ = hdKeychain.pubkey();
-    hash_ = hdKeychain.hash();
+    hash_ = hdKeychain.full_hash();
 
     setPrivateKeyLockKey(lock_key, salt);
     setChainCodeLockKey(lock_key, salt);
@@ -229,7 +229,7 @@ inline std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private)
         child->child_num_ = hdkeychain.child_num();
         child->parent_fp_ = hdkeychain.parent_fp();
         child->depth_ = hdkeychain.depth();
-        child->hash_ = hdkeychain.hash();
+        child->hash_ = hdkeychain.full_hash();
         child->derivation_path_ = derivation_path_;
         child->derivation_path_.push_back(i);
         return child;
@@ -245,7 +245,7 @@ inline std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private)
         child->child_num_ = hdkeychain.child_num();
         child->parent_fp_ = hdkeychain.parent_fp();
         child->depth_ = hdkeychain.depth();
-        child->hash_ = hdkeychain.hash();
+        child->hash_ = hdkeychain.full_hash();
         child->derivation_path_ = derivation_path_;
         child->derivation_path_.push_back(i);
         return child;
