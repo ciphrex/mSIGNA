@@ -759,12 +759,12 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 
     if (!conflicting_txs.empty())
     {
-        tx->status(Tx::CONFLICTED);
+        tx->status(Tx::CONFLICTING);
         for (auto& conflicting_tx: conflicting_txs)
         {
             if (conflicting_tx->status() != Tx::CONFIRMED)
             {
-                conflicting_tx->status(Tx::CONFLICTED);
+                conflicting_tx->status(Tx::CONFLICTING);
                 db_->update(conflicting_tx);
             }
         }
@@ -868,3 +868,14 @@ std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx
     return tx;
 }
 
+// Block operations
+uint32_t Vault::getBestHeight() const
+{
+    LOGGER(trace) << "Vault::getBestHeight()" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    odb::result<BestHeightView> r(db_->query<BestHeightView>());
+    uint32_t best_height = r.empty() ? 0 : r.begin().load()->best_height;
+    return best_height;
+}

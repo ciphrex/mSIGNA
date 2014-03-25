@@ -327,8 +327,10 @@ string formattedTxOutHeader()
        << left  << setw(15) << "value" << " | "
        << left  << setw(50) << "script" << " | "
        << left  << setw(36) << "address" << " | "
-       << left  << setw(8)  << "status" << " | "
+       << left  << setw(13) << "confirmations" << " | "
+       << left  << setw(11) << "tx status" << " | "
        << left  << setw(64) << "tx hash";
+    ss << " ";
 
     size_t header_length = ss.str().size();
     ss << endl;
@@ -344,7 +346,8 @@ string formattedTxOut(
     txout_type_t type,
     uint64_t value,
     const bytes_t& script,
-    bool is_tx_signed,
+    unsigned int confirmations,
+    Tx::status_t tx_status,
     const bytes_t& tx_hash
 )
 {
@@ -366,7 +369,8 @@ string formattedTxOut(
        << right << setw(15) << value << " | "
        << left  << setw(50) << uchar_vector(script).getHex() << " | "
        << left  << setw(36) << address << " | "
-       << left  << setw(8)  << (is_tx_signed ? "signed" : "unsigned") << " | "
+       << right << setw(13) << confirmations << " | "
+       << left  << setw(11) << Tx::getStatusString(tx_status) << " | "
        << left  << setw(64) << uchar_vector(tx_hash).getHex();
     return ss.str();
 }
@@ -380,14 +384,15 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
     std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
     
     Vault vault(params[0], false);
+    uint32_t best_height = vault.getBestHeight();
     vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name);
 
     stringstream ss;
     ss << formattedTxOutHeader();
     for (auto& txOutView: txOutViews)
     {
-        bool is_tx_signed = !txOutView.tx_hash.empty();
-        bytes_t tx_hash = is_tx_signed ? txOutView.tx_hash : txOutView.tx_unsigned_hash;
+        bytes_t tx_hash = txOutView.tx_status == Tx::UNSIGNED ? txOutView.tx_unsigned_hash : txOutView.tx_hash;
+        unsigned int confirmations = txOutView.block_height == 0 ? 0 : best_height - txOutView.block_height + 1;
 
         if (!txOutView.receiving_account_name.empty())
             ss << endl << formattedTxOut(
@@ -396,7 +401,8 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
                 RECEIVE,
                 txOutView.value,
                 txOutView.script,
-                is_tx_signed,
+                confirmations,
+                txOutView.tx_status,
                 tx_hash);                
 
         if (!txOutView.sending_account_name.empty())
@@ -406,7 +412,8 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
                 SEND,
                 txOutView.value,
                 txOutView.script,
-                is_tx_signed,
+                confirmations,
+                txOutView.tx_status,
                 tx_hash);                
     }
     return ss.str();

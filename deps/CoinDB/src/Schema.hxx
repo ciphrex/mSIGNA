@@ -1252,14 +1252,14 @@ class Tx : public std::enable_shared_from_this<Tx>
 public:
     enum status_t
     {
-        UNSIGNED    = 1,      // still missing signatures
-        UNSENT      = 1 << 1, // signed but not yet broadcast to network
-        SENT        = 1 << 2, // sent to at least one peer but possibly not propagated
-        RECEIVED    = 1 << 3, // received from at least one peer
-        CONFLICTED  = 1 << 4, // unconfirmed and spends the same output as another transaction
-        CANCELED    = 1 << 5, // either will never be broadcast or will never confirm
-        CONFIRMED   = 1 << 6, // exists in blockchain
-        ALL         = (1 << 7) - 1
+        UNSIGNED     =  1,      // still missing signatures
+        UNSENT       =  1 << 1, // signed but not yet broadcast to network
+        SENT         =  1 << 2, // sent to at least one peer but possibly not propagated
+        RECEIVED     =  1 << 3, // received from at least one peer
+        CONFLICTING  =  1 << 4, // unconfirmed and spends the same output as another transaction
+        CANCELED     =  1 << 5, // either will never be broadcast or will never confirm
+        CONFIRMED    =  1 << 6, // exists in blockchain
+        ALL          = (1 << 7) - 1
     };
     /*
      * If status is UNSIGNED, remove all txinscripts before hashing so hash
@@ -1277,7 +1277,7 @@ public:
         if (status & UNSENT) flags.push_back("UNSENT");
         if (status & SENT) flags.push_back("SENT");
         if (status & RECEIVED) flags.push_back("RECEIVED");
-        if (status & CONFLICTED) flags.push_back("CONFLICTED");
+        if (status & CONFLICTING) flags.push_back("CONFLICTING");
         if (status & CANCELED) flags.push_back("CANCELED");
         if (status & CONFIRMED) flags.push_back("CONFIRMED");
         if (flags.empty()) return "UNKNOWN";
@@ -1291,7 +1291,7 @@ public:
         if (status & UNSENT) flags.push_back(UNSENT);
         if (status & SENT) flags.push_back(SENT);
         if (status & RECEIVED) flags.push_back(RECEIVED);
-        if (status & CONFLICTED) flags.push_back(CONFLICTED);
+        if (status & CONFLICTING) flags.push_back(CONFLICTING);
         if (status & CANCELED) flags.push_back(CANCELED);
         if (status & CONFIRMED) flags.push_back(CONFIRMED);
         return flags;
@@ -1626,6 +1626,9 @@ struct TxOutView
 
     #pragma db column(TxOut::txindex_)
     uint32_t tx_index;
+
+    #pragma db column(BlockHeader::height_)
+    uint32_t block_height;
 };
 
 #pragma db view \

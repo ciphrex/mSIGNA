@@ -89,6 +89,11 @@ public:
     std::shared_ptr<Tx> insertTx(std::shared_ptr<Tx> tx); // Inserts transaction only if it affects one of our accounts. Returns transaction in vault if change occured. Otherwise returns nullptr.
     std::shared_ptr<Tx> createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
 
+    //////////////////////
+    // BLOCK OPERATIONS //
+    //////////////////////
+    uint32_t getBestHeight() const;
+
 protected:
     // Keychain operations
     std::shared_ptr<Keychain> getKeychain_unwrapped(const std::string& keychain_name) const;
