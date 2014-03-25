@@ -327,7 +327,7 @@ string formattedTxOutHeader()
        << left  << setw(15) << "value" << " | "
        << left  << setw(50) << "script" << " | "
        << left  << setw(36) << "address" << " | "
-       << left  << setw(6)  << "status" << " | "
+       << left  << setw(8)  << "status" << " | "
        << left  << setw(64) << "tx hash";
 
     size_t header_length = ss.str().size();
@@ -351,7 +351,9 @@ string formattedTxOut(
     using namespace CoinQ::Script;
     std::string address;
     payee_t payee = getScriptPubKeyPayee(script);
-    if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
+    if (payee.first == SCRIPT_PUBKEY_PAY_TO_PUBKEY_HASH)
+        address = toBase58Check(payee.second, BASE58_VERSIONS[0]);
+    else if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
         address = toBase58Check(payee.second, BASE58_VERSIONS[1]);
     else
         address = "N/A";
@@ -364,7 +366,7 @@ string formattedTxOut(
        << right << setw(15) << value << " | "
        << left  << setw(50) << uchar_vector(script).getHex() << " | "
        << left  << setw(36) << address << " | "
-       << left  << setw(6)  << (is_tx_signed ? "signed" : "unsigned") << " | "
+       << left  << setw(8)  << (is_tx_signed ? "signed" : "unsigned") << " | "
        << left  << setw(64) << uchar_vector(tx_hash).getHex();
     return ss.str();
 }

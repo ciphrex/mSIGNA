@@ -720,7 +720,14 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                     script->status(SigningScript::RECEIVED);
                 }
                 scripts.insert(script);
-                refillAccountBinPool_unwrapped(script->account_bin());
+                try
+                {
+                    refillAccountBinPool_unwrapped(script->account_bin());
+                }
+                catch (const AccountChainCodeLockedException& e)
+                {
+                    LOGGER(debug) << "Vault::insertTx_unwrapped - Chain code is locked so change pool cannot be replenished." << std::endl;
+                }
                 break;
 
             case SigningScript::PENDING:
