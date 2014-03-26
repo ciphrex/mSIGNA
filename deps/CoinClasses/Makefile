@@ -56,6 +56,7 @@ OBJS = \
         obj/hdkeys.o \
         obj/BloomFilter.o \
         obj/MerkleTree.o \
+        obj/secp256k1.o \
         obj/StandardTransactions.o
 
 OBJ_HEADERS = \
@@ -68,7 +69,6 @@ OBJ_HEADERS = \
         src/jsonResult.h \
         src/numericdata.h \
         src/random.h \
-        src/secp256k1.h \
         src/typedefs.h \
         src/uchar_vector.h \
         src/uint256.h
