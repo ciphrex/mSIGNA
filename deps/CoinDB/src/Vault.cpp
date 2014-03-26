@@ -841,7 +841,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
         for (auto& script:  scripts)        { db_->update(script); }
         for (auto& txout:   updated_txouts) { db_->update(txout); }
 
-        // TODO: updateConfirmations_unwrapped(tx);
+        if (tx->status() >= Tx::SENT) updateConfirmations_unwrapped(tx);
         return tx;
     }
 
@@ -1181,7 +1181,25 @@ bool Vault::insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock)
     return insertMerkleBlock_unwrapped(merkleblock);
 }
 
-unsigned int Vault::updateConfirmations_unwrapped()
+unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)
 {
-    return 0;
+    unsigned int count = 0;
+    typedef odb::query<ConfirmedTxView> query_t;
+    query_t query(query_t::Tx::blockheader.is_null());
+    if (tx) query = (query && query_t::Tx::hash == tx->hash());
+
+    odb::result<ConfirmedTxView> r(db_->query<ConfirmedTxView>(query));
+    for (auto& view: r)
+    {
+        if (view.blockheader_id == 0) continue;
+
+        std::shared_ptr<Tx> tx(db_->load<Tx>(view.tx_id));
+        std::shared_ptr<BlockHeader> blockheader(db_->load<BlockHeader>(view.blockheader_id));
+        tx->blockheader(blockheader);
+        db_->update(tx);
+        count++;
+        LOGGER(debug) << "Vault::updateConfirmations_unwrapped - transaction " << uchar_vector(tx->hash()).getHex() << " confirmed in block " << uchar_vector(tx->blockheader()->hash()).getHex() << " height: " << tx->blockheader()->height() << std::endl;
+    }
+    return count;
 }
+

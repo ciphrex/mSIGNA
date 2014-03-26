@@ -1588,6 +1588,32 @@ struct HorizonTimestampView
     uint32_t timestamp;
 };
 
+#pragma db view \
+    object(Tx) \
+    table("MerkleBlock_hashes" = "t": "t.value = " + Tx::hash_) \
+    object(MerkleBlock: "t.object_id = " + MerkleBlock::id_) \
+    object(BlockHeader: MerkleBlock::blockheader_)
+struct ConfirmedTxView
+{
+    #pragma db column(Tx::id_)
+    unsigned long tx_id;
+
+    #pragma db column(Tx::hash_)
+    bytes_t tx_hash;
+
+    #pragma db column(MerkleBlock::id_)
+    unsigned long merkleblock_id;
+
+    #pragma db column(BlockHeader::id_)
+    unsigned long blockheader_id;
+
+    #pragma db column(BlockHeader::hash_)
+    bytes_t block_hash;
+
+    #pragma db column(BlockHeader::height_)
+    uint32_t block_height;
+};
+
 }
 
 #endif // COINDB_SCHEMA_HXX

@@ -138,7 +138,8 @@ protected:
     // Block operations
     uint32_t getBestHeight_unwrapped() const;
     bool insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
-    unsigned int updateConfirmations_unwrapped(); // returns the number of transaction previously unconfirmed that are now confirmed.
+    unsigned int updateConfirmations_unwrapped(std::shared_ptr<Tx> tx = nullptr);   // If parameter is null, updates all unconfirmed transactions.
+                                                                                    // Returns the number of transaction previously unconfirmed that are now confirmed.
 
 private:
     mutable boost::mutex mutex;
