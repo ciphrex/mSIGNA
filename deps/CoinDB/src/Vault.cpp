@@ -69,6 +69,34 @@ uint32_t Vault::getHorizonTimestamp() const
     return getHorizonTimestamp_unwrapped();
 }
 
+Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const
+{
+    using namespace CoinQ::Script;
+
+    std::vector<bytes_t> elements;
+    odb::result<SigningScriptView> r(db_->query<SigningScriptView>());
+    for (auto& view: r)
+    {
+        Script script(view.txinscript);
+        elements.push_back(script.txinscript(Script::SIGN));                // Add input script element
+        elements.push_back(getScriptPubKeyPayee(view.txoutscript).second);  // Add output script element
+    }
+    if (elements.empty()) return Coin::BloomFilter();
+
+    Coin::BloomFilter filter(elements.size(), falsePositiveRate, nTweak, nFlags);
+    for (auto& element: elements) { filter.insert(element); }
+    return filter;
+}
+
+Coin::BloomFilter Vault::getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const
+{
+    LOGGER(trace) << "Vault::getBloomFilter(" << falsePositiveRate << ", " << nTweak << ", " << nFlags << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    return getBloomFilter_unwrapped(falsePositiveRate, nTweak, nFlags);
+}
+
 bool Vault::keychainExists(const std::string& keychain_name) const
 {
     LOGGER(trace) << "Vault::keychainExists(" << keychain_name << ")" << std::endl;

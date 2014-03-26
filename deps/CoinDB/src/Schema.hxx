@@ -738,71 +738,6 @@ inline std::shared_ptr<SigningScript> AccountBin::newSigningScript(const std::st
 }
 
 
-// Views
-#pragma db view \
-    object(AccountBin) \
-    object(Account: AccountBin::account_)
-struct AccountBinView
-{
-    #pragma db column(Account::id_)
-    unsigned long account_id;
-    #pragma db column(Account::name_)
-    std::string account_name;
-
-    #pragma db column(AccountBin::id_)
-    unsigned long bin_id; 
-    #pragma db column(AccountBin::name_)
-    std::string bin_name;
-};
-
-#pragma db view \
-    object(SigningScript) \
-    object(Account: SigningScript::account_) \
-    object(AccountBin: SigningScript::account_bin_)
-struct SigningScriptView
-{
-    #pragma db column(Account::id_)
-    unsigned long account_id;
-
-    #pragma db column(Account::name_)
-    std::string account_name;
-
-    #pragma db column(AccountBin::id_)
-    unsigned long account_bin_id;
-
-    #pragma db column(AccountBin::name_)
-    std::string account_bin_name;
-
-    #pragma db column(SigningScript::id_)
-    unsigned long id;
-
-    #pragma db column(SigningScript::index_)
-    uint32_t index;
-
-    #pragma db column(SigningScript::label_)
-    std::string label;
-
-    #pragma db column(SigningScript::status_)
-    SigningScript::status_t status;
-
-    #pragma db column(SigningScript::txinscript_)
-    bytes_t txinscript;
-
-    #pragma db column(SigningScript::txoutscript_)
-    bytes_t txoutscript;
-};
-
-#pragma db view \
-    object(SigningScript) \
-    object(Account: SigningScript::account_) \
-    object(AccountBin: SigningScript::account_bin_)
-struct ScriptCountView
-{
-    #pragma db column("count(" + SigningScript::id_ + ")")
-    uint32_t count;
-};
-
-
 /////////////////////////////
 // BLOCKS AND TRANSACTIONS //
 /////////////////////////////
@@ -1491,6 +1426,69 @@ inline std::set<bytes_t> Tx::missingSigPubkeys() const
 }
 
 // Views
+#pragma db view \
+    object(AccountBin) \
+    object(Account: AccountBin::account_)
+struct AccountBinView
+{
+    #pragma db column(Account::id_)
+    unsigned long account_id;
+    #pragma db column(Account::name_)
+    std::string account_name;
+
+    #pragma db column(AccountBin::id_)
+    unsigned long bin_id; 
+    #pragma db column(AccountBin::name_)
+    std::string bin_name;
+};
+
+#pragma db view \
+    object(SigningScript) \
+    object(Account: SigningScript::account_) \
+    object(AccountBin: SigningScript::account_bin_)
+struct SigningScriptView
+{
+    #pragma db column(Account::id_)
+    unsigned long account_id;
+
+    #pragma db column(Account::name_)
+    std::string account_name;
+
+    #pragma db column(AccountBin::id_)
+    unsigned long account_bin_id;
+
+    #pragma db column(AccountBin::name_)
+    std::string account_bin_name;
+
+    #pragma db column(SigningScript::id_)
+    unsigned long id;
+
+    #pragma db column(SigningScript::index_)
+    uint32_t index;
+
+    #pragma db column(SigningScript::label_)
+    std::string label;
+
+    #pragma db column(SigningScript::status_)
+    SigningScript::status_t status;
+
+    #pragma db column(SigningScript::txinscript_)
+    bytes_t txinscript;
+
+    #pragma db column(SigningScript::txoutscript_)
+    bytes_t txoutscript;
+};
+
+#pragma db view \
+    object(SigningScript) \
+    object(Account: SigningScript::account_) \
+    object(AccountBin: SigningScript::account_bin_)
+struct ScriptCountView
+{
+    #pragma db column("count(" + SigningScript::id_ + ")")
+    uint32_t count;
+};
+
 #pragma db view \
     object(TxOut) \
     object(Tx: TxOut::tx_) \
