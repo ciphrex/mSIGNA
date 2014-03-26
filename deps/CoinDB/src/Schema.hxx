@@ -1260,6 +1260,7 @@ class Tx : public std::enable_shared_from_this<Tx>
 public:
     enum status_t
     {
+        NO_STATUS    =  0,
         UNSIGNED     =  1,      // still missing signatures
         UNSENT       =  1 << 1, // signed but not yet broadcast to network
         SENT         =  1 << 2, // sent to at least one peer but possibly not propagated
@@ -1288,7 +1289,7 @@ public:
         if (status & CONFLICTING) flags.push_back("CONFLICTING");
         if (status & CANCELED) flags.push_back("CANCELED");
         if (status & CONFIRMED) flags.push_back("CONFIRMED");
-        if (flags.empty()) return "UNKNOWN";
+        if (flags.empty()) return "NO_STATUS";
         return stdutils::delimited_list(flags, " | ");
     }
 
@@ -1309,7 +1310,7 @@ public:
         : version_(version), locktime_(locktime), timestamp_(timestamp), status_(status), have_fee_(false), fee_(0) { }
 
     void set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED);
-    void set(const Coin::Transaction& coin_tx, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED);
+    void set(Coin::Transaction coin_tx, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED);
     void set(const bytes_t& raw, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED);
 
     Coin::Transaction toCoinClasses() const;
@@ -1327,7 +1328,7 @@ public:
     void timestamp(uint32_t timestamp) { timestamp_ = timestamp; }
     uint32_t timestamp() const { return timestamp_; }
 
-    void status(status_t status);
+    bool updateStatus(status_t status = NO_STATUS); // Will keep the status it already had if it didn't change and no parameter is passed. Returns true iff status changed.
     status_t status() const { return status_; }
 
     void fee(uint64_t fee) { have_fee_ = true; fee_ = fee; }
@@ -1342,10 +1343,6 @@ public:
 
     void shuffle_txins();
     void shuffle_txouts();
-
-    void updateStatus();
-    void updateUnsignedHash();
-    void updateHash();
 
     unsigned int missingSigCount() const;
     std::set<bytes_t> missingSigPubkeys() const;
@@ -1393,28 +1390,6 @@ private:
     odb::nullable<uint32_t> blockindex_;
 };
 
-inline void Tx::updateStatus()
-{
-    // TODO: check for conflicts
-    if (missingSigCount() > 0) status_ = UNSIGNED;
-}
-
-inline void Tx::updateHash()
-{
-    // Leave hash blank until fully signed
-    if (status_ != UNSIGNED) {
-        hash_ = sha256_2(raw());
-        std::reverse(hash_.begin(), hash_.end());
-    }
-}
-
-inline void Tx::updateUnsignedHash()
-{
-    Coin::Transaction coin_tx = toCoinClasses();
-    coin_tx.clearScriptSigs();
-    unsigned_hash_ = coin_tx.getHashLittleEndian();
-}
-
 inline void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp, status_t status)
 {
     version_ = version;
@@ -1438,26 +1413,29 @@ inline void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txou
     }
 
     locktime_ = locktime;
-
     timestamp_ = timestamp;
-    status_ = status;
 
-    updateStatus();
-    updateUnsignedHash();
-    updateHash();
+    Coin::Transaction coin_tx = toCoinClasses();
+
+    if (missingSigCount())  { status_ = UNSIGNED; }
+    else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
+
+    coin_tx.clearScriptSigs();
+    unsigned_hash_ = coin_tx.getHashLittleEndian();
 }
 
-inline void Tx::set(const Coin::Transaction& coin_tx, uint32_t timestamp, status_t status)
+inline void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status)
 {
     LOGGER(trace) << "Tx::set - fromCoinClasses(coin_tx);" << std::endl;
     fromCoinClasses(coin_tx);
 
     timestamp_ = timestamp;
-    status_ = status;
 
-    updateStatus();
-    updateUnsignedHash();
-    updateHash();
+    if (missingSigCount())  { status_ = UNSIGNED; }
+    else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
+
+    coin_tx.clearScriptSigs();
+    unsigned_hash_ = coin_tx.getHashLittleEndian();
 }
 
 inline void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
@@ -1465,20 +1443,53 @@ inline void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
     Coin::Transaction coin_tx(raw);
     fromCoinClasses(coin_tx);
     timestamp_ = timestamp;
-    status_ = status;
 
-    updateStatus();
-    updateUnsignedHash();
-    updateHash();
+    if (missingSigCount())  { status_ = UNSIGNED; }
+    else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
+
+    coin_tx.clearScriptSigs();
+    unsigned_hash_ = coin_tx.getHashLittleEndian();
 }
 
-// TODO: Status updates should occur automatically
-inline void Tx::status(status_t status)
+inline bool Tx::updateStatus(status_t status /* = NO_STATUS */)
 {
-    if (status_ != status) {
-        status_ = status;
-        //updateHash();
+    // Tx is not signed but status is incorrect.
+    if (status_ != UNSIGNED && missingSigCount())
+    {
+        status_ = UNSIGNED;
+        hash_ = bytes_t();
+        return true;
     }
+
+    // Tx status changed from unsigned to signed.
+    if (status_ == UNSIGNED)
+    {
+        switch (status)
+        {
+        case NO_STATUS:
+            status_ = UNSENT;
+            break;
+
+        case UNSIGNED:
+            status_ = RECEIVED;
+            break;
+
+        default:
+            status_ = status;
+        }
+
+        hash_ = toCoinClasses().getHashLittleEndian();
+        return true;
+    }
+
+    // Only update the status if the new status is valid.
+    if (status && status != UNSIGNED && status != status_)
+    {
+        status_ = status;
+        return true;
+    }
+
+    return false;
 }
 
 inline Coin::Transaction Tx::toCoinClasses() const

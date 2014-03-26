@@ -19,8 +19,10 @@
 #include <odb/transaction.hxx>
 #include <odb/session.hxx>
 
-#include <CoinKey.h>
+#include <hash.h>
 #include <MerkleTree.h>
+#include <secp256k1.h>
+#include <BigInt.h>
 
 #include <sstream>
 #include <fstream>
@@ -554,9 +556,7 @@ std::shared_ptr<AccountBin> Vault::getAccountBin(const std::string& account_name
 std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 {
     // TODO: Validate signatures
-
     tx->updateStatus();
-    tx->updateHash();
 
     odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::unsigned_hash == tx->unsigned_hash()));
 
@@ -580,8 +580,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                     txin->script(txins[i++]->script());
                     db_->update(txin);
                 }
-                stored_tx->status(tx->status());
-                stored_tx->updateHash();
+                stored_tx->updateStatus(tx->status());
                 db_->update(stored_tx);
                 return stored_tx;
             }
@@ -617,7 +616,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                 if (tx->status() > stored_tx->status())
                 {
                     LOGGER(debug) << "Vault::insertTx_unwrapped - UPDATING TRANSACTION STATUS FROM " << stored_tx->status() << " TO " << tx->status() << ". hash: " << uchar_vector(stored_tx->hash()).getHex() << std::endl;
-                    stored_tx->status(tx->status());
+                    stored_tx->updateStatus(tx->status());
                     db_->update(stored_tx);
                     return stored_tx;
                 }
@@ -759,12 +758,12 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 
     if (!conflicting_txs.empty())
     {
-        tx->status(Tx::CONFLICTING);
+        tx->updateStatus(Tx::CONFLICTING);
         for (auto& conflicting_tx: conflicting_txs)
         {
             if (conflicting_tx->status() != Tx::CONFIRMED)
             {
-                conflicting_tx->status(Tx::CONFLICTING);
+                conflicting_tx->updateStatus(Tx::CONFLICTING);
                 db_->update(conflicting_tx);
             }
         }
@@ -953,7 +952,59 @@ SigningRequest Vault::getSigningRequest(const bytes_t& unsigned_hash, bool inclu
 
 bool Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
 {
-    return false;
+    using namespace CoinQ::Script;
+    using namespace CoinCrypto;
+    unsigned int sigsadded = 0;
+    for (auto& txin: tx->txins())
+    {
+        Script script(txin->script());
+        unsigned int sigsneeded = script.sigsneeded();
+        if (sigsneeded == 0) continue;
+
+        std::vector<bytes_t> pubkeys = script.missingsigs();
+        if (pubkeys.empty()) continue;
+
+        odb::result<Key> key_r(db_->query<Key>(odb::query<Key>::is_private != 0 && odb::query<Key>::pubkey.in_range(pubkeys.begin(), pubkeys.end())));
+        if (key_r.empty()) continue;
+
+        // Prepare the inputs for hashing
+        Coin::Transaction coin_tx = tx->toCoinClasses();
+        unsigned int i = 0;
+        for (auto& coin_input: coin_tx.inputs)
+        {
+            if (i++ == txin->txindex()) { coin_input.scriptSig = script.txinscript(Script::SIGN); }
+            else                        { coin_input.scriptSig.clear(); }
+        }
+
+        // Compute hash to sign
+        bytes_t signingHash = coin_tx.getHashWithAppendedCode(SIGHASH_ALL);
+        LOGGER(trace) << "Vault::signTx_unwrapped - computed signing hash " << uchar_vector(signingHash).getHex() << " for input " << txin->txindex() << std::endl;
+
+        for (auto& key: key_r)
+        {
+            secure_bytes_t privkey = key.privkey();
+            if (privkey.empty()) continue; // Looks like the keychain is locked.
+
+            // TODO: Better exception handling with secp256kl_key class
+            secp256k1_key signingKey;
+            signingKey.setPrivKey(privkey);
+            if (signingKey.getPubKey() != key.pubkey()) throw KeychainInvalidPrivateKeyException(key.root_keychain()->name(), key.pubkey());
+
+            bytes_t signature = secp256k1_sign(signingKey, signingHash);
+            signature.push_back(SIGHASH_ALL);
+            script.addSig(key.pubkey(), signature);
+            sigsadded++;
+            sigsneeded--;
+            if (sigsneeded == 0) break;
+        }
+
+        txin->script(script.txinscript(sigsneeded ? Script::EDIT : Script::BROADCAST));
+    }
+
+    if (!sigsadded) return false;
+
+    tx->updateStatus();
+    return true;
 }
 
 bool Vault::signTx(const bytes_t& unsigned_hash, const std::string& keychain_name, const secure_bytes_t& unlock_key, bool update)
@@ -972,7 +1023,11 @@ bool Vault::signTx(const bytes_t& unsigned_hash, const std::string& keychain_nam
     if (!keychain->unlockPrivateKey(unlock_key)) throw KeychainPrivateKeyUnlockFailedException(keychain_name);
 
     bool rval = signTx_unwrapped(tx);
-    if (rval && update) updateTx_unwrapped(tx);
+    if (rval && update)
+    {
+        updateTx_unwrapped(tx);
+        t.commit();
+    }
     return rval;
 }
 

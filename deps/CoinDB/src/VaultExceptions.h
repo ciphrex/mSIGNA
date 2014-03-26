@@ -44,6 +44,17 @@ public:
     KeychainPrivateKeyUnlockFailedException(const std::string& keychain_name) : KeychainException("Failed to unlock private keys.", keychain_name) { }
 };
 
+class KeychainInvalidPrivateKeyException: public KeychainException
+{
+public:
+    KeychainInvalidPrivateKeyException(const std::string& keychain_name, const bytes_t& pubkey) : KeychainException("Invalid private key for public key.", keychain_name), pubkey_(pubkey) { }
+
+    const bytes_t& pubkey() const { return pubkey_; }
+
+private:
+    bytes_t pubkey_;
+};
+
 // ACCOUNT EXCEPTIONS
 class AccountException : public std::runtime_error
 {
@@ -81,7 +92,7 @@ public:
 
     const std::set<std::string>& locked_keychains() const { return locked_keychains_; }
 
-protected:
+private:
     std::set<std::string> locked_keychains_;
 };
 
