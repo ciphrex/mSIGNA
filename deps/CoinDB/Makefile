@@ -96,12 +96,14 @@ OBJS = \
     obj/Schema-odb.o \
     obj/Vault.o
 
+TOOLS = \
+    tools/build/coindb$(EXE_EXT)
 
 all: lib tools
 
 lib: lib/libCoinDB.a
 
-tools: tools/build/coindb$(EXE_EXT)
+tools: $(TOOLS) 
 
 lib/libCoinDB.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
@@ -133,6 +135,11 @@ obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/SigningRequest.
 #
 tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp lib/libCoinDB.a
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(TOOLS_INCLUDE_PATH) $< $(TOOLS_LIBPATH) -o $@
+
+install: install_tools
+
+install_tools:
+	-cp $(TOOLS) /usr/local/bin/
 
 clean:
 	-rm -f obj/*.o odb/*-odb.* lib/*.a tools/build/*
