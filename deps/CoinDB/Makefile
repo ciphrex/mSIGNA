@@ -133,7 +133,7 @@ obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/SigningRequest.
 #
 # coindb command line tool
 #
-tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp lib/libCoinDB.a
+tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp tools/src/formatting.h lib/libCoinDB.a
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(TOOLS_INCLUDE_PATH) $< $(TOOLS_LIBPATH) -o $@
 
 install: install_tools
