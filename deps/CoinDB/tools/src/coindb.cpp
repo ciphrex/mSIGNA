@@ -33,6 +33,19 @@ using namespace std;
 using namespace odb::core;
 using namespace CoinDB;
 
+// Utility functions
+string getAddressFromScript(const bytes_t& script)
+{
+    using namespace CoinQ::Script;
+    payee_t payee = getScriptPubKeyPayee(script);
+    if (payee.first == SCRIPT_PUBKEY_PAY_TO_PUBKEY_HASH)
+        return toBase58Check(payee.second, BASE58_VERSIONS[0]);
+    else if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
+        return toBase58Check(payee.second, BASE58_VERSIONS[1]);
+    else
+        return "N/A";
+}
+
 // Vault operations
 cli::result_t cmd_create(bool bHelp, const cli::params_t& params)
 {
@@ -283,6 +296,40 @@ cli::result_t cmd_newscript(bool bHelp, const cli::params_t& params)
     return ss.str(); 
 }
 
+string formattedScriptHeader()
+{
+    stringstream ss;
+    ss << " ";
+    ss << left  << setw(15) << "account name" << " | "
+       << left  << setw(15) << "bin name" << " | "
+       << left  << setw(5)  << "index" << " | "
+       << left  << setw(50) << "script" << " | "
+       << left  << setw(36) << "address" << " | "
+       << left  << setw(8)  << "status";
+    ss << " ";
+
+    size_t header_length = ss.str().size();
+    ss << endl;
+    for (size_t i = 0; i < header_length; i++)
+        ss << "=";
+
+    return ss.str();
+}
+
+string formattedScript(const SigningScriptView& view)
+{
+    stringstream ss;
+    ss << " ";
+    ss << left  << setw(15) << view.account_name << " | "
+       << left  << setw(15) << view.account_bin_name << " | "
+       << right << setw(5)  << view.index << " | "
+       << left  << setw(50) << uchar_vector(view.txoutscript).getHex() << " | "
+       << left  << setw(36) << getAddressFromScript(view.txoutscript) << " | "
+       << left  << setw(8)  << SigningScript::getStatusString(view.status);
+    ss << " ";
+    return ss.str();
+}
+
 cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 1 || params.size() > 4)
@@ -295,23 +342,10 @@ cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
     Vault vault(params[0], false);
     vector<SigningScriptView> scriptViews = vault.getSigningScriptViews(account_name, bin_name, flags);
 
-    using namespace CoinQ::Script;
     stringstream ss;
-    bool newLine = false;
+    ss << formattedScriptHeader();
     for (auto& scriptView: scriptViews)
-    {
-        if (newLine)    ss << endl;
-        else            newLine = true;
-
-        std::string address;
-        payee_t payee = getScriptPubKeyPayee(scriptView.txoutscript);
-        if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
-            address = toBase58Check(payee.second, BASE58_VERSIONS[1]);
-        else
-            address = "N/A";
-
-        ss << "account: " << left << setw(15) << scriptView.account_name << " | bin: " << left << setw(15) << scriptView.account_bin_name << " | index: " << right << setw(5) << scriptView.index << " | script: " << left << setw(50) << uchar_vector(scriptView.txoutscript).getHex() << " | address: " << left << setw(36) << address << " | status: " << SigningScript::getStatusString(scriptView.status);
-    }
+        ss << endl << formattedScript(scriptView);
     return ss.str();
 }
 
@@ -340,38 +374,41 @@ string formattedTxOutHeader()
     return ss.str();
 }
 
-string formattedTxOut(
-    const string& account_name,
-    const string& bin_name,
-    txout_type_t type,
-    uint64_t value,
-    const bytes_t& script,
-    unsigned int confirmations,
-    Tx::status_t tx_status,
-    const bytes_t& tx_hash
-)
+string formattedTxOut(const TxOutView& view, txout_type_t type, unsigned int best_height)
 {
-    using namespace CoinQ::Script;
-    std::string address;
-    payee_t payee = getScriptPubKeyPayee(script);
-    if (payee.first == SCRIPT_PUBKEY_PAY_TO_PUBKEY_HASH)
-        address = toBase58Check(payee.second, BASE58_VERSIONS[0]);
-    else if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
-        address = toBase58Check(payee.second, BASE58_VERSIONS[1]);
+    string account_name;
+    string bin_name;
+    string type_str;
+    if (type == SEND)
+    {
+        account_name = view.sending_account_name;
+        type_str     = "SEND";
+    }
     else
-        address = "N/A";
+    {
+        account_name = view.receiving_account_name;
+        bin_name     = view.account_bin_name;
+        type_str     = "RECEIVE";
+    }
+
+    bytes_t tx_hash = view.tx_status == Tx::UNSIGNED
+        ? view.tx_unsigned_hash : view.tx_hash;
+
+    unsigned int confirmations = view.block_height == 0
+        ? 0 : best_height - view.block_height + 1;
 
     stringstream ss;
     ss << " ";
     ss << left  << setw(15) << account_name << " | "
        << left  << setw(15) << bin_name << " | "
-       << left  << setw(10) << (type == SEND ? "send" : "receive") << " | "
-       << right << setw(15) << value << " | "
-       << left  << setw(50) << uchar_vector(script).getHex() << " | "
-       << left  << setw(36) << address << " | "
+       << left  << setw(10) << type_str << " | "
+       << right << setw(15) << view.value << " | "
+       << left  << setw(50) << uchar_vector(view.script).getHex() << " | "
+       << left  << setw(36) << getAddressFromScript(view.script) << " | "
        << right << setw(13) << confirmations << " | "
-       << left  << setw(11) << Tx::getStatusString(tx_status) << " | "
+       << left  << setw(11) << Tx::getStatusString(view.tx_status) << " | "
        << left  << setw(64) << uchar_vector(tx_hash).getHex();
+    ss << " ";
     return ss.str();
 }
 
@@ -391,30 +428,11 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
     ss << formattedTxOutHeader();
     for (auto& txOutView: txOutViews)
     {
-        bytes_t tx_hash = txOutView.tx_status == Tx::UNSIGNED ? txOutView.tx_unsigned_hash : txOutView.tx_hash;
-        unsigned int confirmations = txOutView.block_height == 0 ? 0 : best_height - txOutView.block_height + 1;
-
         if (!txOutView.receiving_account_name.empty())
-            ss << endl << formattedTxOut(
-                txOutView.receiving_account_name,
-                txOutView.account_bin_name,
-                RECEIVE,
-                txOutView.value,
-                txOutView.script,
-                confirmations,
-                txOutView.tx_status,
-                tx_hash);                
+            ss << endl << formattedTxOut(txOutView, RECEIVE, best_height);
 
         if (!txOutView.sending_account_name.empty())
-            ss << endl << formattedTxOut(
-                txOutView.sending_account_name,
-                "",
-                SEND,
-                txOutView.value,
-                txOutView.script,
-                confirmations,
-                txOutView.tx_status,
-                tx_hash);                
+            ss << endl << formattedTxOut(txOutView, SEND, best_height);
     }
     return ss.str();
 }
@@ -563,7 +581,7 @@ int main(int argc, char* argv[])
 {
     INIT_LOGGER("debug.log");
 
-    cli::command_map cmds("CoinDB by Eric Lombrozo v0.2.0");
+    cli::command_map cmds("CoinDB by Eric Lombrozo v0.2.1");
 
     // Vault operations
     cmds.add("create", &cmd_create);
