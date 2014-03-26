@@ -139,9 +139,7 @@ inline std::string formattedTxOut(const std::shared_ptr<CoinDB::TxOut>& txout)
     using namespace std;
     using namespace CoinDB;
 
-    string status;
-    if (txout->receiving_account())
-        status = TxOut::getStatusString(txout->status());
+    string status = txout->receiving_account() ? status = TxOut::getStatusString(txout->status()) : "N/A";
 
     stringstream ss;
     ss << " ";
