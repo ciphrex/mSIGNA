@@ -53,6 +53,22 @@ Vault::Vault(const std::string& filename, bool create, uint32_t version)
 }
 #endif
 
+uint32_t Vault::getHorizonTimestamp_unwrapped() const
+{
+    odb::result<HorizonTimestampView> r(db_->query<HorizonTimestampView>());
+    if (r.empty()) return 0xffffffff;
+    return r.begin()->timestamp;
+}
+
+uint32_t Vault::getHorizonTimestamp() const
+{
+    LOGGER(trace) << "Vault::getHorizonTimestamp()" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    return getHorizonTimestamp_unwrapped();
+}
+
 bool Vault::keychainExists(const std::string& keychain_name) const
 {
     LOGGER(trace) << "Vault::keychainExists(" << keychain_name << ")" << std::endl;
@@ -1086,13 +1102,86 @@ bool Vault::signTx(const bytes_t& unsigned_hash, bool update)
 }
 
 // Block operations
+uint32_t Vault::getBestHeight_unwrapped() const
+{
+    odb::result<BestHeightView> r(db_->query<BestHeightView>());
+    uint32_t best_height = r.empty() ? 0 : r.begin()->best_height;
+    return best_height;
+}
+
 uint32_t Vault::getBestHeight() const
 {
     LOGGER(trace) << "Vault::getBestHeight()" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
-    odb::result<BestHeightView> r(db_->query<BestHeightView>());
-    uint32_t best_height = r.empty() ? 0 : r.begin().load()->best_height;
-    return best_height;
+    return getBestHeight_unwrapped();
+}
+
+bool Vault::insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock)
+{
+    auto& new_header = merkleblock->blockheader();
+    std::string hash_str = uchar_vector(new_header->hash()).getHex();
+
+    // We need to start fetching no later than the block time horizon window
+    odb::result<BlockHeader> block_r(db_->query<BlockHeader>(odb::query<BlockHeader>::hash == new_header->prevhash()));
+    if (block_r.empty() && new_header->timestamp() + TIME_HORIZON_WINDOW > getHorizonTimestamp_unwrapped()) return false;
+
+    block_r = db_->query<BlockHeader>(odb::query<BlockHeader>::hash == new_header->hash());
+    if (!block_r.empty())
+    {
+        std::shared_ptr<BlockHeader> header(block_r.begin().load());
+        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - already have block. hash: " << hash_str << ", height: " << header->height() << std::endl;
+        return false;
+    }
+
+    block_r = db_->query<BlockHeader>(odb::query<BlockHeader>::height >= new_header->height());
+    if (!block_r.empty()) // Reorg
+    {
+        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - reorganization. hash: " << hash_str << ", height: " << new_header->height() << std::endl;
+        // Disconnect blocks
+        for (auto& sidechain_header: block_r)
+        {
+            db_->erase_query<MerkleBlock>(odb::query<MerkleBlock>::blockheader == sidechain_header.id());
+            odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::blockheader == sidechain_header.id()));
+            for (auto& tx: tx_r)
+            {
+                tx.blockheader(nullptr);
+                db_->update(tx);
+            }
+        }
+        db_->erase_query<BlockHeader>(odb::query<BlockHeader>::height >= new_header->height());
+    }
+
+    LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - inserting new merkle block. hash: " << hash_str << ", height: " << new_header->height() << std::endl;
+    db_->persist(new_header);
+    db_->persist(merkleblock);
+
+    auto& hashes = merkleblock->hashes();
+    odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::hash.in_range(hashes.begin(), hashes.end())));
+    for (auto& tx: tx_r)
+    {
+        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - updating transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
+        tx.block(new_header, 0xffffffff); // TODO: compute correct index or eliminate index altogether/
+        db_->update(tx);
+    }
+
+    unsigned int count = updateConfirmations_unwrapped();
+    LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - " << count << " transaction(s) confirmed." << std::endl;
+    return true;
+}
+
+bool Vault::insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock)
+{
+    LOGGER(trace) << "Vault::insertMerkleBlock(" << uchar_vector(merkleblock->blockheader()->hash()).getHex() << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    return insertMerkleBlock_unwrapped(merkleblock);
+}
+
+unsigned int Vault::updateConfirmations_unwrapped()
+{
+    return 0;
 }

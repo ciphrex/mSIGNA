@@ -33,6 +33,12 @@ public:
     Vault(const std::string& filename, bool create = false, uint32_t version = SCHEMA_VERSION);
 #endif
 
+    ///////////////////////
+    // GLOBAL OPERATIONS //
+    ///////////////////////
+    const uint32_t TIME_HORIZON_WINDOW = 6 * 60 * 60; // a good six hours initial grace period.
+    uint32_t getHorizonTimestamp() const; // nothing that happened before this should matter to us.
+
     /////////////////////////
     // KEYCHAIN OPERATIONS //
     /////////////////////////
@@ -98,8 +104,12 @@ public:
     // BLOCK OPERATIONS //
     //////////////////////
     uint32_t getBestHeight() const;
+    bool insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock);
 
 protected:
+    // Global operations
+    uint32_t getHorizonTimestamp_unwrapped() const;
+
     // Keychain operations
     std::shared_ptr<Keychain> getKeychain_unwrapped(const std::string& keychain_name) const;
     void persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
@@ -124,6 +134,11 @@ protected:
     void updateTx_unwrapped(std::shared_ptr<Tx> tx);
     SigningRequest getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
     bool signTx_unwrapped(std::shared_ptr<Tx> tx); // Tries to sign as many as it can with the unlocked keychains.
+
+    // Block operations
+    uint32_t getBestHeight_unwrapped() const;
+    bool insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
+    unsigned int updateConfirmations_unwrapped(); // returns the number of transaction previously unconfirmed that are now confirmed.
 
 private:
     mutable boost::mutex mutex;

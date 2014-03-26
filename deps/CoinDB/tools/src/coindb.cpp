@@ -29,7 +29,7 @@ using namespace std;
 using namespace odb::core;
 using namespace CoinDB;
 
-// Vault operations
+// Global operations
 cli::result_t cmd_create(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 1)
@@ -39,6 +39,20 @@ cli::result_t cmd_create(bool bHelp, const cli::params_t& params)
 
     stringstream ss;
     ss << "Vault " << params[0] << " created.";
+    return ss.str();
+}
+
+cli::result_t cmd_info(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 1)
+        return "info <filename> - display general information about vault.";
+
+    Vault vault(params[0], false);
+    uint32_t horizon_timestamp = vault.getHorizonTimestamp();
+
+    stringstream ss;
+    ss << "filename:            " << params[0] << endl
+       << "horizon timestamp:   " << horizon_timestamp; 
     return ss.str();
 }
 
@@ -435,10 +449,10 @@ cli::result_t cmd_deletetx(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
-cli::result_t cmd_getsigningrequest(bool bHelp, const cli::params_t& params)
+cli::result_t cmd_signingrequest(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
-        return "deletetx <filename> <tx hash> - gets signing request for transaction with missing signatures.";
+        return "signingrequest <filename> <tx hash> - gets signing request for transaction with missing signatures.";
 
     Vault vault(params[0], false);
     uchar_vector hash(params[1]);
@@ -490,8 +504,9 @@ int main(int argc, char* argv[])
 
     cli::command_map cmds("CoinDB by Eric Lombrozo v0.2.2");
 
-    // Vault operations
+    // Global operations
     cmds.add("create", &cmd_create);
+    cmds.add("info", &cmd_info);
 
     // Keychain operations
     cmds.add("keychainexists", &cmd_keychainexists);
@@ -518,7 +533,7 @@ int main(int argc, char* argv[])
     cmds.add("insertrawtx", &cmd_insertrawtx);
     cmds.add("newrawtx", &cmd_newrawtx);
     cmds.add("deletetx", &cmd_deletetx);
-    cmds.add("getsigningrequest", &cmd_getsigningrequest);
+    cmds.add("signingrequest", &cmd_signingrequest);
     cmds.add("signtx", &cmd_signtx);
 
     try 
