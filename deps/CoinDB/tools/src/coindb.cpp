@@ -329,6 +329,26 @@ cli::result_t cmd_refillaccountpool(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_txinfo(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 2 || params.size() > 3)
+        return "txinfo <filename> <hash> [raw = false] - display transaction information.";
+
+    bool raw = params.size() > 2 ? params[2] == "true" : false;
+
+    Vault vault(params[0], false);
+    std::shared_ptr<Tx> tx = vault.getTx(uchar_vector(params[1]));
+
+    if (raw) return uchar_vector(tx->raw()).getHex();
+
+    bytes_t hash = tx->status() == Tx::UNSIGNED ? tx->unsigned_hash() : tx->hash();
+
+    stringstream ss;
+    ss << "status:      " << Tx::getStatusString(tx->status()) << endl
+       << "hash:        " << uchar_vector(hash).getHex();
+    return ss.str();
+}
+
 cli::result_t cmd_insertrawtx(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
@@ -482,6 +502,7 @@ int main(int argc, char* argv[])
     cmds.add("refillaccountpool", &cmd_refillaccountpool);
 
     // Tx operations
+    cmds.add("txinfo", &cmd_txinfo);
     cmds.add("insertrawtx", &cmd_insertrawtx);
     cmds.add("newrawtx", &cmd_newrawtx);
     cmds.add("deletetx", &cmd_deletetx);
