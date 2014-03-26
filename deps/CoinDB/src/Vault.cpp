@@ -32,8 +32,6 @@
 
 const std::size_t MAXSQLCLAUSES = 500;
 
-const unsigned long LOOKAHEAD = 100;
-
 using namespace CoinDB;
 
 /*
@@ -1020,7 +1018,8 @@ bool Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
                 LOGGER(debug) << "Vault::signTx_unwrapped - chain code locked for keychain " << key.root_keychain()->name() << std::endl;
                 continue;
             }
-            
+
+            LOGGER(debug) << "Vault::signTx_unwrapped - SIGNING INPUT " << txin->txindex() << " WITH KEYCHAIN " << key.root_keychain()->name() << std::endl;        
             secure_bytes_t privkey = key.try_privkey();
 
             // TODO: Better exception handling with secp256kl_key class
@@ -1031,6 +1030,7 @@ bool Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
             bytes_t signature = secp256k1_sign(signingKey, signingHash);
             signature.push_back(SIGHASH_ALL);
             script.addSig(key.pubkey(), signature);
+            LOGGER(debug) << "Vault::signTx_unwrapped - PUBLIC KEY: " << uchar_vector(key.pubkey()).getHex() << " SIGNATURE: " << uchar_vector(signature).getHex() << std::endl;
             sigsadded++;
             sigsneeded--;
             if (sigsneeded == 0) break;
