@@ -579,6 +579,25 @@ std::shared_ptr<AccountBin> Vault::getAccountBin(const std::string& account_name
 
 
 // Tx operations
+std::shared_ptr<Tx> Vault::getTx_unwrapped(const bytes_t& hash) const
+{
+    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == hash || odb::query<Tx>::unsigned_hash == hash));
+    if (r.empty()) throw TxNotFoundException(hash);
+
+    std::shared_ptr<Tx> tx(r.begin().load());
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::getTx(const bytes_t& hash) const
+{
+    LOGGER(trace) << "Vault::getTx(" << uchar_vector(hash).getHex() << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    return getTx_unwrapped(hash);
+}
+
 std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 {
     // TODO: Validate signatures
