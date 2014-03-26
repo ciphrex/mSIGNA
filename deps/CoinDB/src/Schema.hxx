@@ -1321,6 +1321,7 @@ public:
     void setBlock(std::shared_ptr<BlockHeader> blockheader, uint32_t blockindex);
 
     unsigned long id() const { return id_; }
+    uint32_t version() const { return version_; }
     const bytes_t& hash() const { return hash_; }
     bytes_t unsigned_hash() const { return unsigned_hash_; }
     txins_t txins() const { return txins_; }

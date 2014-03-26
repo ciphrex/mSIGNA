@@ -300,14 +300,14 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
     vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name);
 
     stringstream ss;
-    ss << formattedTxOutHeader();
+    ss << formattedTxOutViewHeader();
     for (auto& txOutView: txOutViews)
     {
         if (!txOutView.receiving_account_name.empty())
-            ss << endl << formattedTxOut(txOutView, RECEIVE, best_height);
+            ss << endl << formattedTxOutView(txOutView, RECEIVE, best_height);
 
         if (!txOutView.sending_account_name.empty())
-            ss << endl << formattedTxOut(txOutView, SEND, best_height);
+            ss << endl << formattedTxOutView(txOutView, SEND, best_height);
     }
     return ss.str();
 }
@@ -345,7 +345,19 @@ cli::result_t cmd_txinfo(bool bHelp, const cli::params_t& params)
 
     stringstream ss;
     ss << "status:      " << Tx::getStatusString(tx->status()) << endl
-       << "hash:        " << uchar_vector(hash).getHex();
+       << "hash:        " << uchar_vector(hash).getHex() << endl
+       << "version:     " << tx->version() << endl
+       << "locktime:    " << tx->locktime() << endl
+       << "timestamp:   " << tx->timestamp();
+
+    ss << endl << endl << formattedTxInHeader();
+    for (auto& txin: tx->txins())
+        ss << endl << formattedTxIn(txin);
+
+    ss << endl << endl << formattedTxOutHeader();
+    for (auto& txout: tx->txouts())
+        ss << endl << formattedTxOut(txout);
+    
     return ss.str();
 }
 

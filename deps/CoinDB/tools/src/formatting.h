@@ -79,10 +79,84 @@ inline std::string formattedScript(const CoinDB::SigningScriptView& view)
     return ss.str();
 }
 
+// TxIns
+inline std::string formattedTxInHeader()
+{
+    using namespace std;
+
+    stringstream ss;
+    ss << " ";
+    ss << left  << setw(5)  << "input" << " | "
+       << left  << setw(68) << "outpoint" << " | "
+       << left  << setw(15) << "value";
+    ss << " ";
+
+    size_t header_length = ss.str().size();
+    ss << endl;
+    for (size_t i = 0; i < header_length; i++) { ss << "="; }
+    return ss.str();
+}
+
+inline std::string formattedTxIn(const std::shared_ptr<CoinDB::TxIn>& txin)
+{
+    using namespace std;
+    using namespace CoinDB;
+
+    stringstream outpoint;
+    outpoint << uchar_vector(txin->outhash()).getHex() << ":" << txin->outindex();
+
+    stringstream ss;
+    ss << " ";
+    ss << right << setw(5)  << txin->txindex() << " | "
+       << left  << setw(68) << outpoint.str() << " | "
+       << right << setw(15) << "";
+    ss << " ";
+    return ss.str();
+}
+
 // TxOuts
+inline std::string formattedTxOutHeader()
+{
+    using namespace std;
+
+    stringstream ss;
+    ss << " ";
+    ss << left  << setw(6)  << "output" << " | "
+       << left  << setw(15) << "value" << " | "
+       << left  << setw(50) << "script" << " | "
+       << left  << setw(36) << "address" << " | "
+       << left  << setw(7)  << "status";
+    ss << " ";
+
+    size_t header_length = ss.str().size();
+    ss << endl;
+    for (size_t i = 0; i < header_length; i++) { ss << "="; }
+    return ss.str();
+}
+
+inline std::string formattedTxOut(const std::shared_ptr<CoinDB::TxOut>& txout)
+{
+    using namespace std;
+    using namespace CoinDB;
+
+    string status;
+    if (txout->receiving_account())
+        status = TxOut::getStatusString(txout->status());
+
+    stringstream ss;
+    ss << " ";
+    ss << right << setw(6)  << txout->txindex() << " | "
+       << right << setw(15) << txout->value() << " | "
+       << left  << setw(50) << uchar_vector(txout->script()).getHex() << " | "
+       << left  << setw(36) << getAddressFromScript(txout->script()) << " | "
+       << left  << setw(7)  << status;
+    ss << " ";
+    return ss.str();
+}
+
 enum TxOutRecordType { SEND, RECEIVE };
 
-inline std::string formattedTxOutHeader()
+inline std::string formattedTxOutViewHeader()
 {
     using namespace std;
 
@@ -105,7 +179,7 @@ inline std::string formattedTxOutHeader()
     return ss.str();
 }
 
-inline std::string formattedTxOut(const CoinDB::TxOutView& view, TxOutRecordType type, unsigned int best_height)
+inline std::string formattedTxOutView(const CoinDB::TxOutView& view, TxOutRecordType type, unsigned int best_height)
 {
     using namespace std;
     using namespace CoinDB;
