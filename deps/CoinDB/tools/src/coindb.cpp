@@ -218,16 +218,10 @@ cli::result_t cmd_listaccounts(bool bHelp, const cli::params_t& params)
     Vault vault(params[0], false);
     vector<AccountInfo> accounts = vault.getAllAccountInfo();
 
-    using namespace stdutils;
     stringstream ss;
-    bool newLine = false;
+    ss << formattedAccountHeader();
     for (auto& account: accounts)
-    {
-        if (newLine)    ss << endl;
-        else            newLine = true;
-
-        ss << "name: " << left << setw(20) << account.name() << " | id: " << left << setw(5) << account.id() << " | policy: " << account.minsigs() << " of " << delimited_list(account.keychain_names(), ", ");
-    }
+        ss << endl << formattedAccount(account);
     return ss.str();
 }
 

@@ -178,3 +178,39 @@ inline std::string formattedKeychain(const std::shared_ptr<CoinDB::Keychain>& ke
     ss << " ";
     return ss.str();
 }
+
+// Accounts
+inline std::string formattedAccountHeader()
+{
+    using namespace std;
+
+    stringstream ss;
+    ss << " ";
+    ss << left  << setw(15) << "account name" << " | "
+       << left  << setw(5)  << "id" << " | "
+       << left  << setw(64) << "policy";
+    ss << " ";
+
+    size_t header_length = ss.str().size();
+    ss << endl;
+    for (size_t i = 0; i < header_length; i++) { ss << "="; }
+    return ss.str();
+}
+
+inline std::string formattedAccount(const CoinDB::AccountInfo& info)
+{
+    using namespace std;
+    using namespace CoinDB;
+
+    stringstream policy;
+    policy << info.minsigs() << " of " << stdutils:: delimited_list(info.keychain_names(), ", ");
+
+    stringstream ss;
+    ss << " ";
+    ss << left  << setw(15) << info.name() << " | "
+       << right << setw(5)  << info.id() << " | "
+       << left  << setw(64) << policy.str();
+    ss << " ";
+    return ss.str();
+}
+
