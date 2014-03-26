@@ -410,7 +410,7 @@ cli::result_t cmd_newrawtx(bool bHelp, const cli::params_t& params)
 
             uint64_t fee = i < params.size() ? strtoull(params[i++].c_str(), NULL, 0) : 0;
             uint32_t version = i < params.size() ? strtoul(params[i++].c_str(), NULL, 0) : 1;
-            uint32_t locktime = i < params.size() ? strtoul(params[i++].c_str(), NULL, 0) : 0xffffffff;
+            uint32_t locktime = i < params.size() ? strtoul(params[i++].c_str(), NULL, 0) : 0;
             if (i < params.size()) break;
 
             std::shared_ptr<Tx> tx = vault.createTx(params[1], version, locktime, txouts, fee, 1, false);
@@ -418,7 +418,7 @@ cli::result_t cmd_newrawtx(bool bHelp, const cli::params_t& params)
         }
     }
 
-    return "newrawtx <filename> <account> <address 1> <value 1> [address 2] [value 2] ... [fee = 0] [version = 1] [locktime = 0xffffffff] - create a new raw transaction.";
+    return "newrawtx <filename> <account> <address 1> <value 1> [address 2] [value 2] ... [fee = 0] [version = 1] [locktime = 0] - create a new raw transaction.";
 }
 
 cli::result_t cmd_deletetx(bool bHelp, const cli::params_t& params)
