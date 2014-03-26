@@ -69,6 +69,40 @@ uint32_t Vault::getHorizonTimestamp() const
     return getHorizonTimestamp_unwrapped();
 }
 
+std::vector<bytes_t> Vault::getLocatorHashes_unwrapped() const
+{
+    std::vector<bytes_t>  hashes;
+    std::vector<uint32_t> heights;
+
+    uint32_t i = getBestHeight_unwrapped();
+    if (i == 0) return hashes;
+
+    uint32_t n = 1;
+    uint32_t step = 1;
+    heights.push_back(i);
+    while (step <= i)
+    {
+        i -= step;
+        n++;
+        if (n > 10) step *= 2;
+        heights.push_back(i);
+    }
+
+    typedef odb::query<BlockHeader> query_t;
+    odb::result<BlockHeader> r(db_->query<BlockHeader>(query_t::height.in_range(heights.begin(), heights.end()) + "ORDER BY" + query_t::height + "DESC"));
+    for (auto& header: r) { hashes.push_back(header.hash()); }
+    return hashes;
+}
+
+std::vector<bytes_t> Vault::getLocatorHashes() const
+{
+    LOGGER(trace) << "Vault::getLocatorHashes()" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    return getLocatorHashes_unwrapped();
+}
+
 Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const
 {
     using namespace CoinQ::Script;

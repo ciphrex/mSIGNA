@@ -38,6 +38,7 @@ public:
     ///////////////////////
     const uint32_t TIME_HORIZON_WINDOW = 6 * 60 * 60; // a good six hours initial grace period.
     uint32_t getHorizonTimestamp() const; // nothing that happened before this should matter to us.
+    std::vector<bytes_t> getLocatorHashes() const;
     Coin::BloomFilter getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
 
     /////////////////////////
@@ -110,6 +111,7 @@ public:
 protected:
     // Global operations
     uint32_t getHorizonTimestamp_unwrapped() const;
+    std::vector<bytes_t> getLocatorHashes_unwrapped() const;
     Coin::BloomFilter getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
 
     // Keychain operations
