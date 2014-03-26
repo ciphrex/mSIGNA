@@ -58,9 +58,7 @@ inline std::string formattedScriptHeader()
 
     size_t header_length = ss.str().size();
     ss << endl;
-    for (size_t i = 0; i < header_length; i++)
-        ss << "=";
-
+    for (size_t i = 0; i < header_length; i++) { ss << "="; }
     return ss.str();
 }
 
@@ -103,9 +101,7 @@ inline std::string formattedTxOutHeader()
 
     size_t header_length = ss.str().size();
     ss << endl;
-    for (size_t i = 0; i < header_length; i++)
-        ss << "=";
-
+    for (size_t i = 0; i < header_length; i++) { ss << "="; }
     return ss.str();
 }
 
@@ -150,3 +146,35 @@ inline std::string formattedTxOut(const CoinDB::TxOutView& view, TxOutRecordType
     return ss.str();
 }
 
+// Keychains
+inline std::string formattedKeychainHeader()
+{
+    using namespace std;
+
+    stringstream ss;
+    ss << " ";
+    ss << left  << setw(15) << "keychain name" << " | "
+       << left  << setw(5)  << "id" << " | "
+       << left  << setw(40) << "hash";
+    ss << " ";
+
+    size_t header_length = ss.str().size();
+    ss << endl;
+    for (size_t i = 0; i < header_length; i++) { ss << "="; }
+    return ss.str();
+}
+
+// TODO: KeychainView
+inline std::string formattedKeychain(const std::shared_ptr<CoinDB::Keychain>& keychain)
+{
+    using namespace std;
+    using namespace CoinDB;
+
+    stringstream ss;
+    ss << " ";
+    ss << left  << setw(15) << keychain->name() << " | "
+       << right << setw(5)  << keychain->id() << " | "
+       << left  << setw(40) << uchar_vector(keychain->hash()).getHex();
+    ss << " ";
+    return ss.str();
+}

@@ -129,14 +129,9 @@ cli::result_t cmd_listkeychains(bool bHelp, const cli::params_t& params)
     vector<shared_ptr<Keychain>> keychains = vault.getAllKeychains(root_only);
 
     stringstream ss;
-    bool newLine = false;
+    ss << formattedKeychainHeader();
     for (auto& keychain: keychains)
-    {
-        if (newLine)    ss << endl;
-        else            newLine = true;
-
-        ss << "name: " << left << setw(20) << keychain->name() << " | id: " << left << setw(5) << keychain->id() << " | hash: " << uchar_vector(keychain->hash()).getHex();
-    }
+        ss << endl << formattedKeychain(keychain);
     return ss.str();
 }
 
