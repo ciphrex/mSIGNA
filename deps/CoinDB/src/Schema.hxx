@@ -323,7 +323,10 @@ inline secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vect
     if (privkey_.empty()) throw std::runtime_error("Private key is locked.");
     if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
 
-    Coin::HDKeychain hdkeychain(privkey_, chain_code_, child_num_, parent_fp_, depth_);
+    // Remove initial zero from privkey.
+    // TODO: Don't store the zero in the first place.
+    secure_bytes_t stripped_privkey(privkey_.begin() + 1, privkey_.end());
+    Coin::HDKeychain hdkeychain(stripped_privkey, chain_code_, child_num_, parent_fp_, depth_);
     for (auto k: derivation_path) { hdkeychain = hdkeychain.getChild(k); }
     return hdkeychain.getPrivateSigningKey(i);
 }
@@ -1453,8 +1456,8 @@ inline void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
 
 inline bool Tx::updateStatus(status_t status /* = NO_STATUS */)
 {
-    // Tx is not signed but status is incorrect.
-    if (status_ != UNSIGNED && missingSigCount())
+    // Tx is not signed.
+    if (missingSigCount())
     {
         status_ = UNSIGNED;
         hash_ = bytes_t();

@@ -38,6 +38,12 @@ public:
     KeychainAlreadyExistsException(const std::string& keychain_name) : KeychainException("Keychain already exists.", keychain_name) { }
 };
 
+class KeychainChainCodeUnlockFailedException: public KeychainException
+{
+public:
+    KeychainChainCodeUnlockFailedException(const std::string& keychain_name) : KeychainException("Failed to unlock chain code.", keychain_name) { }
+};
+
 class KeychainPrivateKeyUnlockFailedException: public KeychainException
 {
 public:

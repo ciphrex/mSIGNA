@@ -536,6 +536,28 @@ cli::result_t cmd_getsigningrequest(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+// TODO: do something with passphrase
+cli::result_t cmd_signtx(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 4)
+        return "signtx <filename> <tx hash> <keychain> <passphrase> - add signatures to transaction for specified keychain.";
+
+    Vault vault(params[0], false);
+    vault.unlockKeychainChainCode(params[2], secure_bytes_t());
+    vault.unlockKeychainPrivateKey(params[2], secure_bytes_t());
+
+    stringstream ss;
+    if (vault.signTx(uchar_vector(params[1]), true))
+    {
+        ss << "Signatures added.";
+    }
+    else
+    {
+        ss << "No signatures were added.";
+    }
+    return ss.str();
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -571,6 +593,7 @@ int main(int argc, char* argv[])
     cmds.add("newrawtx", &cmd_newrawtx);
     cmds.add("deletetx", &cmd_deletetx);
     cmds.add("getsigningrequest", &cmd_getsigningrequest);
+    cmds.add("signtx", &cmd_signtx);
 
     try 
     {

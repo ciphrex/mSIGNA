@@ -91,7 +91,7 @@ public:
     std::shared_ptr<Tx> createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
     void deleteTx(const bytes_t& tx_hash); // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     SigningRequest getSigningRequest(const bytes_t& unsigned_hash, bool include_raw_tx = false) const; // Tries only unsigned hashes. Throws TxNotFoundException.
-    bool signTx(const bytes_t& unsigned_hash, const std::string& keychain_name, const secure_bytes_t& unlock_key, bool update = false); // Tries only unsigned hashes. Throws TxNotFoundException.
+    bool signTx(const bytes_t& unsigned_hash, bool update = false); // Tries only unsigned hashes. Throws TxNotFoundException.
 
     //////////////////////
     // BLOCK OPERATIONS //
@@ -102,6 +102,8 @@ protected:
     // Keychain operations
     std::shared_ptr<Keychain> getKeychain_unwrapped(const std::string& keychain_name) const;
     void persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
+    bool tryUnlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain);
+    bool tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain);
 
     // Account operations
     std::shared_ptr<Account> getAccount_unwrapped(const std::string& account_name) const;

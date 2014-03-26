@@ -198,6 +198,16 @@ void Vault::unlockKeychainChainCode(const std::string& keychain_name, const secu
     if (keychain->unlockChainCode(unlock_key))
         mapChainCodeUnlock[keychain_name] = unlock_key;
 }
+
+bool Vault::tryUnlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain)
+{
+    const auto& it = mapChainCodeUnlock.find(keychain->name());
+    if (it == mapChainCodeUnlock.end()) return false;
+    if (!keychain->unlockChainCode(it->second))
+        throw KeychainChainCodeUnlockFailedException(keychain->name());
+
+    return true;
+}
  
 void Vault::lockAllKeychainPrivateKeys()
 {
@@ -215,8 +225,26 @@ void Vault::lockKeychainPrivateKey(const std::string& keychain_name)
     mapPrivateKeyUnlock.erase(keychain_name);
 }
 
-void unlockKeychainPrivateKey(const std::string& keychain_name, const secure_bytes_t& unlock_key)
+void Vault::unlockKeychainPrivateKey(const std::string& keychain_name, const secure_bytes_t& unlock_key)
 {
+    LOGGER(trace) << "Vault::unlockKeychainPrivateKey(" << keychain_name << ", ?)" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
+    if (keychain->unlockPrivateKey(unlock_key))
+        mapPrivateKeyUnlock[keychain_name] = unlock_key;
+}
+
+bool Vault::tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain)
+{
+    const auto& it = mapPrivateKeyUnlock.find(keychain->name());
+    if (it == mapPrivateKeyUnlock.end()) return false;
+    if (!keychain->unlockPrivateKey(it->second))
+        throw KeychainPrivateKeyUnlockFailedException(keychain->name());
+
+    return true;
 }
 
 
@@ -978,12 +1006,22 @@ bool Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
 
         // Compute hash to sign
         bytes_t signingHash = coin_tx.getHashWithAppendedCode(SIGHASH_ALL);
-        LOGGER(trace) << "Vault::signTx_unwrapped - computed signing hash " << uchar_vector(signingHash).getHex() << " for input " << txin->txindex() << std::endl;
+        LOGGER(debug) << "Vault::signTx_unwrapped - computed signing hash " << uchar_vector(signingHash).getHex() << " for input " << txin->txindex() << std::endl;
 
         for (auto& key: key_r)
         {
-            secure_bytes_t privkey = key.privkey();
-            if (privkey.empty()) continue; // Looks like the keychain is locked.
+            if (!tryUnlockKeychainPrivateKey_unwrapped(key.root_keychain()))
+            {
+                LOGGER(debug) << "Vault::signTx_unwrapped - private key locked for keychain " << key.root_keychain()->name() << std::endl;
+                continue;
+            }
+            if (!tryUnlockKeychainChainCode_unwrapped(key.root_keychain()))
+            {
+                LOGGER(debug) << "Vault::signTx_unwrapped - chain code locked for keychain " << key.root_keychain()->name() << std::endl;
+                continue;
+            }
+            
+            secure_bytes_t privkey = key.try_privkey();
 
             // TODO: Better exception handling with secp256kl_key class
             secp256k1_key signingKey;
@@ -1007,9 +1045,9 @@ bool Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
     return true;
 }
 
-bool Vault::signTx(const bytes_t& unsigned_hash, const std::string& keychain_name, const secure_bytes_t& unlock_key, bool update)
+bool Vault::signTx(const bytes_t& unsigned_hash, bool update)
 {
-    LOGGER(trace) << "Vault::signTx(" << uchar_vector(unsigned_hash).getHex() << ", " << keychain_name << "..., " << (update ? "update" : "no update") << ")" << std::endl;
+    LOGGER(trace) << "Vault::signTx(" << uchar_vector(unsigned_hash).getHex() << ", " << (update ? "update" : "no update") << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
@@ -1018,9 +1056,6 @@ bool Vault::signTx(const bytes_t& unsigned_hash, const std::string& keychain_nam
     odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::unsigned_hash == unsigned_hash));
     if (tx_r.empty()) throw TxNotFoundException(unsigned_hash);
     std::shared_ptr<Tx> tx(tx_r.begin().load());
-
-    std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
-    if (!keychain->unlockPrivateKey(unlock_key)) throw KeychainPrivateKeyUnlockFailedException(keychain_name);
 
     bool rval = signTx_unwrapped(tx);
     if (rval && update)
