@@ -50,7 +50,7 @@ inline std::string formattedScriptHeader()
     ss << " ";
     ss << left  << setw(15) << "account name" << " | "
        << left  << setw(15) << "bin name" << " | "
-       << left  << setw(5)  << "index" << " | "
+       << right << setw(5)  << "index" << " | "
        << left  << setw(50) << "script" << " | "
        << left  << setw(36) << "address" << " | "
        << left  << setw(8)  << "status";
@@ -86,9 +86,9 @@ inline std::string formattedTxInHeader()
 
     stringstream ss;
     ss << " ";
-    ss << left  << setw(5)  << "input" << " | "
+    ss << right << setw(5)  << "input" << " | "
        << left  << setw(68) << "outpoint" << " | "
-       << left  << setw(15) << "value";
+       << right << setw(15) << "value";
     ss << " ";
 
     size_t header_length = ss.str().size();
@@ -121,8 +121,8 @@ inline std::string formattedTxOutHeader()
 
     stringstream ss;
     ss << " ";
-    ss << left  << setw(6)  << "output" << " | "
-       << left  << setw(15) << "value" << " | "
+    ss << right << setw(6)  << "output" << " | "
+       << right << setw(15) << "value" << " | "
        << left  << setw(50) << "script" << " | "
        << left  << setw(36) << "address" << " | "
        << left  << setw(7)  << "status";
@@ -163,10 +163,10 @@ inline std::string formattedTxOutViewHeader()
     ss << left  << setw(15) << "account name" << " | "
        << left  << setw(15) << "bin name" << " | "
        << left  << setw(10) << "type" << " | "
-       << left  << setw(15) << "value" << " | "
+       << right << setw(15) << "value" << " | "
        << left  << setw(50) << "script" << " | "
        << left  << setw(36) << "address" << " | "
-       << left  << setw(13) << "confirmations" << " | "
+       << right << setw(13) << "confirmations" << " | "
        << left  << setw(11) << "tx status" << " | "
        << left  << setw(64) << "tx hash";
     ss << " ";
@@ -261,7 +261,7 @@ inline std::string formattedAccountHeader()
     stringstream ss;
     ss << " ";
     ss << left  << setw(15) << "account name" << " | "
-       << left  << setw(5)  << "id" << " | "
+       << right << setw(5)  << "id" << " | "
        << left  << setw(64) << "policy";
     ss << " ";
 
