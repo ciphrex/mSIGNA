@@ -149,6 +149,21 @@ cli::result_t cmd_listkeychains(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_exportkeychain(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 3 || params.size() > 4)
+        return "exportkeychains <filename> <keychain_name> <output_filename> [export_privkey = false] - export a keychain to file.";
+
+    bool export_privkey = params.size() > 3 ? (params[3] == "true") : false;
+
+    Vault vault(params[0], false);
+    vault.exportKeychain(params[1], params[2], export_privkey);
+
+    stringstream ss;
+    ss << "Keychain " << params[1] << " exported to " << params[2] << ".";
+    return ss.str();
+}
+
 // Account operations
 cli::result_t cmd_accountexists(bool bHelp, const cli::params_t& params)
 {
@@ -515,6 +530,7 @@ int main(int argc, char* argv[])
     cmds.add("renamekeychain", &cmd_renamekeychain);
     cmds.add("keychaininfo", &cmd_keychaininfo);
     cmds.add("listkeychains", &cmd_listkeychains);
+    cmds.add("exportkeychain", &cmd_exportkeychain);
 
     // Account operations
     cmds.add("accountexists", &cmd_accountexists);
