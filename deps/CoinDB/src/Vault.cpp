@@ -762,6 +762,7 @@ std::shared_ptr<SigningScript> Vault::issueSigningScript(const std::string& acco
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
+    if (bin->isChange()) throw AccountCannotIssueChangeScriptException(bin->account()->name());
     std::shared_ptr<SigningScript> script = issueAccountBinSigningScript_unwrapped(bin, label);
     t.commit();
     return script;
@@ -769,8 +770,6 @@ std::shared_ptr<SigningScript> Vault::issueSigningScript(const std::string& acco
 
 std::shared_ptr<SigningScript> Vault::issueAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> bin, const std::string& label)
 {
-    if (bin->isChange()) throw AccountCannotIssueChangeScriptException(bin->account()->name());
-
     try
     {
         refillAccountBinPool_unwrapped(bin);
