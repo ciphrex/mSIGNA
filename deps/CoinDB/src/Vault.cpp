@@ -294,8 +294,22 @@ std::shared_ptr<Keychain> Vault::importKeychain_unwrapped(const std::string& fil
         ia >> *keychain;
     }
 
+    if (!keychain->isPrivate()) { importprivkeys = false; }
+    if (!importprivkeys)        { keychain->clearPrivateKey(); }
+
     odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::hash == keychain->hash()));
-    if (!r.empty()) throw KeychainAlreadyExistsException(r.begin().load()->name());
+    if (!r.empty())
+    {
+        std::shared_ptr<Keychain> stored_keychain(r.begin().load());
+        if (keychain->isPrivate() && !stored_keychain->isPrivate())
+        {
+            // Just import the private keys
+            stored_keychain->importPrivateKey(*keychain);
+            db_->update(stored_keychain);
+            return stored_keychain; 
+        }
+        throw KeychainAlreadyExistsException(stored_keychain->name());
+    }
 
     std::string keychain_name = keychain->name();
     unsigned int append_num = 1; // in case of name conflict
@@ -306,8 +320,6 @@ std::shared_ptr<Keychain> Vault::importKeychain_unwrapped(const std::string& fil
         keychain->name(ss.str());
     }
 
-    if (!keychain->isPrivate()) { importprivkeys = false; }
-    if (!importprivkeys)        { keychain->clearPrivateKey(); }
     db_->persist(keychain);
     return keychain;
 }

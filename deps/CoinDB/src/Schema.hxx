@@ -131,6 +131,8 @@ public:
     const bytes_t& chain_code_ciphertext() const { return chain_code_ciphertext_; }
     const bytes_t& chain_code_salt() const { return chain_code_salt_; }
 
+    void importPrivateKey(const Keychain& source);
+
     // hash = ripemd160(sha256(pubkey + chain_code))
     const bytes_t& hash() const { return hash_; }
 
@@ -375,6 +377,12 @@ inline secure_bytes_t Keychain::chain_code() const
 {
     if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
     return chain_code_;
+}
+
+inline void Keychain::importPrivateKey(const Keychain& source)
+{
+    privkey_ciphertext_ = source.privkey_ciphertext_;
+    privkey_salt_ = source.privkey_salt_;
 }
 
 inline secure_bytes_t Keychain::extkey(bool get_private) const
