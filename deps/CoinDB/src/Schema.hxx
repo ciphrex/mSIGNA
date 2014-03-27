@@ -110,15 +110,15 @@ public:
     void setPrivateKeyLockKey(const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
     void setChainCodeLockKey(const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
 
-    void lockPrivateKey();
-    void lockChainCode();
-    void lockAll();
+    void lockPrivateKey() const;
+    void lockChainCode() const;
+    void lockAll() const;
 
     bool isPrivateKeyLocked() const;
     bool isChainCodeLocked() const;
 
-    bool unlockPrivateKey(const secure_bytes_t& lock_key);
-    bool unlockChainCode(const secure_bytes_t& lock_key);
+    bool unlockPrivateKey(const secure_bytes_t& lock_key) const;
+    bool unlockChainCode(const secure_bytes_t& lock_key) const;
 
     secure_bytes_t getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
     bytes_t getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
@@ -157,12 +157,12 @@ private:
     bytes_t pubkey_;
 
     #pragma db transient
-    secure_bytes_t chain_code_;
+    mutable secure_bytes_t chain_code_;
     bytes_t chain_code_ciphertext_;
     bytes_t chain_code_salt_;
 
     #pragma db transient
-    secure_bytes_t privkey_;
+    mutable secure_bytes_t privkey_;
     bytes_t privkey_ciphertext_;
     bytes_t privkey_salt_;
 
@@ -299,17 +299,17 @@ inline void Keychain::setChainCodeLockKey(const secure_bytes_t& /*lock_key*/, co
     chain_code_salt_ = salt;
 }
 
-inline void Keychain::lockPrivateKey()
+inline void Keychain::lockPrivateKey() const
 {
     privkey_.clear();
 }
 
-inline void Keychain::lockChainCode()
+inline void Keychain::lockChainCode() const 
 {
     chain_code_.clear();
 }
 
-inline void Keychain::lockAll()
+inline void Keychain::lockAll() const
 {
     lockPrivateKey();
     lockChainCode();
@@ -326,7 +326,7 @@ inline bool Keychain::isChainCodeLocked() const
     return chain_code_.empty();
 }
 
-inline bool Keychain::unlockPrivateKey(const secure_bytes_t& lock_key)
+inline bool Keychain::unlockPrivateKey(const secure_bytes_t& lock_key) const
 {
     if (!isPrivate()) throw std::runtime_error("Cannot unlock the private key of a public keychain.");
     if (!privkey_.empty()) return true; // Already unlocked
@@ -336,7 +336,7 @@ inline bool Keychain::unlockPrivateKey(const secure_bytes_t& lock_key)
     return true;
 }
 
-inline bool Keychain::unlockChainCode(const secure_bytes_t& lock_key)
+inline bool Keychain::unlockChainCode(const secure_bytes_t& lock_key) const
 {
     if (!chain_code_.empty()) return true; // Already unlocked
 
@@ -485,6 +485,7 @@ public:
 
     AccountBin() { }
     AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name);
+    AccountBin(const AccountBin& source) : account_(source.account_), index_(source.index_), name_(source.name_), script_count_(source.script_count_), next_script_index_(source.next_script_index_), keychains_(source.keychains_) { }
 
     unsigned long id() const { return id_; }
 
@@ -527,14 +528,23 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int version)
+    void save(Archive& ar, const unsigned int version) const
     {
         ar & name_;
         ar & index_;
-        ar & script_count_;
         ar & next_script_index_;
-        ar & keychains_; // useful for exporting the account bin independently from account
+//        ar & keychains_; // useful for exporting the account bin independently from account
     }
+    template<class Archive>
+    void load(Archive& ar, const unsigned int version)
+    {
+        ar & name_;
+        ar & index_;
+        ar & next_script_index_;
+ //       ar & keychains_; // useful for importing the account bin independently from account
+        script_count_ = 0;
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 typedef std::vector<std::shared_ptr<AccountBin>> AccountBinVector;
@@ -662,21 +672,47 @@ private:
     {
         ar & name_;
         ar & minsigs_;
-        ar & keychains_;
+
+        uint32_t n = keychains_.size();
+        ar & n;
+        for (auto& keychain: keychains_)    { ar & *keychain; }
+
         ar & unused_pool_size_;
         ar & time_created_;
-        ar & bins_;
+
+        n = bins_.size();
+        ar & n;
+        for (auto& bin: bins_)              { ar & *bin; }
     }
     template<class Archive>
     void load(Archive& ar, const unsigned int version)
     {
         ar & name_;
         ar & minsigs_;
-        ar & keychains_;
+
+        uint32_t n;
+        ar & n;
+        keychains_.clear();
+        for (uint32_t i = 0; i < n; i++)
+        {
+            std::shared_ptr<Keychain> keychain(new Keychain());
+            ar & *keychain;
+            keychains_.insert(keychain);
+        }
+
         ar & unused_pool_size_;
         ar & time_created_;
-        ar & bins_;
+
         // TODO: validate bins
+        ar & n;
+        bins_.clear();
+        for (uint32_t i = 0; i < n; i++)
+        {
+            std::shared_ptr<AccountBin> bin(new AccountBin());
+            ar & *bin;
+            bins_.push_back(bin);
+        }
+
         updateHash();
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()

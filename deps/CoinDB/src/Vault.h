@@ -46,8 +46,8 @@ public:
     /////////////////////
     void exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
     std::shared_ptr<Keychain> importKeychain(const std::string& filepath, bool& importprivkeys);
-    void exportAccount(const std::string& account_name, const std::string& filepath, bool exportprivkeys = false) const;
-    std::shared_ptr<Account> importAccount(const std::string& filepath, unsigned int& privkeysimported); // pass privkeysimported = 0 to not inport any private keys.
+    void exportAccount(const std::string& account_name, const std::string& filepath, const secure_bytes_t& chain_code_key, const bytes_t& salt, bool exportprivkeys = false) const;
+    std::shared_ptr<Account> importAccount(const std::string& filepath, const secure_bytes_t& chain_code_key, unsigned int& privkeysimported); // pass privkeysimported = 0 to not inport any private keys.
 
     /////////////////////////
     // KEYCHAIN OPERATIONS //
@@ -123,20 +123,21 @@ protected:
     void                            exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath) const;
     std::shared_ptr<Keychain>       importKeychain_unwrapped(const std::string& filepath, bool& importprivkeys);
     void                            exportAccount_unwrapped(const std::shared_ptr<Account> account, const std::string& filepath) const;
-    std::shared_ptr<Account>        importAccount_unwrapped(const std::string& filepath, unsigned int& privkeysimported);
+    std::shared_ptr<Account>        importAccount_unwrapped(const std::string& filepath, const secure_bytes_t& chain_code_key, unsigned int& privkeysimported);
 
     // Keychain operations
     bool                            keychainExists_unwrapped(const std::string& keychain_name) const;
     bool                            keychainExists_unwrapped(const bytes_t& keychain_hash) const;
     std::shared_ptr<Keychain>       getKeychain_unwrapped(const std::string& keychain_name) const;
     void                            persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
-    bool                            tryUnlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain);
-    bool                            tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain);
+    bool                            tryUnlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain) const;
+    bool                            tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain) const;
 
     // Account operations
     std::shared_ptr<Account>        getAccount_unwrapped(const std::string& account_name) const;
-    void                            tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account);
+    void                            tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account) const;
     void                            refillAccountPool_unwrapped(std::shared_ptr<Account> account);
+    void                            trySetAccountChainCodesLockKey_unwrapped(std::shared_ptr<Account> account, const secure_bytes_t& new_lock_key, const bytes_t& salt) const;
 
     // AccountBin operations
     std::shared_ptr<AccountBin>     getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;
@@ -161,8 +162,8 @@ private:
     mutable boost::mutex mutex;
     std::shared_ptr<odb::core::database> db_;
 
-    std::map<std::string, secure_bytes_t> mapChainCodeUnlock;
-    std::map<std::string, secure_bytes_t> mapPrivateKeyUnlock;
+    mutable std::map<std::string, secure_bytes_t> mapChainCodeUnlock;
+    mutable std::map<std::string, secure_bytes_t> mapPrivateKeyUnlock;
 };
 
 }

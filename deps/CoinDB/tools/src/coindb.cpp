@@ -273,6 +273,39 @@ cli::result_t cmd_listaccounts(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_exportaccount(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 3 || params.size() > 4)
+        return "exportaccount <db file> <account> <passphrase> [output file = *.account]- export account to file.";
+
+    std::string output_file = params.size() > 3 ? params[3] : (params[1] + ".account");
+
+    Vault vault(params[0], false);
+    AccountInfo accountInfo = vault.getAccountInfo(params[1]);
+    for (auto& keychain_name: accountInfo.keychain_names())
+        vault.unlockKeychainChainCode(keychain_name, secure_bytes_t());
+
+    vault.exportAccount(params[1], output_file, secure_bytes_t(), bytes_t());
+
+    stringstream ss;
+    ss << "Account " << params[1] << " exported to " << output_file << ".";
+    return ss.str();
+}
+
+cli::result_t cmd_importaccount(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 3)
+        return "importaccount <db file> <input fle> <passphrase> - input account to file.";
+
+    unsigned int privkeycount = 1;
+    Vault vault(params[0], false);
+    std::shared_ptr<Account> account = vault.importAccount(params[1], secure_bytes_t(), privkeycount);
+
+    stringstream ss;
+    ss << "Account " << account->name() << " imported from " << params[1] << ".";
+    return ss.str();
+}
+
 cli::result_t cmd_newaccountbin(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 3)
@@ -552,6 +585,8 @@ int main(int argc, char* argv[])
     cmds.add("renameaccount", &cmd_renameaccount);
     cmds.add("accountinfo", &cmd_accountinfo);
     cmds.add("listaccounts", &cmd_listaccounts);
+    cmds.add("exportaccount", &cmd_exportaccount);
+    cmds.add("importaccount", &cmd_importaccount);
     cmds.add("newaccountbin", &cmd_newaccountbin);
     cmds.add("issuescript", &cmd_issuescript);
     cmds.add("listscripts", &cmd_listscripts);

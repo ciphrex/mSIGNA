@@ -210,7 +210,7 @@ std::shared_ptr<Keychain> Vault::importKeychain_unwrapped(const std::string& fil
     return keychain;
 }
 
-void Vault::exportAccount(const std::string& account_name, const std::string& filepath, bool exportprivkeys) const
+void Vault::exportAccount(const std::string& account_name, const std::string& filepath, const secure_bytes_t& chain_code_lock_key, const bytes_t& salt, bool exportprivkeys) const
 {
     LOGGER(trace) << "Vault::exportAccount(" << account_name << ", " << filepath << ", " << (exportprivkeys ? "true" : "false") << ")" << std::endl;
 
@@ -218,31 +218,112 @@ void Vault::exportAccount(const std::string& account_name, const std::string& fi
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
+
+    // Use the same lock key for all keychain chain codes
+    tryUnlockAccountChainCodes_unwrapped(account);
+    trySetAccountChainCodesLockKey_unwrapped(account, chain_code_lock_key, salt);
+
     if (!exportprivkeys)
         for (auto& keychain: account->keychains()) { keychain->clearPrivateKey(); }
+
     exportAccount_unwrapped(account, filepath);
 }
 
 void Vault::exportAccount_unwrapped(const std::shared_ptr<Account> account, const std::string& filepath) const
 {
+
+    std::ofstream ofs(filepath);
+    boost::archive::text_oarchive oa(ofs);
+    oa << *account;
 }
 
-std::shared_ptr<Account> Vault::importAccount(const std::string& filepath, unsigned int& privkeysimported)
+std::shared_ptr<Account> Vault::importAccount(const std::string& filepath, const secure_bytes_t& chain_code_key, unsigned int& privkeysimported)
 {
     LOGGER(trace) << "Vault::importAccount(" << filepath << ", " << privkeysimported << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
-    std::shared_ptr<Account> account = importAccount_unwrapped(filepath, privkeysimported);
+    std::shared_ptr<Account> account = importAccount_unwrapped(filepath, chain_code_key, privkeysimported);
     t.commit();
     return account; 
 }
 
-std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filepath, unsigned int& privkeysimported)
+std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filepath, const secure_bytes_t& chain_code_key, unsigned int& privkeysimported)
 {
-    return nullptr;
+    std::shared_ptr<Account> account(new Account());
+    {
+        std::ifstream ifs(filepath);
+        boost::archive::text_iarchive ia(ifs);
+        ia >> *account;
+    }
+
+    odb::result<Account> r(db_->query<Account>(odb::query<Account>::hash == account->hash()));
+    if (!r.empty()) throw AccountAlreadyExistsException(r.begin().load()->name());
+
+    // Persist keychains
+    bool countprivkeys = (privkeysimported != 0);
+    privkeysimported = 0;
+    for (auto& keychain: account->keychains())
+    {
+        // Try to unlock account chain code
+        if (!keychain->unlockChainCode(chain_code_key)) throw KeychainChainCodeUnlockFailedException(keychain->name());
+
+        if (countprivkeys) { if (keychain->isPrivate()) privkeysimported++; }
+        else               { keychain->clearPrivateKey(); }
+
+        // If we already have the keychain, just import the private key if necessary
+        odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::hash == keychain->hash()));
+        if (!r.empty())
+        {
+            std::shared_ptr<Keychain> stored_keychain(r.begin().load());
+            if (keychain->isPrivate() && !stored_keychain->isPrivate())
+            {
+                // Just import the private keys
+                stored_keychain->importPrivateKey(*keychain);
+                db_->update(stored_keychain);
+                continue;
+            }
+        }
+
+        std::string keychain_name = keychain->name();
+        unsigned int append_num = 1; // in case of name conflict
+        while (keychainExists_unwrapped(keychain->name()))
+        {
+            std::stringstream ss;
+            ss << keychain_name << append_num++;
+            keychain->name(ss.str());
+        }
+
+        db_->persist(keychain);
+    }
+
+    // Create signing scripts and keys and persist account bins
+    for (auto& bin: account->bins())
+    {
+        SigningScript::status_t status = bin->isChange() ? SigningScript::CHANGE : SigningScript::ISSUED;
+        for (unsigned int i = 0; i < bin->next_script_index(); i++)
+        {
+            // TODO: SigningScript labels
+            std::shared_ptr<SigningScript> script = bin->newSigningScript();
+            script->status(status);
+            for (auto& key: script->keys()) { db_->persist(key); }
+            db_->persist(script); 
+        }
+        for (unsigned int i = 0; i < account->unused_pool_size(); i++)
+        {
+            std::shared_ptr<SigningScript> script = bin->newSigningScript();
+            for (auto& key: script->keys()) { db_->persist(key); }
+            db_->persist(script); 
+        }
+        db_->persist(bin);
+    } 
+
+    // Persist account
+    db_->persist(account);
+    return account;
 }
+
 
 /////////////////////////
 // KEYCHAIN OPERATIONS //
@@ -325,7 +406,7 @@ void Vault::persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain)
     db_->persist(keychain);
 }
 
-void Vault::tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account)
+void Vault::tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account) const
 {
     std::set<std::string> locked_keychains;
     for (auto& keychain: account->keychains())
@@ -345,6 +426,11 @@ void Vault::tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> accoun
         }
     }
     if (!locked_keychains.empty()) throw AccountChainCodeLockedException(account->name(), locked_keychains);
+}
+
+void Vault::trySetAccountChainCodesLockKey_unwrapped(std::shared_ptr<Account> account, const secure_bytes_t& new_lock_key, const bytes_t& salt) const
+{
+    for (auto& keychain: account->keychains()) { keychain->setChainCodeLockKey(new_lock_key, salt); }
 }
 
 std::shared_ptr<Keychain> Vault::getKeychain(const std::string& keychain_name) const
@@ -410,7 +496,7 @@ void Vault::unlockKeychainChainCode(const std::string& keychain_name, const secu
         mapChainCodeUnlock[keychain_name] = unlock_key;
 }
 
-bool Vault::tryUnlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain)
+bool Vault::tryUnlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain) const
 {
     const auto& it = mapChainCodeUnlock.find(keychain->name());
     if (it == mapChainCodeUnlock.end()) return false;
@@ -448,7 +534,7 @@ void Vault::unlockKeychainPrivateKey(const std::string& keychain_name, const sec
         mapPrivateKeyUnlock[keychain_name] = unlock_key;
 }
 
-bool Vault::tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain)
+bool Vault::tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain) const
 {
     const auto& it = mapPrivateKeyUnlock.find(keychain->name());
     if (it == mapPrivateKeyUnlock.end()) return false;
