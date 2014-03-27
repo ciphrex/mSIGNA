@@ -280,6 +280,7 @@ void Vault::exportKeychain(const std::string& keychain_name, const std::string& 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
+    if (exportprivkeys && !keychain->isPrivate()) throw KeychainIsNotPrivateException(keychain_name);
     if (!exportprivkeys) { keychain->clearPrivateKey(); }
     exportKeychain_unwrapped(keychain, filepath);
 }
@@ -317,7 +318,9 @@ std::shared_ptr<Keychain> Vault::importKeychain(const std::string& filepath, boo
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
-    return importKeychain_unwrapped(filepath, importprivkeys);
+    std::shared_ptr<Keychain> keychain = importKeychain_unwrapped(filepath, importprivkeys);
+    t.commit();
+    return keychain;
 }
 
 void Vault::lockAllKeychainChainCodes()

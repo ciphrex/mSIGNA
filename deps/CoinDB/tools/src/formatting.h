@@ -226,7 +226,8 @@ inline std::string formattedKeychainHeader()
     stringstream ss;
     ss << " ";
     ss << left  << setw(15) << "keychain name" << " | "
-       << left  << setw(5)  << "id" << " | "
+       << left  << setw(7)  << "type" << " | "
+       << right << setw(5)  << "id" << " | "
        << left  << setw(40) << "hash";
     ss << " ";
 
@@ -245,6 +246,7 @@ inline std::string formattedKeychain(const std::shared_ptr<CoinDB::Keychain>& ke
     stringstream ss;
     ss << " ";
     ss << left  << setw(15) << keychain->name() << " | "
+       << left  << setw(7)  << (keychain->isPrivate() ? "PRIVATE" : "PUBLIC") << " | "
        << right << setw(5)  << keychain->id() << " | "
        << left  << setw(40) << uchar_vector(keychain->hash()).getHex();
     ss << " ";

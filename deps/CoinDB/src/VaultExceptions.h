@@ -50,6 +50,12 @@ public:
     KeychainPrivateKeyUnlockFailedException(const std::string& keychain_name) : KeychainException("Failed to unlock private keys.", keychain_name) { }
 };
 
+class KeychainIsNotPrivateException: public KeychainException
+{
+public:
+    KeychainIsNotPrivateException(const std::string& keychain_name) : KeychainException("Keychain is not private.", keychain_name) { }
+};
+
 class KeychainInvalidPrivateKeyException: public KeychainException
 {
 public:

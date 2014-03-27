@@ -33,7 +33,7 @@ using namespace CoinDB;
 cli::result_t cmd_create(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 1)
-        return "create <filename> - create a new vault.";
+        return "create <db file> - create a new vault.";
 
     Vault vault(params[0], true);
 
@@ -45,7 +45,7 @@ cli::result_t cmd_create(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_info(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 1)
-        return "info <filename> - display general information about vault.";
+        return "info <db file> - display general information about vault.";
 
     Vault vault(params[0], false);
     uint32_t horizon_timestamp = vault.getHorizonTimestamp();
@@ -60,7 +60,7 @@ cli::result_t cmd_info(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_keychainexists(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
-        return "keychainexists <filename> <keychain_name> - check if a keychain exists.";
+        return "keychainexists <db file> <keychain_name> - check if a keychain exists.";
 
     Vault vault(params[0], false);
     bool bExists = vault.keychainExists(params[1]);
@@ -73,7 +73,7 @@ cli::result_t cmd_keychainexists(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_newkeychain(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
-        return "newkeychain <filename> <keychain_name> - create a new keychain.";
+        return "newkeychain <db file> <keychain_name> - create a new keychain.";
 
     Vault vault(params[0], false);
     vault.newKeychain(params[1], random_bytes(32));
@@ -86,7 +86,7 @@ cli::result_t cmd_newkeychain(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_erasekeychain(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2) {
-        return "erasekeychain <filename> <keychain_name> - erase a keychain.";
+        return "erasekeychain <db file> <keychain_name> - erase a keychain.";
     }
 
     Vault vault(params[0], false);
@@ -103,7 +103,7 @@ cli::result_t cmd_erasekeychain(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_renamekeychain(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 3)
-        return "renamekeychain <filename> <oldname> <newname> - rename a keychain.";
+        return "renamekeychain <db file> <oldname> <newname> - rename a keychain.";
 
     Vault vault(params[0], false);
     vault.renameKeychain(params[1], params[2]);
@@ -116,7 +116,7 @@ cli::result_t cmd_renamekeychain(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_keychaininfo(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
-        return "keychaininfo <filename> <keychain_name> - display keychain information.";
+        return "keychaininfo <db file> <keychain_name> - display keychain information.";
 
     Vault vault(params[0], false);
     shared_ptr<Keychain> keychain = vault.getKeychain(params[1]);
@@ -135,7 +135,7 @@ cli::result_t cmd_keychaininfo(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_listkeychains(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 1 || params.size() > 2)
-        return "listkeychains <filename> [root_only = false] - display list of keychains.";
+        return "listkeychains <db file> [root_only = false] - display list of keychains.";
 
     bool root_only = params.size() > 1 ? (params[1] == "true") : false;
 
@@ -151,16 +151,35 @@ cli::result_t cmd_listkeychains(bool bHelp, const cli::params_t& params)
 
 cli::result_t cmd_exportkeychain(bool bHelp, const cli::params_t& params)
 {
-    if (bHelp || params.size() < 3 || params.size() > 4)
-        return "exportkeychains <filename> <keychain_name> <output_filename> [export_privkey = false] - export a keychain to file.";
+    if (bHelp || params.size() < 2 || params.size() > 4)
+        return "exportkeychain <db file> <keychain> [try export private key = false] [output file = keychain.(pub|priv)] - export a keychain to file.";
 
-    bool export_privkey = params.size() > 3 ? (params[3] == "true") : false;
+    bool export_privkey = params.size() > 2 ? (params[2] == "true") : false;
+
+    std::string output_file;
+    if (params.size() > 3)  { output_file = params[3]; }
+    else                    { output_file = params[1] + (export_privkey ? ".priv" : ".pub"); }
 
     Vault vault(params[0], false);
-    vault.exportKeychain(params[1], params[2], export_privkey);
+    vault.exportKeychain(params[1], output_file, export_privkey);
 
     stringstream ss;
-    ss << "Keychain " << params[1] << " exported to " << params[2] << ".";
+    ss << (export_privkey ? "Private" : "Public") << " keychain " << params[1] << " exported to " << output_file << ".";
+    return ss.str();
+}
+
+cli::result_t cmd_importkeychain(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 2 || params.size() > 3)
+        return "importkeychain <db file> <input file> [try import private key = true] - import a keychain from file.";
+
+    bool import_privkey = params.size() > 2 ? (params[2] == "true") : true;
+
+    Vault vault(params[0], false);
+    std::shared_ptr<Keychain> keychain = vault.importKeychain(params[1], import_privkey);
+
+    stringstream ss;
+    ss << (import_privkey ? "Private" : "Public") << " keychain " << keychain->name() << " imported from " << params[1] << ".";
     return ss.str();
 }
 
@@ -168,7 +187,7 @@ cli::result_t cmd_exportkeychain(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_accountexists(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
-        return "accountexists <filename> <account_name> - check if an account exists.";
+        return "accountexists <db file> <account_name> - check if an account exists.";
 
     Vault vault(params[0], false);
     bool bExists = vault.accountExists(params[1]);
@@ -181,7 +200,7 @@ cli::result_t cmd_accountexists(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_newaccount(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 4)
-        return "newaccount <filename> <account_name> <minsigs> <keychain1> [keychain2] [keychain3] ... - create a new account using specified keychains.";
+        return "newaccount <db file> <account_name> <minsigs> <keychain1> [keychain2] [keychain3] ... - create a new account using specified keychains.";
 
     uint32_t minsigs = strtoull(params[2].c_str(), NULL, 10);
     size_t keychain_count = params.size() - 3;
@@ -205,7 +224,7 @@ cli::result_t cmd_newaccount(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_renameaccount(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 3)
-        return "renameaccount <filename> <old_account_name> <new_account_name> - rename an account.";
+        return "renameaccount <db file> <old_account_name> <new_account_name> - rename an account.";
 
     Vault vault(params[0], false);
     vault.renameAccount(params[1], params[2]);
@@ -218,7 +237,7 @@ cli::result_t cmd_renameaccount(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_accountinfo(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
-        return "accountinfo <filename> <account_name> - display account info.";
+        return "accountinfo <db file> <account_name> - display account info.";
 
     Vault vault(params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
@@ -242,7 +261,7 @@ cli::result_t cmd_accountinfo(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_listaccounts(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 1)
-        return "listaccounts <filename> - display list of accounts.";
+        return "listaccounts <db file> - display list of accounts.";
 
     Vault vault(params[0], false);
     vector<AccountInfo> accounts = vault.getAllAccountInfo();
@@ -257,7 +276,7 @@ cli::result_t cmd_listaccounts(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_newaccountbin(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 3)
-        return "newaccountbin <filename> <account_name> <bin_name> - add new account bin.";
+        return "newaccountbin <db file> <account_name> <bin_name> - add new account bin.";
 
     Vault vault(params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
@@ -273,7 +292,7 @@ cli::result_t cmd_newaccountbin(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_newscript(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 2 || params.size() > 4)
-        return std::string("newscript <filename> <account_name> [bin_name = ") + DEFAULT_BIN_NAME + "] [label = null] - get a new signing script.";
+        return std::string("newscript <db file> <account_name> [bin_name = ") + DEFAULT_BIN_NAME + "] [label = null] - get a new signing script.";
 
     Vault vault(params[0], false);
     std::string bin_name = params.size() > 2 ? params[2] : std::string(DEFAULT_BIN_NAME);
@@ -300,7 +319,7 @@ cli::result_t cmd_newscript(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 1 || params.size() > 4)
-        return "listscripts <filename> [account_name = @all] [bin_name = @all] [flags = PENDING | RECEIVED] - display list of signing script. (flags: UNUSED=1, CHANGE=2, PENDING=4, RECEIVED=8, CANCELED=16)";
+        return "listscripts <db file> [account_name = @all] [bin_name = @all] [flags = PENDING | RECEIVED] - display list of signing script. (flags: UNUSED=1, CHANGE=2, PENDING=4, RECEIVED=8, CANCELED=16)";
 
     std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
     std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
@@ -319,7 +338,7 @@ cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 1 || params.size() > 4)
-        return "listtxouts <filename> [account_name = @all] [bin_name = @all] - display list of transaction outputs.";
+        return "listtxouts <db file> [account_name = @all] [bin_name = @all] - display list of transaction outputs.";
 
     std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
     std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
@@ -344,7 +363,7 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_refillaccountpool(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 1 || params.size() != 2 )
-        return "refillaccountpool <filename> <account_name> - refill signing script pool for account.";
+        return "refillaccountpool <db file> <account_name> - refill signing script pool for account.";
 
     Vault vault(params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
@@ -361,7 +380,7 @@ cli::result_t cmd_refillaccountpool(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_txinfo(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 2 || params.size() > 3)
-        return "txinfo <filename> <hash> [raw = false] - display transaction information.";
+        return "txinfo <db file> <hash> [raw = false] - display transaction information.";
 
     bool raw = params.size() > 2 ? params[2] == "true" : false;
 
@@ -393,7 +412,7 @@ cli::result_t cmd_txinfo(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_insertrawtx(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
-        return "insertrawtx <filename> <raw tx hex> - inserts a raw transaction into vault.";
+        return "insertrawtx <db file> <raw tx hex> - inserts a raw transaction into vault.";
 
     Vault vault(params[0], false);
 
@@ -447,13 +466,13 @@ cli::result_t cmd_newrawtx(bool bHelp, const cli::params_t& params)
         }
     }
 
-    return "newrawtx <filename> <account> <address 1> <value 1> [address 2] [value 2] ... [fee = 0] [version = 1] [locktime = 0] - create a new raw transaction.";
+    return "newrawtx <db file> <account> <address 1> <value 1> [address 2] [value 2] ... [fee = 0] [version = 1] [locktime = 0] - create a new raw transaction.";
 }
 
 cli::result_t cmd_deletetx(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
-        return "deletetx <filename> <tx hash> - deletes transaction by hash.";
+        return "deletetx <db file> <tx hash> - deletes transaction by hash.";
 
     Vault vault(params[0], false);
     uchar_vector hash(params[1]);
@@ -467,7 +486,7 @@ cli::result_t cmd_deletetx(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_signingrequest(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
-        return "signingrequest <filename> <tx hash> - gets signing request for transaction with missing signatures.";
+        return "signingrequest <db file> <tx hash> - gets signing request for transaction with missing signatures.";
 
     Vault vault(params[0], false);
     uchar_vector hash(params[1]);
@@ -494,7 +513,7 @@ cli::result_t cmd_signingrequest(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_signtx(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 4)
-        return "signtx <filename> <tx hash> <keychain> <passphrase> - add signatures to transaction for specified keychain.";
+        return "signtx <db file> <tx hash> <keychain> <passphrase> - add signatures to transaction for specified keychain.";
 
     Vault vault(params[0], false);
     vault.unlockKeychainChainCode(params[2], secure_bytes_t());
@@ -531,6 +550,7 @@ int main(int argc, char* argv[])
     cmds.add("keychaininfo", &cmd_keychaininfo);
     cmds.add("listkeychains", &cmd_listkeychains);
     cmds.add("exportkeychain", &cmd_exportkeychain);
+    cmds.add("importkeychain", &cmd_importkeychain);
 
     // Account operations
     cmds.add("accountexists", &cmd_accountexists);
