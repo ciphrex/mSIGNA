@@ -558,6 +558,52 @@ cli::result_t cmd_signtx(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+// Blockchain operations
+cli::result_t cmd_rawblockheader(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 6)
+        return "rawblockheader <version> <previous blocks> <merkle root> <timestamp> <bits> <nonce> - construct a raw block header.";
+
+    uint32_t version = strtoull(params[0].c_str(), NULL, 0);
+    uchar_vector prevblockhash(params[1]); prevblockhash.reverse();
+    uchar_vector merkleroot(params[2]); merkleroot.reverse();
+    uint32_t timestamp = strtoull(params[3].c_str(), NULL, 0);
+    uint32_t bits = strtoull(params[4].c_str(), NULL, 0);
+    uint32_t nonce = strtoull(params[5].c_str(), NULL, 0);
+    Coin::CoinBlockHeader header(version, prevblockhash, merkleroot, timestamp, bits, nonce);
+
+    return header.getSerialized().getHex();
+}
+
+cli::result_t cmd_rawmerkleblock(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 4)
+        return "rawmerkleblock <raw block header> <nTxs> <nHashes> [<hash 1> <hash 2> ...] <flags> - construct a raw merkle block.";
+
+    uchar_vector rawblockheader(params[0]);
+    Coin::CoinBlockHeader header(rawblockheader);
+
+    uint32_t nTxs = strtoull(params[1].c_str(), NULL, 0);
+    uint32_t nHashes = strtoull(params[2].c_str(), NULL, 0);
+    if (params.size() != nHashes + 4)
+        return "Invalid hash count.";
+
+    vector<uchar_vector> hashes;
+    for (size_t i = 3; i < nHashes + 3; i++)
+    {
+        uchar_vector hash(params[i]);
+        hash.reverse();
+        hashes.push_back(hash); 
+    }
+
+    uchar_vector flags(params[params.size() - 1]);
+
+    Coin::MerkleBlock merkleblock(header, nTxs, hashes, flags);
+
+    return merkleblock.getSerialized().getHex();
+}
+
+
 
 int main(int argc, char* argv[])
 {
@@ -602,7 +648,8 @@ int main(int argc, char* argv[])
     cmds.add("signtx", &cmd_signtx);
 
     // Blockchain operations
-    cmds.add("merkleblock", &cmd_merkleblock);
+    cmds.add("rawblockheader", &cmd_rawblockheader);
+    cmds.add("rawmerkleblock", &cmd_rawmerkleblock);
 
     try 
     {
