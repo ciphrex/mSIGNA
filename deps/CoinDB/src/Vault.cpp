@@ -1464,55 +1464,75 @@ bool Vault::insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock)
 
 bool Vault::insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock)
 {
-    auto& new_header = merkleblock->blockheader();
-    std::string hash_str = uchar_vector(new_header->hash()).getHex();
+    auto& new_blockheader = merkleblock->blockheader();
+    std::string new_blockheader_hash = uchar_vector(new_blockheader->hash()).getHex();
 
-    // We need to start fetching no later than the block time horizon window
-    odb::result<BlockHeader> block_r(db_->query<BlockHeader>(odb::query<BlockHeader>::hash == new_header->prevhash()));
-    if (block_r.empty() && new_header->timestamp() + TIME_HORIZON_WINDOW > getHorizonTimestamp_unwrapped()) return false;
+    typedef odb::query<BlockHeader> query_t;
+    odb::result<BlockHeader> blockheader_r;
 
-    block_r = db_->query<BlockHeader>(odb::query<BlockHeader>::hash == new_header->hash());
-    if (!block_r.empty())
+    // Check if we already have it
+    blockheader_r = db_->query<BlockHeader>(query_t::hash == new_blockheader->hash());
+    if (!blockheader_r.empty())
     {
-        std::shared_ptr<BlockHeader> header(block_r.begin().load());
-        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - already have block. hash: " << hash_str << ", height: " << header->height() << std::endl;
+        std::shared_ptr<BlockHeader> blockheader(blockheader_r.begin().load());
+        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - already have block. hash: " << uchar_vector(blockheader->hash()).getHex() << ", height: " << blockheader->height() << std::endl;
         return false;
     }
 
-    block_r = db_->query<BlockHeader>(odb::query<BlockHeader>::height >= new_header->height());
-    if (!block_r.empty()) // Reorg
+    // Check if it connects
+    blockheader_r = db_->query<BlockHeader>(query_t::hash == new_blockheader->prevhash());
+    if (blockheader_r.empty())
     {
-        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - reorganization. hash: " << hash_str << ", height: " << new_header->height() << std::endl;
-        // Disconnect blocks
-        for (auto& sidechain_header: block_r)
+        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - could not connect block. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
+        return false;
+    }
+
+    // Make sure we have correct height
+    new_blockheader->height(blockheader_r.begin().load()->height() + 1);
+
+    // Make sure this block is unique at this height
+    blockheader_r = db_->query<BlockHeader>((query_t::height >= new_blockheader->height()) + "ORDER BY" + query_t::height);
+    if (!blockheader_r.empty())
+    {
+        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - reorganizing blockchain. height: " << new_blockheader->height() << std::endl;
+        // Reorg - delete all blocks of equal or greater height
+        for (auto& blockheader: blockheader_r)
         {
-            db_->erase_query<MerkleBlock>(odb::query<MerkleBlock>::blockheader == sidechain_header.id());
-            odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::blockheader == sidechain_header.id()));
+            LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - deleting block. hash: " << uchar_vector(blockheader.hash()).getHex() << ", height: " << blockheader.height() << std::endl;
+
+            // Remove tx confirmations
+            odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::blockheader == blockheader.id()));
             for (auto& tx: tx_r)
             {
+                LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - unconfirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
                 tx.blockheader(nullptr);
                 db_->update(tx);
             }
+
+            // Delete merkle block
+            db_->erase_query<MerkleBlock>(odb::query<MerkleBlock>::blockheader == blockheader.id());
+
+            // Delete block header
+            db_->erase(blockheader);
         }
-        db_->erase_query<BlockHeader>(odb::query<BlockHeader>::height >= new_header->height());
     }
 
-    LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - inserting new merkle block. hash: " << hash_str << ", height: " << new_header->height() << std::endl;
-    db_->persist(new_header);
+    // Persist merkle block
+    LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - inserting merkle block. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
+    db_->persist(new_blockheader);
     db_->persist(merkleblock);
 
-    auto& hashes = merkleblock->hashes();
+    // Confirm transactions
+    const auto& hashes = merkleblock->hashes();
     odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::hash.in_range(hashes.begin(), hashes.end())));
     for (auto& tx: tx_r)
     {
-        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - updating transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
-        tx.blockheader(new_header);
+        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - confirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
+        tx.blockheader(new_blockheader);
         db_->update(tx);
     }
 
-    unsigned int count = updateConfirmations_unwrapped();
-    LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - " << count << " additional transaction(s) confirmed." << std::endl;
-    return true;
+    return true;     
 }
 
 unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)

@@ -918,7 +918,10 @@ public:
 
     unsigned long id() const { return id_; }
     bytes_t hash() const { return hash_; }
+
+    void height(uint32_t height) { height_ = height; }
     uint32_t height() const { return height_; }
+
     uint32_t version() const { return version_; }
     bytes_t prevhash() const { return prevhash_; }
     bytes_t merkleroot() const { return merkleroot_; }
