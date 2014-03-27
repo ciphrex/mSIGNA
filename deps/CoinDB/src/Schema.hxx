@@ -422,6 +422,8 @@ public:
     std::vector<uint32_t> derivation_path() const { return derivation_path_; }
     uint32_t index() const { return index_; }
 
+    void updatePrivate() { is_private_ = root_keychain_->isPrivate(); }
+
 private:
     friend class odb::access;
 
@@ -447,8 +449,8 @@ inline Key::Key(const std::shared_ptr<Keychain>& keychain, uint32_t index)
     derivation_path_ = keychain->derivation_path();
     index_ = index;
 
-    is_private_ = root_keychain_->isPrivate();
     pubkey_ = keychain->getSigningPublicKey(index_);
+    updatePrivate();
 }
 
 inline secure_bytes_t Key::privkey() const

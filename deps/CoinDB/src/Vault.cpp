@@ -165,6 +165,7 @@ std::shared_ptr<Keychain> Vault::importKeychain(const std::string& filepath, boo
     LOGGER(trace) << "Vault::importKeychain(" << filepath << ", " << (importprivkeys ? "true" : "false") << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Keychain> keychain = importKeychain_unwrapped(filepath, importprivkeys);
     t.commit();
@@ -183,15 +184,21 @@ std::shared_ptr<Keychain> Vault::importKeychain_unwrapped(const std::string& fil
     if (!keychain->isPrivate()) { importprivkeys = false; }
     if (!importprivkeys)        { keychain->clearPrivateKey(); }
 
-    odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::hash == keychain->hash()));
-    if (!r.empty())
+    odb::result<Keychain> keychain_r(db_->query<Keychain>(odb::query<Keychain>::hash == keychain->hash()));
+    if (!keychain_r.empty())
     {
-        std::shared_ptr<Keychain> stored_keychain(r.begin().load());
+        std::shared_ptr<Keychain> stored_keychain(keychain_r.begin().load());
         if (keychain->isPrivate() && !stored_keychain->isPrivate())
         {
-            // Just import the private keys
+            // We already have the public key. Import the private key and update signing keys.
             stored_keychain->importPrivateKey(*keychain);
             db_->update(stored_keychain);
+            odb::result<Key> key_r(db_->query<Key>(odb::query<Key>::root_keychain == stored_keychain->id() && odb::query<Key>::is_private == 0));
+            for (auto& key: key_r)
+            {
+                key.updatePrivate();
+                db_->update(key);
+            }
             return stored_keychain; 
         }
         throw KeychainAlreadyExistsException(stored_keychain->name());
