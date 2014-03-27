@@ -710,6 +710,7 @@ private:
         {
             std::shared_ptr<AccountBin> bin(new AccountBin());
             ar & *bin;
+            bin->account(shared_from_this());
             bins_.push_back(bin);
         }
 
@@ -751,7 +752,7 @@ inline std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
 }
 
 inline AccountBin::AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name)
-    : account_(account), index_(index), name_(name), script_count_(0)
+    : account_(account), index_(index), name_(name), script_count_(0), next_script_index_(0)
 {
     if (index == 0) throw std::runtime_error("Account bin index cannot be zero.");
     if (index == CHANGE_INDEX && name != CHANGE_BIN_NAME) throw std::runtime_error("Account bin index reserved for change.");

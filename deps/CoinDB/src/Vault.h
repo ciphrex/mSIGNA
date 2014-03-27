@@ -134,6 +134,7 @@ protected:
     bool                            tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain) const;
 
     // Account operations
+    bool                            accountExists_unwrapped(const std::string& account_name) const;
     std::shared_ptr<Account>        getAccount_unwrapped(const std::string& account_name) const;
     void                            tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account) const;
     void                            refillAccountPool_unwrapped(std::shared_ptr<Account> account);
