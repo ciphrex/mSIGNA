@@ -51,6 +51,10 @@ public:
     std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
     std::vector<std::shared_ptr<Keychain>> getAllKeychains(bool root_only = false) const;
 
+    void exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
+    //bytes_t importKeychain(const std::string& keychain_name, const std::string& filepath, bool& importprivkeys);
+    //bool isKeychainFilePrivate(const std::string& filepath) const;
+
     // The following chain code and private key lock/unlock methods do not maintain a database session open so they only
     // store and erase the unlock keys in member maps to be used by the other class methods.
     void lockAllKeychainChainCodes();
@@ -61,9 +65,6 @@ public:
     void lockKeychainPrivateKey(const std::string& keychain_name);
     void unlockKeychainPrivateKey(const std::string& keychain_name, const secure_bytes_t& unlock_key);
 
-    //bytes_t exportKeychain(std::shared_ptr<Keychain> keychain, const std::string& filepath, bool exportprivkeys = false) const;
-    //bytes_t importKeychain(const std::string& keychain_name, const std::string& filepath, bool& importprivkeys);
-    //bool isKeychainFilePrivate(const std::string& filepath) const;
 
     ////////////////////////
     // ACCOUNT OPERATIONS //
@@ -117,6 +118,8 @@ protected:
     // Keychain operations
     std::shared_ptr<Keychain> getKeychain_unwrapped(const std::string& keychain_name) const;
     void persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
+    void exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath) const;
+
     bool tryUnlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain);
     bool tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain);
 

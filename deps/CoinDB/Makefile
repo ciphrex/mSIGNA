@@ -88,6 +88,7 @@ TOOLS_LIBPATH = \
     -lboost_filesystem$(BOOST_SUFFIX) \
     -lboost_regex$(BOOST_SUFFIX) \
     -lboost_thread$(BOOST_SUFFIX) \
+    -lboost_serialization$(BOOST_SUFFIX) \
     -lcrypto \
     -lodb-sqlite \
     -lodb

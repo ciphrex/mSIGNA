@@ -247,6 +247,25 @@ std::vector<std::shared_ptr<Keychain>> Vault::getAllKeychains(bool root_only) co
     return keychains;
 }
 
+void Vault::exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath) const
+{
+    std::ofstream ofs(filepath);
+    boost::archive::text_oarchive oa(ofs);
+    oa << *keychain;
+}
+
+void Vault::exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys) const
+{
+    LOGGER(trace) << "Vault::exportKeychain(" << keychain_name << ", " << filepath << ", " << (exportprivkeys ? "true" : "false") << ")" << std::endl;
+
+    
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
+    if (!exportprivkeys) { keychain->clearPrivateKey(); }
+    exportKeychain_unwrapped(keychain, filepath);
+}
+
 void Vault::lockAllKeychainChainCodes()
 {
     LOGGER(trace) << "Vault::lockAllKeychainChainCodes()" << std::endl;

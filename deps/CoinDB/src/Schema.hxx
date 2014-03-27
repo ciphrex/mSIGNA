@@ -29,6 +29,12 @@
 
 #include <logger.h>
 
+// support for boost serialization
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/vector.hpp>
+
 #pragma db namespace session
 namespace CoinDB
 {
@@ -129,6 +135,8 @@ public:
 
     secure_bytes_t extkey(bool get_private = false) const;
 
+    void clearPrivateKey();
+
 private:
     friend class odb::access;
     Keychain() { }
@@ -162,6 +170,22 @@ private:
     std::vector<std::weak_ptr<Keychain>> children_;
 
     bytes_t hash_;
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version)
+    {
+        ar & name_;
+        ar & depth_;
+        ar & parent_fp_;
+        ar & child_num_;
+        ar & pubkey_;
+        ar & chain_code_ciphertext_;
+        ar & chain_code_salt_;
+        ar & privkey_ciphertext_;
+        ar & privkey_salt_;
+        ar & hash_;
+    }
 };
 
 typedef std::set<std::shared_ptr<Keychain>> KeychainSet;
@@ -362,6 +386,14 @@ inline secure_bytes_t Keychain::extkey(bool get_private) const
     secure_bytes_t key = get_private ? privkey_ : pubkey_;
     return Coin::HDKeychain(key, chain_code_, child_num_, parent_fp_, depth_).extkey();
 }
+
+inline void Keychain::clearPrivateKey()
+{
+    privkey_.clear();
+    privkey_ciphertext_.clear();
+    privkey_salt_.clear();
+}
+
 
 #pragma db object pointer(std::shared_ptr)
 class Key
