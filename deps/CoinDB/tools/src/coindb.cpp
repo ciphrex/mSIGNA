@@ -601,6 +601,9 @@ int main(int argc, char* argv[])
     cmds.add("signingrequest", &cmd_signingrequest);
     cmds.add("signtx", &cmd_signtx);
 
+    // Blockchain operations
+    cmds.add("merkleblock", &cmd_merkleblock);
+
     try 
     {
         return cmds.exec(argc, argv);
