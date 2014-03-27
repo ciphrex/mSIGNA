@@ -1457,7 +1457,9 @@ bool Vault::insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock)
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
-    return insertMerkleBlock_unwrapped(merkleblock);
+    bool inserted = insertMerkleBlock_unwrapped(merkleblock);
+    t.commit();
+    return inserted;
 }
 
 bool Vault::insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock)
@@ -1504,12 +1506,12 @@ bool Vault::insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock
     for (auto& tx: tx_r)
     {
         LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - updating transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
-        tx.block(new_header, 0xffffffff); // TODO: compute correct index or eliminate index altogether/
+        tx.blockheader(new_header);
         db_->update(tx);
     }
 
     unsigned int count = updateConfirmations_unwrapped();
-    LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - " << count << " transaction(s) confirmed." << std::endl;
+    LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - " << count << " additional transaction(s) confirmed." << std::endl;
     return true;
 }
 

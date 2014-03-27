@@ -603,6 +603,24 @@ cli::result_t cmd_rawmerkleblock(bool bHelp, const cli::params_t& params)
     return merkleblock.getSerialized().getHex();
 }
 
+cli::result_t cmd_insertrawmerkleblock(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 2 || params.size() > 3)
+        return "insertrawmerkleblock <db file> <raw merkleblock> <height = 0>- insert raw merkleblock into database.";
+
+    uint32_t height = params.size() > 2 ? strtoull(params[2].c_str(), NULL, 0) : 0;
+
+    uchar_vector rawmerkleblock(params[1]);
+    std::shared_ptr<MerkleBlock> merkleblock(new MerkleBlock());
+    merkleblock->fromCoinClasses(rawmerkleblock, height);
+
+    Vault vault(params[0], false);
+    bool rval = vault.insertMerkleBlock(merkleblock);
+
+    stringstream ss;
+    ss << "Merkleblock " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << (rval ? " " : " not ") << "inserted.";
+    return ss.str();
+}
 
 
 int main(int argc, char* argv[])
@@ -650,6 +668,7 @@ int main(int argc, char* argv[])
     // Blockchain operations
     cmds.add("rawblockheader", &cmd_rawblockheader);
     cmds.add("rawmerkleblock", &cmd_rawmerkleblock);
+    cmds.add("insertrawmerkleblock", &cmd_insertrawmerkleblock);
 
     try 
     {
