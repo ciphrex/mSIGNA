@@ -274,6 +274,7 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
     // Persist keychains
     bool countprivkeys = (privkeysimported != 0);
     privkeysimported = 0;
+    KeychainSet keychains = account->keychains(); // We will replace any duplicate loaded keychains with keychains already in database.
     for (auto& keychain: account->keychains())
     {
         // Try to unlock account chain code
@@ -286,13 +287,16 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
         odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::hash == keychain->hash()));
         if (!r.empty())
         {
+            // TODO: This might be dangerous - we could end up overwriting a good keychain with a corrupt one. More checks necessary.
+            // Perhaps we just disallow importing keychain before an account using it. Instead, first import account, then upgrade keychain to private.
             std::shared_ptr<Keychain> stored_keychain(r.begin().load());
+            tryUnlockKeychainChainCode_unwrapped(stored_keychain);
+            stored_keychain->setChainCodeLockKey(chain_code_key); // TODO: we should really use a single chain code key for the whole vault.
             if (keychain->isPrivate() && !stored_keychain->isPrivate())
-            {
-                // Just import the private keys
                 stored_keychain->importPrivateKey(*keychain);
-                db_->update(stored_keychain);
-            }
+            keychains.erase(keychain);
+            keychains.insert(stored_keychain);
+            db_->update(stored_keychain);
             continue;
         }
 
@@ -308,6 +312,7 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
         db_->persist(keychain);
     }
 
+    account->keychains(keychains); // We might have replaced loaded keychains with stored keychains.
     db_->persist(account);
 
     // Create signing scripts and keys and persist account bins

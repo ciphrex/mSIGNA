@@ -639,7 +639,11 @@ public:
     void name(const std::string& name) { name_ = name; }
     const std::string& name() const { return name_; }
     unsigned int minsigs() const { return minsigs_; }
+
+
+    void keychains(const KeychainSet& keychains) { keychains_ = keychains; }
     KeychainSet keychains() const { return keychains_; }
+
     uint32_t unused_pool_size() const { return unused_pool_size_; }
     uint32_t time_created() const { return time_created_; }
     const bytes_t& hash() const { return hash_; }
