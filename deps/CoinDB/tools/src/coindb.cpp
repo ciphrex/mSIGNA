@@ -289,10 +289,10 @@ cli::result_t cmd_newaccountbin(bool bHelp, const cli::params_t& params)
     return ss.str(); 
 }
 
-cli::result_t cmd_newscript(bool bHelp, const cli::params_t& params)
+cli::result_t cmd_issuescript(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 2 || params.size() > 4)
-        return std::string("newscript <db file> <account_name> [bin_name = ") + DEFAULT_BIN_NAME + "] [label = null] - get a new signing script.";
+        return std::string("issuescript <db file> <account_name> [bin_name = ") + DEFAULT_BIN_NAME + "] [label = null] - issue a new signing script.";
 
     Vault vault(params[0], false);
     std::string bin_name = params.size() > 2 ? params[2] : std::string(DEFAULT_BIN_NAME);
@@ -323,7 +323,7 @@ cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
 
     std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
     std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
-    int flags = params.size() > 3 ? (int)strtoul(params[3].c_str(), NULL, 0) : ((int)SigningScript::PENDING | (int)SigningScript::RECEIVED);
+    int flags = params.size() > 3 ? (int)strtoul(params[3].c_str(), NULL, 0) : ((int)SigningScript::ISSUED | (int)SigningScript::USED);
     
     Vault vault(params[0], false);
     vector<SigningScriptView> scriptViews = vault.getSigningScriptViews(account_name, bin_name, flags);
@@ -559,7 +559,7 @@ int main(int argc, char* argv[])
     cmds.add("accountinfo", &cmd_accountinfo);
     cmds.add("listaccounts", &cmd_listaccounts);
     cmds.add("newaccountbin", &cmd_newaccountbin);
-    cmds.add("newscript", &cmd_newscript);
+    cmds.add("issuescript", &cmd_issuescript);
     cmds.add("listscripts", &cmd_listscripts);
     cmds.add("listtxouts", &cmd_listtxouts);
     cmds.add("refillaccountpool", &cmd_refillaccountpool);

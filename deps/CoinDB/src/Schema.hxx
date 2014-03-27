@@ -30,10 +30,12 @@
 #include <logger.h>
 
 // support for boost serialization
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/split_member.hpp>
+
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/set.hpp>
 
 #pragma db namespace session
 namespace CoinDB
@@ -178,6 +180,7 @@ private:
     void serialize(Archive& ar, const unsigned int version)
     {
         ar & name_;
+        ar & hash_;
         ar & depth_;
         ar & parent_fp_;
         ar & child_num_;
@@ -186,10 +189,10 @@ private:
         ar & chain_code_salt_;
         ar & privkey_ciphertext_;
         ar & privkey_salt_;
-        ar & hash_;
     }
 };
 
+BOOST_CLASS_VERSION(Keychain, 1)
 typedef std::set<std::shared_ptr<Keychain>> KeychainSet;
 
 inline Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lock_key, const bytes_t& salt)
@@ -473,24 +476,34 @@ const std::string DEFAULT_BIN_NAME = "@default";
 class AccountBin : public std::enable_shared_from_this<AccountBin>
 {
 public:
-    static const uint32_t CHANGE_INDEX = 1;
-    static const uint32_t DEFAULT_INDEX = 2;
+    // Note: index 0 is reserved for subaccounts but vector indices are 0-indexed so an offset of 1 is required.
+    enum
+    {
+        CHANGE_INDEX = 1,
+        DEFAULT_INDEX,
+        FIRST_CUSTOM_INDEX
+    };
 
+    AccountBin() { }
     AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name);
 
     unsigned long id() const { return id_; }
 
-    std::shared_ptr<Account> account() const { return account_; }
+    void account(std::shared_ptr<Account> account) { account_ = account; }
+    std::shared_ptr<Account> account() const { return account_.lock(); }
+
     uint32_t index() const { return index_; }
 
     void name(const std::string& name) { name_ = name; }
     std::string name() const { return name_; }
 
     uint32_t script_count() const { return script_count_; }
+    uint32_t next_script_index() const { return next_script_index_; }
 
     std::shared_ptr<SigningScript> newSigningScript(const std::string& label = "");
+    void markSigningScriptIssued(uint32_t script_index);
 
-    bool loadKeychains();
+    bool loadKeychains(bool get_private = false);
     KeychainSet keychains() const { return keychains_; }
 
     bool isChange() const { return index_ == CHANGE_INDEX; }
@@ -498,24 +511,35 @@ public:
 
 private:
     friend class odb::access;
-    AccountBin() { }
 
     #pragma db id auto
     unsigned long id_;
 
     #pragma db value_not_null
-    std::shared_ptr<Account> account_;
+    std::weak_ptr<Account> account_;
     uint32_t index_;
     std::string name_;
 
     uint32_t script_count_;
+    uint32_t next_script_index_; // index of next script in pool that will be issued
 
     #pragma db transient
     KeychainSet keychains_;
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version)
+    {
+        ar & name_;
+        ar & index_;
+        ar & script_count_;
+        ar & next_unused_script_index_;
+        ar & keychains_; // useful for exporting the account bin independently from account
+    }
 };
 
+BOOST_CLASS_VERSION(AccountBin, 1);
 typedef std::vector<std::shared_ptr<AccountBin>> AccountBinVector;
-typedef std::vector<std::weak_ptr<AccountBin>> WeakAccountBinVector;
 
 // Immutable object containng keychain and bin names as strings
 class AccountInfo
@@ -585,6 +609,7 @@ private:
 class Account : public std::enable_shared_from_this<Account>
 {
 public:
+    Account() { }
     Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL))
         : name_(name), minsigs_(minsigs), keychains_(keychains), unused_pool_size_(unused_pool_size), time_created_(time_created)
     {
@@ -593,7 +618,11 @@ public:
         if (keychains_.size() > 15) throw std::runtime_error("Account can use at most 15 keychains.");
         if (minsigs > keychains_.size()) throw std::runtime_error("Account minimum signatures cannot exceed number of keychains.");
         if (minsigs < 1) throw std::runtime_error("Account must require at least one signature.");
+
+        updateHash();
     }
+
+    void updateHash();
 
     AccountInfo accountInfo() const;
 
@@ -605,7 +634,8 @@ public:
     KeychainSet keychains() const { return keychains_; }
     uint32_t unused_pool_size() const { return unused_pool_size_; }
     uint32_t time_created() const { return time_created_; }
-    AccountBinVector bins() const;
+    const bytes_t& hash() const { return hash_; }
+    AccountBinVector bins() const { return bins_; }
 
     std::shared_ptr<AccountBin> addBin(const std::string& name);
 
@@ -613,7 +643,6 @@ public:
 
 private:
     friend class odb::access;
-    Account() { }
 
     #pragma db id auto
     unsigned long id_;
@@ -624,10 +653,51 @@ private:
     KeychainSet keychains_;
     uint32_t unused_pool_size_; // how many unused scripts we want in our lookahead
     uint32_t time_created_;
+    bytes_t hash_; // ripemd160(sha256(data)) where data = concat(first byte(minsigs), keychain hash 1, keychain hash 2, ...) and keychain hashes are sorted lexically
 
     #pragma db value_not_null inverse(account_)
-    WeakAccountBinVector bins_;
+    AccountBinVector bins_;
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void save(Archive& ar, const unsigned int version) const
+    {
+        ar & name_;
+        ar & minsigs_;
+        ar & keychains_;
+        ar & unused_pool_size_;
+        ar & time_created_;
+        ar & bins_;
+    }
+    template<class Archive>
+    void load(Archive& ar, const unsigned int version)
+    {
+        ar & name_;
+        ar & minsigs_;
+        ar & keychains_;
+        ar & unused_pool_size_;
+        ar & time_created_;
+        ar & bins_;
+        // TODO: validate bins
+        updateHash();
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
+
+BOOST_CLASS_VERSION(Account, 1)
+
+inline void Account::updateHash()
+{
+    std::vector<bytes_t> keychain_hashes;
+    for (auto& keychain: keychains_) { keychain_hashes.push_back(keychain->hash()); }
+    std::sort(keychain_hashes.begin(), keychain_hashes.end());
+
+    uchar_vector data;
+    data.push_back((unsigned char)minsigs_);
+    for (auto& keychain_hash: keychain_hashes) { data += keychain_hash; }
+
+    hash_ = ripemd160(sha256(data));
+}
 
 inline AccountInfo Account::accountInfo() const
 {
@@ -635,16 +705,9 @@ inline AccountInfo Account::accountInfo() const
     for (auto& keychain: keychains_) { keychain_names.push_back(keychain->name()); }
 
     std::vector<std::string> bin_names;
-    for (auto& bin: bins()) { bin_names.push_back(bin->name()); }
+    for (auto& bin: bins_) { bin_names.push_back(bin->name()); }
 
     return AccountInfo(id_, name_, minsigs_, keychain_names, unused_pool_size_, time_created_, bin_names);
-}
-
-inline AccountBinVector Account::bins() const
-{
-    AccountBinVector bins;
-    for (auto& bin: bins_) { bins.push_back(bin.lock()); }
-    return bins;
 }
 
 inline std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
@@ -663,12 +726,12 @@ inline AccountBin::AccountBin(std::shared_ptr<Account> account, uint32_t index, 
     if (index == DEFAULT_INDEX && name != DEFAULT_BIN_NAME) throw std::runtime_error("Account bin index reserved for default."); 
 }
 
-inline bool AccountBin::loadKeychains()
+inline bool AccountBin::loadKeychains(bool get_private)
 {
     if (!keychains_.empty()) return false;
     for (auto& keychain: account_->keychains())
     {
-        std::shared_ptr<Keychain> child(keychain->child(index_));
+        std::shared_ptr<Keychain> child(keychain->child(index_, get_private));
         keychains_.insert(child);
     }
     return true;
@@ -679,16 +742,23 @@ inline bool AccountBin::loadKeychains()
 class SigningScript : public std::enable_shared_from_this<SigningScript>
 {
 public:
-    enum status_t { UNUSED = 1, CHANGE = 2, PENDING = 4, RECEIVED = 8, CANCELED = 16, ALL = 31 };
+    enum status_t
+    {
+        NONE        =  0,
+        UNUSED      =  1,
+        CHANGE      =  1 << 1,
+        ISSUED      =  1 << 2,
+        USED        =  1 << 3,
+        ALL         = (1 << 4) - 1
+    };
     static std::string getStatusString(int status)
     {
         std::vector<std::string> flags;
         if (status & UNUSED) flags.push_back("UNUSED");
         if (status & CHANGE) flags.push_back("CHANGE");
-        if (status & PENDING) flags.push_back("PENDING");
-        if (status & RECEIVED) flags.push_back("RECEIVED");
-        if (status & CANCELED) flags.push_back("CANCELED");
-        if (flags.empty()) return "UNKNOWN";
+        if (status & ISSUED) flags.push_back("ISSUED");
+        if (status & USED) flags.push_back("USED");
+        if (flags.empty()) return "NONE";
 
         return stdutils::delimited_list(flags, " | ");
     }
@@ -698,14 +768,14 @@ public:
         std::vector<status_t> flags;
         if (status & UNUSED) flags.push_back(UNUSED);
         if (status & CHANGE) flags.push_back(CHANGE);
-        if (status & PENDING) flags.push_back(PENDING);
-        if (status & RECEIVED) flags.push_back(RECEIVED);
-        if (status & CANCELED) flags.push_back(CANCELED);
+        if (status & ISSUED) flags.push_back(ISSUED);
+        if (status & USED) flags.push_back(USED);
         return flags;
     }
 
-    SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index, const std::string& label = "", status_t status = UNUSED);
+    const uint32_t NOT_LOADED = 0xffffffff;
 
+    SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index = NOT_LOADED, const std::string& label = "", status_t status = UNUSED);
     SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index, const bytes_t& txinscript, const bytes_t& txoutscript, const std::string& label = "", status_t status = UNUSED)
         : account_(account_bin->account()), account_bin_(account_bin), index_(index), label_(label), status_(status), txinscript_(txinscript), txoutscript_(txoutscript) { }
 
@@ -713,7 +783,7 @@ public:
     void label(const std::string& label) { label_ = label; }
     const std::string label() const { return label_; }
 
-    void status(status_t status) { status_ = status; }
+    void status(status_t status);
     status_t status() const { return status_; }
 
     const bytes_t& txinscript() const { return txinscript_; }
@@ -771,12 +841,23 @@ inline SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uin
     txoutscript_ = script.txoutscript();
 }
 
+inline void SigningScript::status(status_t status)
+{
+    status_ = status;
+    if (status > UNUSED) account_bin_->markSigningScriptIssued(index_);
+}
+
 inline std::shared_ptr<SigningScript> AccountBin::newSigningScript(const std::string& label)
 {
     std::shared_ptr<SigningScript> signingscript(new SigningScript(shared_from_this(), script_count_++, label));
     return signingscript;
 }
 
+inline void AccountBin::markSigningScriptIssued(uint32_t script_index)
+{
+    if (script_index >= next_script_index_)
+        next_script_index_ = script_index + 1;
+}
 
 /////////////////////////////
 // BLOCKS AND TRANSACTIONS //
@@ -956,8 +1037,19 @@ private:
     std::weak_ptr<Tx> tx_;
 
     uint32_t txindex_;
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version)
+    {
+        ar & outhash_;
+        ar & outindex_;
+        ar & script_;
+        ar & sequence_;
+    }
 };
 
+BOOST_CLASS_VERSION(TxIn, 1)
 typedef std::vector<std::shared_ptr<TxIn>> txins_t;
 
 inline TxIn::TxIn(const Coin::TxIn& coin_txin)
@@ -1014,6 +1106,7 @@ public:
         return vflags;
     }
 
+    TxOut() : status_(UNSPENT) { }
     TxOut(uint64_t value, const bytes_t& script)
         : value_(value), script_(script), status_(UNSPENT) { }
 
@@ -1042,7 +1135,13 @@ public:
     void sending_account(std::shared_ptr<Account> sending_account) { sending_account_ = sending_account; }
     const std::shared_ptr<Account> sending_account() const { return sending_account_; }
 
+    void sending_label(const std::string& label) { sending_label_ = label; }
+    const std::string& sending_label() const { return sending_label_; }
+
     const std::shared_ptr<Account> receiving_account() const { return receiving_account_; }
+
+    void receiving_label(const std::string& label) { receiving_label_ = label; }
+    const std::string& receiving_label() const { return receiving_label; }
 
     const std::shared_ptr<AccountBin> account_bin() const { return account_bin_; }
 
@@ -1053,7 +1152,6 @@ public:
 
 private:
     friend class odb::access;
-    TxOut() { }
 
     #pragma db id auto
     unsigned long id_;
@@ -1070,9 +1168,11 @@ private:
 
     #pragma db null
     std::shared_ptr<Account> sending_account_;
+    std::string sending_label_;
 
     #pragma db null
     std::shared_ptr<Account> receiving_account_;
+    std::string receiving_label_;
 
     // account_bin and signingscript are only for receiving account
     #pragma db null
@@ -1084,8 +1184,19 @@ private:
     // status == SPENT if spent_ is not null. Otherwise UNSPENT.
     // Redundant but convenient for view queries.
     status_t status_;
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version)
+    {
+        ar & value_;
+        ar & script_;
+        ar & sending_label_;
+        ar & receiving_label_;
+    }
 };
 
+BOOST_CLASS_VERSION(TxOut, 1)
 typedef std::vector<std::shared_ptr<TxOut>> txouts_t;
 
 inline TxOut::TxOut(uint64_t value, std::shared_ptr<SigningScript> signingscript)
@@ -1272,7 +1383,20 @@ private:
 
     #pragma db null
     odb::nullable<uint32_t> blockindex_;
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version)
+    {
+        ar & version_;
+        ar & txins_;
+        ar & txouts_;
+        ar & locktime_;
+        ar & timestamp_; // only used for sorting in UI
+    }
 };
+
+BOOST_CLASS_VERSION(Tx, 1)
 
 inline void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp, status_t status)
 {

@@ -60,7 +60,6 @@ class KeychainInvalidPrivateKeyException: public KeychainException
 {
 public:
     KeychainInvalidPrivateKeyException(const std::string& keychain_name, const bytes_t& pubkey) : KeychainException("Invalid private key for public key.", keychain_name), pubkey_(pubkey) { }
-
     const bytes_t& pubkey() const { return pubkey_; }
 
 private:
@@ -75,7 +74,6 @@ public:
 
 protected:
     AccountException(const std::string& what, const std::string& account_name) : std::runtime_error(what), account_name_(account_name) { }
-
     std::string account_name_;
 };
 
@@ -97,11 +95,16 @@ public:
     AccountInsufficientFundsException(const std::string& account_name) : AccountException("Insufficient funds.", account_name) { }
 };
 
+class AccountCannotIssueChangeScriptException : public AccountException
+{
+public:
+    AccountCannotIssueChangeScriptException(const std::string& account_name) : AccountException("Account cannot issue change script", account_name) { }
+};
+
 class AccountChainCodeLockedException : public AccountException
 {
 public:
     AccountChainCodeLockedException(const std::string& account_name, const std::set<std::string>& locked_keychains) : AccountException("Chain code is locked.", account_name), locked_keychains_(locked_keychains) { }
-
     const std::set<std::string>& locked_keychains() const { return locked_keychains_; }
 
 private:
@@ -117,7 +120,6 @@ public:
 
 protected:
     AccountBinException(const std::string& what, const std::string& account_name, const std::string& bin_name) : std::runtime_error(what), account_name_(account_name), bin_name_(bin_name) { }
-
     std::string account_name_;
     std::string bin_name_;
 };
@@ -148,7 +150,6 @@ public:
 
 protected:
     TxException(const std::string& what, const bytes_t& hash) : std::runtime_error(what), hash_(hash) { }
-
     bytes_t hash_;
 };
 

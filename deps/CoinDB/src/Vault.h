@@ -41,6 +41,14 @@ public:
     std::vector<bytes_t> getLocatorHashes() const;
     Coin::BloomFilter getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
 
+    /////////////////////
+    // FILE OPERATIONS //
+    /////////////////////
+    void exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
+    std::shared_ptr<Keychain> importKeychain(const std::string& filepath, bool& importprivkeys);
+    void exportAccount(const std::string& account_name, const std::string& filepath, bool exportprivkeys = false) const;
+    std::shared_ptr<Account> importAccount(const std::string& filepath, unsigned int& privkeysimported); // pass privkeysimported = 0 to not inport any private keys.
+
     /////////////////////////
     // KEYCHAIN OPERATIONS //
     /////////////////////////
@@ -52,10 +60,6 @@ public:
     std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
     std::vector<std::shared_ptr<Keychain>> getAllKeychains(bool root_only = false) const;
 
-    void exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
-    std::shared_ptr<Keychain> importKeychain(const std::string& filepath, bool& importprivkeys);
-    //bool isKeychainFilePrivate(const std::string& filepath) const;
-
     // The following chain code and private key lock/unlock methods do not maintain a database session open so they only
     // store and erase the unlock keys in member maps to be used by the other class methods.
     void lockAllKeychainChainCodes();
@@ -65,7 +69,6 @@ public:
     void lockAllKeychainPrivateKeys();
     void lockKeychainPrivateKey(const std::string& keychain_name);
     void unlockKeychainPrivateKey(const std::string& keychain_name, const secure_bytes_t& unlock_key);
-
 
     ////////////////////////
     // ACCOUNT OPERATIONS //
@@ -116,14 +119,17 @@ protected:
     std::vector<bytes_t>            getLocatorHashes_unwrapped() const;
     Coin::BloomFilter               getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
 
+    // File operations
+    void                            exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath) const;
+    std::shared_ptr<Keychain>       importKeychain_unwrapped(const std::string& filepath, bool& importprivkeys);
+    void                            exportAccount_unwrapped(const std::shared_ptr<Account> account, const std::string& filepath) const;
+    std::shared_ptr<Account>        importAccount_unwrapped(const std::string& filepath, unsigned int& privkeysimported);
+
     // Keychain operations
     bool                            keychainExists_unwrapped(const std::string& keychain_name) const;
     bool                            keychainExists_unwrapped(const bytes_t& keychain_hash) const;
     std::shared_ptr<Keychain>       getKeychain_unwrapped(const std::string& keychain_name) const;
     void                            persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
-    void                            exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath) const;
-    std::shared_ptr<Keychain>       importKeychain_unwrapped(const std::string& filepath, bool& importprivkeys);
-
     bool                            tryUnlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain);
     bool                            tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain);
 
