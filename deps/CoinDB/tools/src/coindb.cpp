@@ -297,15 +297,9 @@ cli::result_t cmd_issuescript(bool bHelp, const cli::params_t& params)
     Vault vault(params[0], false);
     std::string bin_name = params.size() > 2 ? params[2] : std::string(DEFAULT_BIN_NAME);
     std::string label = params.size() > 3 ? params[3] : std::string("");
-    std::shared_ptr<SigningScript> script = vault.newSigningScript(params[1], bin_name, label);
+    std::shared_ptr<SigningScript> script = vault.issueSigningScript(params[1], bin_name, label);
 
-    using namespace CoinQ::Script;
-    std::string address;
-    payee_t payee = getScriptPubKeyPayee(script->txoutscript());
-    if (payee.first == SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH)
-        address = toBase58Check(payee.second, BASE58_VERSIONS[1]);
-    else
-        address = "N/A";
+    std::string address = getAddressFromScript(script->txoutscript());
 
     stringstream ss;
     ss << "account:     " << params[1] << endl

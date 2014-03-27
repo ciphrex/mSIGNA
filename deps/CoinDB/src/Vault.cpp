@@ -219,9 +219,7 @@ void Vault::exportAccount(const std::string& account_name, const std::string& fi
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
     if (!exportprivkeys)
-    {
         for (auto& keychain: account->keychains()) { keychain->clearPrivateKey(); }
-    }
     exportAccount_unwrapped(account, filepath);
 }
 
@@ -233,10 +231,17 @@ std::shared_ptr<Account> Vault::importAccount(const std::string& filepath, unsig
 {
     LOGGER(trace) << "Vault::importAccount(" << filepath << ", " << privkeysimported << ")" << std::endl;
 
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Account> account = importAccount_unwrapped(filepath, privkeysimported);
+    t.commit();
+    return account; 
 }
 
 std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filepath, unsigned int& privkeysimported)
 {
+    return nullptr;
 }
 
 /////////////////////////
@@ -1123,7 +1128,7 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
     if (change > 0)
     {
         std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, CHANGE_BIN_NAME);
-        std::shared_ptr<SigningScript> changescript = newAccountBinSigningScript_unwrapped(bin);
+        std::shared_ptr<SigningScript> changescript = issueAccountBinSigningScript_unwrapped(bin);
 
         // TODO: Allow adding multiple change outputs
         std::shared_ptr<TxOut> txout(new TxOut(change, changescript));

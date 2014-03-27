@@ -192,7 +192,6 @@ private:
     }
 };
 
-BOOST_CLASS_VERSION(Keychain, 1)
 typedef std::set<std::shared_ptr<Keychain>> KeychainSet;
 
 inline Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lock_key, const bytes_t& salt)
@@ -533,12 +532,11 @@ private:
         ar & name_;
         ar & index_;
         ar & script_count_;
-        ar & next_unused_script_index_;
+        ar & next_script_index_;
         ar & keychains_; // useful for exporting the account bin independently from account
     }
 };
 
-BOOST_CLASS_VERSION(AccountBin, 1);
 typedef std::vector<std::shared_ptr<AccountBin>> AccountBinVector;
 
 // Immutable object containng keychain and bin names as strings
@@ -684,8 +682,6 @@ private:
     BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
-BOOST_CLASS_VERSION(Account, 1)
-
 inline void Account::updateHash()
 {
     std::vector<bytes_t> keychain_hashes;
@@ -729,7 +725,7 @@ inline AccountBin::AccountBin(std::shared_ptr<Account> account, uint32_t index, 
 inline bool AccountBin::loadKeychains(bool get_private)
 {
     if (!keychains_.empty()) return false;
-    for (auto& keychain: account_->keychains())
+    for (auto& keychain: account()->keychains())
     {
         std::shared_ptr<Keychain> child(keychain->child(index_, get_private));
         keychains_.insert(child);
@@ -773,9 +769,7 @@ public:
         return flags;
     }
 
-    const uint32_t NOT_LOADED = 0xffffffff;
-
-    SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index = NOT_LOADED, const std::string& label = "", status_t status = UNUSED);
+    SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index, const std::string& label = "", status_t status = UNUSED);
     SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index, const bytes_t& txinscript, const bytes_t& txoutscript, const std::string& label = "", status_t status = UNUSED)
         : account_(account_bin->account()), account_bin_(account_bin), index_(index), label_(label), status_(status), txinscript_(txinscript), txoutscript_(txoutscript) { }
 
@@ -1049,7 +1043,6 @@ private:
     }
 };
 
-BOOST_CLASS_VERSION(TxIn, 1)
 typedef std::vector<std::shared_ptr<TxIn>> txins_t;
 
 inline TxIn::TxIn(const Coin::TxIn& coin_txin)
@@ -1141,7 +1134,7 @@ public:
     const std::shared_ptr<Account> receiving_account() const { return receiving_account_; }
 
     void receiving_label(const std::string& label) { receiving_label_ = label; }
-    const std::string& receiving_label() const { return receiving_label; }
+    const std::string& receiving_label() const { return receiving_label_; }
 
     const std::shared_ptr<AccountBin> account_bin() const { return account_bin_; }
 
@@ -1196,7 +1189,6 @@ private:
     }
 };
 
-BOOST_CLASS_VERSION(TxOut, 1)
 typedef std::vector<std::shared_ptr<TxOut>> txouts_t;
 
 inline TxOut::TxOut(uint64_t value, std::shared_ptr<SigningScript> signingscript)
@@ -1395,8 +1387,6 @@ private:
         ar & timestamp_; // only used for sorting in UI
     }
 };
-
-BOOST_CLASS_VERSION(Tx, 1)
 
 inline void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp, status_t status)
 {

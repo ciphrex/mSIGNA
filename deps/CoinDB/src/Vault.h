@@ -84,7 +84,7 @@ public:
     uint64_t getAccountBalance(const std::string& account_name, unsigned int min_confirmations = 1, int tx_flags = Tx::ALL) const;
 
     std::shared_ptr<AccountBin> addAccountBin(const std::string& account_name, const std::string& bin_name);
-    std::shared_ptr<SigningScript> newSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "");
+    std::shared_ptr<SigningScript> issueSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "");
 
     void refillAccountPool(const std::string& account_name);
 
@@ -140,7 +140,7 @@ protected:
 
     // AccountBin operations
     std::shared_ptr<AccountBin>     getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;
-    std::shared_ptr<SigningScript>  newAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> account_bin, const std::string& label = "");
+    std::shared_ptr<SigningScript>  issueAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> account_bin, const std::string& label = "");
     void                            refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin);
 
     // Tx operations
