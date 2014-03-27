@@ -82,6 +82,7 @@ class SigningScript;
 class Keychain : public std::enable_shared_from_this<Keychain>
 {
 public:
+    Keychain() { }
     Keychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t()); // Creates a new root keychain
     Keychain(const Keychain& source)
         : name_(source.name_), depth_(source.depth_), parent_fp_(source.parent_fp_), child_num_(source.child_num_), pubkey_(source.pubkey_), chain_code_(source.chain_code_), chain_code_ciphertext_(source.chain_code_ciphertext_), chain_code_salt_(source.chain_code_salt_), privkey_(source.privkey_), privkey_ciphertext_(source.privkey_ciphertext_), privkey_salt_(source.privkey_salt_), parent_(source.parent_), derivation_path_(source.derivation_path_) { }
@@ -139,7 +140,6 @@ public:
 
 private:
     friend class odb::access;
-    Keychain() { }
 
     #pragma db id auto
     unsigned long id_;

@@ -45,6 +45,7 @@ public:
     // KEYCHAIN OPERATIONS //
     /////////////////////////
     bool keychainExists(const std::string& keychain_name) const;
+    bool keychainExists(const bytes_t& keychain_hash) const;
     std::shared_ptr<Keychain> newKeychain(const std::string& keychain_name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
     //void eraseKeychain(const std::string& keychain_name) const;
     void renameKeychain(const std::string& old_name, const std::string& new_name);
@@ -52,7 +53,7 @@ public:
     std::vector<std::shared_ptr<Keychain>> getAllKeychains(bool root_only = false) const;
 
     void exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
-    //bytes_t importKeychain(const std::string& keychain_name, const std::string& filepath, bool& importprivkeys);
+    std::shared_ptr<Keychain> importKeychain(const std::string& filepath, bool& importprivkeys);
     //bool isKeychainFilePrivate(const std::string& filepath) const;
 
     // The following chain code and private key lock/unlock methods do not maintain a database session open so they only
@@ -111,43 +112,45 @@ public:
 
 protected:
     // Global operations
-    uint32_t getHorizonTimestamp_unwrapped() const;
-    std::vector<bytes_t> getLocatorHashes_unwrapped() const;
-    Coin::BloomFilter getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
+    uint32_t                        getHorizonTimestamp_unwrapped() const;
+    std::vector<bytes_t>            getLocatorHashes_unwrapped() const;
+    Coin::BloomFilter               getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
 
     // Keychain operations
-    std::shared_ptr<Keychain> getKeychain_unwrapped(const std::string& keychain_name) const;
-    void persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
-    void exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath) const;
+    bool                            keychainExists_unwrapped(const std::string& keychain_name) const;
+    bool                            keychainExists_unwrapped(const bytes_t& keychain_hash) const;
+    std::shared_ptr<Keychain>       getKeychain_unwrapped(const std::string& keychain_name) const;
+    void                            persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
+    void                            exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath) const;
+    std::shared_ptr<Keychain>       importKeychain_unwrapped(const std::string& filepath, bool& importprivkeys);
 
-    bool tryUnlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain);
-    bool tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain);
+    bool                            tryUnlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain);
+    bool                            tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain);
 
     // Account operations
-    std::shared_ptr<Account> getAccount_unwrapped(const std::string& account_name) const;
-    void tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account);
-    void refillAccountPool_unwrapped(std::shared_ptr<Account> account);
+    std::shared_ptr<Account>        getAccount_unwrapped(const std::string& account_name) const;
+    void                            tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account);
+    void                            refillAccountPool_unwrapped(std::shared_ptr<Account> account);
 
     // AccountBin operations
-    std::shared_ptr<AccountBin> getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;
-    std::shared_ptr<SigningScript> newAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> account_bin, const std::string& label = "");
-    void refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin);
+    std::shared_ptr<AccountBin>     getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;
+    std::shared_ptr<SigningScript>  newAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> account_bin, const std::string& label = "");
+    void                            refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin);
 
     // Tx operations
-    std::shared_ptr<Tx> getTx_unwrapped(const bytes_t& hash) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException/
-    std::shared_ptr<Tx> insertTx_unwrapped(std::shared_ptr<Tx> tx);
-    std::shared_ptr<Tx> createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
-    void deleteTx_unwrapped(std::shared_ptr<Tx> tx);
-    void updateTx_unwrapped(std::shared_ptr<Tx> tx);
-    SigningRequest getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
-    bool signTx_unwrapped(std::shared_ptr<Tx> tx); // Tries to sign as many as it can with the unlocked keychains.
+    std::shared_ptr<Tx>             getTx_unwrapped(const bytes_t& hash) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException/
+    std::shared_ptr<Tx>             insertTx_unwrapped(std::shared_ptr<Tx> tx);
+    std::shared_ptr<Tx>             createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
+    void                            deleteTx_unwrapped(std::shared_ptr<Tx> tx);
+    void                            updateTx_unwrapped(std::shared_ptr<Tx> tx);
+    SigningRequest                  getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
+    bool                            signTx_unwrapped(std::shared_ptr<Tx> tx); // Tries to sign as many as it can with the unlocked keychains.
 
     // Block operations
-    uint32_t getBestHeight_unwrapped() const;
-    bool insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
-    unsigned int updateConfirmations_unwrapped(std::shared_ptr<Tx> tx = nullptr);   // If parameter is null, updates all unconfirmed transactions.
-                                                                                    // Returns the number of transaction previously unconfirmed that are now confirmed.
-
+    uint32_t                        getBestHeight_unwrapped() const;
+    bool                            insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
+    unsigned int                    updateConfirmations_unwrapped(std::shared_ptr<Tx> tx = nullptr); // If parameter is null, updates all unconfirmed transactions.
+                                                                                                     // Returns the number of transaction previously unconfirmed that are now confirmed.
 private:
     mutable boost::mutex mutex;
     std::shared_ptr<odb::core::database> db_;

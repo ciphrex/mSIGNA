@@ -131,15 +131,34 @@ Coin::BloomFilter Vault::getBloomFilter(double falsePositiveRate, uint32_t nTwea
     return getBloomFilter_unwrapped(falsePositiveRate, nTweak, nFlags);
 }
 
+bool Vault::keychainExists_unwrapped(const std::string& keychain_name) const
+{
+    odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
+    return !r.empty();
+}
+
 bool Vault::keychainExists(const std::string& keychain_name) const
 {
     LOGGER(trace) << "Vault::keychainExists(" << keychain_name << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
-    odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
+    return keychainExists_unwrapped(keychain_name);
+}
 
+bool Vault::keychainExists_unwrapped(const bytes_t& keychain_hash) const
+{
+    odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::hash == keychain_hash));
     return !r.empty();
+}
+
+bool Vault::keychainExists(const bytes_t& keychain_hash) const
+{
+    LOGGER(trace) << "Vault::keychainExists(@hash = " << uchar_vector(keychain_hash).getHex() << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    return keychainExists_unwrapped(keychain_hash);
 }
 
 std::shared_ptr<Keychain> Vault::newKeychain(const std::string& keychain_name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey, const bytes_t& salt)
@@ -258,12 +277,47 @@ void Vault::exportKeychain(const std::string& keychain_name, const std::string& 
 {
     LOGGER(trace) << "Vault::exportKeychain(" << keychain_name << ", " << filepath << ", " << (exportprivkeys ? "true" : "false") << ")" << std::endl;
 
-    
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
     if (!exportprivkeys) { keychain->clearPrivateKey(); }
     exportKeychain_unwrapped(keychain, filepath);
+}
+
+std::shared_ptr<Keychain> Vault::importKeychain_unwrapped(const std::string& filepath, bool& importprivkeys)
+{
+    std::shared_ptr<Keychain> keychain(new Keychain());
+    {
+        std::ifstream ifs(filepath);
+        boost::archive::text_iarchive ia(ifs);
+        ia >> *keychain;
+    }
+
+    odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::hash == keychain->hash()));
+    if (!r.empty()) throw KeychainAlreadyExistsException(r.begin().load()->name());
+
+    std::string keychain_name = keychain->name();
+    unsigned int append_num = 1; // in case of name conflict
+    while (keychainExists_unwrapped(keychain->name()))
+    {
+        std::stringstream ss;
+        ss << keychain_name << append_num++;
+        keychain->name(ss.str());
+    }
+
+    if (!keychain->isPrivate()) { importprivkeys = false; }
+    if (!importprivkeys)        { keychain->clearPrivateKey(); }
+    db_->persist(keychain);
+    return keychain;
+}
+
+std::shared_ptr<Keychain> Vault::importKeychain(const std::string& filepath, bool& importprivkeys)
+{
+    LOGGER(trace) << "Vault::importKeychain(" << filepath << ", " << (importprivkeys ? "true" : "false") << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    return importKeychain_unwrapped(filepath, importprivkeys);
 }
 
 void Vault::lockAllKeychainChainCodes()
