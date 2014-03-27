@@ -606,7 +606,7 @@ cli::result_t cmd_rawmerkleblock(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_insertrawmerkleblock(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 2 || params.size() > 3)
-        return "insertrawmerkleblock <db file> <raw merkleblock> <height = 0>- insert raw merkleblock into database.";
+        return "insertrawmerkleblock <db file> <raw merkleblock> <height = 0> - insert raw merkleblock into database.";
 
     uint32_t height = params.size() > 2 ? strtoull(params[2].c_str(), NULL, 0) : 0;
 
@@ -622,6 +622,14 @@ cli::result_t cmd_insertrawmerkleblock(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_randombytes(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 1)
+        return "randombytes <length> - output random bytes in hex.";
+
+    uchar_vector bytes = random_bytes(strtoul(params[0].c_str(), NULL, 0));
+    return bytes.getHex();
+}
 
 int main(int argc, char* argv[])
 {
@@ -669,6 +677,9 @@ int main(int argc, char* argv[])
     cmds.add("rawblockheader", &cmd_rawblockheader);
     cmds.add("rawmerkleblock", &cmd_rawmerkleblock);
     cmds.add("insertrawmerkleblock", &cmd_insertrawmerkleblock);
+
+    // Miscellaneous
+    cmds.add("randombytes", &cmd_randombytes);
 
     try 
     {
