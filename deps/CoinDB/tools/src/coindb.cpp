@@ -615,7 +615,7 @@ cli::result_t cmd_insertrawmerkleblock(bool bHelp, const cli::params_t& params)
     merkleblock->fromCoinClasses(rawmerkleblock, height);
 
     Vault vault(params[0], false);
-    bool rval = vault.insertMerkleBlock(merkleblock);
+    bool rval = (bool)vault.insertMerkleBlock(merkleblock);
 
     stringstream ss;
     ss << "Merkleblock " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << (rval ? " " : " not ") << "inserted.";

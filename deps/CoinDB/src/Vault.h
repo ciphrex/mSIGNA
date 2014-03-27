@@ -36,8 +36,10 @@ public:
     ///////////////////////
     // GLOBAL OPERATIONS //
     ///////////////////////
-    const uint32_t TIME_HORIZON_WINDOW = 6 * 60 * 60; // a good six hours initial grace period.
+     uint32_t MIN_HORIZON_TIMESTAMP_OFFSET = 6 * 60 * 60; // a good six hours initial reorganization tolerance period.
+    void updateHorizonStatus();
     uint32_t getHorizonTimestamp() const; // nothing that happened before this should matter to us.
+    uint32_t getHorizonHeight() const;
     std::vector<bytes_t> getLocatorHashes() const;
     Coin::BloomFilter getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
 
@@ -111,11 +113,16 @@ public:
     // BLOCK OPERATIONS //
     //////////////////////
     uint32_t getBestHeight() const;
-    bool insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock);
+    std::shared_ptr<BlockHeader> getBlockHeader(const bytes_t& hash) const;
+    std::shared_ptr<BlockHeader> getBlockHeader(uint32_t height) const;
+    std::shared_ptr<MerkleBlock> insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock);
+    unsigned int deleteMerkleBlock(const bytes_t& hash);
+    unsigned int deleteMerkleBlock(uint32_t height);
 
 protected:
     // Global operations
     uint32_t                        getHorizonTimestamp_unwrapped() const;
+    uint32_t                        getHorizonHeight_unwrapped() const;
     std::vector<bytes_t>            getLocatorHashes_unwrapped() const;
     Coin::BloomFilter               getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
 
@@ -156,9 +163,17 @@ protected:
 
     // Block operations
     uint32_t                        getBestHeight_unwrapped() const;
-    bool                            insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
+    std::shared_ptr<BlockHeader>    getBlockHeader_unwrapped(const bytes_t& hash) const;
+    std::shared_ptr<BlockHeader>    getBlockHeader_unwrapped(uint32_t height) const;
+    std::shared_ptr<MerkleBlock>    insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
+    unsigned int                    deleteMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
     unsigned int                    updateConfirmations_unwrapped(std::shared_ptr<Tx> tx = nullptr); // If parameter is null, updates all unconfirmed transactions.
                                                                                                      // Returns the number of transaction previously unconfirmed that are now confirmed.
+
+    // Used for initial synching
+    bool haveHorizonBlock;
+    uint32_t minHorizonTimestamp;
+
 private:
     mutable boost::mutex mutex;
     std::shared_ptr<odb::core::database> db_;
