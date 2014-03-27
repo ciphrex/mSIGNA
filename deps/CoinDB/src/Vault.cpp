@@ -251,14 +251,12 @@ std::shared_ptr<Account> Vault::importAccount(const std::string& filepath, const
 
 std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filepath, const secure_bytes_t& chain_code_key, unsigned int& privkeysimported)
 {
-    LOGGER(debug) << "before" << std::endl;
     std::shared_ptr<Account> account(new Account());
     {
         std::ifstream ifs(filepath);
         boost::archive::text_iarchive ia(ifs);
         ia >> *account;
     }
-    LOGGER(debug) << "after" << std::endl;
 
     odb::result<Account> r(db_->query<Account>(odb::query<Account>::hash == account->hash()));
     if (!r.empty()) throw AccountAlreadyExistsException(r.begin().load()->name());
@@ -278,7 +276,6 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
     privkeysimported = 0;
     for (auto& keychain: account->keychains())
     {
-        LOGGER(debug) << "Trying to persist keychain " << keychain->name() << std::endl;
         // Try to unlock account chain code
         if (!keychain->unlockChainCode(chain_code_key)) throw KeychainChainCodeUnlockFailedException(keychain->name());
 
@@ -295,8 +292,8 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
                 // Just import the private keys
                 stored_keychain->importPrivateKey(*keychain);
                 db_->update(stored_keychain);
-                continue;
             }
+            continue;
         }
 
         std::string keychain_name = keychain->name();
@@ -316,7 +313,6 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
     // Create signing scripts and keys and persist account bins
     for (auto& bin: account->bins())
     {
-        LOGGER(debug) << "Trying to persist account bin " << bin->name() << " next_script_index = " << bin->next_script_index() << std::endl;
         db_->persist(bin);
 
         SigningScript::status_t status = bin->isChange() ? SigningScript::CHANGE : SigningScript::ISSUED;
@@ -329,7 +325,6 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
             for (auto& key: script->keys()) { db_->persist(key); }
             db_->persist(script); 
         }
-        LOGGER(debug) << "account->unused_pool_size() = " << account->unused_pool_size() << std::endl;
         for (unsigned int i = 0; i < account->unused_pool_size(); i++)
         {
             std::shared_ptr<SigningScript> script = bin->newSigningScript();
