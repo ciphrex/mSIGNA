@@ -1775,7 +1775,15 @@ struct BalanceView
 struct BestHeightView
 {
     #pragma db column("max(" + BlockHeader::height_ + ")")
-    uint32_t best_height;
+    uint32_t height;
+};
+
+#pragma db view \
+    object(BlockHeader)
+struct HorizonHeightView
+{
+    #pragma db column("min(" + BlockHeader::height_ + ")")
+    uint32_t height;
 };
 
 #pragma db view \

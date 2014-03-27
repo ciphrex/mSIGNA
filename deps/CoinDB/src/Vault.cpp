@@ -711,13 +711,12 @@ uint64_t Vault::getAccountBalance(const std::string& account_name, unsigned int 
     query_t query(query_t::Account::name == account_name && query_t::TxOut::status == TxOut::UNSPENT && query_t::Tx::status.in_range(tx_statuses.begin(), tx_statuses.end()));
     if (min_confirmations > 0)
     {
-        odb::result<BestHeightView> height_r(db_->query<BestHeightView>());
-        uint32_t best_height = height_r.empty() ? 0 : height_r.begin().load()->best_height;
+        uint32_t best_height = getBestHeight_unwrapped();
         if (min_confirmations > best_height) return 0;
         query = (query && query_t::BlockHeader::height <= best_height + 1 - min_confirmations);
     }
     odb::result<BalanceView> r(db_->query<BalanceView>(query));
-    return r.empty() ? 0 : r.begin().load()->balance;
+    return r.empty() ? 0 : r.begin()->balance;
 }
 
 std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name, const std::string& bin_name)
@@ -1446,7 +1445,7 @@ uint32_t Vault::getBestHeight() const
 uint32_t Vault::getBestHeight_unwrapped() const
 {
     odb::result<BestHeightView> r(db_->query<BestHeightView>());
-    uint32_t best_height = r.empty() ? 0 : r.begin()->best_height;
+    uint32_t best_height = r.empty() ? 0 : r.begin()->height;
     return best_height;
 }
 
