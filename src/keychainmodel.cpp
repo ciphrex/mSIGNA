@@ -19,7 +19,7 @@ KeychainModel::KeychainModel()
     : vault(NULL)
 {
     QStringList columns;
-    columns << tr("Keychain Name") << tr("Type") << tr("Keys") << tr("Hash");
+    columns << tr("Keychain Name") << tr("Type") << tr("Hash");
     setHorizontalHeaderLabels(columns);
 }
 
@@ -35,19 +35,17 @@ void KeychainModel::update()
 
     if (!vault) return;
 
-    std::vector<KeychainInfo> keychains = vault->getKeychains();
+    std::vector<std::shared_ptr<Keychain>> keychains = vault->getAllKeychains();
     for (auto& keychain: keychains) {
         QList<QStandardItem*> row;
-        row.append(new QStandardItem(QString::fromStdString(keychain.name())));
+        row.append(new QStandardItem(QString::fromStdString(keychain->name())));
 
-        bool isPrivate = (keychain.type() == Keychain::PRIVATE);
         QStandardItem* typeItem = new QStandardItem(
-            isPrivate  ? tr("Private") : tr("Public"));
-        typeItem->setData(isPrivate, Qt::UserRole);
+            keychain->isPrivate()  ? tr("Private") : tr("Public"));
+        typeItem->setData(keychain->isPrivate(), Qt::UserRole);
         row.append(typeItem);
         
-        row.append(new QStandardItem(QString::number(keychain.numkeys())));
-        row.append(new QStandardItem(QString::fromStdString(uchar_vector(keychain.hash()).getHex())));
+        row.append(new QStandardItem(QString::fromStdString(uchar_vector(keychain->hash()).getHex())));
         appendRow(row);
     }    
 }
@@ -61,13 +59,13 @@ void KeychainModel::exportKeychain(const QString& keychainName, const QString& f
     vault->exportKeychain(keychainName.toStdString(), fileName.toStdString(), exportPrivate);
 }
 
-void KeychainModel::importKeychain(const QString& keychainName, const QString& fileName, bool& importPrivate)
+void KeychainModel::importKeychain(const QString& /*keychainName*/, const QString& fileName, bool& importPrivate)
 {
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
 
-    vault->importKeychain(keychainName.toStdString(), fileName.toStdString(), importPrivate);
+    vault->importKeychain(fileName.toStdString(), importPrivate);
     update();
 }
 
@@ -84,7 +82,7 @@ bool KeychainModel::isPrivate(const QString& keychainName) const
     }
 
     std::shared_ptr<Keychain> keychain = vault->getKeychain(keychainName.toStdString());
-    return keychain->is_private();
+    return keychain->isPrivate();
 }
 
 bytes_t KeychainModel::getExtendedKeyBytes(const QString& keychainName, bool getPrivate, const bytes_t& decryptionKey) const
@@ -93,7 +91,8 @@ bytes_t KeychainModel::getExtendedKeyBytes(const QString& keychainName, bool get
         throw std::runtime_error("No vault is loaded.");
     }
 
-    return vault->getExtendedKeyBytes(keychainName.toStdString(), getPrivate, decryptionKey);
+    std::shared_ptr<Keychain> keychain = vault->getKeychain(keychainName.toStdString());
+    return keychain->extkey(getPrivate);
 }
 
 QVariant KeychainModel::data(const QModelIndex& index, int role) const

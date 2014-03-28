@@ -54,8 +54,7 @@ public:
     Coin::BloomFilter getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags = 0) const;
 
     // Key Chain operations
-    void newKeychain(const QString& name, unsigned long numkeys);
-    void newHDKeychain(const QString& name, const bytes_t& extkey, unsigned long numkeys);
+    void newKeychain(const QString& name, const secure_bytes_t& entropy);
 
     // Account operations
     void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames);

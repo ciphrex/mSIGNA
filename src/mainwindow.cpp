@@ -102,7 +102,7 @@ MainWindow::MainWindow()
             // TODO
         }
     });
-    networkSync.subscribeBlock([&](const ChainBlock& block) { accountModel->insertBlock(block); });
+//    networkSync.subscribeBlock([&](const ChainBlock& block) { accountModel->insertBlock(block); });
     networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleBlock) { accountModel->insertMerkleBlock(merkleBlock); });
     networkSync.subscribeBlockTreeChanged([&]() { doneHeaderSync = false; emit updateBestHeight(networkSync.getBestHeight()); });
 
@@ -390,14 +390,11 @@ void MainWindow::newKeychain()
         NewKeychainDialog dlg(this);
         if (dlg.exec()) {
             QString name = dlg.getName();
-            unsigned long numKeys = dlg.getNumKeys();
-            updateStatusMessage(tr("Generating ") + QString::number(numKeys) + tr(" keys..."));
+            //unsigned long numKeys = dlg.getNumKeys();
+            //updateStatusMessage(tr("Generating ") + QString::number(numKeys) + tr(" keys..."));
 
             // TODO: Randomize using user input for entropy
-            Coin::HDSeed hdSeed(random_bytes(32));
-            Coin::HDKeychain keychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
-
-            accountModel->newHDKeychain(name, keychain.extkey(), numKeys);
+            accountModel->newKeychain(name, random_bytes(32));
             accountModel->update();
             keychainModel->update();
             keychainView->update();
@@ -633,9 +630,7 @@ void MainWindow::quickNewAccount()
 
             for (auto& keychainName: keychainNames) {
                 // TODO: Randomize using user input for entropy
-                Coin::HDSeed hdSeed(random_bytes(32));
-                Coin::HDKeychain keychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
-                accountModel->newHDKeychain(keychainName, keychain.extkey(), DEFAULT_KEY_COUNT);
+                accountModel->newKeychain(keychainName, random_bytes(32));
             }
 
             accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames);
@@ -958,8 +953,8 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 networkSync.sendTx(coin_tx);
 
                 // TODO: Check transaction has propagated before changing status to RECEIVED
-                tx->status(CoinDB::Tx::RECEIVED);
-                accountModel->getVault()->addTx(tx, true);
+                tx->updateStatus(CoinDB::Tx::RECEIVED);
+                accountModel->getVault()->insertTx(tx);
             }
             txModel->update();
             txView->update();
