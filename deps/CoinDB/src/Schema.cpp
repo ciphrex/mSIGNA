@@ -594,7 +594,7 @@ std::string Tx::getStatusString(int status)
     if (status & UNSIGNED) flags.push_back("UNSIGNED");
     if (status & UNSENT) flags.push_back("UNSENT");
     if (status & SENT) flags.push_back("SENT");
-    if (status & RECEIVED) flags.push_back("RECEIVED");
+    if (status & PROPAGATED) flags.push_back("PROPAGATED");
     if (status & CONFLICTING) flags.push_back("CONFLICTING");
     if (status & CANCELED) flags.push_back("CANCELED");
     if (status & CONFIRMED) flags.push_back("CONFIRMED");
@@ -609,7 +609,7 @@ std::vector<Tx::status_t> Tx::getStatusFlags(int status)
     if (status & UNSIGNED) flags.push_back(UNSIGNED);
     if (status & UNSENT) flags.push_back(UNSENT);
     if (status & SENT) flags.push_back(SENT);
-    if (status & RECEIVED) flags.push_back(RECEIVED);
+    if (status & PROPAGATED) flags.push_back(PROPAGATED);
     if (status & CONFLICTING) flags.push_back(CONFLICTING);
     if (status & CANCELED) flags.push_back(CANCELED);
     if (status & CONFIRMED) flags.push_back(CONFIRMED);
@@ -697,7 +697,7 @@ bool Tx::updateStatus(status_t status /* = NO_STATUS */)
             break;
 
         case UNSIGNED:
-            status_ = RECEIVED;
+            status_ = PROPAGATED;
             break;
 
         default:

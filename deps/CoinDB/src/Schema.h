@@ -838,7 +838,7 @@ public:
         UNSIGNED     =  1,      // still missing signatures
         UNSENT       =  1 << 1, // signed but not yet broadcast to network
         SENT         =  1 << 2, // sent to at least one peer but possibly not propagated
-        RECEIVED     =  1 << 3, // received from at least one peer
+        PROPAGATED   =  1 << 3, // received from at least one peer
         CONFLICTING  =  1 << 4, // unconfirmed and spends the same output as another transaction
         CANCELED     =  1 << 5, // either will never be broadcast or will never confirm
         CONFIRMED    =  1 << 6, // exists in blockchain
@@ -848,12 +848,12 @@ public:
     static std::string              getStatusString(int status);
     static std::vector<status_t>    getStatusFlags(int status);
 
-    Tx(uint32_t version = 1, uint32_t locktime = 0, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED)
+    Tx(uint32_t version = 1, uint32_t locktime = 0, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED)
         : version_(version), locktime_(locktime), timestamp_(timestamp), status_(status), have_fee_(false), fee_(0) { }
 
-    void set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED);
-    void set(Coin::Transaction coin_tx, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED);
-    void set(const bytes_t& raw, uint32_t timestamp = 0xffffffff, status_t status = RECEIVED);
+    void set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED);
+    void set(Coin::Transaction coin_tx, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED);
+    void set(const bytes_t& raw, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED);
 
     Coin::Transaction toCoinClasses() const;
 
@@ -881,7 +881,7 @@ public:
 
     void block(std::shared_ptr<BlockHeader> header, uint32_t index) { blockheader_ = header, blockindex_ = index; }
 
-    void blockheader(std::shared_ptr<BlockHeader> blockheader) { blockheader_ = blockheader; status_ = blockheader ? CONFIRMED : RECEIVED; }
+    void blockheader(std::shared_ptr<BlockHeader> blockheader) { blockheader_ = blockheader; status_ = blockheader ? CONFIRMED : PROPAGATED; }
     std::shared_ptr<BlockHeader> blockheader() const { return blockheader_; }
 
     void shuffle_txins();
@@ -916,7 +916,7 @@ private:
     uint32_t locktime_;
 
     // Timestamp should be set each time we modify the transaction.
-    // Once status is RECEIVED the timestamp is fixed.
+    // Once status is PROPAGATED the timestamp is fixed.
     // Timestamp defaults to 0xffffffff
     uint32_t timestamp_;
 

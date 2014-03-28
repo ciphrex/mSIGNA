@@ -37,6 +37,7 @@ inline std::string getAddressFromScript(const bytes_t& script)
         return "N/A";
 }
 
+
 ////////////
 // Tables //
 ////////////
@@ -48,8 +49,8 @@ inline std::string formattedScriptHeader()
 
     stringstream ss;
     ss << " ";
-    ss << left  << setw(15) << "account name" << " | "
-       << left  << setw(15) << "bin name" << " | "
+    ss << left  << setw(8) << "account" << " | "
+       << left  << setw(8) << "bin" << " | "
        << right << setw(5)  << "index" << " | "
        << left  << setw(50) << "script" << " | "
        << left  << setw(36) << "address" << " | "
@@ -69,8 +70,8 @@ inline std::string formattedScript(const CoinDB::SigningScriptView& view)
 
     stringstream ss;
     ss << " ";
-    ss << left  << setw(15) << view.account_name << " | "
-       << left  << setw(15) << view.account_bin_name << " | "
+    ss << left  << setw(8)  << view.account_name << " | "
+       << left  << setw(8)  << view.account_bin_name << " | "
        << right << setw(5)  << view.index << " | "
        << left  << setw(50) << uchar_vector(view.txoutscript).getHex() << " | "
        << left  << setw(36) << getAddressFromScript(view.txoutscript) << " | "
@@ -158,14 +159,14 @@ inline std::string formattedTxOutViewHeader()
 
     stringstream ss;
     ss << " ";
-    ss << left  << setw(15) << "account name" << " | "
-       << left  << setw(15) << "bin name" << " | "
-       << left  << setw(10) << "type" << " | "
+    ss << left  << setw(8)  << "account" << " | "
+       << left  << setw(8)  << "bin" << " | "
+       << left  << setw(40) << "description" << " | "
+       << left  << setw(7)  << "type" << " | "
        << right << setw(15) << "value" << " | "
-       << left  << setw(50) << "script" << " | "
        << left  << setw(36) << "address" << " | "
-       << right << setw(13) << "confirmations" << " | "
-       << left  << setw(11) << "tx status" << " | "
+       << right << setw(6)  << "confs" << " | "
+       << left  << setw(10) << "tx status" << " | "
        << left  << setw(64) << "tx hash";
     ss << " ";
 
@@ -175,6 +176,7 @@ inline std::string formattedTxOutViewHeader()
     return ss.str();
 }
 
+const int COIN_EXP = 100000000ull;
 inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned int best_height)
 {
     using namespace std;
@@ -188,14 +190,14 @@ inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned in
 
     stringstream ss;
     ss << " ";
-    ss << left  << setw(15) << view.role_account() << " | "
-       << left  << setw(15) << view.role_bin() << " | "
-       << left  << setw(10) << TxOut::getRoleString(view.role_flags) << " | "
-       << right << setw(15) << view.value << " | "
-       << left  << setw(50) << uchar_vector(view.script).getHex() << " | "
+    ss << left  << setw(8)  << view.role_account() << " | "
+       << left  << setw(8)  << view.role_bin() << " | "
+       << left  << setw(40) << view.role_label() << " | "
+       << left  << setw(7)  << TxOut::getRoleString(view.role_flags) << " | "
+       << right << setw(15) << fixed << setprecision(8) << 1.0*view.value/COIN_EXP << " | "
        << left  << setw(36) << getAddressFromScript(view.script) << " | "
-       << right << setw(13) << confirmations << " | "
-       << left  << setw(11) << Tx::getStatusString(view.tx_status) << " | "
+       << right << setw(6)  << confirmations << " | "
+       << left  << setw(10) << Tx::getStatusString(view.tx_status) << " | "
        << left  << setw(64) << uchar_vector(tx_hash).getHex();
     ss << " ";
     return ss.str();
