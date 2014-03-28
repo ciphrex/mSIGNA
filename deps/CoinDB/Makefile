@@ -94,8 +94,9 @@ TOOLS_LIBPATH = \
     -lodb
 
 OBJS = \
+    obj/Schema.o \
+    obj/Vault.o \
     obj/Schema-odb.o \
-    obj/Vault.o
 
 TOOLS = \
     tools/build/coindb$(EXE_EXT)
@@ -118,9 +119,15 @@ odb/Schema-odb.hxx: src/Schema.h
 odb/Schema-odb.cxx: odb/Schema-odb.hxx
 
 #
-# schema
+# odb generated schema object
 #
 obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx src/Schema.h
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
+
+#
+# schema classes
+#
+obj/Schema.o: src/Schema.cpp src/Schema.h
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
