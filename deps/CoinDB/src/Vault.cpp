@@ -1509,6 +1509,22 @@ std::shared_ptr<BlockHeader> Vault::getBlockHeader_unwrapped(uint32_t height) co
     return r.empty() ? nullptr : r.begin().load();
 }
 
+std::shared_ptr<BlockHeader> Vault::getBestBlockHeader() const
+{
+    LOGGER(trace) << "Vault::getBestBlockHeader()" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    return getBestBlockHeader_unwrapped();
+}
+
+std::shared_ptr<BlockHeader> Vault::getBestBlockHeader_unwrapped() const
+{
+    odb::result<BlockHeader> r(db_->query<BlockHeader>("ORDER BY" + odb::query<BlockHeader>::height + "DESC LIMIT 1"));
+    if (r.empty()) return nullptr;
+    return r.begin().load();
+}
+
 std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock)
 {
     LOGGER(trace) << "Vault::insertMerkleBlock(" << uchar_vector(merkleblock->blockheader()->hash()).getHex() << ")" << std::endl;

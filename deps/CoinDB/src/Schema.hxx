@@ -177,7 +177,7 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int version)
+    void serialize(Archive& ar, const unsigned int /*version*/)
     {
         ar & name_;
         ar & hash_;
@@ -530,7 +530,7 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void save(Archive& ar, const unsigned int version) const
+    void save(Archive& ar, const unsigned int /*version*/) const
     {
         ar & name_;
         ar & index_;
@@ -538,7 +538,7 @@ private:
 //        ar & keychains_; // useful for exporting the account bin independently from account
     }
     template<class Archive>
-    void load(Archive& ar, const unsigned int version)
+    void load(Archive& ar, const unsigned int /*version*/)
     {
         ar & name_;
         ar & index_;
@@ -674,7 +674,7 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void save(Archive& ar, const unsigned int version) const
+    void save(Archive& ar, const unsigned int /*version*/) const
     {
         ar & name_;
         ar & minsigs_;
@@ -691,7 +691,7 @@ private:
         for (auto& bin: bins_)              { ar & *bin; }
     }
     template<class Archive>
-    void load(Archive& ar, const unsigned int version)
+    void load(Archive& ar, const unsigned int /*version*/)
     {
         ar & name_;
         ar & minsigs_;
@@ -976,6 +976,8 @@ public:
     MerkleBlock(const std::shared_ptr<BlockHeader>& blockheader, uint32_t txcount, const std::vector<bytes_t>& hashes, const bytes_t& flags)
         : blockheader_(blockheader), txcount_(txcount), hashes_(hashes), flags_(flags) { }
 
+    MerkleBlock(const Coin::MerkleBlock& merkleblock, uint32_t height = 0xffffffff) { fromCoinClasses(merkleblock, height); }
+
     void fromCoinClasses(const Coin::MerkleBlock& merkleblock, uint32_t height = 0xffffffff);
     Coin::MerkleBlock toCoinClasses() const;
 
@@ -1080,7 +1082,7 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int version)
+    void serialize(Archive& ar, const unsigned int /*version*/)
     {
         ar & outhash_;
         ar & outindex_;
@@ -1226,7 +1228,7 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int version)
+    void serialize(Archive& ar, const unsigned int /*version*/)
     {
         ar & value_;
         ar & script_;
@@ -1424,7 +1426,7 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int version)
+    void serialize(Archive& ar, const unsigned int /*version*/)
     {
         ar & version_;
         ar & txins_;

@@ -48,7 +48,7 @@ public:
     /////////////////////
     void exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
     std::shared_ptr<Keychain> importKeychain(const std::string& filepath, bool& importprivkeys);
-    void exportAccount(const std::string& account_name, const std::string& filepath, const secure_bytes_t& chain_code_key, const bytes_t& salt, bool exportprivkeys = false) const;
+    void exportAccount(const std::string& account_name, const std::string& filepath, const secure_bytes_t& chain_code_key = secure_bytes_t(), const bytes_t& salt = bytes_t(), bool exportprivkeys = false) const;
     std::shared_ptr<Account> importAccount(const std::string& filepath, const secure_bytes_t& chain_code_key, unsigned int& privkeysimported); // pass privkeysimported = 0 to not inport any private keys.
 
     /////////////////////////
@@ -115,6 +115,7 @@ public:
     uint32_t getBestHeight() const;
     std::shared_ptr<BlockHeader> getBlockHeader(const bytes_t& hash) const;
     std::shared_ptr<BlockHeader> getBlockHeader(uint32_t height) const;
+    std::shared_ptr<BlockHeader> getBestBlockHeader() const;
     std::shared_ptr<MerkleBlock> insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock);
     unsigned int deleteMerkleBlock(const bytes_t& hash);
     unsigned int deleteMerkleBlock(uint32_t height);
@@ -165,6 +166,7 @@ protected:
     uint32_t                        getBestHeight_unwrapped() const;
     std::shared_ptr<BlockHeader>    getBlockHeader_unwrapped(const bytes_t& hash) const;
     std::shared_ptr<BlockHeader>    getBlockHeader_unwrapped(uint32_t height) const;
+    std::shared_ptr<BlockHeader>    getBestBlockHeader_unwrapped() const;
     std::shared_ptr<MerkleBlock>    insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
     unsigned int                    deleteMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
     unsigned int                    updateConfirmations_unwrapped(std::shared_ptr<Tx> tx = nullptr); // If parameter is null, updates all unconfirmed transactions.
