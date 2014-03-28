@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "Schema.hxx"
+#include "Schema.h"
 #include "VaultExceptions.h"
 #include "SigningRequest.h"
 

@@ -112,23 +112,21 @@ lib/libCoinDB.a: $(OBJS)
 #
 # odb compiled dependencies
 #
-odb/Schema-odb.hxx: src/Schema.hxx
+odb/Schema-odb.hxx: src/Schema.h
 	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema $(ODB_INCLUDE_PATH) $<
 
-#odb/Schema-odb.cxx: src/Schema.hxx
-#	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema $< $(ODB_INCLUDE_PATH)
 odb/Schema-odb.cxx: odb/Schema-odb.hxx
 
 #
 # schema
 #
-obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx src/Schema.hxx
+obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx src/Schema.h
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
 # vault class
 #
-obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/SigningRequest.h src/Schema.hxx odb/Schema-odb.hxx src/Database.hxx
+obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/SigningRequest.h src/Schema.h src/Database.h odb/Schema-odb.hxx
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #

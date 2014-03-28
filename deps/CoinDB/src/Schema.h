@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Schema.hxx
+// Schema.h
 //
 // Copyright (c) 2013-2014 Eric Lombrozo
 //
@@ -8,8 +8,8 @@
 //
 
 // odb compiler complains about #pragma once
-#ifndef COINDB_SCHEMA_HXX
-#define COINDB_SCHEMA_HXX
+#ifndef COINDB_SCHEMA_H
+#define COINDB_SCHEMA_H
 
 #include <CoinQ_script.h>
 #include <CoinQ_typedefs.h>
@@ -1874,4 +1874,4 @@ struct ConfirmedTxView
 
 }
 
-#endif // COINDB_SCHEMA_HXX
+#endif // COINDB_SCHEMA_H

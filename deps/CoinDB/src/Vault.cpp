@@ -12,7 +12,7 @@
 #include <CoinQ_script.h>
 #include <CoinQ_blocks.h>
 
-#include "Database.hxx"
+#include "Database.h"
 
 #include "../odb/Schema-odb.hxx"
 
