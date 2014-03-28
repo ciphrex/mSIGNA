@@ -103,12 +103,12 @@ public:
     ///////////////////
     // TX OPERATIONS //
     ///////////////////
-    std::shared_ptr<Tx> getTx(const bytes_t& hash) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException/
-    std::shared_ptr<Tx> insertTx(std::shared_ptr<Tx> tx); // Inserts transaction only if it affects one of our accounts. Returns transaction in vault if change occured. Otherwise returns nullptr.
-    std::shared_ptr<Tx> createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
-    void deleteTx(const bytes_t& tx_hash); // Tries both signed and unsigned hashes. Throws TxNotFoundException.
-    SigningRequest getSigningRequest(const bytes_t& unsigned_hash, bool include_raw_tx = false) const; // Tries only unsigned hashes. Throws TxNotFoundException.
-    bool signTx(const bytes_t& unsigned_hash, bool update = false); // Tries only unsigned hashes. Throws TxNotFoundException.
+    std::shared_ptr<Tx>                     getTx(const bytes_t& hash) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException/
+    std::shared_ptr<Tx>                     insertTx(std::shared_ptr<Tx> tx); // Inserts transaction only if it affects one of our accounts. Returns transaction in vault if change occured. Otherwise returns nullptr.
+    std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
+    void                                    deleteTx(const bytes_t& tx_hash); // Tries both signed and unsigned hashes. Throws TxNotFoundException.
+    SigningRequest                          getSigningRequest(const bytes_t& unsigned_hash, bool include_raw_tx = false) const; // Tries only unsigned hashes. Throws TxNotFoundException.
+    std::shared_ptr<Tx>                     signTx(const bytes_t& unsigned_hash, bool update = false); // Tries only unsigned hashes. Throws TxNotFoundException.
 
     //////////////////////
     // BLOCK OPERATIONS //

@@ -1393,7 +1393,7 @@ SigningRequest Vault::getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool i
     return SigningRequest(sigs_needed, keychain_info, rawtx);
 }
 
-bool Vault::signTx(const bytes_t& unsigned_hash, bool update)
+std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, bool update)
 {
     LOGGER(trace) << "Vault::signTx(" << uchar_vector(unsigned_hash).getHex() << ", " << (update ? "update" : "no update") << ")" << std::endl;
 
@@ -1411,7 +1411,7 @@ bool Vault::signTx(const bytes_t& unsigned_hash, bool update)
         updateTx_unwrapped(tx);
         t.commit();
     }
-    return rval;
+    return rval ? tx : nullptr;
 }
 
 bool Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
