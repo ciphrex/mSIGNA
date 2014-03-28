@@ -11,23 +11,15 @@
 #ifndef COINDB_SCHEMA_H
 #define COINDB_SCHEMA_H
 
-#include <CoinQ_script.h>
-#include <CoinQ_typedefs.h>
-
-#include <uchar_vector.h>
-#include <hash.h>
 #include <CoinNodeData.h>
-#include <hdkeys.h>
 
-#include <stdutils/stringutils.h>
+#include <CoinQ_typedefs.h>
 
 #include <odb/core.hxx>
 #include <odb/nullable.hxx>
 #include <odb/database.hxx>
 
 #include <memory>
-
-#include <logger.h>
 
 // support for boost serialization
 #include <boost/serialization/version.hpp>

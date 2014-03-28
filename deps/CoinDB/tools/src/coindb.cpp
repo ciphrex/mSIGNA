@@ -661,7 +661,7 @@ int main(int argc, char* argv[])
 {
     INIT_LOGGER("debug.log");
 
-    cli::command_map cmds("CoinDB by Eric Lombrozo v0.2.2");
+    cli::command_map cmds("CoinDB by Eric Lombrozo v0.2.4");
 
     // Global operations
     cmds.add("create", &cmd_create);

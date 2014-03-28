@@ -24,6 +24,8 @@
 #include <secp256k1.h>
 #include <BigInt.h>
 
+#include <stdutils/stringutils.h>
+
 #include <sstream>
 #include <fstream>
 #include <algorithm>

@@ -9,6 +9,17 @@
 
 #include "Schema.h"
 
+#include <stdutils/stringutils.h>
+
+#include <uchar_vector.h>
+#include <hash.h>
+#include <CoinNodeData.h>
+#include <hdkeys.h>
+
+#include <CoinQ_script.h>
+
+#include <logger.h>
+
 using namespace CoinDB;
 
 /*
