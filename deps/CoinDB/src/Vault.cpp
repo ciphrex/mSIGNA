@@ -1528,13 +1528,14 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
     {
         if (new_blockheader->timestamp() > minHorizonTimestamp)
         {
-            LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - block ti estamp is not early enough for accounts in database. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
+            LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - block timestamp is not early enough for accounts in database. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
             return nullptr;
         }
-        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - inserting horizon merkle block. hash: " << new_blockheader->height() << std::endl;
+        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - inserting horizon merkle block. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
         db_->persist(new_blockheader);
         db_->persist(merkleblock);
         haveHorizonBlock = true;
+        return merkleblock;
     }
 
     typedef odb::query<BlockHeader> query_t;

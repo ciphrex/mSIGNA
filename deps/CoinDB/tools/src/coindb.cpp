@@ -559,14 +559,40 @@ cli::result_t cmd_signtx(bool bHelp, const cli::params_t& params)
 }
 
 // Blockchain operations
+cli::result_t cmd_bestheight(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 1)
+        return "bestheight <db file> - display best block height.";
+
+    Vault vault(params[0], false);
+    uint32_t best_height = vault.getBestHeight();
+
+    stringstream ss;
+    ss << best_height;
+    return ss.str();
+}
+
+cli::result_t cmd_blockinfo(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 2)
+        return "blockinfo <db file> <height> - display block information.";
+
+    uint32_t height = strtoul(params[1].c_str(), NULL, 0);
+
+    Vault vault(params[0], false);
+    std::shared_ptr<BlockHeader> blockheader = vault.getBlockHeader(height);
+
+    return blockheader->toCoinClasses().toIndentedString();
+}
+
 cli::result_t cmd_rawblockheader(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 6)
         return "rawblockheader <version> <previous blocks> <merkle root> <timestamp> <bits> <nonce> - construct a raw block header.";
 
     uint32_t version = strtoull(params[0].c_str(), NULL, 0);
-    uchar_vector prevblockhash(params[1]); prevblockhash.reverse();
-    uchar_vector merkleroot(params[2]); merkleroot.reverse();
+    uchar_vector prevblockhash(params[1]);
+    uchar_vector merkleroot(params[2]);
     uint32_t timestamp = strtoull(params[3].c_str(), NULL, 0);
     uint32_t bits = strtoull(params[4].c_str(), NULL, 0);
     uint32_t nonce = strtoull(params[5].c_str(), NULL, 0);
@@ -674,6 +700,8 @@ int main(int argc, char* argv[])
     cmds.add("signtx", &cmd_signtx);
 
     // Blockchain operations
+    cmds.add("bestheight", &cmd_bestheight);
+    cmds.add("blockinfo", &cmd_blockinfo);    
     cmds.add("rawblockheader", &cmd_rawblockheader);
     cmds.add("rawmerkleblock", &cmd_rawmerkleblock);
     cmds.add("insertrawmerkleblock", &cmd_insertrawmerkleblock);
