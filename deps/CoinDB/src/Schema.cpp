@@ -164,7 +164,7 @@ bool Keychain::isChainCodeLocked() const
 
 bool Keychain::unlockPrivateKey(const secure_bytes_t& lock_key) const
 {
-    if (!isPrivate()) throw std::runtime_error("Cannot unlock the private key of a public keychain.");
+    if (!isPrivate()) throw std::runtime_error("Missing private key.");
     if (!privkey_.empty()) return true; // Already unlocked
 
     // TODO: decrypt
@@ -183,7 +183,7 @@ bool Keychain::unlockChainCode(const secure_bytes_t& lock_key) const
 
 secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path) const
 {
-    if (!isPrivate()) throw std::runtime_error("Cannot get a private signing key from public keychain.");
+    if (!isPrivate()) throw std::runtime_error("Missing private key.");
     if (privkey_.empty()) throw std::runtime_error("Private key is locked.");
     if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
 
@@ -225,7 +225,7 @@ void Keychain::importPrivateKey(const Keychain& source)
 
 secure_bytes_t Keychain::extkey(bool get_private) const
 {
-    if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private extkey of a public keychain.");
+    if (get_private && !isPrivate()) throw std::runtime_error("Missing private key.");
     if (get_private && privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
     if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
 

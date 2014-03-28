@@ -1151,6 +1151,10 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 
     for (auto& txout: tx->txouts())
     {
+        // Assume all inputs sent from same account.
+        // TODO: Allow coin mixing.
+        if (sending_account) { txout->sending_account(sending_account); }
+
         output_total += txout->value();
         odb::result<SigningScript> script_r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == txout->script()));
         if (!script_r.empty())
@@ -1200,12 +1204,6 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                 std::shared_ptr<TxIn> txin(txin_r.begin().load());
                 txout->spent(txin);
             }
-        }
-        else if (sending_account)
-        {
-            // Again, assume all inputs sent from same account.
-            // TODO: Allow coin mixing.
-            txout->sending_account(sending_account);
         }
     }
 

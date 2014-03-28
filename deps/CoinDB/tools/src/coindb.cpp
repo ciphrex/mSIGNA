@@ -532,7 +532,7 @@ cli::result_t cmd_signtx(bool bHelp, const cli::params_t& params)
         return "signtx <db file> <tx hash> <keychain> <passphrase> - add signatures to transaction for specified keychain.";
 
     Vault vault(params[0], false);
-    vault.unlockChainCodes(secure_bytes_t());
+    vault.unlockChainCodes(uchar_vector("1234"));
     vault.unlockKeychainPrivateKey(params[2], secure_bytes_t());
 
     stringstream ss;
