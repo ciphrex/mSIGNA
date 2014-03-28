@@ -1009,6 +1009,8 @@ struct ScriptCountView
     uint32_t count;
 };
 
+const std::string EMPTY_STRING = "";
+
 #pragma db view \
     object(TxOut) \
     object(Tx: TxOut::tx_) \
@@ -1020,14 +1022,79 @@ struct ScriptCountView
 struct TxOutView
 {
     TxOutView() : role_flags(TxOut::ROLE_NONE) { }
+    TxOutView(const TxOutView& source, TxOut::role_t role)
+    {
+        *this = source;
+        role_flags = role;
+    }
 
     // must be called when queried - TODO: better style
-    void updateRole(const std::string& account_name)
+    void updateRole(int flags = TxOut::ROLE_BOTH)
     {
         role_flags = TxOut::ROLE_NONE;
-        if (account_name.empty()) return;
-        if (account_name == sending_account_name)   { role_flags |= TxOut::ROLE_SENDER;   }
-        if (account_name == receiving_account_name) { role_flags |= TxOut::ROLE_RECEIVER; }
+        if (sending_account_id)          { role_flags |= TxOut::ROLE_SENDER;   }
+        if (receiving_account_id)        { role_flags |= TxOut::ROLE_RECEIVER; }
+        role_flags &= flags;
+    }
+
+
+    const std::string& role_account() const
+    {
+        switch (role_flags)
+        {
+        case TxOut::ROLE_SENDER:
+            return sending_account_name;
+
+        case TxOut::ROLE_RECEIVER:
+            return receiving_account_name;
+
+        default:
+            return EMPTY_STRING;
+        }
+    }
+
+    const std::string& role_bin() const
+    {
+        if (role_flags == TxOut::ROLE_RECEIVER)
+            return account_bin_name;
+        else
+            return EMPTY_STRING;
+    }
+
+    const std::string& role_label() const
+    {
+        switch (role_flags)
+        {
+        case TxOut::ROLE_SENDER:
+            return sending_label;
+
+        case TxOut::ROLE_RECEIVER:
+            return receiving_label;
+
+        default:
+            return EMPTY_STRING;
+        }
+    }
+
+    std::vector<TxOutView> getSplitRoles(TxOut::role_t first = TxOut::ROLE_RECEIVER)
+    {
+        std::vector<TxOutView> split_views;
+        if (role_flags == TxOut::ROLE_NONE)
+        {
+            split_views.push_back(*this);
+        }
+        else if (first == TxOut::ROLE_RECEIVER)
+        {
+            if (role_flags & TxOut::ROLE_RECEIVER)  { split_views.push_back(TxOutView(*this, TxOut::ROLE_RECEIVER));  }
+            if (role_flags & TxOut::ROLE_SENDER)    { split_views.push_back(TxOutView(*this, TxOut::ROLE_SENDER));    }
+        }
+        else
+        {
+            if (role_flags & TxOut::ROLE_SENDER)    { split_views.push_back(TxOutView(*this, TxOut::ROLE_SENDER));    }
+            if (role_flags & TxOut::ROLE_RECEIVER)  { split_views.push_back(TxOutView(*this, TxOut::ROLE_RECEIVER));  }
+        }
+
+        return split_views;
     }
 
     #pragma db column(sending_account::id_)

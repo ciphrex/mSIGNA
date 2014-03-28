@@ -94,9 +94,9 @@ TOOLS_LIBPATH = \
     -lodb
 
 OBJS = \
-    obj/Schema.o \
-    obj/Vault.o \
     obj/Schema-odb.o \
+    obj/Schema.o \
+    obj/Vault.o
 
 TOOLS = \
     tools/build/coindb$(EXE_EXT)

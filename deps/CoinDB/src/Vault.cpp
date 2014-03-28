@@ -891,7 +891,7 @@ std::vector<SigningScriptView> Vault::getSigningScriptViews(const std::string& a
     return views;
 }
 
-std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, const std::string& bin_name, int role_flags, int txout_status_flags, int tx_status_flags) const
+std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, const std::string& bin_name, int role_flags, int txout_status_flags, int tx_status_flags, bool hide_change) const
 {
     LOGGER(trace) << "Vault::getTxOutViews(" << account_name << ", " << bin_name << ", " << TxOut::getRoleString(role_flags) << ", " << TxOut::getStatusString(txout_status_flags) << ", " << ", " << Tx::getStatusString(tx_status_flags) << ")" << std::endl;
 
@@ -899,10 +899,13 @@ std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, con
     query_t query(query_t::receiving_account::id != 0 || query_t::sending_account::id != 0);
     if (account_name != "@all")
     {
-        if (role_flags & TxOut::ROLE_SENDER)    query = (query && (query_t::sending_account::name == account_name));
-        if (role_flags & TxOut::ROLE_RECEIVER)  query = (query && (query_t::receiving_account::name == account_name));
+        query_t role_query(1 == 1);
+        if (role_flags & TxOut::ROLE_SENDER)    role_query = (role_query && (query_t::sending_account::name == account_name));
+        if (role_flags & TxOut::ROLE_RECEIVER)  role_query = (role_query || (query_t::receiving_account::name == account_name));
+        query = query && role_query;
     }
     if (bin_name != "@all")                     query = (query && query_t::AccountBin::name == bin_name);
+    if (hide_change)                            query = (query && (query_t::TxOut::account_bin.is_null() || query_t::AccountBin::name != CHANGE_BIN_NAME));
 
     std::vector<TxOut::status_t> txout_statuses = TxOut::getStatusFlags(txout_status_flags);
     query = (query && query_t::TxOut::status.in_range(txout_statuses.begin(), txout_statuses.end()));
@@ -918,8 +921,9 @@ std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, con
     odb::result<TxOutView> r(db_->query<TxOutView>(query));
     for (auto& view: r)
     {
-        view.updateRole(account_name);
-        views.push_back(view);
+        view.updateRole(role_flags);
+        std::vector<TxOutView> split_views = view.getSplitRoles(TxOut::ROLE_RECEIVER);
+        for (auto& split_view: split_views) { views.push_back(split_view); }
     }
     return views;
 }

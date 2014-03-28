@@ -378,11 +378,14 @@ cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
     ss << formattedTxOutViewHeader();
     for (auto& txOutView: txOutViews)
     {
+        ss << endl << formattedTxOutView(txOutView, RECEIVE, best_height);
+/*
         if (!txOutView.receiving_account_name.empty())
             ss << endl << formattedTxOutView(txOutView, RECEIVE, best_height);
 
         if (!txOutView.sending_account_name.empty())
             ss << endl << formattedTxOutView(txOutView, SEND, best_height);
+*/
     }
     return ss.str();
 }

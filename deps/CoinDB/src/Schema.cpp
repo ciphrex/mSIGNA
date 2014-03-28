@@ -519,8 +519,8 @@ std::vector<TxOut::status_t> TxOut::getStatusFlags(int flags)
 std::string TxOut::getRoleString(int flags)
 {
     std::vector<std::string> str_flags;
-    if (flags & ROLE_SENDER)        str_flags.push_back("SENDER");
-    if (flags & ROLE_RECEIVER)      str_flags.push_back("RECEIVER");
+    if (flags & ROLE_SENDER)        str_flags.push_back("SEND");
+    if (flags & ROLE_RECEIVER)      str_flags.push_back("RECEIVE");
     if (str_flags.empty())          return "NONE";
     return stdutils::delimited_list(str_flags, " | ");
 }

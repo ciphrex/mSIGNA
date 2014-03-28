@@ -181,7 +181,7 @@ inline std::string formattedTxOutView(const CoinDB::TxOutView& view, TxOutRecord
 {
     using namespace std;
     using namespace CoinDB;
-
+/*
     string account_name;
     string bin_name;
     string type_str;
@@ -196,7 +196,12 @@ inline std::string formattedTxOutView(const CoinDB::TxOutView& view, TxOutRecord
         bin_name     = view.account_bin_name;
         type_str     = "RECEIVE";
     }
+*/
 
+    string account_name = view.role_account();
+    string bin_name = view.role_bin();
+    string type_str = TxOut::getRoleString(view.role_flags);
+    
     bytes_t tx_hash = view.tx_status == Tx::UNSIGNED
         ? view.tx_unsigned_hash : view.tx_hash;
 
