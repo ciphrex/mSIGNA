@@ -31,7 +31,7 @@
 
 #include <stdexcept>
 
-uchar_vector random_bytes(int length)
+inline uchar_vector random_bytes(int length)
 {
     uchar_vector r(length);
     if (!RAND_bytes(&r[0], length)) { 
