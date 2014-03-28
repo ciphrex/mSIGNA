@@ -1498,12 +1498,14 @@ std::shared_ptr<BlockHeader> Vault::getBlockHeader(uint32_t height) const
 std::shared_ptr<BlockHeader> Vault::getBlockHeader_unwrapped(const bytes_t& hash) const
 {
     odb::result<BlockHeader> r(db_->query<BlockHeader>(odb::query<BlockHeader>::hash == hash));
-    return r.empty() ? nullptr : r.begin().load();
+    if (r.empty()) throw BlockHeaderNotFoundException(hash);
+    return r.begin().load();
 }
 
 std::shared_ptr<BlockHeader> Vault::getBlockHeader_unwrapped(uint32_t height) const
 {
     odb::result<BlockHeader> r(db_->query<BlockHeader>(odb::query<BlockHeader>::height == height));
+    if (r.empty()) throw BlockHeaderNotFoundException(height);
     return r.empty() ? nullptr : r.begin().load();
 }
 
@@ -1598,6 +1600,11 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
     odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::hash.in_range(hashes.begin(), hashes.end())));
     for (auto& tx: tx_r)
     {
+        if (tx.blockheader())
+        {
+            LOGGER(error) << "Vault::insertMerkleBlock_unwrapped - transaction appears in more than one block. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
+            throw MerkleBlockInvalidException(new_blockheader->hash(), new_blockheader->height());
+        } 
         LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - confirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
         tx.blockheader(new_blockheader);
         db_->update(tx);

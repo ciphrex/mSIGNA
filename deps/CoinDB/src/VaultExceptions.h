@@ -159,4 +159,46 @@ public:
     TxNotFoundException(const bytes_t& hash) : TxException("Transaction not found.", hash) { }
 };
 
+// BLOCK HEADER EXCEPTIONS
+class BlockHeaderException : public std::runtime_error
+{
+public:
+    const bytes_t& hash() const { return hash_; }
+    uint32_t height() const { return height_; }
+
+protected:
+    BlockHeaderException(const std::string& what, const bytes_t& hash, uint32_t height) : std::runtime_error(what), hash_(hash), height_(height) { }
+    BlockHeaderException(const std::string& what, const bytes_t& hash) : std::runtime_error(what), hash_(hash), height_(0) { }
+    BlockHeaderException(const std::string& what, uint32_t height) : std::runtime_error(what), height_(height) { }
+    bytes_t hash_;
+    uint32_t height_;
+};
+
+class BlockHeaderNotFoundException : public BlockHeaderException
+{
+public:
+    BlockHeaderNotFoundException(const bytes_t& hash, uint32_t height) : BlockHeaderException("Block header not found.", hash, height) { }
+    BlockHeaderNotFoundException(const bytes_t& hash) : BlockHeaderException("Block header not found.", hash) { }
+    BlockHeaderNotFoundException(uint32_t height) : BlockHeaderException("Block header not found.", height) { }
+};
+
+// MERKLE BLOCK EXCEPTIONS
+class MerkleBlockException : public std::runtime_error
+{
+public:
+    const bytes_t& hash() const { return hash_; }
+    uint32_t height() const { return height_; }
+
+protected:
+    MerkleBlockException(const std::string& what, const bytes_t& hash, uint32_t height) : std::runtime_error(what), hash_(hash), height_(height) { }
+    bytes_t hash_;
+    uint32_t height_;
+};
+
+class MerkleBlockInvalidException : public MerkleBlockException
+{
+public:
+    MerkleBlockInvalidException(const bytes_t& hash, uint32_t height) : MerkleBlockException("Merkle block is invalid.", hash, height) { }
+};
+
 }
