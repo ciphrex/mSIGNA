@@ -13,9 +13,12 @@
 
 #include "accountmodel.h"
 
+#include <CoinQ_script.h>
 #include <CoinQ_netsync.h>
 
 #include <random.h>
+
+#include <stdutils/stringutils.h>
 
 #include <QStandardItemModel>
 #include <QFile>

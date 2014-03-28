@@ -55,7 +55,7 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
             sendTxAction->setEnabled(networkSync && networkSync->isConnected() && typeItem->text() == "0");
         }
 
-        if (type == CoinDB::Tx::RECEIVED) {
+        if (type == CoinDB::Tx::PROPAGATED) {
             viewTxOnWebAction->setEnabled(true);
         }
         else {

@@ -81,7 +81,7 @@ void AccountHistoryDialog::updateCurrentTx(const QModelIndex& current, const QMo
             sendTxAction->setEnabled(false);
         }
 
-        if (type == CoinDB::Tx::RECEIVED) {
+        if (type == CoinDB::Tx::PROPAGATED) {
             viewTxOnWebAction->setEnabled(true);
         }
         else {

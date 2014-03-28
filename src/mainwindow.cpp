@@ -24,6 +24,9 @@
 // Random
 #include <random.h>
 
+// Coin scripts
+#include <CoinQ_script.h>
+
 // Network
 #include <CoinQ_netsync.h>
 
@@ -953,7 +956,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 networkSync.sendTx(coin_tx);
 
                 // TODO: Check transaction has propagated before changing status to RECEIVED
-                tx->updateStatus(CoinDB::Tx::RECEIVED);
+                tx->updateStatus(CoinDB::Tx::PROPAGATED);
                 accountModel->getVault()->insertTx(tx);
             }
             txModel->update();
