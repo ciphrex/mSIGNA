@@ -152,8 +152,6 @@ inline std::string formattedTxOut(const std::shared_ptr<CoinDB::TxOut>& txout)
     return ss.str();
 }
 
-enum TxOutRecordType { SEND, RECEIVE };
-
 inline std::string formattedTxOutViewHeader()
 {
     using namespace std;
@@ -177,31 +175,11 @@ inline std::string formattedTxOutViewHeader()
     return ss.str();
 }
 
-inline std::string formattedTxOutView(const CoinDB::TxOutView& view, TxOutRecordType type, unsigned int best_height)
+inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned int best_height)
 {
     using namespace std;
     using namespace CoinDB;
-/*
-    string account_name;
-    string bin_name;
-    string type_str;
-    if (type == SEND)
-    {
-        account_name = view.sending_account_name;
-        type_str     = "SEND";
-    }
-    else
-    {
-        account_name = view.receiving_account_name;
-        bin_name     = view.account_bin_name;
-        type_str     = "RECEIVE";
-    }
-*/
 
-    string account_name = view.role_account();
-    string bin_name = view.role_bin();
-    string type_str = TxOut::getRoleString(view.role_flags);
-    
     bytes_t tx_hash = view.tx_status == Tx::UNSIGNED
         ? view.tx_unsigned_hash : view.tx_hash;
 
@@ -210,9 +188,9 @@ inline std::string formattedTxOutView(const CoinDB::TxOutView& view, TxOutRecord
 
     stringstream ss;
     ss << " ";
-    ss << left  << setw(15) << account_name << " | "
-       << left  << setw(15) << bin_name << " | "
-       << left  << setw(10) << type_str << " | "
+    ss << left  << setw(15) << view.role_account() << " | "
+       << left  << setw(15) << view.role_bin() << " | "
+       << left  << setw(10) << TxOut::getRoleString(view.role_flags) << " | "
        << right << setw(15) << view.value << " | "
        << left  << setw(50) << uchar_vector(view.script).getHex() << " | "
        << left  << setw(36) << getAddressFromScript(view.script) << " | "

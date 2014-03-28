@@ -362,31 +362,22 @@ cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
-cli::result_t cmd_listtxouts(bool bHelp, const cli::params_t& params)
+cli::result_t cmd_history(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 1 || params.size() > 4)
-        return "listtxouts <db file> [account_name = @all] [bin_name = @all] - display list of transaction outputs.";
+        return "history <db file> [account name = @all] [bin name = @all] [hide change = true]- display transaction history.";
 
     std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
     std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
+    bool hide_change = params.size() > 3 ? params[3] == "true" : true;
     
     Vault vault(params[0], false);
     uint32_t best_height = vault.getBestHeight();
-    vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name);
-
+    vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name, TxOut::ROLE_BOTH, TxOut::BOTH, Tx::ALL, hide_change);
     stringstream ss;
     ss << formattedTxOutViewHeader();
     for (auto& txOutView: txOutViews)
-    {
-        ss << endl << formattedTxOutView(txOutView, RECEIVE, best_height);
-/*
-        if (!txOutView.receiving_account_name.empty())
-            ss << endl << formattedTxOutView(txOutView, RECEIVE, best_height);
-
-        if (!txOutView.sending_account_name.empty())
-            ss << endl << formattedTxOutView(txOutView, SEND, best_height);
-*/
-    }
+        ss << endl << formattedTxOutView(txOutView, best_height);
     return ss.str();
 }
 
@@ -691,7 +682,7 @@ int main(int argc, char* argv[])
     cmds.add("newaccountbin", &cmd_newaccountbin);
     cmds.add("issuescript", &cmd_issuescript);
     cmds.add("listscripts", &cmd_listscripts);
-    cmds.add("listtxouts", &cmd_listtxouts);
+    cmds.add("history", &cmd_history);
     cmds.add("refillaccountpool", &cmd_refillaccountpool);
 
     // Tx operations
