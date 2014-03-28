@@ -42,8 +42,8 @@ Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const
     pubkey_ = hdKeychain.pubkey();
     hash_ = hdKeychain.full_hash();
 
-    setPrivateKeyLockKey(lock_key, salt);
-    setChainCodeLockKey(lock_key, salt);
+    setPrivateKeyUnlockKey(lock_key, salt);
+    setChainCodeUnlockKey(lock_key, salt);
 }
 
 Keychain& Keychain::operator=(const Keychain& source)
@@ -112,7 +112,7 @@ std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private)
     }
 }
 
-void Keychain::setPrivateKeyLockKey(const secure_bytes_t& /*lock_key*/, const bytes_t& salt)
+bool Keychain::setPrivateKeyUnlockKey(const secure_bytes_t& /*lock_key*/, const bytes_t& salt)
 {
     if (!isPrivate()) throw std::runtime_error("Cannot lock the private key of a public keychain.");
     if (privkey_.empty()) throw std::runtime_error("Key is locked.");
@@ -120,15 +120,19 @@ void Keychain::setPrivateKeyLockKey(const secure_bytes_t& /*lock_key*/, const by
     // TODO: encrypt
     privkey_ciphertext_ = privkey_;
     privkey_salt_ = salt;
+
+    return true;
 }
 
-void Keychain::setChainCodeLockKey(const secure_bytes_t& /*lock_key*/, const bytes_t& salt)
+bool Keychain::setChainCodeUnlockKey(const secure_bytes_t& /*lock_key*/, const bytes_t& salt)
 {
     if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
 
     // TODO: encrypt
     chain_code_ciphertext_ = chain_code_;
     chain_code_salt_ = salt;
+
+    return true;
 }
 
 void Keychain::lockPrivateKey() const

@@ -104,11 +104,11 @@ public:
 class AccountChainCodeLockedException : public AccountException
 {
 public:
-    AccountChainCodeLockedException(const std::string& account_name, const std::set<std::string>& locked_keychains) : AccountException("Chain code is locked.", account_name), locked_keychains_(locked_keychains) { }
-    const std::set<std::string>& locked_keychains() const { return locked_keychains_; }
+    AccountChainCodeLockedException(const std::string& account_name, const std::string& keychain_name) : AccountException("Chain code is locked.", account_name), keychain_name_(keychain_name) { }
+    const std::string& keychain_name() const { return keychain_name_; }
 
 private:
-    std::set<std::string> locked_keychains_;
+    std::string keychain_name_;
 };
 
 // ACCOUNT BIN EXCEPTIONS
@@ -199,6 +199,39 @@ class MerkleBlockInvalidException : public MerkleBlockException
 {
 public:
     MerkleBlockInvalidException(const bytes_t& hash, uint32_t height) : MerkleBlockException("Merkle block is invalid.", hash, height) { }
+};
+
+// CHAIN CODE EXCEPTIONS
+class ChainCodeException : public std::runtime_error
+{
+protected:
+    ChainCodeException(const std::string& what) : std::runtime_error(what) { }
+};
+
+class ChainCodesAreLockedException : public ChainCodeException
+{
+public:
+    ChainCodesAreLockedException() : ChainCodeException("Chain codes are locked.") { }
+};
+
+class ChainCodeUnlockFailedForKeychainException : public ChainCodeException
+{
+public:
+    ChainCodeUnlockFailedForKeychainException(const std::string& keychain_name) : ChainCodeException("Chain code is locked for a keychain."), keychain_name_(keychain_name) { }
+    const std::string& keychain_name() const { return keychain_name_; }
+
+protected:
+    std::string keychain_name_;
+};
+
+class ChainCodeSetUnlockKeyFailedForKeychainException : public ChainCodeException
+{
+public:
+    ChainCodeSetUnlockKeyFailedForKeychainException(const std::string& keychain_name) : ChainCodeException("Failed to set unlock key for keychain chain code."), keychain_name_(keychain_name) { }
+    const std::string& keychain_name() const { return keychain_name_; }
+
+protected:
+    std::string keychain_name_;
 };
 
 }

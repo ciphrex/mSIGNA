@@ -185,8 +185,8 @@ inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned in
     bytes_t tx_hash = view.tx_status == Tx::UNSIGNED
         ? view.tx_unsigned_hash : view.tx_hash;
 
-    unsigned int confirmations = view.block_height == 0
-        ? 0 : best_height - view.block_height + 1;
+    unsigned int confirmations = view.height == 0
+        ? 0 : best_height - view.height + 1;
 
     stringstream ss;
     ss << " ";

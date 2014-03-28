@@ -43,6 +43,14 @@ public:
     std::vector<bytes_t>        getLocatorHashes() const;
     Coin::BloomFilter           getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
 
+    ///////////////////////////
+    // CHAIN CODE OPERATIONS //
+    ///////////////////////////
+    bool                        areChainCodesLocked() const;
+    void                        lockChainCodes() const;
+    void                        unlockChainCodes(const secure_bytes_t& unlockKey) const;
+    void                        setChainCodeUnlockKey(const secure_bytes_t& newUnlockKey);
+
     /////////////////////
     // FILE OPERATIONS //
     /////////////////////
@@ -64,10 +72,6 @@ public:
 
     // The following chain code and private key lock/unlock methods do not maintain a database session open so they only
     // store and erase the unlock keys in member maps to be used by the other class methods.
-    void lockAllKeychainChainCodes();
-    void lockKeychainChainCode(const std::string& keychain_name);
-    void unlockKeychainChainCode(const std::string& keychain_name, const secure_bytes_t& unlock_key);
-
     void lockAllKeychainPrivateKeys();
     void lockKeychainPrivateKey(const std::string& keychain_name);
     void unlockKeychainPrivateKey(const std::string& keychain_name, const secure_bytes_t& unlock_key);
@@ -109,13 +113,13 @@ public:
     //////////////////////
     // BLOCK OPERATIONS //
     //////////////////////
-    uint32_t getBestHeight() const;
-    std::shared_ptr<BlockHeader> getBlockHeader(const bytes_t& hash) const;
-    std::shared_ptr<BlockHeader> getBlockHeader(uint32_t height) const;
-    std::shared_ptr<BlockHeader> getBestBlockHeader() const;
-    std::shared_ptr<MerkleBlock> insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock);
-    unsigned int deleteMerkleBlock(const bytes_t& hash);
-    unsigned int deleteMerkleBlock(uint32_t height);
+    uint32_t                        getBestHeight() const;
+    std::shared_ptr<BlockHeader>    getBlockHeader(const bytes_t& hash) const;
+    std::shared_ptr<BlockHeader>    getBlockHeader(uint32_t height) const;
+    std::shared_ptr<BlockHeader>    getBestBlockHeader() const;
+    std::shared_ptr<MerkleBlock>    insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock);
+    unsigned int                    deleteMerkleBlock(const bytes_t& hash);
+    unsigned int                    deleteMerkleBlock(uint32_t height);
 
 protected:
     // Global operations
@@ -123,6 +127,11 @@ protected:
     uint32_t                        getHorizonHeight_unwrapped() const;
     std::vector<bytes_t>            getLocatorHashes_unwrapped() const;
     Coin::BloomFilter               getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
+
+    // Chain code operations
+    void                            verifyChainCodeUnlockKey_unwrapped(const secure_bytes_t& unlockKey) const;
+    void                            setChainCodeUnlockKey_unwrapped(const secure_bytes_t& newUnlockKey);
+    void                            trySetAccountChainCodeUnlockKey_unwrapped(std::shared_ptr<Account> account, const secure_bytes_t& unlockKey, const bytes_t& salt) const;
 
     // File operations
     void                            exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath) const;
@@ -143,7 +152,6 @@ protected:
     std::shared_ptr<Account>        getAccount_unwrapped(const std::string& account_name) const;
     void                            tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account) const;
     void                            refillAccountPool_unwrapped(std::shared_ptr<Account> account);
-    void                            trySetAccountChainCodesLockKey_unwrapped(std::shared_ptr<Account> account, const secure_bytes_t& new_lock_key, const bytes_t& salt) const;
 
     // AccountBin operations
     std::shared_ptr<AccountBin>     getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;
@@ -177,7 +185,7 @@ private:
     mutable boost::mutex mutex;
     std::shared_ptr<odb::core::database> db_;
 
-    mutable std::map<std::string, secure_bytes_t> mapChainCodeUnlock;
+    mutable secure_bytes_t chainCodeUnlockKey;
     mutable std::map<std::string, secure_bytes_t> mapPrivateKeyUnlock;
 };
 

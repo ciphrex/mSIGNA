@@ -212,8 +212,7 @@ cli::result_t cmd_newaccount(bool bHelp, const cli::params_t& params)
         keychain_names.push_back(params[i]);
 
     Vault vault(params[0], false);
-    for (auto& keychain_name: keychain_names)
-        vault.unlockKeychainChainCode(keychain_name, secure_bytes_t());
+    vault.unlockChainCodes(secure_bytes_t());
     vault.newAccount(params[1], minsigs, keychain_names);
 
     stringstream ss;
@@ -282,8 +281,7 @@ cli::result_t cmd_exportaccount(bool bHelp, const cli::params_t& params)
 
     Vault vault(params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
-    for (auto& keychain_name: accountInfo.keychain_names())
-        vault.unlockKeychainChainCode(keychain_name, secure_bytes_t());
+    vault.unlockChainCodes(secure_bytes_t());
 
     vault.exportAccount(params[1], output_file, secure_bytes_t(), bytes_t());
 
@@ -313,8 +311,7 @@ cli::result_t cmd_newaccountbin(bool bHelp, const cli::params_t& params)
 
     Vault vault(params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
-    for (auto& keychain_name: accountInfo.keychain_names())
-        vault.unlockKeychainChainCode(keychain_name, secure_bytes_t());
+    vault.unlockChainCodes(secure_bytes_t());
     vault.addAccountBin(params[1], params[2]);
 
     stringstream ss;
@@ -388,9 +385,7 @@ cli::result_t cmd_refillaccountpool(bool bHelp, const cli::params_t& params)
 
     Vault vault(params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
-    for (auto& keychain_name: accountInfo.keychain_names())
-        vault.unlockKeychainChainCode(keychain_name, secure_bytes_t());
-
+    vault.unlockChainCodes(secure_bytes_t());
     vault.refillAccountPool(params[1]);
 
     stringstream ss;
@@ -537,7 +532,7 @@ cli::result_t cmd_signtx(bool bHelp, const cli::params_t& params)
         return "signtx <db file> <tx hash> <keychain> <passphrase> - add signatures to transaction for specified keychain.";
 
     Vault vault(params[0], false);
-    vault.unlockKeychainChainCode(params[2], secure_bytes_t());
+    vault.unlockChainCodes(secure_bytes_t());
     vault.unlockKeychainPrivateKey(params[2], secure_bytes_t());
 
     stringstream ss;

@@ -99,8 +99,8 @@ public:
     bool isPrivate() const { return (!privkey_.empty()) || (!privkey_ciphertext_.empty()); }
 
     // Lock keys must be set before persisting
-    void setPrivateKeyLockKey(const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
-    void setChainCodeLockKey(const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
+    bool setPrivateKeyUnlockKey(const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
+    bool setChainCodeUnlockKey(const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
 
     void lockPrivateKey() const;
     void lockChainCode() const;
@@ -1145,6 +1145,9 @@ struct TxOutView
     #pragma db column(TxOut::receiving_label_)
     std::string receiving_label;
 
+    #pragma db column(Tx::id_)
+    unsigned long tx_id;
+
     #pragma db column(Tx::unsigned_hash_)
     bytes_t tx_unsigned_hash;
 
@@ -1160,8 +1163,14 @@ struct TxOutView
     #pragma db column(TxOut::txindex_)
     uint32_t tx_index;
 
+    #pragma db column(Tx::have_fee_)
+    bool have_fee;
+
+    #pragma db column(Tx::fee_)
+    uint64_t fee;
+
     #pragma db column(BlockHeader::height_)
-    uint32_t block_height;
+    uint32_t height;
 };
 
 #pragma db view \
