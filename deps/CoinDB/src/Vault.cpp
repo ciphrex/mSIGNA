@@ -1655,6 +1655,16 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
     return merkleblock;     
 }
 
+unsigned int Vault::deleteMerkleBlock(const bytes_t& hash)
+{
+    return 0;
+}
+
+unsigned int Vault::deleteMerkleBlock(uint32_t height)
+{
+    return 0;
+}
+
 unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)
 {
     unsigned int count = 0;
