@@ -1129,21 +1129,51 @@ inline bytes_t TxIn::raw() const
 class TxOut
 {
 public:
-    enum status_t { NEITHER = 0, UNSPENT = 1, SPENT = 2, BOTH = 3 };
+    enum status_t
+    {
+        NEITHER     =  0,
+        UNSPENT     =  1,
+        SPENT       =  1 << 1,
+        BOTH        = (1 << 2) - 1
+    };
     static std::string getStatusString(int flags)
     {
         std::vector<std::string> str_flags;
-        if (flags & UNSPENT) str_flags.push_back("UNSPENT");
-        if (flags & SPENT) str_flags.push_back("SPENT");
-        if (str_flags.empty()) return "NEITHER";
+        if (flags & UNSPENT)    str_flags.push_back("UNSPENT");
+        if (flags & SPENT)      str_flags.push_back("SPENT");
+        if (str_flags.empty())  return "NEITHER";
         return stdutils::delimited_list(str_flags, " | ");
     }
 
     static std::vector<status_t> getStatusFlags(int flags)
     {
         std::vector<status_t> vflags;
-        if (flags & UNSPENT) vflags.push_back(UNSPENT);
-        if (flags & SPENT) vflags.push_back(SPENT);
+        if (flags & UNSPENT)    vflags.push_back(UNSPENT);
+        if (flags & SPENT)      vflags.push_back(SPENT);
+        return vflags;
+    }
+
+    enum role_t
+    {
+        ROLE_NONE       =  0,
+        ROLE_SENDER     =  1,
+        ROLE_RECEIVER   =  1 << 1,
+        ROLE_BOTH       = (1 << 2) - 1
+    };
+    static std::string getRoleString(int flags)
+    {
+        std::vector<std::string> str_flags;
+        if (flags & ROLE_SENDER)        str_flags.push_back("SENDER");
+        if (flags & ROLE_RECEIVER)      str_flags.push_back("RECEIVER");
+        if (str_flags.empty())          return "NONE";
+        return stdutils::delimited_list(str_flags, " | ");
+    }
+
+    static std::vector<role_t> getRoleFlags(int flags)
+    {
+        std::vector<role_t> vflags;
+        if (flags & ROLE_SENDER)        vflags.push_back(ROLE_SENDER);
+        if (flags & ROLE_RECEIVER)      vflags.push_back(ROLE_RECEIVER);
         return vflags;
     }
 
@@ -1701,6 +1731,17 @@ struct ScriptCountView
     object(SigningScript: TxOut::signingscript_)
 struct TxOutView
 {
+    TxOutView() : role_flags(TxOut::ROLE_NONE) { }
+
+    // must be called when queried - TODO: better style
+    void updateRole(const std::string& account_name)
+    {
+        role_flags = TxOut::ROLE_NONE;
+        if (account_name.empty()) return;
+        if (account_name == sending_account_name)   { role_flags |= TxOut::ROLE_SENDER;   }
+        if (account_name == receiving_account_name) { role_flags |= TxOut::ROLE_RECEIVER; }
+    }
+
     #pragma db column(sending_account::id_)
     unsigned long sending_account_id;
 
@@ -1739,6 +1780,15 @@ struct TxOutView
 
     #pragma db column(TxOut::status_)
     TxOut::status_t status;
+
+    #pragma db transient
+    int role_flags;
+
+    #pragma db column(TxOut::sending_label_)
+    std::string sending_label;
+
+    #pragma db column(TxOut::receiving_label_)
+    std::string receiving_label;
 
     #pragma db column(Tx::unsigned_hash_)
     bytes_t tx_unsigned_hash;

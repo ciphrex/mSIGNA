@@ -36,31 +36,31 @@ public:
     ///////////////////////
     // GLOBAL OPERATIONS //
     ///////////////////////
-     uint32_t MIN_HORIZON_TIMESTAMP_OFFSET = 6 * 60 * 60; // a good six hours initial reorganization tolerance period.
-    void updateHorizonStatus();
-    uint32_t getHorizonTimestamp() const; // nothing that happened before this should matter to us.
-    uint32_t getHorizonHeight() const;
-    std::vector<bytes_t> getLocatorHashes() const;
-    Coin::BloomFilter getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
+    uint32_t                    MIN_HORIZON_TIMESTAMP_OFFSET = 6 * 60 * 60; // a good six hours initial reorganization tolerance period.
+    void                        updateHorizonStatus();
+    uint32_t                    getHorizonTimestamp() const; // nothing that happened before this should matter to us.
+    uint32_t                    getHorizonHeight() const;
+    std::vector<bytes_t>        getLocatorHashes() const;
+    Coin::BloomFilter           getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
 
     /////////////////////
     // FILE OPERATIONS //
     /////////////////////
-    void exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
-    std::shared_ptr<Keychain> importKeychain(const std::string& filepath, bool& importprivkeys);
-    void exportAccount(const std::string& account_name, const std::string& filepath, const secure_bytes_t& chain_code_key = secure_bytes_t(), const bytes_t& salt = bytes_t(), bool exportprivkeys = false) const;
-    std::shared_ptr<Account> importAccount(const std::string& filepath, const secure_bytes_t& chain_code_key, unsigned int& privkeysimported); // pass privkeysimported = 0 to not inport any private keys.
+    void                        exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
+    std::shared_ptr<Keychain>   importKeychain(const std::string& filepath, bool& importprivkeys);
+    void                        exportAccount(const std::string& account_name, const std::string& filepath, const secure_bytes_t& chain_code_key = secure_bytes_t(), const bytes_t& salt = bytes_t(), bool exportprivkeys = false) const;
+    std::shared_ptr<Account>    importAccount(const std::string& filepath, const secure_bytes_t& chain_code_key, unsigned int& privkeysimported); // pass privkeysimported = 0 to not inport any private keys.
 
     /////////////////////////
     // KEYCHAIN OPERATIONS //
     /////////////////////////
-    bool keychainExists(const std::string& keychain_name) const;
-    bool keychainExists(const bytes_t& keychain_hash) const;
-    std::shared_ptr<Keychain> newKeychain(const std::string& keychain_name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
+    bool                                    keychainExists(const std::string& keychain_name) const;
+    bool                                    keychainExists(const bytes_t& keychain_hash) const;
+    std::shared_ptr<Keychain>               newKeychain(const std::string& keychain_name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
     //void eraseKeychain(const std::string& keychain_name) const;
-    void renameKeychain(const std::string& old_name, const std::string& new_name);
-    std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
-    std::vector<std::shared_ptr<Keychain>> getAllKeychains(bool root_only = false) const;
+    void                                    renameKeychain(const std::string& old_name, const std::string& new_name);
+    std::shared_ptr<Keychain>               getKeychain(const std::string& keychain_name) const;
+    std::vector<std::shared_ptr<Keychain>>  getAllKeychains(bool root_only = false) const;
 
     // The following chain code and private key lock/unlock methods do not maintain a database session open so they only
     // store and erase the unlock keys in member maps to be used by the other class methods.
@@ -75,24 +75,21 @@ public:
     ////////////////////////
     // ACCOUNT OPERATIONS //
     ////////////////////////
-    bool accountExists(const std::string& account_name) const;
-    void newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL));
-    //void eraseAccount(const std::string& name) const;
-    void renameAccount(const std::string& old_name, const std::string& new_name);
-    std::shared_ptr<Account> getAccount(const std::string& account_name) const;
-    AccountInfo getAccountInfo(const std::string& account_name) const;
-    std::vector<AccountInfo> getAllAccountInfo() const;
-
-    uint64_t getAccountBalance(const std::string& account_name, unsigned int min_confirmations = 1, int tx_flags = Tx::ALL) const;
-
-    std::shared_ptr<AccountBin> addAccountBin(const std::string& account_name, const std::string& bin_name);
-    std::shared_ptr<SigningScript> issueSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "");
-
-    void refillAccountPool(const std::string& account_name);
+    bool                                    accountExists(const std::string& account_name) const;
+    void                                    newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL));
+    //void                                  eraseAccount(const std::string& name) const;
+    void                                    renameAccount(const std::string& old_name, const std::string& new_name);
+    std::shared_ptr<Account>                getAccount(const std::string& account_name) const;
+    AccountInfo                             getAccountInfo(const std::string& account_name) const;
+    std::vector<AccountInfo>                getAllAccountInfo() const;
+    uint64_t                                getAccountBalance(const std::string& account_name, unsigned int min_confirmations = 1, int tx_flags = Tx::ALL) const;
+    std::shared_ptr<AccountBin>             addAccountBin(const std::string& account_name, const std::string& bin_name);
+    std::shared_ptr<SigningScript>          issueSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "");
+    void                                    refillAccountPool(const std::string& account_name);
 
     // empty account_name or bin_name means do not filter on those fields
-    std::vector<SigningScriptView> getSigningScriptViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int flags = SigningScript::ALL) const;
-    std::vector<TxOutView> getTxOutViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int txout_status_flags = TxOut::BOTH, int tx_status_flags = Tx::ALL) const;
+    std::vector<SigningScriptView>          getSigningScriptViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int flags = SigningScript::ALL) const;
+    std::vector<TxOutView>                  getTxOutViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int role_flags = TxOut::ROLE_BOTH, int txout_status_flags = TxOut::BOTH, int tx_status_flags = Tx::ALL) const;
 
     ////////////////////////////
     // ACCOUNT BIN OPERATIONS //

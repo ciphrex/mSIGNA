@@ -889,13 +889,17 @@ std::vector<SigningScriptView> Vault::getSigningScriptViews(const std::string& a
     return views;
 }
 
-std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, const std::string& bin_name, int txout_status_flags, int tx_status_flags) const
+std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, const std::string& bin_name, int role_flags, int txout_status_flags, int tx_status_flags) const
 {
-    LOGGER(trace) << "Vault::getTxOutViews(" << account_name << ", " << bin_name << ", " << TxOut::getStatusString(txout_status_flags) << ", " << ", " << Tx::getStatusString(tx_status_flags) << ")" << std::endl;
+    LOGGER(trace) << "Vault::getTxOutViews(" << account_name << ", " << bin_name << ", " << TxOut::getRoleString(role_flags) << ", " << TxOut::getStatusString(txout_status_flags) << ", " << ", " << Tx::getStatusString(tx_status_flags) << ")" << std::endl;
 
     typedef odb::query<TxOutView> query_t;
     query_t query(query_t::receiving_account::id != 0 || query_t::sending_account::id != 0);
-    if (account_name != "@all")                 query = (query && (query_t::sending_account::name == account_name || query_t::receiving_account::name == account_name));
+    if (account_name != "@all")
+    {
+        if (role_flags & TxOut::ROLE_SENDER)    query = (query && (query_t::sending_account::name == account_name));
+        if (role_flags & TxOut::ROLE_RECEIVER)  query = (query && (query_t::receiving_account::name == account_name));
+    }
     if (bin_name != "@all")                     query = (query && query_t::AccountBin::name == bin_name);
 
     std::vector<TxOut::status_t> txout_statuses = TxOut::getStatusFlags(txout_status_flags);
@@ -910,7 +914,11 @@ std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, con
     odb::core::transaction t(db_->begin());
     std::vector<TxOutView> views;
     odb::result<TxOutView> r(db_->query<TxOutView>(query));
-    for (auto& view: r) { views.push_back(view); }
+    for (auto& view: r)
+    {
+        view.updateRole(account_name);
+        views.push_back(view);
+    }
     return views;
 }
 
