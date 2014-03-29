@@ -406,7 +406,7 @@ void Vault::persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain)
     db_->persist(keychain);
 }
 
-secure_bytes_t Vault::getKeychainExtendedKey(const std::string& keychain_name, bool& get_private) const
+secure_bytes_t Vault::getKeychainExtendedKey(const std::string& keychain_name, bool get_private) const
 {
     LOGGER(debug) << "Vault::getKeychainExtendedKey(" << keychain_name << ", " << (get_private ? "true" : "false") << ")" << std::endl;
 
@@ -414,18 +414,14 @@ secure_bytes_t Vault::getKeychainExtendedKey(const std::string& keychain_name, b
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
     get_private = get_private && keychain->isPrivate();
-    if (get_private) tryUnlockKeychainPrivateKey_unwrapped(keychain);
     unlockKeychainChainCode_unwrapped(keychain);
-
-    if (!keychain->unlockChainCode(chainCodeUnlockKey))
-        throw KeychainChainCodeLockedException(keychain->name());
+    if (get_private) unlockKeychainPrivateKey_unwrapped(keychain); 
     return getKeychainExtendedKey_unwrapped(keychain, get_private);
 }
 
-secure_bytes_t Vault::getKeychainExtendedKey_unwrapped(std::shared_ptr<Keychain> keychain, bool& get_private) const
+secure_bytes_t Vault::getKeychainExtendedKey_unwrapped(std::shared_ptr<Keychain> keychain, bool get_private) const
 {
-    
-    return secure_bytes_t();
+    return keychain->extkey(get_private);
 }
 
 void Vault::unlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account, const secure_bytes_t& overrideChainCodeUnlockKey) const
