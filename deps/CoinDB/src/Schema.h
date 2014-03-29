@@ -14,6 +14,7 @@
 #include <CoinNodeData.h>
 
 #include <CoinQ_typedefs.h>
+#include <CoinQ_blocks.h>
 
 #include <odb/core.hxx>
 #include <odb/nullable.hxx>
@@ -600,7 +601,7 @@ public:
     MerkleBlock(const std::shared_ptr<BlockHeader>& blockheader, uint32_t txcount, const std::vector<bytes_t>& hashes, const bytes_t& flags)
         : blockheader_(blockheader), txcount_(txcount), hashes_(hashes), flags_(flags) { }
 
-    MerkleBlock(const Coin::MerkleBlock& merkleblock, uint32_t height = 0xffffffff) { fromCoinClasses(merkleblock, height); }
+    MerkleBlock(const ChainMerkleBlock& merkleblock) { fromCoinClasses(merkleblock, merkleblock.height); }
 
     void fromCoinClasses(const Coin::MerkleBlock& merkleblock, uint32_t height = 0xffffffff);
     Coin::MerkleBlock toCoinClasses() const;
@@ -1200,6 +1201,14 @@ struct HorizonHeightView
 {
     #pragma db column("min(" + BlockHeader::height_ + ")")
     uint32_t height;
+};
+
+#pragma db view \
+    object(BlockHeader)
+struct BlockCountView
+{
+    #pragma db column("count(" + BlockHeader::id_ + ")")
+    unsigned long count;
 };
 
 #pragma db view \

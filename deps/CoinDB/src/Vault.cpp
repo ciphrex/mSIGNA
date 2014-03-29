@@ -1573,15 +1573,17 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
     auto& new_blockheader = merkleblock->blockheader();
     std::string new_blockheader_hash = uchar_vector(new_blockheader->hash()).getHex();
 
-    uint32_t maxFirstBlockTimestamp = getMaxFirstBlockTimestamp_unwrapped();
-    if (maxFirstBlockTimestamp == 0)
+    odb::result<BlockCountView> blockcount_r(db_->query<BlockCountView>(odb::query<BlockCountView>()));
+    unsigned long blockcount = blockcount_r.empty() ? 0 : blockcount_r.begin()->count;
+    if (blockcount == 0)
     {
-        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - account must exist before inserting blocks." << std::endl;
-        return nullptr;
-    }
+        uint32_t maxFirstBlockTimestamp = getMaxFirstBlockTimestamp_unwrapped();
+        if (maxFirstBlockTimestamp == 0)
+        {
+            LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - account must exist before inserting blocks." << std::endl;
+            return nullptr;
+        }
 
-    if (!getHorizonHeight_unwrapped())
-    {
         if (new_blockheader->timestamp() > maxFirstBlockTimestamp)
         {
             LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - block timestamp is not early enough for accounts in database. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
