@@ -65,8 +65,16 @@ boost::mutex repaintMutex;
 using namespace CoinQ::Script;
 using namespace std;
 
-MainWindow::MainWindow()
-    : licenseAccepted(false), networkSync(getCoinParams()), syncHeight(0), bestHeight(0), connected(false), doneHeaderSync(false), networkState(NETWORK_STATE_NOT_CONNECTED)
+MainWindow::MainWindow() :
+    licenseAccepted(false),
+    networkSync(getCoinParams()),
+    syncHeight(0),
+    bestHeight(0),
+    connected(false),
+    doneHeaderSync(false),
+    networkState(NETWORK_STATE_NOT_CONNECTED),
+    accountModel(nullptr),
+    keychainModel(nullptr)
 {
     loadSettings();
 
@@ -258,6 +266,7 @@ void MainWindow::updateVaultStatus(const QString& name)
 
     // keychain actions
     newKeychainAction->setEnabled(isOpen);
+    lockAllKeychainsAction->setEnabled(keychainModel && keychainModel->rowCount());
     importKeychainAction->setEnabled(isOpen);
 
     // account actions
@@ -414,6 +423,18 @@ void MainWindow::newKeychain()
     }    
 }
 
+void MainWindow::unlockKeychain()
+{
+}
+
+void MainWindow::lockKeychain()
+{
+}
+
+void MainWindow::lockAllKeychains()
+{
+}
+
 void MainWindow::importKeychain(QString fileName)
 {
     if (fileName.isEmpty()) {
@@ -470,10 +491,17 @@ void MainWindow::exportKeychain(bool exportPrivate)
     }
 
     QStandardItem* typeItem = keychainModel->item(row, 1);
-    bool isPrivate = typeItem->data(Qt::UserRole).toBool();
+    int lockFlags = typeItem->data(Qt::UserRole).toInt();
+    bool isPrivate = lockFlags & (1 << 1);
+    bool isLocked = lockFlags & 1;
 
     if (exportPrivate && !isPrivate) {
         showError(tr("Cannot export private keys for public keychain."));
+        return;
+    }
+
+    if (exportPrivate && isLocked) {
+        showError(tr("Cannot export private keys for locked keychain."));
         return;
     }
 
@@ -548,8 +576,12 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
     }
     else {
         QStandardItem* typeItem = keychainModel->item(row, 1);
-        bool isPrivate = typeItem->data(Qt::UserRole).toBool();
+        int lockFlags = typeItem->data(Qt::UserRole).toInt();
+        bool isPrivate = lockFlags & (1 << 1);
+        bool isLocked = lockFlags & 1;
 
+        unlockKeychainAction->setEnabled(isPrivate && isLocked);
+        lockKeychainAction->setEnabled(isPrivate && !isLocked);
         exportPrivateKeychainAction->setEnabled(isPrivate);
         exportPublicKeychainAction->setEnabled(true);
         backupKeychainAction->setEnabled(true);
@@ -1362,6 +1394,21 @@ void MainWindow::createActions()
     newKeychainAction->setEnabled(false);
     connect(newKeychainAction, SIGNAL(triggered()), this, SLOT(newKeychain()));
 
+    unlockKeychainAction = new QAction(tr("Unlock keychain..."), this);
+    unlockKeychainAction->setStatusTip(tr("Unlock keychain"));
+    unlockKeychainAction->setEnabled(false);
+    connect(unlockKeychainAction, SIGNAL(triggered()), this, SLOT(unlockKeychain()));
+
+    lockKeychainAction = new QAction(tr("Lock keychain"), this);
+    lockKeychainAction->setStatusTip(tr("Lock keychain"));
+    lockKeychainAction->setEnabled(false);
+    connect(lockKeychainAction, SIGNAL(triggered()), this, SLOT(lockKeychain()));
+
+    lockAllKeychainsAction = new QAction(tr("Lock all keychains"), this);
+    lockAllKeychainsAction->setStatusTip(tr("Lock all keychains"));
+    lockAllKeychainsAction->setEnabled(false);
+    connect(lockAllKeychainsAction, SIGNAL(triggered()), this, SLOT(lockAllKeychains()));
+
     importPrivateAction = new QAction(tr("Private Imports"), this);
     importPrivateAction->setCheckable(true);
     importPrivateAction->setStatusTip(tr("Import private keys if available"));
@@ -1591,6 +1638,10 @@ void MainWindow::createMenus()
     keychainMenu->addSeparator();
     keychainMenu->addAction(newKeychainAction);
     keychainMenu->addAction(newAccountAction);
+    keychainMenu->addSeparator();
+    keychainMenu->addAction(unlockKeychainAction);
+    keychainMenu->addAction(lockKeychainAction);
+    keychainMenu->addAction(lockAllKeychainsAction);
     keychainMenu->addSeparator()->setText(tr("Import Mode"));
     keychainMenu->addAction(importPrivateAction);
     keychainMenu->addAction(importPublicAction);

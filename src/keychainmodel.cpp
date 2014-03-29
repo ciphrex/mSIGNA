@@ -43,7 +43,7 @@ void KeychainModel::update()
 
         QStandardItem* typeItem = new QStandardItem(
             keychain.is_private  ? tr("Private") : tr("Public"));
-        typeItem->setData(keychain.is_private && !keychain.is_locked, Qt::UserRole);
+        typeItem->setData(((int)keychain.is_private << 1) | (int)keychain.is_locked, Qt::UserRole);
         row.append(typeItem);
 
         QStandardItem* lockedItem = new QStandardItem(
