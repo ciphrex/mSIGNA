@@ -807,6 +807,8 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
 
 void Vault::renameAccount(const std::string& old_name, const std::string& new_name)
 {
+    LOGGER(trace) << "Vault::renameAccount(" << old_name << ", " << new_name << ")" << std::endl;
+
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session session;
     odb::core::transaction t(db_->begin());
