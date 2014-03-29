@@ -223,8 +223,10 @@ void Vault::setChainCodeUnlockKey_unwrapped(const secure_bytes_t& newUnlockKey)
     odb::result<Keychain> r(db_->query<Keychain>());
     for (auto& keychain: r)
     {
-        if (!keychain.setChainCodeUnlockKey(newUnlockKey))
-            throw ChainCodeSetUnlockKeyFailedForKeychainException(keychain.name());
+        if (!keychain.unlockChainCode(chainCodeUnlockKey))
+            throw KeychainChainCodeUnlockFailedException(keychain.name());
+
+        keychain.setChainCodeUnlockKey(newUnlockKey);
     }
 }
 
@@ -675,7 +677,6 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
 
             if (importChainCodeUnlockKey.empty())
             {
-                // Make sure we can decrypt the chain code using our own unlock key.
                 unlockKeychainChainCode_unwrapped(keychain);
             }
             else
@@ -701,9 +702,10 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
         }
         else
         {
-            // We already have this keychain. Just import the private key if possible and continue using the one we already have.
+            // We already have this keychain. Just import the private key if possible and use the one we already have.
 
             std::shared_ptr<Keychain> stored_keychain(r.begin().load());
+            unlockKeychainChainCode_unwrapped(stored_keychain);
             if (keychain->isPrivate() && !stored_keychain->isPrivate())
             {
                 stored_keychain->importPrivateKey(*keychain);
