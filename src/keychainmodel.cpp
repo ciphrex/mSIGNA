@@ -74,6 +74,36 @@ void KeychainModel::importKeychain(const QString& /*keychainName*/, const QStrin
     update();
 }
 
+void KeychainModel::unlockKeychain(const QString& keychainName, const secure_bytes_t& unlockKey)
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    vault->unlockKeychain(keychainName.toStdString(), unlockKey);
+    update();
+}
+
+void KeychainModel::lockKeychain(const QString& keychainName)
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    vault->lockKeychain(keychainName.toStdString());
+    update();
+}
+
+void KeychainModel::lockAllKeychains()
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    vault->lockAllKeychains();
+    update();
+}
+
 bool KeychainModel::exists(const QString& keychainName) const
 {
     QList<QStandardItem*> items = findItems(keychainName, Qt::MatchExactly, 0);

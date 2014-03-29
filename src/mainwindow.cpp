@@ -425,14 +425,38 @@ void MainWindow::newKeychain()
 
 void MainWindow::unlockKeychain()
 {
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0) {
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+
+    // TODO: Prompt user for unlock key
+    keychainModel->unlockKeychain(name, secure_bytes_t());
 }
 
 void MainWindow::lockKeychain()
 {
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0) {
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+
+    keychainModel->lockKeychain(name);
 }
 
 void MainWindow::lockAllKeychains()
 {
+    keychainModel->lockAllKeychains();
 }
 
 void MainWindow::importKeychain(QString fileName)

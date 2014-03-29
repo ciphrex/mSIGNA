@@ -289,7 +289,16 @@ secure_bytes_t Keychain::extkey(bool get_private) const
     if (get_private && privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
     if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
 
-    secure_bytes_t key = get_private ? privkey_ : pubkey_;
+    secure_bytes_t key;
+    if (get_private)
+    {
+        key = (privkey_.size() > 32) ? secure_bytes_t(privkey_.begin() + 1, privkey_.end()) : privkey_;
+    }
+    else
+    {
+        key = pubkey_;
+    }
+    // Remove initial zero from privkey if necessary
     return Coin::HDKeychain(key, chain_code_, child_num_, parent_fp_, depth_).extkey();
 }
 
