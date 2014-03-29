@@ -21,6 +21,8 @@
 
 #include <logger.h>
 
+//#define ENABLE_CRYPTO
+
 using namespace CoinDB;
 
 /*
@@ -124,6 +126,7 @@ bool Keychain::setPrivateKeyUnlockKey(const secure_bytes_t& lock_key, const byte
     if (!isPrivate()) throw std::runtime_error("Cannot lock the private key of a public keychain.");
     if (privkey_.empty()) throw std::runtime_error("Key is locked.");
 
+#ifdef ENABLE_CRYPTO
     if (lock_key.empty())
     {
         privkey_ciphertext_ = privkey_;
@@ -136,6 +139,10 @@ bool Keychain::setPrivateKeyUnlockKey(const secure_bytes_t& lock_key, const byte
         privkey_salt_.clear();
         privkey_salt_.push_back(1);
     }
+#else
+    privkey_ciphertext_ = privkey_;
+    privkey_salt_.clear();
+#endif
 
     return true;
 }
@@ -144,6 +151,7 @@ bool Keychain::setChainCodeUnlockKey(const secure_bytes_t& lock_key, const bytes
 {
     if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
 
+#ifdef ENABLE_CRYPTO
     if (lock_key.empty())
     {
         chain_code_ciphertext_ = chain_code_;
@@ -156,6 +164,10 @@ bool Keychain::setChainCodeUnlockKey(const secure_bytes_t& lock_key, const bytes
         chain_code_salt_.clear();
         chain_code_salt_.push_back(1);
     }
+#else
+    chain_code_ciphertext_ = chain_code_;
+    chain_code_salt_.clear();
+#endif
 
     return true;
 }
@@ -192,6 +204,7 @@ bool Keychain::unlockPrivateKey(const secure_bytes_t& lock_key) const
     if (!isPrivate()) throw std::runtime_error("Missing private key.");
     if (!privkey_.empty()) return true; // Already unlocked
 
+#ifdef ENABLE_CRYPTO
     if (privkey_salt_.empty())
     {
         privkey_ = privkey_ciphertext_;
@@ -201,13 +214,18 @@ bool Keychain::unlockPrivateKey(const secure_bytes_t& lock_key) const
         // TODO: add real salt, better crypto function
         privkey_ = aes_decrypt(lock_key, privkey_ciphertext_, 0);
     }
-     return true;
+#else
+    privkey_ = privkey_ciphertext_;
+#endif
+
+    return true;
 }
 
 bool Keychain::unlockChainCode(const secure_bytes_t& lock_key) const
 {
     if (!chain_code_.empty()) return true; // Already unlocked
 
+#ifdef ENABLE_CRYPTO
     if (chain_code_salt_.empty())
     {
         chain_code_ = chain_code_ciphertext_;
@@ -217,6 +235,10 @@ bool Keychain::unlockChainCode(const secure_bytes_t& lock_key) const
         // TODO: add real salt, better crypto function
         chain_code_ = aes_decrypt(lock_key, chain_code_ciphertext_, 0);
     }
+#else
+    chain_code_ = chain_code_ciphertext_;
+#endif
+
     return true;
 }
 

@@ -283,14 +283,14 @@ cli::result_t cmd_exportaccount(bool bHelp, const cli::params_t& params)
     Vault vault(params[0], false);
 
     secure_bytes_t exportChainCodeUnlockKey;
-    if (params.size() > 2)
+    if (params.size() > 2 && !params[2].empty())
         exportChainCodeUnlockKey = sha256_2(params[2]);
 
-    if (params.size() > 3)
-        vault.unlockChainCodes(sha256_2(params[4]));
+    if (params.size() > 3 && !params[3].empty())
+        vault.unlockChainCodes(sha256_2(params[3]));
 
     std::string output_file = params.size() > 4 ? params[4] : (params[1] + ".account");
-    vault.exportAccount(params[1], output_file);
+    vault.exportAccount(params[1], output_file, true, exportChainCodeUnlockKey);
 
     stringstream ss;
     ss << "Account " << params[1] << " exported to " << output_file << ".";
@@ -307,10 +307,10 @@ cli::result_t cmd_importaccount(bool bHelp, const cli::params_t& params)
     unsigned int privkeycount = 1;
 
     secure_bytes_t chainCodeUnlockKey;
-    if (params.size() > 2)
+    if (params.size() > 2 && !params[2].empty())
         chainCodeUnlockKey = sha256_2(params[2]);
 
-    if (params.size() > 3)
+    if (params.size() > 3 && !params[3].empty())
         vault.unlockChainCodes(sha256_2(params[3]));
 
     std::shared_ptr<Account> account = vault.importAccount(params[1], privkeycount, chainCodeUnlockKey);
