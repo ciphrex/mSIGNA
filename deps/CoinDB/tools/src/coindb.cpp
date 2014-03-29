@@ -24,6 +24,8 @@
 
 #include <iostream>
 #include <sstream>
+#include <ctime>
+#include <functional>
 
 using namespace std;
 using namespace odb::core;
@@ -574,6 +576,25 @@ cli::result_t cmd_horizonheight(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_horizontimestamp(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 1 || params.size() > 2)
+        return "horizontimestamp <db file> [use gmt = false] - display timestamp minimum for first stored block.";
+
+    bool use_gmt = params.size() > 1 && params[1] == "true";
+
+    Vault vault(params[0], false);
+    long timestamp = vault.getHorizonTimestamp();
+
+    std::function<struct tm*(const time_t*)> fConvert = use_gmt ? &gmtime : &localtime;
+    string formatted_timestamp = asctime(fConvert(&timestamp));
+    formatted_timestamp = formatted_timestamp.substr(0, formatted_timestamp.size() - 1);
+
+    stringstream ss;
+    ss << timestamp << " (" + formatted_timestamp + ")";
+    return ss.str();
+}
+
 cli::result_t cmd_blockinfo(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
@@ -718,6 +739,7 @@ int main(int argc, char* argv[])
     // Blockchain operations
     cmds.add("bestheight", &cmd_bestheight);
     cmds.add("horizonheight", &cmd_horizonheight);
+    cmds.add("horizontimestamp", &cmd_horizontimestamp);
     cmds.add("blockinfo", &cmd_blockinfo);    
     cmds.add("rawblockheader", &cmd_rawblockheader);
     cmds.add("rawmerkleblock", &cmd_rawmerkleblock);

@@ -1605,14 +1605,11 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
     // Make sure we have correct height
     new_blockheader->height(blockheader_r.begin().load()->height() + 1);
 
-    // Make sure this block is unique at this height
-    blockheader_r = db_->query<BlockHeader>((query_t::height >= new_blockheader->height()) + "ORDER BY" + query_t::height + "DESC");
-    if (!blockheader_r.empty())
+    // Make sure this block is unique at this height. All higher blocks are also deleted.
+    unsigned int reorg_depth = deleteMerkleBlock_unwrapped(new_blockheader->height());
+    if (reorg_depth > 0)
     {
-        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - reorganizing blockchain. height: " << new_blockheader->height() << std::endl;
-
-        // Reorg - delete all blocks of equal or greater height
-        deleteMerkleBlock_unwrapped(new_blockheader->height());
+        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - reorganization. " << reorg_depth << " blocks removed from chain." << std::endl;
     }
 
     // Persist merkle block
