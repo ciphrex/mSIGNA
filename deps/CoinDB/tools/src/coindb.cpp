@@ -285,7 +285,7 @@ cli::result_t cmd_exportaccount(bool bHelp, const cli::params_t& params)
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
     vault.unlockChainCodes(secure_bytes_t());
 
-    vault.exportAccount(params[1], output_file, secure_bytes_t(), bytes_t());
+    vault.exportAccount(params[1], output_file);
 
     stringstream ss;
     ss << "Account " << params[1] << " exported to " << output_file << ".";
@@ -299,7 +299,7 @@ cli::result_t cmd_importaccount(bool bHelp, const cli::params_t& params)
 
     unsigned int privkeycount = 1;
     Vault vault(params[0], false);
-    std::shared_ptr<Account> account = vault.importAccount(params[1], secure_bytes_t(), privkeycount);
+    std::shared_ptr<Account> account = vault.importAccount(params[1], privkeycount);
 
     stringstream ss;
     ss << "Account " << account->name() << " imported from " << params[1] << ".";

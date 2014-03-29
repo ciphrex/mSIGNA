@@ -44,10 +44,22 @@ public:
     KeychainChainCodeLockedException(const std::string& keychain_name) : KeychainException("Keychain chain code is locked.", keychain_name) { }
 };
 
+class KeychainChainCodeUnlockFailedException: public KeychainException
+{
+public:
+    KeychainChainCodeUnlockFailedException(const std::string& keychain_name) : KeychainException("Keychain chain code could not be unlocked.", keychain_name) { }
+};
+
 class KeychainPrivateKeyLockedException: public KeychainException
 {
 public:
     KeychainPrivateKeyLockedException(const std::string& keychain_name) : KeychainException("Keychain private keys are locked.", keychain_name) { }
+};
+
+class KeychainPrivateKeyUnlockFailedException: public KeychainException
+{
+public:
+    KeychainPrivateKeyUnlockFailedException(const std::string& keychain_name) : KeychainException("Keychain private keys could not be unlocked.", keychain_name) { }
 };
 
 class KeychainIsNotPrivateException: public KeychainException
