@@ -44,6 +44,15 @@ void RequestPaymentDialog::setAccounts(const QStringList& accountNames)
 void RequestPaymentDialog::setCurrentAccount(const QString &accountName)
 {
     ui->accountComboBox->setCurrentText(accountName);
+    clearInvoice();
+}
+
+void RequestPaymentDialog::clearInvoice()
+{
+        ui->invoiceDetailsLabelLineEdit->clear();
+        ui->invoiceDetailsAddressLineEdit->clear();
+        ui->invoiceDetailsScriptLineEdit->clear();
+        ui->invoiceDetailsUrlLineEdit->clear();
 }
 
 void RequestPaymentDialog::on_newInvoiceButton_clicked()
