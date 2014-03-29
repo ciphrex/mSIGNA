@@ -313,6 +313,9 @@ void MainWindow::newVault(QString fileName)
         txView->update();
 
         updateVaultStatus(fileName);
+
+        // TODO: prompt user to unlock chain codes.
+        accountModel->getVault()->unlockChainCodes(uchar_vector("1234"));
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::newVault - " << e.what() << std::endl;
@@ -1742,6 +1745,9 @@ void MainWindow::loadVault(const QString &fileName)
     txView->update();
 
     newKeychainAction->setEnabled(true);
+
+    // TODO: Prompt user to unlock chain codes
+    accountModel->getVault()->unlockChainCodes(uchar_vector("1234"));
 
     networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
 }
