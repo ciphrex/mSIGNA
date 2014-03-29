@@ -713,6 +713,8 @@ void MainWindow::importAccount(QString fileName)
         accountModel->importAccount(name, fileName);
         accountModel->update();
         accountView->update();
+        keychainModel->update();
+        keychainView->update();
         tabWidget->setCurrentWidget(accountView);
         networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         updateStatusMessage(tr("Imported account ") + name);
