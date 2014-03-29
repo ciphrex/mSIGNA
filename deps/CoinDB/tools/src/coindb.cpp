@@ -134,6 +134,24 @@ cli::result_t cmd_keychaininfo(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_keychains(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 1 || params.size() > 2)
+        return "listkeychains <db file> [account = @all] - display keychains.";
+
+    std::string account_name;
+    if (params.size() > 1) account_name = params[1];
+
+    Vault vault(params[0], false);
+    vector<KeychainView> views = vault.getRootKeychainViews(account_name);
+
+    stringstream ss;
+    ss << formattedKeychainViewHeader();
+    for (auto& view: views)
+        ss << endl << formattedKeychainView(view);
+    return ss.str();
+}
+
 cli::result_t cmd_listkeychains(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 1 || params.size() > 2)
@@ -724,6 +742,7 @@ int main(int argc, char* argv[])
     //cmds.add("erasekeychain", &cmd_erasekeychain);
     cmds.add("renamekeychain", &cmd_renamekeychain);
     cmds.add("keychaininfo", &cmd_keychaininfo);
+    cmds.add("keychains", &cmd_keychains);
     cmds.add("listkeychains", &cmd_listkeychains);
     cmds.add("exportkeychain", &cmd_exportkeychain);
     cmds.add("importkeychain", &cmd_importkeychain);

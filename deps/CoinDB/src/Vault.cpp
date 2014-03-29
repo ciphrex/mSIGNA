@@ -421,7 +421,7 @@ std::vector<KeychainView> Vault::getRootKeychainViews(const std::string& account
     std::vector<KeychainView> views;
     for (auto& view: r)
     {
-        view.is_locked = mapPrivateKeyUnlock.count(view.name);
+        view.is_locked = !mapPrivateKeyUnlock.count(view.name);
         views.push_back(view);
     }
     return views;

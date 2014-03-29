@@ -204,6 +204,41 @@ inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned in
 }
 
 // Keychains
+inline std::string formattedKeychainViewHeader()
+{
+    using namespace std;
+
+    stringstream ss;
+    ss << " ";
+    ss << left  << setw(15) << "keychain" << " | "
+       << left  << setw(7)  << "type" << " | "
+       << left  << setw(6)  << "locked" << " | "
+       << right << setw(5)  << "id" << " | "
+       << left  << setw(40) << "hash";
+    ss << " ";
+
+    size_t header_length = ss.str().size();
+    ss << endl;
+    for (size_t i = 0; i < header_length; i++) { ss << "="; }
+    return ss.str();
+}
+
+inline std::string formattedKeychainView(const CoinDB::KeychainView& view)
+{
+    using namespace std;
+    using namespace CoinDB;
+
+    stringstream ss;
+    ss << " ";
+    ss << left  << setw(15) << view.name << " | "
+       << left  << setw(7)  << (view.is_private ? "PRIVATE" : "PUBLIC") << " | "
+       << left  << setw(6)  << (view.is_locked ? "YES" : "NO") << " | "
+       << right << setw(5)  << view.id << " | "
+       << left  << setw(40) << uchar_vector(view.hash).getHex();
+    ss << " ";
+    return ss.str();
+}
+
 inline std::string formattedKeychainHeader()
 {
     using namespace std;
@@ -222,7 +257,6 @@ inline std::string formattedKeychainHeader()
     return ss.str();
 }
 
-// TODO: KeychainView
 inline std::string formattedKeychain(const std::shared_ptr<CoinDB::Keychain>& keychain)
 {
     using namespace std;

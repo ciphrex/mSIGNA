@@ -973,6 +973,8 @@ struct KeychainView
     bytes_t pubkey;
     #pragma db column(Keychain::hash_)
     bytes_t hash;
+    #pragma db column("length(" + Keychain::privkey_ciphertext_ + ") != 0")
+    bool is_private;
     #pragma db transient
     bool is_locked;
 };
