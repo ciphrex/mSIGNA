@@ -36,7 +36,7 @@ AccountModel::AccountModel()
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
     QStringList columns;
-    columns << tr("Account Name") << tr("Policy") << tr("Balance") << "";
+    columns << tr("Account") << tr("Policy") << tr("Balance") << "";
     setHorizontalHeaderLabels(columns);
 }
 

@@ -19,7 +19,7 @@ KeychainModel::KeychainModel()
     : vault(NULL)
 {
     QStringList columns;
-    columns << tr("Keychain Name") << tr("Type") << tr("Hash");
+    columns << tr("Keychain") << tr("Type") << tr("Unlocked") << tr("Hash");
     setHorizontalHeaderLabels(columns);
 }
 
@@ -35,19 +35,24 @@ void KeychainModel::update()
 
     if (!vault) return;
 
-    std::vector<std::shared_ptr<Keychain>> keychains = vault->getAllKeychains();
-    for (auto& keychain: keychains) {
+    std::vector<KeychainView> keychains = vault->getRootKeychainViews();
+    for (auto& keychain: keychains)
+    {
         QList<QStandardItem*> row;
-        row.append(new QStandardItem(QString::fromStdString(keychain->name())));
+        row.append(new QStandardItem(QString::fromStdString(keychain.name)));
 
         QStandardItem* typeItem = new QStandardItem(
-            keychain->isPrivate()  ? tr("Private") : tr("Public"));
-        typeItem->setData(keychain->isPrivate(), Qt::UserRole);
+            keychain.is_private  ? tr("Private") : tr("Public"));
+        typeItem->setData(keychain.is_private && !keychain.is_locked, Qt::UserRole);
         row.append(typeItem);
+
+        QStandardItem* lockedItem = new QStandardItem(
+            keychain.is_private ? (keychain.is_locked ? tr("No") : tr("Yes")) : tr(""));
+        row.append(lockedItem);
         
-        row.append(new QStandardItem(QString::fromStdString(uchar_vector(keychain->hash()).getHex())));
+        row.append(new QStandardItem(QString::fromStdString(uchar_vector(keychain.hash).getHex())));
         appendRow(row);
-    }    
+    }
 }
 
 void KeychainModel::exportKeychain(const QString& keychainName, const QString& fileName, bool exportPrivate) const
@@ -96,10 +101,12 @@ bytes_t KeychainModel::getExtendedKeyBytes(const QString& keychainName, bool get
 
 QVariant KeychainModel::data(const QModelIndex& index, int role) const
 {
+/*
     if (role == Qt::TextAlignmentRole && index.column() == 1) {
         // Right-align numeric fields
         return Qt::AlignRight;
     }
+*/
 
     return QStandardItemModel::data(index, role);
 }
