@@ -535,7 +535,7 @@ cli::result_t cmd_signtx(bool bHelp, const cli::params_t& params)
 
     Vault vault(params[0], false);
     vault.unlockChainCodes(uchar_vector("1234"));
-    vault.unlockKeychainPrivateKey(params[2], secure_bytes_t());
+    vault.unlockKeychain(params[2], secure_bytes_t());
 
     stringstream ss;
     if (vault.signTx(uchar_vector(params[1]), true))

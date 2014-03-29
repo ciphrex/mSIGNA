@@ -38,16 +38,16 @@ public:
     KeychainAlreadyExistsException(const std::string& keychain_name) : KeychainException("Keychain already exists.", keychain_name) { }
 };
 
-class KeychainChainCodeUnlockFailedException: public KeychainException
+class KeychainChainCodeLockedException: public KeychainException
 {
 public:
-    KeychainChainCodeUnlockFailedException(const std::string& keychain_name) : KeychainException("Failed to unlock chain code.", keychain_name) { }
+    KeychainChainCodeLockedException(const std::string& keychain_name) : KeychainException("Keychain chain code is locked.", keychain_name) { }
 };
 
-class KeychainPrivateKeyUnlockFailedException: public KeychainException
+class KeychainPrivateKeyLockedException: public KeychainException
 {
 public:
-    KeychainPrivateKeyUnlockFailedException(const std::string& keychain_name) : KeychainException("Failed to unlock private keys.", keychain_name) { }
+    KeychainPrivateKeyLockedException(const std::string& keychain_name) : KeychainException("Keychain private keys are locked.", keychain_name) { }
 };
 
 class KeychainIsNotPrivateException: public KeychainException
@@ -99,16 +99,6 @@ class AccountCannotIssueChangeScriptException : public AccountException
 {
 public:
     AccountCannotIssueChangeScriptException(const std::string& account_name) : AccountException("Account cannot issue change script", account_name) { }
-};
-
-class AccountChainCodeLockedException : public AccountException
-{
-public:
-    AccountChainCodeLockedException(const std::string& account_name, const std::string& keychain_name) : AccountException("Chain code is locked.", account_name), keychain_name_(keychain_name) { }
-    const std::string& keychain_name() const { return keychain_name_; }
-
-private:
-    std::string keychain_name_;
 };
 
 // ACCOUNT BIN EXCEPTIONS
