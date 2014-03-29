@@ -1610,26 +1610,9 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
     if (!blockheader_r.empty())
     {
         LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - reorganizing blockchain. height: " << new_blockheader->height() << std::endl;
+
         // Reorg - delete all blocks of equal or greater height
-        for (auto& blockheader: blockheader_r)
-        {
-            LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - deleting block. hash: " << uchar_vector(blockheader.hash()).getHex() << ", height: " << blockheader.height() << std::endl;
-
-            // Remove tx confirmations
-            odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::blockheader == blockheader.id()));
-            for (auto& tx: tx_r)
-            {
-                LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - unconfirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
-                tx.blockheader(nullptr);
-                db_->update(tx);
-            }
-
-            // Delete merkle block
-            db_->erase_query<MerkleBlock>(odb::query<MerkleBlock>::blockheader == blockheader.id());
-
-            // Delete block header
-            db_->erase(blockheader);
-        }
+        deleteMerkleBlock_unwrapped(new_blockheader->height());
     }
 
     // Persist merkle block
