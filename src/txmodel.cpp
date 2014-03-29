@@ -82,7 +82,7 @@ void TxModel::update()
 
     std::shared_ptr<BlockHeader> bestHeader = vault->getBestBlockHeader();
 
-    std::vector<TxOutView> txoutviews = vault->getTxOutViews(accountName.toStdString(), "@default");
+    std::vector<TxOutView> txoutviews = vault->getTxOutViews(accountName.toStdString(), "@all", TxOut::ROLE_BOTH, TxOut::BOTH, Tx::ALL, true);
     bytes_t last_txhash;
     typedef std::pair<unsigned long, uint32_t> sorting_info_t;
     typedef std::pair<QList<QStandardItem*>, int64_t> value_row_t; // used to associate output values with rows for computing balance
