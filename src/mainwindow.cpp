@@ -1069,12 +1069,12 @@ void MainWindow::newBlock(const chain_block_t& block)
 void MainWindow::resync()
 {
     updateStatusMessage(tr("Resynchronizing vault"));
-    uint32_t startTime = accountModel->getFirstAccountTimeCreated();
+    uint32_t startTime = accountModel->getMaxFirstBlockTimestamp();
     std::vector<bytes_t> locatorHashes = accountModel->getLocatorHashes();
     for (auto& hash: locatorHashes) {
         LOGGER(debug) << "MainWindow::resync() - hash: " << uchar_vector(hash).getHex() << std::endl;
     }
-    networkSync.resync(locatorHashes, startTime - 2*60*60);
+    networkSync.resync(locatorHashes, startTime);
 }
 
 void MainWindow::doneSync()

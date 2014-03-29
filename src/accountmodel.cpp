@@ -180,13 +180,13 @@ QPair<QString, bytes_t> AccountModel::issueNewScript(const QString& accountName,
     return qMakePair(address, signingscript->txoutscript());
 }
 
-uint32_t AccountModel::getFirstAccountTimeCreated() const
+uint32_t AccountModel::getMaxFirstBlockTimestamp() const
 {
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
 
-    return vault->getHorizonTimestamp();
+    return vault->getMaxFirstBlockTimestamp();
 }
 
 bool AccountModel::insertRawTx(const bytes_t& rawTx)

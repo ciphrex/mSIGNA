@@ -63,7 +63,7 @@ public:
     void importAccount(const QString& name, const QString& filePath);
     void deleteAccount(const QString& name);
     QPair<QString, bytes_t> issueNewScript(const QString& accountName, const QString& label); // returns qMakePair<address, script>
-    uint32_t getFirstAccountTimeCreated() const; // the timestamp for when the first account in the vault was created
+    uint32_t getMaxFirstBlockTimestamp() const; // the timestamp for latest acceptable first block
 
     // Transaction operations
     bool insertRawTx(const bytes_t& rawTx);
