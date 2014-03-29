@@ -591,7 +591,7 @@ cli::result_t cmd_horizontimestamp(bool bHelp, const cli::params_t& params)
     formatted_timestamp = formatted_timestamp.substr(0, formatted_timestamp.size() - 1);
 
     stringstream ss;
-    ss << timestamp << " (" + formatted_timestamp + ")";
+    ss << timestamp << " (" << formatted_timestamp << " " << (use_gmt ? "GMT" : "LOCAL") << ")";
     return ss.str();
 }
 
