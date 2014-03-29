@@ -150,7 +150,7 @@ void AccountModel::importAccount(const QString& /*name*/, const QString& filePat
     }
 
     unsigned int privkeysimported = 0;
-    vault->importAccount(filePath.toStdString(), secure_bytes_t(), privkeysimported);
+    vault->importAccount(filePath.toStdString(), privkeysimported);
     update();
 }
 

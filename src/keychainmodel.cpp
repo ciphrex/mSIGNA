@@ -85,14 +85,13 @@ bool KeychainModel::isPrivate(const QString& keychainName) const
     return keychain->isPrivate();
 }
 
-bytes_t KeychainModel::getExtendedKeyBytes(const QString& keychainName, bool getPrivate, const bytes_t& decryptionKey) const
+bytes_t KeychainModel::getExtendedKeyBytes(const QString& keychainName, bool getPrivate, const bytes_t& /*decryptionKey*/) const
 {
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
 
-    std::shared_ptr<Keychain> keychain = vault->getKeychain(keychainName.toStdString());
-    return keychain->extkey(getPrivate);
+    return vault->getKeychainExtendedKey(keychainName.toStdString(), getPrivate);
 }
 
 QVariant KeychainModel::data(const QModelIndex& index, int role) const
