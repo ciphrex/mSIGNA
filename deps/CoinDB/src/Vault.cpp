@@ -406,6 +406,32 @@ void Vault::persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain)
     db_->persist(keychain);
 }
 
+std::vector<KeychainView> Vault::getRootKeychainViews(const std::string& account_name) const
+{
+    LOGGER(trace) << "Vault::getRootKeychainViews(" << account_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+
+    typedef odb::query<KeychainView> query_t;
+    query_t query(1 == 1);
+    if (!account_name.empty())
+        query = query && (query_t::Account::name == account_name);
+    odb::result<KeychainView> r(db_->query<KeychainView>(query));
+    std::vector<KeychainView> views;
+    for (auto& view: r)
+    {
+        view.is_locked = mapPrivateKeyUnlock.count(view.name);
+        views.push_back(view);
+    }
+    return views;
+}
+
+std::vector<KeychainView> Vault::getRootKeychainViews_unwrapped(std::shared_ptr<Account> account) const
+{
+    return std::vector<KeychainView>();
+}
+
 secure_bytes_t Vault::getKeychainExtendedKey(const std::string& keychain_name, bool get_private) const
 {
     LOGGER(debug) << "Vault::getKeychainExtendedKey(" << keychain_name << ", " << (get_private ? "true" : "false") << ")" << std::endl;

@@ -412,7 +412,11 @@ private:
     #pragma db unique
     std::string name_;
     unsigned int minsigs_;
+
+    #pragma db value_not_null \
+        id_column("object_id") value_column("value")
     KeychainSet keychains_;
+
     uint32_t unused_pool_size_; // how many unused scripts we want in our lookahead
     uint32_t time_created_;
     bytes_t hash_; // ripemd160(sha256(data)) where data = concat(first byte(minsigs), keychain hash 1, keychain hash 2, ...) and keychain hashes are sorted lexically
@@ -947,6 +951,49 @@ private:
 
 
 // Views
+#pragma db view \
+    object(Keychain) \
+    table("Account_keychains" = "t": "t.value = " + Keychain::id_) \
+    object(Account: "t.object_id = " + Account::id_)
+struct KeychainView
+{
+    KeychainView() : is_locked(true) { }
+
+    #pragma db column(Keychain::id_)
+    unsigned long id;
+    #pragma db column(Keychain::name_)
+    std::string name;
+    #pragma db column(Keychain::depth_)
+    uint32_t depth;
+    #pragma db column(Keychain::parent_fp_)
+    uint32_t parent_fp;
+    #pragma db column(Keychain::child_num_)
+    uint32_t child_num;
+    #pragma db column(Keychain::pubkey_)
+    bytes_t pubkey;
+    #pragma db column(Keychain::hash_)
+    bytes_t hash;
+    #pragma db transient
+    bool is_locked;
+};
+
+#pragma db view \
+    object(Account)
+struct AccountView
+{
+    unsigned long               id;
+    std::string                 name;
+    unsigned int                minsigs;
+    uint32_t                    unused_pool_size;
+    uint32_t                    time_created;
+
+    #pragma db transient
+    std::vector<KeychainView>    keychain_views;
+
+    #pragma db transient
+    std::vector<std::string>    bin_names;
+};
+
 #pragma db view \
     object(AccountBin) \
     object(Account: AccountBin::account_)

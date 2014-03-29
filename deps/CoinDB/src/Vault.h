@@ -63,6 +63,7 @@ public:
     void                                    renameKeychain(const std::string& old_name, const std::string& new_name);
     std::shared_ptr<Keychain>               getKeychain(const std::string& keychain_name) const;
     std::vector<std::shared_ptr<Keychain>>  getAllKeychains(bool root_only = false) const;
+    std::vector<KeychainView>               getRootKeychainViews(const std::string& account_name = std::string()) const;
     secure_bytes_t                          getKeychainExtendedKey(const std::string& keychain_name, bool get_private) const;
 
     // The following private key lock/unlock methods do not maintain a database session open so they only
@@ -144,6 +145,7 @@ protected:
     void                                    exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
     std::shared_ptr<Keychain>               importKeychain_unwrapped(const std::string& filepath, bool& importprivkeys, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
     secure_bytes_t                          getKeychainExtendedKey_unwrapped(std::shared_ptr<Keychain> keychain, bool get_private) const;
+    std::vector<KeychainView>               getRootKeychainViews_unwrapped(std::shared_ptr<Account> account = nullptr) const;
 
     // All the keychain unlock methods use the global keys by default
 
