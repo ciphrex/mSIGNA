@@ -620,7 +620,6 @@ void MainWindow::quickNewAccount()
                 throw std::runtime_error(tr("An account with that name already exists.").toStdString());
 
             const int MAX_KEYCHAIN_INDEX = 1000;
-            const unsigned int DEFAULT_KEY_COUNT = 100;
             int i = 0;
             QList<QString> keychainNames;
             while (keychainNames.size() < dlg.getMaxSigs() && ++i <= MAX_KEYCHAIN_INDEX) {
