@@ -49,7 +49,6 @@ Vault::Vault(int argc, char** argv, bool create, uint32_t version)
     LOGGER(trace) << "Opened Vault" << std::endl;
 
 //    if (create) setVersion(version);
-    updateHorizonStatus();
 }
 
 #if defined(DATABASE_SQLITE)
@@ -59,23 +58,12 @@ Vault::Vault(const std::string& filename, bool create, uint32_t version)
     LOGGER(trace) << "Opened Vault - filename: " << filename << " create: " << (create ? "true" : "false") << " version: " << version << std::endl;
 
 //    if (create) setVersion(version);
-    updateHorizonStatus();
 }
 #endif
 
 ///////////////////////
 // GLOBAL OPERATIONS //
 ///////////////////////
-void Vault::updateHorizonStatus()
-{
-    haveHorizonBlock = getHorizonHeight() > 0;
-    if (!haveHorizonBlock)
-    {
-        minHorizonTimestamp = getHorizonTimestamp();
-        minHorizonTimestamp = minHorizonTimestamp <= MIN_HORIZON_TIMESTAMP_OFFSET ? 0 : minHorizonTimestamp - MIN_HORIZON_TIMESTAMP_OFFSET;
-    }
-}    
-
 uint32_t Vault::getHorizonTimestamp() const
 {
     LOGGER(trace) << "Vault::getHorizonTimestamp()" << std::endl;
@@ -85,10 +73,27 @@ uint32_t Vault::getHorizonTimestamp() const
     return getHorizonTimestamp_unwrapped();
 }
 
+uint32_t Vault::getMaxFirstBlockTimestamp() const
+{
+    LOGGER(trace) << "Vault::getMaxFirstBlockTimestamp()" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    return getMaxFirstBlockTimestamp_unwrapped();
+}
+
 uint32_t Vault::getHorizonTimestamp_unwrapped() const
 {
     odb::result<HorizonTimestampView> r(db_->query<HorizonTimestampView>());
     return r.empty() ? 0 : r.begin()->timestamp;
+}
+
+uint32_t Vault::getMaxFirstBlockTimestamp_unwrapped() const
+{
+    uint32_t maxFirstBlockTimestamp = getHorizonTimestamp_unwrapped();
+    if (maxFirstBlockTimestamp > MAX_HORIZON_TIMESTAMP_OFFSET)
+        maxFirstBlockTimestamp -= MAX_HORIZON_TIMESTAMP_OFFSET;
+    return maxFirstBlockTimestamp;
 }
 
 uint32_t Vault::getHorizonHeight() const
@@ -1568,17 +1573,30 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
     auto& new_blockheader = merkleblock->blockheader();
     std::string new_blockheader_hash = uchar_vector(new_blockheader->hash()).getHex();
 
-    if (!haveHorizonBlock)
+    uint32_t maxFirstBlockTimestamp = getMaxFirstBlockTimestamp_unwrapped();
+    if (maxFirstBlockTimestamp == 0)
     {
-        if (new_blockheader->timestamp() > minHorizonTimestamp)
+        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - account must exist before inserting blocks." << std::endl;
+        return nullptr;
+    }
+
+    if (!getHorizonHeight_unwrapped())
+    {
+        if (new_blockheader->timestamp() > maxFirstBlockTimestamp)
         {
             LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - block timestamp is not early enough for accounts in database. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
             return nullptr;
         }
+
+        if (new_blockheader->height() == 0)
+        {
+            LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - horizon merkle block must have height > 0. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
+            return nullptr;
+        }
+
         LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - inserting horizon merkle block. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
         db_->persist(new_blockheader);
         db_->persist(merkleblock);
-        haveHorizonBlock = true;
         return merkleblock;
     }
 
