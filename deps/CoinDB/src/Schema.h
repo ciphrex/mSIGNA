@@ -881,7 +881,7 @@ public:
 
     void block(std::shared_ptr<BlockHeader> header, uint32_t index) { blockheader_ = header, blockindex_ = index; }
 
-    void blockheader(std::shared_ptr<BlockHeader> blockheader) { blockheader_ = blockheader; status_ = blockheader ? CONFIRMED : PROPAGATED; }
+    void blockheader(std::shared_ptr<BlockHeader> blockheader);
     std::shared_ptr<BlockHeader> blockheader() const { return blockheader_; }
 
     void shuffle_txins();

@@ -1606,7 +1606,7 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
     new_blockheader->height(blockheader_r.begin().load()->height() + 1);
 
     // Make sure this block is unique at this height
-    blockheader_r = db_->query<BlockHeader>((query_t::height >= new_blockheader->height()) + "ORDER BY" + query_t::height);
+    blockheader_r = db_->query<BlockHeader>((query_t::height >= new_blockheader->height()) + "ORDER BY" + query_t::height + "DESC");
     if (!blockheader_r.empty())
     {
         LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - reorganizing blockchain. height: " << new_blockheader->height() << std::endl;
@@ -1662,7 +1662,43 @@ unsigned int Vault::deleteMerkleBlock(const bytes_t& hash)
 
 unsigned int Vault::deleteMerkleBlock(uint32_t height)
 {
-    return 0;
+    LOGGER(trace) << "Vault::deleteMerkleBlock(" << height << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    unsigned int count = deleteMerkleBlock_unwrapped(height);
+    t.commit();
+    return count;
+}
+
+unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
+{
+    typedef odb::query<BlockHeader> query_t;
+    odb::result<BlockHeader> r(db_->query<BlockHeader>((query_t::height >= height) + "ORDER BY" + query_t::height + "DESC"));
+    unsigned int count = 0;
+    for (auto& blockheader: r)
+    {
+        LOGGER(debug) << "Vault::deleteMerkleBlock_unwrapped - deleting block. hash: " << uchar_vector(blockheader.hash()).getHex() << ", height: " << blockheader.height() << std::endl;
+
+        // Remove tx confirmations
+        odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::blockheader == blockheader.id()));
+        for (auto& tx: tx_r)
+        {
+            LOGGER(debug) << "Vault::deleteMerkleBlock_unwrapped - unconfirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
+            tx.blockheader(nullptr);
+            db_->update(tx);
+        }
+
+        // Delete merkle block
+        db_->erase_query<MerkleBlock>(odb::query<MerkleBlock>::blockheader == blockheader.id());
+
+        // Delete block header
+        db_->erase(blockheader);
+
+        count++;
+    }
+    return count;
 }
 
 unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)

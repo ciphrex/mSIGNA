@@ -561,6 +561,19 @@ cli::result_t cmd_bestheight(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_horizonheight(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 1)
+        return "horizonheight <db file> - display height of first stored block.";
+
+    Vault vault(params[0], false);
+    uint32_t horizon_height = vault.getHorizonHeight();
+
+    stringstream ss;
+    ss << horizon_height;
+    return ss.str();
+}
+
 cli::result_t cmd_blockinfo(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() != 2)
@@ -621,7 +634,7 @@ cli::result_t cmd_rawmerkleblock(bool bHelp, const cli::params_t& params)
 cli::result_t cmd_insertrawmerkleblock(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 2 || params.size() > 3)
-        return "insertrawmerkleblock <db file> <raw merkleblock> <height = 0> - insert raw merkleblock into database.";
+        return "insertrawmerkleblock <db file> <raw merkleblock> <height = 0> - insert raw merkle block into database.";
 
     uint32_t height = params.size() > 2 ? strtoull(params[2].c_str(), NULL, 0) : 0;
 
@@ -633,7 +646,21 @@ cli::result_t cmd_insertrawmerkleblock(bool bHelp, const cli::params_t& params)
     bool rval = (bool)vault.insertMerkleBlock(merkleblock);
 
     stringstream ss;
-    ss << "Merkleblock " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << (rval ? " " : " not ") << "inserted.";
+    ss << "Merkle block " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << (rval ? " " : " not ") << "inserted.";
+    return ss.str();
+}
+
+cli::result_t cmd_deleteblock(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() != 2)
+        return "deleteblock <db file> <height = 0> - delete merkle block including all descendants.";
+
+    uint32_t height = strtoull(params[1].c_str(), NULL, 0);
+    Vault vault(params[0], false);
+    unsigned int count = vault.deleteMerkleBlock(height);
+
+    stringstream ss;
+    ss << count << " merkle blocks deleted.";
     return ss.str();
 }
 
@@ -690,10 +717,12 @@ int main(int argc, char* argv[])
 
     // Blockchain operations
     cmds.add("bestheight", &cmd_bestheight);
+    cmds.add("horizonheight", &cmd_horizonheight);
     cmds.add("blockinfo", &cmd_blockinfo);    
     cmds.add("rawblockheader", &cmd_rawblockheader);
     cmds.add("rawmerkleblock", &cmd_rawmerkleblock);
     cmds.add("insertrawmerkleblock", &cmd_insertrawmerkleblock);
+    cmds.add("deleteblock", &cmd_deleteblock);
 
     // Miscellaneous
     cmds.add("randombytes", &cmd_randombytes);

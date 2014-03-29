@@ -174,6 +174,7 @@ protected:
     std::shared_ptr<BlockHeader>    getBestBlockHeader_unwrapped() const;
     std::shared_ptr<MerkleBlock>    insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
     unsigned int                    deleteMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
+    unsigned int                    deleteMerkleBlock_unwrapped(uint32_t height);
     unsigned int                    updateConfirmations_unwrapped(std::shared_ptr<Tx> tx = nullptr); // If parameter is null, updates all unconfirmed transactions.
                                                                                                      // Returns the number of transaction previously unconfirmed that are now confirmed.
 

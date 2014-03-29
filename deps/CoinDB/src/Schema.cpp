@@ -738,6 +738,13 @@ void Tx::setBlock(std::shared_ptr<BlockHeader> blockheader, uint32_t blockindex)
     blockindex_ = blockindex;
 }
 
+void Tx::blockheader(std::shared_ptr<BlockHeader> blockheader)
+{
+    blockheader_ = blockheader;
+    if (blockheader)                { status_ = CONFIRMED;  }
+    else if (status_ == CONFIRMED)  { status_ = PROPAGATED; }   
+}
+
 bytes_t Tx::raw() const
 {
     return toCoinClasses().getSerialized();
