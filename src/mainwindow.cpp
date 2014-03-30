@@ -1700,8 +1700,8 @@ void MainWindow::createMenus()
 
     txMenu = menuBar()->addMenu(tr("&Transactions"));
     txMenu->addAction(insertRawTxAction);
-    txMenu->addSeparator();
-    txMenu->addAction(signRawTxAction);
+    //txMenu->addSeparator();
+    //txMenu->addAction(signRawTxAction);
     //txMenu->addSeparator();
 //    txMenu->addAction(createRawTxAction);
     //txMenu->addAction(createTxAction);
