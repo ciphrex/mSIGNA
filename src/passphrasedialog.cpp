@@ -2,55 +2,49 @@
 //
 // CoinVault
 //
-// keychainbackupdialog.cpp
+// passphrasedialog.cpp
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#include "keychainbackupdialog.h"
-
-#include <uchar_vector.h>
-#include <Base58Check.h>
+#include "passphrasedialog.h"
 
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
-#include <QTextEdit>
+#include <QLineEdit>
 #include <QLabel>
 
-#include <stdexcept>
-
-KeychainBackupDialog::KeychainBackupDialog(const QString& prompt, QWidget* parent)
+PassphraseDialog::PassphraseDialog(const QString& prompt, QWidget* parent)
     : QDialog(parent)
 {
-/*
     // Buttons
     QDialogButtonBox* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok
                                      | QDialogButtonBox::Cancel);
 
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
-*/
     // Prompt
+
     QLabel* promptLabel = new QLabel();
     promptLabel->setText(prompt);
 
     // Text Edit
-    keychainBackupEdit = new QTextEdit();
+    passphraseEdit = new QLineEdit();
+    passphraseEdit->setEchoMode(QLineEdit::Password);
 
     QVBoxLayout* mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
     mainLayout->addWidget(promptLabel);
-    mainLayout->addWidget(keychainBackupEdit);
-    //mainLayout->addWidget(buttonBox);
+    mainLayout->addWidget(passphraseEdit);
+    mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
 
-    resize(1000, 100);
+    resize(500, 140);
 }
 
-void KeychainBackupDialog::setExtendedKey(const bytes_t& extendedKey)
+QString PassphraseDialog::getPassphrase() const
 {
-    this->extendedKey = extendedKey;
-    keychainBackupEdit->setText(toBase58Check(extendedKey).c_str());
+    return passphraseEdit->text();
 }

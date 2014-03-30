@@ -11,18 +11,25 @@ endif
 LOGGER = ../logger
 COINCLASSES = ../CoinClasses
 COINQ = ../CoinQ
+CLI = ../cli
 
 INCLUDE_PATH = \
     -Isrc \
     -I$(COINQ)/src \
     -I$(COINCLASSES)/src \
-    -I$(LOGGER)/src
+    -I$(LOGGER)/src \
+    -I$(CLI)/src
 
 ODB_INCLUDE_PATH = \
     -Isrc \
     -I$(COINQ)/src \
     -I$(COINCLASSES)/src \
     -I$(LOGGER)/src
+
+TOOLS_INCLUDE_PATH = \
+    $(INCLUDE_PATH) \
+    -Iodb
+
 
 ifndef OS
     UNAME_S := $(shell uname -s)
@@ -64,18 +71,41 @@ else ifeq ($(OS), osx)
     INCLUDE_PATH += -I/usr/local/include
     ODB_INCLUDE_PATH += -I/usr/local/include
 
+    BOOST_SUFFIX = -mt
+
     ARCHIVER = ar
 
 else ifneq ($(MAKECMDGOALS), clean)
     $(error OS must be set to linux, mingw64, or osx)
 endif
 
+TOOLS_LIBPATH = \
+    -Llib -lCoinDB \
+    -L$(COINQ)/lib -lCoinQ \
+    -L$(COINCLASSES)/lib -lCoinClasses \
+    -L$(LOGGER)/lib -llogger \
+    -lboost_system$(BOOST_SUFFIX) \
+    -lboost_filesystem$(BOOST_SUFFIX) \
+    -lboost_regex$(BOOST_SUFFIX) \
+    -lboost_thread$(BOOST_SUFFIX) \
+    -lboost_serialization$(BOOST_SUFFIX) \
+    -lcrypto \
+    -lodb-sqlite \
+    -lodb
+
 OBJS = \
     obj/Schema-odb.o \
+    obj/Schema.o \
     obj/Vault.o
 
+TOOLS = \
+    tools/build/coindb$(EXE_EXT)
 
-all: lib/libCoinDB.a
+all: lib tools
+
+lib: lib/libCoinDB.a
+
+tools: $(TOOLS) 
 
 lib/libCoinDB.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
@@ -83,23 +113,39 @@ lib/libCoinDB.a: $(OBJS)
 #
 # odb compiled dependencies
 #
-odb/Schema-odb.hxx: src/Schema.hxx
-	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema $< $(ODB_INCLUDE_PATH)
+odb/Schema-odb.hxx: src/Schema.h
+	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema $(ODB_INCLUDE_PATH) $<
 
-odb/Schema-odb.cxx: src/Schema.hxx
-	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema $< $(ODB_INCLUDE_PATH)
+odb/Schema-odb.cxx: odb/Schema-odb.hxx
 
 #
-# schema
+# odb generated schema object
 #
-obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx src/Schema.hxx
-	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
+obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx src/Schema.h
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
+
+#
+# schema classes
+#
+obj/Schema.o: src/Schema.cpp src/Schema.h
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
 # vault class
 #
-obj/Vault.o: src/Vault.cpp src/Vault.h odb/Schema-odb.hxx
-	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(ODB_DB) $(INCLUDE_PATH)
+obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/SigningRequest.h src/Schema.h src/Database.h odb/Schema-odb.hxx
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
+
+#
+# coindb command line tool
+#
+tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp tools/src/formatting.h lib/libCoinDB.a
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(TOOLS_INCLUDE_PATH) $< $(TOOLS_LIBPATH) -o $@
+
+install: install_tools
+
+install_tools:
+	-cp $(TOOLS) /usr/local/bin/
 
 clean:
-	-rm -f obj/*.o odb/*-odb.* lib/*.a
+	-rm -f obj/*.o odb/*-odb.* lib/*.a tools/build/*

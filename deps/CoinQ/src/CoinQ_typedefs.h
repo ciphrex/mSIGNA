@@ -10,5 +10,8 @@
 #define COINQ_TYPEDEFS_H
 
 typedef std::vector<unsigned char> bytes_t;
+typedef std::vector<unsigned char> secure_bytes_t;
+
+// TODO: use custom allocator for secure_bytes_t;
 
 #endif // COINQ_TYPEDEFS_H

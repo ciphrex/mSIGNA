@@ -84,6 +84,7 @@ HEADERS = \
     src/requestpaymentdialog.h \
     src/networksettingsdialog.h \
     src/keychainbackupdialog.h \
+    src/passphrasedialog.h \
     src/resyncdialog.h
                 
 SOURCES = \
@@ -117,6 +118,7 @@ SOURCES = \
     src/requestpaymentdialog.cpp \
     src/networksettingsdialog.cpp \
     src/keychainbackupdialog.cpp \
+    src/passphrasedialog.cpp \
     src/resyncdialog.cpp
 
 RESOURCES = \
@@ -128,48 +130,35 @@ target.path = build
 INSTALLS += target
 
 win32 {
+    BOOST_LIB_SUFFIX = -mt-s
+    BOOST_THREAD_LIB_SUFFIX = _win32
+
     LIBS += \
         -L/usr/x86_64-w64-mingw32/plugins/platforms \
         -static-libgcc -static-libstdc++ \
         -lws2_32 \
-        -lmswsock \
-        -lboost_system-mt-s \
-        -lboost_filesystem-mt-s \
-        -lboost_regex-mt-s \
-        -lboost_thread_win32-mt-s \
-        -lcrypto \
-        -lodb-sqlite \
-        -lodb
+        -lmswsock
 }
 
-unix {
-    !macx {
-        LIBS += \
-            -lboost_system \
-            -lboost_filesystem \
-            -lboost_regex \
-            -lboost_thread \
-            -lcrypto \
-            -lodb-sqlite \
-            -lodb
+macx {
+    isEmpty(BOOST_LIB_PATH) {
+        BOOST_LIB_PATH = /usr/local/lib
     }
-    else {
-	isEmpty(BOOST_LIB_PATH) {
-            BOOST_LIB_PATH = /usr/local/lib
-        }
 
-        exists($$BOOST_LIB_PATH/libboost_system-mt*) {
-            BOOST_LIB_SUFFIX = -mt
-        }
-
-        LIBS += \
-            -L$$BOOST_LIB_PATH \
-            -lboost_system$$BOOST_LIB_SUFFIX \
-            -lboost_filesystem$$BOOST_LIB_SUFFIX \
-            -lboost_regex$$BOOST_LIB_SUFFIX \
-            -lboost_thread$$BOOST_LIB_SUFFIX \
-            -lcrypto \
-            -lodb-sqlite \
-            -lodb
+    exists($$BOOST_LIB_PATH/libboost_system-mt*) {
+        BOOST_LIB_SUFFIX = -mt
     }
+
+    LIBS += \
+        -L$$BOOST_LIB_PATH
 }
+
+LIBS += \
+    -lboost_system$$BOOST_LIB_SUFFIX \
+    -lboost_filesystem$$BOOST_LIB_SUFFIX \
+    -lboost_regex$$BOOST_LIB_SUFFIX \
+    -lboost_thread$$BOOST_THREAD_LIB_SUFFIX$$BOOST_LIB_SUFFIX \
+    -lboost_serialization$$BOOST_LIB_SUFFIX \
+    -lcrypto \
+    -lodb-sqlite \
+    -lodb

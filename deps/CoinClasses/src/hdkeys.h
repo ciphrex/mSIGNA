@@ -91,25 +91,30 @@ public:
     bytes_t privkey() const;
     const bytes_t& pubkey() const { return pubkey_; }
 
-    bool isPrivate() const { return ( key_.size() == 33 && key_[0] == 0x00); }
+    bool isPrivate() const { return (key_.size() == 33 && key_[0] == 0x00); }
     bytes_t hash() const; // hash is ripemd160(sha256(pubkey))
     uint32_t fp() const; // fingerprint is first 32 bits of hash
+    bytes_t full_hash() const; // full_hash is ripemd160(sha256(pubkey + chain_code))
 
     HDKeychain getPublic() const;
     HDKeychain getChild(uint32_t i) const;
-    HDKeychain getChildNode(uint32_t i) const { return getChild(0).getChild(i); }
+    HDKeychain getChildNode(uint32_t i, bool private_derivation = false) const
+    {
+        uint32_t mask = private_derivation ? 0x80000000ull : 0x00000000ull;
+        return getChild(mask).getChild(i);
+    }
 
     // Precondition: i >= 1
-    bytes_t getSigningPrivateKey(uint32_t i) const
+    bytes_t getPrivateSigningKey(uint32_t i) const
     {
-        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
+//        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
         return getChild(i).privkey();
     }
 
     // Precondition: i >= 1
-    bytes_t getSigningPublicKey(uint32_t i) const
+    bytes_t getPublicSigningKey(uint32_t i) const
     {
-        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
+//        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
         return getChild(i).pubkey();
     }
 

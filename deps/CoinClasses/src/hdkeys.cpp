@@ -39,6 +39,7 @@
 // #include <cstdlib>
 
 using namespace Coin;
+using namespace CoinCrypto;
 
 const uchar_vector CURVE_ORDER_BYTES("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
 const BigInt CURVE_ORDER(CURVE_ORDER_BYTES);
@@ -187,6 +188,13 @@ bytes_t HDKeychain::privkey() const
 bytes_t HDKeychain::hash() const
 {
     return ripemd160(sha256(pubkey_));
+}
+
+bytes_t HDKeychain::full_hash() const
+{
+    uchar_vector_secure data(pubkey_);
+    data += chain_code_;
+    return ripemd160(sha256(data));
 }
 
 uint32_t HDKeychain::fp() const

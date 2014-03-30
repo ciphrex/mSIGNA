@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Database.hxx
+// Database.h
 //
 // Copyright (c) 2013-2014 Eric Lombrozo
 //
@@ -105,13 +105,9 @@ openDatabase(const std::string& filename, bool create = false)
 {
     using namespace odb::core;
 
-    int argc = 3;
-    char prog[] = "prog";
-    char opt[] = "--database";
-    char buf[255];
-    std::strcpy(buf, filename.c_str());
-    char* argv[] = {prog, opt, buf};
-    std::unique_ptr<database> db(new odb::sqlite::database(argc, argv, false, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE));
+    int flags = SQLITE_OPEN_READWRITE;
+    if (create) flags |= SQLITE_OPEN_CREATE;
+    std::unique_ptr<database> db(new odb::sqlite::database(filename, flags, false));
 
   // Create the database schema. Due to bugs in SQLite foreign key
   // support for DDL statements, we need to temporarily disable

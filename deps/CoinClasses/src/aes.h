@@ -24,6 +24,8 @@
 
 // Uses public domain code by Saju Pillai (saju.pillai@gmail.com)
 
+// TODO: Use secure buffers
+
 #include "uchar_vector.h"
 
 #include <string.h>
@@ -38,7 +40,7 @@
  * Create an 256 bit key and IV using the supplied key_data. salt can be added for taste.
  * Fills in the encryption and decryption ctx objects and returns 0 on success
  **/
-int aes_init(unsigned char *key_data, int key_data_len, unsigned char *salt, EVP_CIPHER_CTX *e_ctx, 
+int aes_init(const unsigned char *key_data, int key_data_len, unsigned char *salt, EVP_CIPHER_CTX *e_ctx, 
              EVP_CIPHER_CTX *d_ctx)
 {
     int i, nrounds = 5;
@@ -87,7 +89,7 @@ unsigned char *aes_encrypt(EVP_CIPHER_CTX *e, unsigned char *plaintext, int *len
     return ciphertext;
 }
 
-uchar_vector aes_encrypt(uchar_vector& key, const uchar_vector& plaintext, uint64_t salt)
+uchar_vector aes_encrypt(const uchar_vector& key, const uchar_vector& plaintext, uint64_t salt)
 {
     EVP_CIPHER_CTX en, de;
 
@@ -128,7 +130,7 @@ unsigned char *aes_decrypt(EVP_CIPHER_CTX *e, unsigned char *ciphertext, int *le
     return plaintext;
 }
 
-uchar_vector aes_decrypt(uchar_vector& key, const uchar_vector& ciphertext, uint64_t salt)
+uchar_vector aes_decrypt(const uchar_vector& key, const uchar_vector& ciphertext, uint64_t salt)
 {
     EVP_CIPHER_CTX en, de;
 

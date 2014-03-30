@@ -19,7 +19,7 @@ KeychainModel::KeychainModel()
     : vault(NULL)
 {
     QStringList columns;
-    columns << tr("Keychain Name") << tr("Type") << tr("Keys") << tr("Hash");
+    columns << tr("Keychain") << tr("Type") << tr("Unlocked") << tr("Hash");
     setHorizontalHeaderLabels(columns);
 }
 
@@ -35,21 +35,24 @@ void KeychainModel::update()
 
     if (!vault) return;
 
-    std::vector<KeychainInfo> keychains = vault->getKeychains();
-    for (auto& keychain: keychains) {
+    std::vector<KeychainView> keychains = vault->getRootKeychainViews();
+    for (auto& keychain: keychains)
+    {
         QList<QStandardItem*> row;
-        row.append(new QStandardItem(QString::fromStdString(keychain.name())));
+        row.append(new QStandardItem(QString::fromStdString(keychain.name)));
 
-        bool isPrivate = (keychain.type() == Keychain::PRIVATE);
         QStandardItem* typeItem = new QStandardItem(
-            isPrivate  ? tr("Private") : tr("Public"));
-        typeItem->setData(isPrivate, Qt::UserRole);
+            keychain.is_private  ? tr("Private") : tr("Public"));
+        typeItem->setData(((int)keychain.is_private << 1) | (int)keychain.is_locked, Qt::UserRole);
         row.append(typeItem);
+
+        QStandardItem* lockedItem = new QStandardItem(
+            keychain.is_private ? (keychain.is_locked ? tr("No") : tr("Yes")) : tr(""));
+        row.append(lockedItem);
         
-        row.append(new QStandardItem(QString::number(keychain.numkeys())));
-        row.append(new QStandardItem(QString::fromStdString(uchar_vector(keychain.hash()).getHex())));
+        row.append(new QStandardItem(QString::fromStdString(uchar_vector(keychain.hash).getHex())));
         appendRow(row);
-    }    
+    }
 }
 
 void KeychainModel::exportKeychain(const QString& keychainName, const QString& fileName, bool exportPrivate) const
@@ -61,13 +64,43 @@ void KeychainModel::exportKeychain(const QString& keychainName, const QString& f
     vault->exportKeychain(keychainName.toStdString(), fileName.toStdString(), exportPrivate);
 }
 
-void KeychainModel::importKeychain(const QString& keychainName, const QString& fileName, bool& importPrivate)
+void KeychainModel::importKeychain(const QString& /*keychainName*/, const QString& fileName, bool& importPrivate)
 {
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
 
-    vault->importKeychain(keychainName.toStdString(), fileName.toStdString(), importPrivate);
+    vault->importKeychain(fileName.toStdString(), importPrivate);
+    update();
+}
+
+void KeychainModel::unlockKeychain(const QString& keychainName, const secure_bytes_t& unlockKey)
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    vault->unlockKeychain(keychainName.toStdString(), unlockKey);
+    update();
+}
+
+void KeychainModel::lockKeychain(const QString& keychainName)
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    vault->lockKeychain(keychainName.toStdString());
+    update();
+}
+
+void KeychainModel::lockAllKeychains()
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    vault->lockAllKeychains();
     update();
 }
 
@@ -84,24 +117,26 @@ bool KeychainModel::isPrivate(const QString& keychainName) const
     }
 
     std::shared_ptr<Keychain> keychain = vault->getKeychain(keychainName.toStdString());
-    return keychain->is_private();
+    return keychain->isPrivate();
 }
 
-bytes_t KeychainModel::getExtendedKeyBytes(const QString& keychainName, bool getPrivate, const bytes_t& decryptionKey) const
+bytes_t KeychainModel::getExtendedKeyBytes(const QString& keychainName, bool getPrivate, const bytes_t& /*decryptionKey*/) const
 {
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
 
-    return vault->getExtendedKeyBytes(keychainName.toStdString(), getPrivate, decryptionKey);
+    return vault->getKeychainExtendedKey(keychainName.toStdString(), getPrivate);
 }
 
 QVariant KeychainModel::data(const QModelIndex& index, int role) const
 {
+/*
     if (role == Qt::TextAlignmentRole && index.column() == 1) {
         // Right-align numeric fields
         return Qt::AlignRight;
     }
+*/
 
     return QStandardItemModel::data(index, role);
 }

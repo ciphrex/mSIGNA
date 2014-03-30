@@ -716,6 +716,8 @@ public:
     uint32_t nonce;
 
     CoinBlockHeader() { }
+    CoinBlockHeader(uint32_t _version, const uchar_vector& _prevBlockHash, const uchar_vector& _merkleRoot, uint32_t _timestamp, uint32_t _bits, uint32_t _nonce)
+        : version(_version), prevBlockHash(_prevBlockHash), merkleRoot(_merkleRoot), timestamp(_timestamp), bits(_bits), nonce(_nonce) { }
     CoinBlockHeader(uint32_t _version, uint32_t _timestamp, uint32_t _bits, uint32_t _nonce = 0, const uchar_vector& _prevBlockHash = g_zero32bytes, const uchar_vector& _merkleRoot = g_zero32bytes)
         : version(_version), prevBlockHash(_prevBlockHash), merkleRoot(_merkleRoot), timestamp(_timestamp), bits(_bits), nonce(_nonce) { }
     CoinBlockHeader(const uchar_vector& bytes) { this->setSerialized(bytes); }

@@ -24,6 +24,9 @@
 // Random
 #include <random.h>
 
+// Coin scripts
+#include <CoinQ_script.h>
+
 // Network
 #include <CoinQ_netsync.h>
 
@@ -49,6 +52,7 @@
 #include "requestpaymentdialog.h"
 #include "networksettingsdialog.h"
 #include "keychainbackupdialog.h"
+#include "passphrasedialog.h"
 #include "resyncdialog.h"
 
 // Logging
@@ -62,8 +66,16 @@ boost::mutex repaintMutex;
 using namespace CoinQ::Script;
 using namespace std;
 
-MainWindow::MainWindow()
-    : licenseAccepted(false), networkSync(getCoinParams()), syncHeight(0), bestHeight(0), connected(false), doneHeaderSync(false), networkState(NETWORK_STATE_NOT_CONNECTED)
+MainWindow::MainWindow() :
+    licenseAccepted(false),
+    networkSync(getCoinParams()),
+    syncHeight(0),
+    bestHeight(0),
+    connected(false),
+    doneHeaderSync(false),
+    networkState(NETWORK_STATE_NOT_CONNECTED),
+    accountModel(nullptr),
+    keychainModel(nullptr)
 {
     loadSettings();
 
@@ -102,7 +114,7 @@ MainWindow::MainWindow()
             // TODO
         }
     });
-    networkSync.subscribeBlock([&](const ChainBlock& block) { accountModel->insertBlock(block); });
+//    networkSync.subscribeBlock([&](const ChainBlock& block) { accountModel->insertBlock(block); });
     networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleBlock) { accountModel->insertMerkleBlock(merkleBlock); });
     networkSync.subscribeBlockTreeChanged([&]() { doneHeaderSync = false; emit updateBestHeight(networkSync.getBestHeight()); });
 
@@ -255,6 +267,7 @@ void MainWindow::updateVaultStatus(const QString& name)
 
     // keychain actions
     newKeychainAction->setEnabled(isOpen);
+    lockAllKeychainsAction->setEnabled(keychainModel && keychainModel->rowCount());
     importKeychainAction->setEnabled(isOpen);
 
     // account actions
@@ -310,6 +323,9 @@ void MainWindow::newVault(QString fileName)
         txView->update();
 
         updateVaultStatus(fileName);
+
+        // TODO: prompt user to unlock chain codes.
+        accountModel->getVault()->unlockChainCodes(uchar_vector("1234"));
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::newVault - " << e.what() << std::endl;
@@ -390,14 +406,11 @@ void MainWindow::newKeychain()
         NewKeychainDialog dlg(this);
         if (dlg.exec()) {
             QString name = dlg.getName();
-            unsigned long numKeys = dlg.getNumKeys();
-            updateStatusMessage(tr("Generating ") + QString::number(numKeys) + tr(" keys..."));
+            //unsigned long numKeys = dlg.getNumKeys();
+            //updateStatusMessage(tr("Generating ") + QString::number(numKeys) + tr(" keys..."));
 
             // TODO: Randomize using user input for entropy
-            Coin::HDSeed hdSeed(random_bytes(32));
-            Coin::HDKeychain keychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
-
-            accountModel->newHDKeychain(name, keychain.extkey(), numKeys);
+            accountModel->newKeychain(name, random_bytes(32));
             accountModel->update();
             keychainModel->update();
             keychainView->update();
@@ -409,6 +422,49 @@ void MainWindow::newKeychain()
         LOGGER(debug) << "MainWindow::newKeyChain - " << e.what() << std::endl;
         showError(e.what());
     }    
+}
+
+void MainWindow::unlockKeychain()
+{
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0)
+    {
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+
+    PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
+    if (dlg.exec())
+    {
+        // TODO: proper hash
+        secure_bytes_t hash(sha256_2(dlg.getPassphrase().toStdString()));
+        keychainModel->unlockKeychain(name, hash);
+    }
+}
+
+void MainWindow::lockKeychain()
+{
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0)
+    {
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+
+    keychainModel->lockKeychain(name);
+}
+
+void MainWindow::lockAllKeychains()
+{
+    keychainModel->lockAllKeychains();
 }
 
 void MainWindow::importKeychain(QString fileName)
@@ -467,10 +523,17 @@ void MainWindow::exportKeychain(bool exportPrivate)
     }
 
     QStandardItem* typeItem = keychainModel->item(row, 1);
-    bool isPrivate = typeItem->data(Qt::UserRole).toBool();
+    int lockFlags = typeItem->data(Qt::UserRole).toInt();
+    bool isPrivate = lockFlags & (1 << 1);
+    bool isLocked = lockFlags & 1;
 
     if (exportPrivate && !isPrivate) {
         showError(tr("Cannot export private keys for public keychain."));
+        return;
+    }
+
+    if (exportPrivate && isLocked) {
+        showError(tr("Cannot export private keys for locked keychain."));
         return;
     }
 
@@ -545,8 +608,12 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
     }
     else {
         QStandardItem* typeItem = keychainModel->item(row, 1);
-        bool isPrivate = typeItem->data(Qt::UserRole).toBool();
+        int lockFlags = typeItem->data(Qt::UserRole).toInt();
+        bool isPrivate = lockFlags & (1 << 1);
+        bool isLocked = lockFlags & 1;
 
+        unlockKeychainAction->setEnabled(isPrivate && isLocked);
+        lockKeychainAction->setEnabled(isPrivate && !isLocked);
         exportPrivateKeychainAction->setEnabled(isPrivate);
         exportPublicKeychainAction->setEnabled(true);
         backupKeychainAction->setEnabled(true);
@@ -620,7 +687,6 @@ void MainWindow::quickNewAccount()
                 throw std::runtime_error(tr("An account with that name already exists.").toStdString());
 
             const int MAX_KEYCHAIN_INDEX = 1000;
-            const unsigned int DEFAULT_KEY_COUNT = 100;
             int i = 0;
             QList<QString> keychainNames;
             while (keychainNames.size() < dlg.getMaxSigs() && ++i <= MAX_KEYCHAIN_INDEX) {
@@ -633,9 +699,7 @@ void MainWindow::quickNewAccount()
 
             for (auto& keychainName: keychainNames) {
                 // TODO: Randomize using user input for entropy
-                Coin::HDSeed hdSeed(random_bytes(32));
-                Coin::HDKeychain keychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
-                accountModel->newHDKeychain(keychainName, keychain.extkey(), DEFAULT_KEY_COUNT);
+                accountModel->newKeychain(keychainName, random_bytes(32));
             }
 
             accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames);
@@ -715,6 +779,8 @@ void MainWindow::importAccount(QString fileName)
         accountModel->importAccount(name, fileName);
         accountModel->update();
         accountView->update();
+        keychainModel->update();
+        keychainView->update();
         tabWidget->setCurrentWidget(accountView);
         networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         updateStatusMessage(tr("Imported account ") + name);
@@ -957,9 +1023,9 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 coin_tx = tx->toCoinClasses();
                 networkSync.sendTx(coin_tx);
 
-                // TODO: Check transaction has propagated before changing status to RECEIVED
-                tx->status(CoinDB::Tx::RECEIVED);
-                accountModel->getVault()->addTx(tx, true);
+                // TODO: Check transaction has propagated before changing status
+                tx->updateStatus(CoinDB::Tx::PROPAGATED);
+                accountModel->getVault()->insertTx(tx);
             }
             txModel->update();
             txView->update();
@@ -1071,12 +1137,12 @@ void MainWindow::newBlock(const chain_block_t& block)
 void MainWindow::resync()
 {
     updateStatusMessage(tr("Resynchronizing vault"));
-    uint32_t startTime = accountModel->getFirstAccountTimeCreated();
+    uint32_t startTime = accountModel->getMaxFirstBlockTimestamp();
     std::vector<bytes_t> locatorHashes = accountModel->getLocatorHashes();
     for (auto& hash: locatorHashes) {
         LOGGER(debug) << "MainWindow::resync() - hash: " << uchar_vector(hash).getHex() << std::endl;
     }
-    networkSync.resync(locatorHashes, startTime - 2*60*60);
+    networkSync.resync(locatorHashes, startTime);
 }
 
 void MainWindow::doneSync()
@@ -1360,6 +1426,21 @@ void MainWindow::createActions()
     newKeychainAction->setEnabled(false);
     connect(newKeychainAction, SIGNAL(triggered()), this, SLOT(newKeychain()));
 
+    unlockKeychainAction = new QAction(tr("Unlock keychain..."), this);
+    unlockKeychainAction->setStatusTip(tr("Unlock keychain"));
+    unlockKeychainAction->setEnabled(false);
+    connect(unlockKeychainAction, SIGNAL(triggered()), this, SLOT(unlockKeychain()));
+
+    lockKeychainAction = new QAction(tr("Lock keychain"), this);
+    lockKeychainAction->setStatusTip(tr("Lock keychain"));
+    lockKeychainAction->setEnabled(false);
+    connect(lockKeychainAction, SIGNAL(triggered()), this, SLOT(lockKeychain()));
+
+    lockAllKeychainsAction = new QAction(tr("Lock all keychains"), this);
+    lockAllKeychainsAction->setStatusTip(tr("Lock all keychains"));
+    lockAllKeychainsAction->setEnabled(false);
+    connect(lockAllKeychainsAction, SIGNAL(triggered()), this, SLOT(lockAllKeychains()));
+
     importPrivateAction = new QAction(tr("Private Imports"), this);
     importPrivateAction->setCheckable(true);
     importPrivateAction->setStatusTip(tr("Import private keys if available"));
@@ -1589,6 +1670,10 @@ void MainWindow::createMenus()
     keychainMenu->addSeparator();
     keychainMenu->addAction(newKeychainAction);
     keychainMenu->addAction(newAccountAction);
+    keychainMenu->addSeparator();
+    keychainMenu->addAction(unlockKeychainAction);
+    keychainMenu->addAction(lockKeychainAction);
+    keychainMenu->addAction(lockAllKeychainsAction);
     keychainMenu->addSeparator()->setText(tr("Import Mode"));
     keychainMenu->addAction(importPrivateAction);
     keychainMenu->addAction(importPublicAction);
@@ -1615,8 +1700,8 @@ void MainWindow::createMenus()
 
     txMenu = menuBar()->addMenu(tr("&Transactions"));
     txMenu->addAction(insertRawTxAction);
-    txMenu->addSeparator();
-    txMenu->addAction(signRawTxAction);
+    //txMenu->addSeparator();
+    //txMenu->addAction(signRawTxAction);
     //txMenu->addSeparator();
 //    txMenu->addAction(createRawTxAction);
     //txMenu->addAction(createTxAction);
@@ -1743,6 +1828,9 @@ void MainWindow::loadVault(const QString &fileName)
     txView->update();
 
     newKeychainAction->setEnabled(true);
+
+    // TODO: Prompt user to unlock chain codes
+    accountModel->getVault()->unlockChainCodes(uchar_vector("1234"));
 
     networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
 }

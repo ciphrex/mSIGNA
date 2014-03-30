@@ -400,5 +400,24 @@ void Script::clearSigs()
     for (unsigned int i = 0; i < pubkeys_.size(); i++) { sigs_.push_back(bytes_t()); }
 }
 
+unsigned int Script::mergesigs(const Script& other)
+{
+    if (type_ != other.type_) throw std::runtime_error("Script::mergesigs(...) - cannot merge two different script types.");
+    if (minsigs_ != other.minsigs_) throw std::runtime_error("Script::mergesigs(...) - cannot merge two scripts with different minimum signatures.");
+    if (pubkeys_ != other.pubkeys_) throw std::runtime_error("Script::mergesigs(...) - cannot merge two scripts with different public keys.");
+    if (sigs_.size() != other.sigs_.size()) throw std::runtime_error("Script::mergesigs(...) - signature counts differ. invalid state.");
+
+    unsigned int sigsadded = 0;
+    for (std::size_t i = 0; i < sigs_.size(); i++)
+    {
+        if (sigs_[i].empty() && !other.sigs_[i].empty())
+        {
+            sigs_[i] = other.sigs_[i];
+            sigsadded++;
+        }
+    }
+    return sigsadded;
+}
+
 }
 }
