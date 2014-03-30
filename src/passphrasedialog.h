@@ -26,5 +26,5 @@ public:
     QString getPassphrase() const;
 
 private:
-    QTextEdit* passphraseEdit;
+    QLineEdit* passphraseEdit;
 };

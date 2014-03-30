@@ -41,10 +41,10 @@ PassphraseDialog::PassphraseDialog(const QString& prompt, QWidget* parent)
     mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
 
-    resize(700, 100);
+    resize(500, 140);
 }
 
-QString getPassphrase() const
+QString PassphraseDialog::getPassphrase() const
 {
     return passphraseEdit->text();
 }

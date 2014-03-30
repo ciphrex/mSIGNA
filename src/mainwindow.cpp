@@ -52,6 +52,7 @@
 #include "requestpaymentdialog.h"
 #include "networksettingsdialog.h"
 #include "keychainbackupdialog.h"
+#include "passphrasedialog.h"
 #include "resyncdialog.h"
 
 // Logging
@@ -427,7 +428,8 @@ void MainWindow::unlockKeychain()
 {
     QModelIndex index = keychainSelectionModel->currentIndex();
     int row = index.row();
-    if (row < 0) {
+    if (row < 0)
+    {
         showError(tr("No keychain is selected."));
         return;
     }
@@ -435,15 +437,21 @@ void MainWindow::unlockKeychain()
     QStandardItem* nameItem = keychainModel->item(row, 0);
     QString name = nameItem->data(Qt::DisplayRole).toString();
 
-    // TODO: Prompt user for unlock key
-    keychainModel->unlockKeychain(name, secure_bytes_t());
+    PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
+    if (dlg.exec())
+    {
+        // TODO: proper hash
+        secure_bytes_t hash(sha256_2(dlg.getPassphrase().toStdString()));
+        keychainModel->unlockKeychain(name, hash);
+    }
 }
 
 void MainWindow::lockKeychain()
 {
     QModelIndex index = keychainSelectionModel->currentIndex();
     int row = index.row();
-    if (row < 0) {
+    if (row < 0)
+    {
         showError(tr("No keychain is selected."));
         return;
     }
@@ -1015,7 +1023,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 coin_tx = tx->toCoinClasses();
                 networkSync.sendTx(coin_tx);
 
-                // TODO: Check transaction has propagated before changing status to RECEIVED
+                // TODO: Check transaction has propagated before changing status
                 tx->updateStatus(CoinDB::Tx::PROPAGATED);
                 accountModel->getVault()->insertTx(tx);
             }

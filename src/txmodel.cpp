@@ -103,6 +103,7 @@ void TxModel::update()
         QString amount;
         QString fee;
         int64_t value = 0;
+        bytes_t this_txhash = item.tx_status == Tx::UNSIGNED ? item.tx_unsigned_hash : item.tx_hash;
         switch (item.role_flags) {
         case TxOut::ROLE_NONE:
             type = tr("None");
@@ -113,11 +114,11 @@ void TxModel::update()
             amount = "-";
             value -= item.value;
             if (item.have_fee && item.fee > 0) {
-                if (item.tx_hash != last_txhash) {
+                if (this_txhash != last_txhash) {
                     fee = "-";
                     fee += QString::number(item.fee/100000000.0, 'g', 8);
                     value -= item.fee;
-                    last_txhash = item.tx_hash;
+                    last_txhash = this_txhash;
                 }
                 else {
                     fee = "||";
@@ -158,7 +159,7 @@ void TxModel::update()
         confirmationsItem->setData(item.tx_status, Qt::UserRole);
 
         QString address = QString::fromStdString(getAddressForTxOutScript(item.script, base58_versions));
-        QString txhash = QString::fromStdString(uchar_vector(item.tx_hash).getHex());
+        QString hash = QString::fromStdString(uchar_vector(this_txhash).getHex());
 
         row.append(new QStandardItem(time));
         row.append(new QStandardItem(description));
@@ -168,7 +169,7 @@ void TxModel::update()
         row.append(new QStandardItem("")); // placeholder for balance, once sorted
         row.append(confirmationsItem);
         row.append(new QStandardItem(address));
-        row.append(new QStandardItem(txhash));
+        row.append(new QStandardItem(hash));
 
         rows.append(std::make_pair(std::make_pair(item.tx_id, nConfirmations), std::make_pair(row, value)));
     }
@@ -204,6 +205,8 @@ void TxModel::update()
 
 void TxModel::signTx(int row)
 {
+    LOGGER(trace) << "TxModel::signTx(" << row << ")" << std::endl;
+
     if (row == -1 || row >= rowCount()) {
         throw std::runtime_error(tr("Invalid row.").toStdString());
     }
@@ -218,13 +221,10 @@ void TxModel::signTx(int row)
     uchar_vector txhash;
     txhash.setHex(txHashItem->text().toStdString());
 
-    std::shared_ptr<Tx> tx = vault->getTx(txhash);
-    tx = vault->signTx(txhash);
+    std::shared_ptr<Tx> tx = vault->signTx(txhash, true);
+    if (!tx) throw std::runtime_error(tr("No new signatures were added.").toStdString());
 
-    LOGGER(trace) << uchar_vector(tx->raw()).getHex() << std::endl;
-
-    vault->insertTx(tx);
-
+    LOGGER(trace) << "TxModel::signTx - signature(s) added. raw tx: " << uchar_vector(tx->raw()).getHex() << std::endl;
     update();
 }
 
