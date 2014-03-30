@@ -192,7 +192,7 @@ protected:
     void                                    deleteTx_unwrapped(std::shared_ptr<Tx> tx);
     void                                    updateTx_unwrapped(std::shared_ptr<Tx> tx);
     SigningRequest                          getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
-    bool                                    signTx_unwrapped(std::shared_ptr<Tx> tx); // Tries to sign as many as it can with the unlocked keychains.
+    unsigned int                            signTx_unwrapped(std::shared_ptr<Tx> tx); // Tries to sign as many as it can with the unlocked keychains.
 
     ///////////////////////////
     // BLOCKCHAIN OPERATIONS //

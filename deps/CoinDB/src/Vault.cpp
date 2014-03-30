@@ -1541,16 +1541,16 @@ std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, bool update)
     if (tx_r.empty()) throw TxNotFoundException(unsigned_hash);
     std::shared_ptr<Tx> tx(tx_r.begin().load());
 
-    bool rval = signTx_unwrapped(tx);
-    if (rval && update)
+    unsigned int sigcount = signTx_unwrapped(tx);
+    if (sigcount && update)
     {
         updateTx_unwrapped(tx);
         t.commit();
     }
-    return rval ? tx : nullptr;
+    return sigcount ? tx : nullptr;
 }
 
-bool Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
+unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
 {
     using namespace CoinQ::Script;
     using namespace CoinCrypto;
@@ -1613,10 +1613,10 @@ bool Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
         txin->script(script.txinscript(sigsneeded ? Script::EDIT : Script::BROADCAST));
     }
 
-    if (!sigsadded) return false;
+    if (!sigsadded) return 0;
 
     tx->updateStatus();
-    return true;
+    return sigsadded;
 }
 
 
