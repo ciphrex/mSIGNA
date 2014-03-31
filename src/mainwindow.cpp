@@ -436,13 +436,23 @@ void MainWindow::unlockKeychain()
 
     QStandardItem* nameItem = keychainModel->item(row, 0);
     QString name = nameItem->data(Qt::DisplayRole).toString();
-
-    PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
-    if (dlg.exec())
+    secure_bytes_t hash;
+    if (keychainModel->isEncrypted(name))
     {
+        PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
+        if (!dlg.exec()) return;
+
         // TODO: proper hash
-        secure_bytes_t hash(sha256_2(dlg.getPassphrase().toStdString()));
+        hash = sha256_2(dlg.getPassphrase().toStdString());
+    }
+
+    try
+    {
         keychainModel->unlockKeychain(name, hash);
+    }
+    catch (const CoinDB::KeychainPrivateKeyUnlockFailedException& e)
+    {
+        throw std::runtime_error(tr("Invalid passphrase.").toStdString());
     }
 }
 
