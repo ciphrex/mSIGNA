@@ -638,6 +638,7 @@ void TxOut::signingscript(std::shared_ptr<SigningScript> signingscript)
 
     script_ = signingscript->txoutscript();
     receiving_account_ = signingscript->account();
+    receiving_label_ = signingscript->label();
     account_bin_ = signingscript->account_bin();
     signingscript_ = signingscript;
 }
