@@ -98,6 +98,7 @@ public:
     const std::vector<uint32_t>& derivation_path() const { return derivation_path_; }
 
     bool isPrivate() const { return (!privkey_.empty()) || (!privkey_ciphertext_.empty()); }
+    bool isEncrypted() const { return !privkey_salt_.empty(); }
 
     // Lock keys must be set before persisting
     bool setPrivateKeyUnlockKey(const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
@@ -975,6 +976,8 @@ struct KeychainView
     bytes_t hash;
     #pragma db column("length(" + Keychain::privkey_ciphertext_ + ") != 0")
     bool is_private;
+    #pragma db column("length(" + Keychain::privkey_salt_ + ") != 0")
+    bool is_encrypted;
     #pragma db transient
     bool is_locked;
 };

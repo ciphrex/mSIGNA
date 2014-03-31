@@ -140,7 +140,7 @@ inline std::string formattedTxOut(const std::shared_ptr<CoinDB::TxOut>& txout)
     using namespace std;
     using namespace CoinDB;
 
-    string status = txout->receiving_account() ? status = TxOut::getStatusString(txout->status()) : "N/A";
+    string status = txout->receiving_account() ? TxOut::getStatusString(txout->status()) : "N/A";
 
     stringstream ss;
     ss << " ";
@@ -212,6 +212,7 @@ inline std::string formattedKeychainViewHeader()
     ss << " ";
     ss << left  << setw(15) << "keychain" << " | "
        << left  << setw(7)  << "type" << " | "
+       << left  << setw(9)  << "encrypted" << " | "
        << left  << setw(6)  << "locked" << " | "
        << right << setw(5)  << "id" << " | "
        << left  << setw(40) << "hash";
@@ -232,6 +233,7 @@ inline std::string formattedKeychainView(const CoinDB::KeychainView& view)
     ss << " ";
     ss << left  << setw(15) << view.name << " | "
        << left  << setw(7)  << (view.is_private ? "PRIVATE" : "PUBLIC") << " | "
+       << left  << setw(9)  << (view.is_encrypted ? "YES" : "NO") << " | "
        << left  << setw(6)  << (view.is_locked ? "YES" : "NO") << " | "
        << right << setw(5)  << view.id << " | "
        << left  << setw(40) << uchar_vector(view.hash).getHex();
