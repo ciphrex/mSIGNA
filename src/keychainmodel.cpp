@@ -19,7 +19,7 @@ KeychainModel::KeychainModel()
     : vault(NULL)
 {
     QStringList columns;
-    columns << tr("Keychain") << tr("Type") << tr("Encrypted") << tr("Unlocked") << tr("Hash");
+    columns << tr("Keychain") << tr("Type") << tr("Unlocked") << tr("Hash");
     setHorizontalHeaderLabels(columns);
 }
 
@@ -46,10 +46,6 @@ void KeychainModel::update()
         typeItem->setData(((int)keychain.is_private << 1) | (int)keychain.is_locked, Qt::UserRole);
         row.append(typeItem);
 
-        QStandardItem* encryptedItem = new QStandardItem(
-            keychain.is_private ? (keychain.is_encrypted ? tr("Yes") : tr("No")) : tr(""));
-        row.append(encryptedItem);
-        
         QStandardItem* lockedItem = new QStandardItem(
             keychain.is_private ? (keychain.is_locked ? tr("No") : tr("Yes")) : tr(""));
         row.append(lockedItem);
