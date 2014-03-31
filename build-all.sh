@@ -92,7 +92,7 @@ cd ../CoinQ
 make OS=$OS $OPTIONS
 
 cd ../CoinDB
-make OS=$OS $OPTIONS
+make lib OS=$OS $OPTIONS
 
 cd $CURRENT_DIR
 ${QMAKE_PATH}qmake $SPEC CONFIG+=$BUILD_TYPE && make $OPTIONS

@@ -619,7 +619,7 @@ cli::result_t cmd_horizontimestamp(bool bHelp, const cli::params_t& params)
     long timestamp = vault.getHorizonTimestamp();
 
     std::function<struct tm*(const time_t*)> fConvert = use_gmt ? &gmtime : &localtime;
-    string formatted_timestamp = asctime(fConvert(&timestamp));
+    string formatted_timestamp = asctime(fConvert((const time_t*)&timestamp));
     formatted_timestamp = formatted_timestamp.substr(0, formatted_timestamp.size() - 1);
 
     stringstream ss;
