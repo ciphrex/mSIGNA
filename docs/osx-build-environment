@@ -115,3 +115,18 @@ Mac OS X 10.9.x Mavericks
     $ make install
     $ cd ..
 
+Clang boost patch (needed for clang 3.4 and up)
+===============================================
+
+--- a/boost/config/compiler/clang.hpp 
++++ b/boost/config/compiler/clang.hpp 
+@@ -39,6 +39,11 @@ 
+ // Clang supports "long long" in all compilation modes. 
+ #define BOOST_HAS_LONG_LONG 
+
++#if defined(__SIZEOF_INT128__) 
++#  define BOOST_HAS_INT128 
++#endif 
++ 
++ 
+
