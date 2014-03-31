@@ -70,6 +70,11 @@ echo "Building using commit hash $COMMIT_HASH..."
 echo "#pragma once" > BuildInfo.h.tmp
 echo "#define COMMIT_HASH \"$COMMIT_HASH\"" >> BuildInfo.h.tmp
 
+if [[ ! -f BuildInfo.h ]]
+then
+    touch BuildInfo.h
+fi
+
 if [[ -z $(diff BuildInfo.h BuildInfo.h.tmp) ]]
 then
     rm BuildInfo.h.tmp
