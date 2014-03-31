@@ -206,6 +206,25 @@ bool AccountModel::insertRawTx(const bytes_t& rawTx)
     return false;
 }
 
+std::shared_ptr<Tx> AccountModel::insertTx(std::shared_ptr<Tx> tx, bool sign)
+{
+    if (!vault) return nullptr;
+
+    tx = vault->insertTx(tx);
+    if (!tx) throw std::runtime_error("Transaction not inserted.");
+
+    if (tx->status() == Tx::UNSIGNED && sign)
+    {
+        LOGGER(trace) << "Attempting to sign tx " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
+        vault->signTx(tx->unsigned_hash(), true);
+    }
+
+    update();
+    emit newTx(tx->hash());
+
+    return tx;
+}
+
 std::shared_ptr<Tx> AccountModel::insertTx(const Coin::Transaction& coinTx, Tx::status_t status, bool sign)
 {
     if (!vault) {
@@ -225,6 +244,14 @@ std::shared_ptr<Tx> AccountModel::insertTx(const Coin::Transaction& coinTx, Tx::
     update();
     emit newTx(tx->hash());
 
+    return tx;
+}
+
+std::shared_ptr<CoinDB::Tx> AccountModel::createTx(const QString& accountName, std::vector<std::shared_ptr<CoinDB::TxOut>> txouts, uint64_t fee)
+{
+    if (!vault) throw std::runtime_error("No vault is loaded.");
+ 
+    std::shared_ptr<Tx> tx = vault->createTx(accountName.toStdString(), 1, 0, txouts, fee,  1);
     return tx;
 }
 

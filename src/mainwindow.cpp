@@ -1014,10 +1014,8 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
         try {
             CreateTxDialog::status_t status = dlg.getStatus();
             bool sign = status == CreateTxDialog::SIGN_AND_SEND || status == CreateTxDialog::SIGN_AND_SAVE;
-            std::vector<TaggedOutput> outputs = dlg.getOutputs();
-            uint64_t fee = dlg.getFeeValue();
-            Coin::Transaction coin_tx = accountModel->createTx(dlg.getAccountName(), outputs, fee);
-            std::shared_ptr<CoinDB::Tx> tx = accountModel->insertTx(coin_tx, CoinDB::Tx::UNSIGNED, sign);
+            std::shared_ptr<CoinDB::Tx> tx = accountModel->createTx(dlg.getAccountName(), dlg.getTxOuts(), dlg.getFeeValue());
+            tx = accountModel->insertTx(tx, sign);
             saved = true;
             txModel->update();
             txView->update();
@@ -1030,7 +1028,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 if (!connected) {
                     throw std::runtime_error(tr("Must be connected to network to send.").toStdString());
                 }
-                coin_tx = tx->toCoinClasses();
+                Coin::Transaction coin_tx = tx->toCoinClasses();
                 networkSync.sendTx(coin_tx);
 
                 // TODO: Check transaction has propagated before changing status

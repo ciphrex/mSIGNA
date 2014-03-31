@@ -231,6 +231,27 @@ uint64_t CreateTxDialog::getFeeValue() const
     return btcStringToSatoshis(feeEdit->text().toStdString());
 }
 
+std::vector<std::shared_ptr<CoinDB::TxOut>> CreateTxDialog::getTxOuts()
+{
+    std::vector<std::shared_ptr<CoinDB::TxOut>> txouts;
+    std::set<TxOutLayout*> txOutLayoutsCopy = txOutLayouts;
+    for (auto& txOutLayout: txOutLayoutsCopy) {
+        if (txOutLayout->getAddress().isEmpty()) {
+            removeTxOut(txOutLayout);
+            continue;
+        }
+        std::shared_ptr<CoinDB::TxOut> txout(new CoinDB::TxOut(txOutLayout->getValue(), txOutLayout->getScript()));
+        txout->sending_label(txOutLayout->getRecipient().toStdString());
+        txouts.push_back(txout);
+    }
+
+    if (txouts.empty()) {
+        addTxOut();
+        throw std::runtime_error("No outputs entered.");
+    }
+    return txouts;
+}
+
 std::vector<TaggedOutput> CreateTxDialog::getOutputs()
 {
     std::vector<TaggedOutput> outputs;
