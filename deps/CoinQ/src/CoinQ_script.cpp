@@ -26,15 +26,15 @@ uchar_vector opPushData(uint32_t nBytes)
     }
     else if (nBytes <= 0xffff) {
         rval.push_back(0x4d);
-        rval.push_back((unsigned char)(nBytes >> 8));
         rval.push_back((unsigned char)(nBytes & 0xff));
+        rval.push_back((unsigned char)(nBytes >> 8));
     }
     else {
         rval.push_back(0x4e);
-        rval.push_back((unsigned char)(nBytes >> 24));
-        rval.push_back((unsigned char)((nBytes >> 16) & 0xff));
-        rval.push_back((unsigned char)((nBytes >> 8) & 0xff));
         rval.push_back((unsigned char)(nBytes & 0xff));
+        rval.push_back((unsigned char)((nBytes >> 8) & 0xff));
+        rval.push_back((unsigned char)((nBytes >> 16) & 0xff));
+        rval.push_back((unsigned char)(nBytes >> 24));
     }
 
     return rval;
@@ -60,18 +60,18 @@ uint32_t getDataLength(const uchar_vector& script, uint& pos)
         if (pos + 1 >= script.size()) {
             throw std::runtime_error("Script pos past end.");
         }
-        uint32_t rval = (uint32_t)script[pos++] << 8;
-        rval         += (uint32_t)script[pos++];
+        uint32_t rval = (uint32_t)script[pos++];
+        rval         += (uint32_t)script[pos++] << 8;;
         return rval;
     }
     else if (op == 0x4e) {
         if (pos + 3 >= script.size()) {
             throw std::runtime_error("Script pos past end.");
         }
-        uint32_t rval = (uint32_t)script[pos++] << 24;
-        rval         += (uint32_t)script[pos++] << 16;
+        uint32_t rval = (uint32_t)script[pos++];
         rval         += (uint32_t)script[pos++] << 8;
-        rval         += (uint32_t)script[pos++];
+        rval         += (uint32_t)script[pos++] << 16;
+        rval         += (uint32_t)script[pos++] << 24;
         return rval;
     }
     else {
@@ -398,6 +398,25 @@ void Script::clearSigs()
 {
     sigs_.clear();
     for (unsigned int i = 0; i < pubkeys_.size(); i++) { sigs_.push_back(bytes_t()); }
+}
+
+unsigned int Script::mergesigs(const Script& other)
+{
+    if (type_ != other.type_) throw std::runtime_error("Script::mergesigs(...) - cannot merge two different script types.");
+    if (minsigs_ != other.minsigs_) throw std::runtime_error("Script::mergesigs(...) - cannot merge two scripts with different minimum signatures.");
+    if (pubkeys_ != other.pubkeys_) throw std::runtime_error("Script::mergesigs(...) - cannot merge two scripts with different public keys.");
+    if (sigs_.size() != other.sigs_.size()) throw std::runtime_error("Script::mergesigs(...) - signature counts differ. invalid state.");
+
+    unsigned int sigsadded = 0;
+    for (std::size_t i = 0; i < sigs_.size(); i++)
+    {
+        if (sigs_[i].empty() && !other.sigs_[i].empty())
+        {
+            sigs_[i] = other.sigs_[i];
+            sigsadded++;
+        }
+    }
+    return sigsadded;
 }
 
 }

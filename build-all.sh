@@ -59,14 +59,33 @@ then
     BUILD_TYPE=release
 fi
 
-COMMIT_HASH=$(git rev-parse HEAD)
+if [[ -z $(git diff --shortstat) ]]
+then
+    COMMIT_HASH=$(git rev-parse HEAD)
+else
+    COMMIT_HASH="N/A"
+fi
+
 echo "Building using commit hash $COMMIT_HASH..."
-echo "#pragma once" > BuildInfo.h
-echo "#define COMMIT_HASH \"$COMMIT_HASH\"" >> BuildInfo.h
+echo "#pragma once" > BuildInfo.h.tmp
+echo "#define COMMIT_HASH \"$COMMIT_HASH\"" >> BuildInfo.h.tmp
+
+if [[ ! -f BuildInfo.h ]]
+then
+    touch BuildInfo.h
+fi
+
+if [[ -z $(diff BuildInfo.h BuildInfo.h.tmp) ]]
+then
+    rm BuildInfo.h.tmp
+else
+    mv BuildInfo.h.tmp BuildInfo.h
+fi
 
 CURRENT_DIR=$(pwd)
 
 set -x
+set -e
 
 cd deps/logger
 make OS=$OS $OPTIONS
@@ -78,12 +97,16 @@ cd ../CoinQ
 make OS=$OS $OPTIONS
 
 cd ../CoinDB
-make OS=$OS $OPTIONS
+make lib OS=$OS $OPTIONS
 
 cd $CURRENT_DIR
 ${QMAKE_PATH}qmake $SPEC CONFIG+=$BUILD_TYPE && make $OPTIONS
 
 if [[ "$OS" == "osx" ]]
 then
+    if [[ -e build/$BUILD_TYPE/CoinVault.app/Contents/Resources/qt.conf ]]
+    then
+        rm build/$BUILD_TYPE/CoinVault.app/Contents/Resources/qt.conf
+    fi
     ${MACDEPLOYQT_PATH}macdeployqt $(find ./build/$BUILD_TYPE -name *.app)
 fi

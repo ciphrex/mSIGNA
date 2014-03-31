@@ -54,8 +54,7 @@ public:
     Coin::BloomFilter getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags = 0) const;
 
     // Key Chain operations
-    void newKeychain(const QString& name, unsigned long numkeys);
-    void newHDKeychain(const QString& name, const bytes_t& extkey, unsigned long numkeys);
+    void newKeychain(const QString& name, const secure_bytes_t& entropy);
 
     // Account operations
     void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames);
@@ -64,13 +63,15 @@ public:
     void importAccount(const QString& name, const QString& filePath);
     void deleteAccount(const QString& name);
     QPair<QString, bytes_t> issueNewScript(const QString& accountName, const QString& label); // returns qMakePair<address, script>
-    uint32_t getFirstAccountTimeCreated() const; // the timestamp for when the first account in the vault was created
+    uint32_t getMaxFirstBlockTimestamp() const; // the timestamp for latest acceptable first block
 
     // Transaction operations
     bool insertRawTx(const bytes_t& rawTx);
-    std::shared_ptr<CoinDB::Tx> insertTx(const Coin::Transaction& coinTx, CoinDB::Tx::status_t status = CoinDB::Tx::RECEIVED, bool sign = false);
+    std::shared_ptr<CoinDB::Tx> insertTx(std::shared_ptr<CoinDB::Tx> tx, bool sign = false);
+    std::shared_ptr<CoinDB::Tx> createTx(const QString& accountName, std::vector<std::shared_ptr<CoinDB::TxOut>> txouts, uint64_t fee);
     bytes_t createRawTx(const QString& accountName, const std::vector<TaggedOutput>& outputs, uint64_t fee);
     // TODO: not sure I'm too happy about exposing Coin:Vault::Tx
+    std::shared_ptr<CoinDB::Tx> insertTx(const Coin::Transaction& coinTx, CoinDB::Tx::status_t status = CoinDB::Tx::PROPAGATED, bool sign = false);
     Coin::Transaction createTx(const QString& accountName, const std::vector<TaggedOutput>& outputs, uint64_t fee);
     bytes_t signRawTx(const bytes_t& rawTx);
 

@@ -2,14 +2,16 @@
 //
 // Vault.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 //
 
 #pragma once
 
-#include "Schema.hxx"
+#include "Schema.h"
+#include "VaultExceptions.h"
+#include "SigningRequest.h"
 
 #include <CoinQ_signals.h>
 #include <CoinQ_slots.h>
@@ -19,184 +21,197 @@
 
 #include <boost/thread.hpp>
 
-class ChainBlock;
-
 namespace CoinDB
 {
-
-class KeychainInfo
-{
-public:
-    KeychainInfo(unsigned long id, const std::string name, Keychain::type_t type, const bytes_t& hash, unsigned long numkeys)
-        : id_(id), name_(name), type_(type), hash_(hash), numkeys_(numkeys) { }
-
-    unsigned long id() const { return id_; }
-    const std::string& name() const { return name_; }
-    Keychain::type_t type() const { return type_; }
-    const bytes_t& hash() const { return hash_; }
-    unsigned long numkeys() const { return numkeys_; } 
-
-private:
-    unsigned long id_;
-    std::string name_;
-    Keychain::type_t type_;
-    bytes_t hash_;
-    unsigned long numkeys_;
-};
-
-class AccountInfo
-{
-public:
-    AccountInfo(unsigned long id, const std::string name, unsigned int minsigs, const std::vector<std::string> keychain_names, uint64_t balance = 0, uint64_t pending = 0, unsigned long scripts_remaining = 0, bool is_ours = true)
-        :id_(id), name_(name), minsigs_(minsigs), keychain_names_(keychain_names), balance_(balance), pending_(pending), scripts_remaining_(scripts_remaining), is_ours_(is_ours)  { }
-
-    unsigned long id() const { return id_; }
-    const std::string& name() const { return name_; }
-    unsigned int minsigs() const { return minsigs_; }
-    const std::vector<std::string>& keychain_names() { return keychain_names_; }
-    uint64_t balance() const { return balance_; }
-    uint64_t pending() const { return pending_; }
-    unsigned long scripts_remaining() const { return scripts_remaining_; }
-    bool is_ours() const { return is_ours_; }
-
-private:
-    unsigned long id_;
-    std::string name_;
-    unsigned int minsigs_;
-    std::vector<std::string> keychain_names_;
-    uint64_t balance_;
-    uint64_t pending_;
-    unsigned long scripts_remaining_;
-    bool is_ours_;
-};
 
 class Vault
 {
 public:
     Vault(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION);
 
-    enum result_t {
-        OBJECT_INSERTED,
-        OBJECT_UPDATED,
-        OBJECT_UNCHANGED,
-        OBJECT_IGNORED
-    };
+#if defined(DATABASE_SQLITE)
+    Vault(const std::string& filename, bool create = false, uint32_t version = SCHEMA_VERSION);
+#endif
 
-    // Global operations
-    void setVersion(uint32_t version);
-    uint32_t getVersion() const;
+    ///////////////////////
+    // GLOBAL OPERATIONS //
+    ///////////////////////
+    uint32_t                                MAX_HORIZON_TIMESTAMP_OFFSET = 6 * 60 * 60; // a good six hours initial tolerance for incorrect clock
+    uint32_t                                getHorizonTimestamp() const; // nothing that happened before this should matter to us.
+    uint32_t                                getMaxFirstBlockTimestamp() const; // convenience method. getHorizonTimestamp() - MIN_HORIZON_TIMESTAMP_OFFSET
+    uint32_t                                getHorizonHeight() const;
+    std::vector<bytes_t>                    getLocatorHashes() const;
+    Coin::BloomFilter                       getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
 
-    // Keychain operations
-    bool keychainExists(const std::string& keychain_name) const;
-    void newKeychain(const std::string& name, unsigned long numkeys);
-    void newHDKeychain(const std::string& name, const bytes_t& extkey, unsigned long numkeys = 100);
-    void eraseKeychain(const std::string& keychain_name) const;
-    void renameKeychain(const std::string& old_name, const std::string& new_name);
-    bytes_t getExtendedKeyBytes(const std::string& keychain_name, bool get_private = false, const bytes_t& decryption_key = bytes_t()) const;
-    std::vector<KeychainInfo> getKeychains() const;
-    std::shared_ptr<Keychain> getKeychain(const std::string& keychain_name) const;
-    bytes_t exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
-    bytes_t importKeychain(const std::string& keychain_name, const std::string& filepath, bool& importprivkeys);
-    bool isKeychainFilePrivate(const std::string& filepath) const;
+    ///////////////////////////
+    // CHAIN CODE OPERATIONS //
+    ///////////////////////////
+    bool                                    areChainCodesLocked() const;
+    void                                    lockChainCodes() const;
+    void                                    unlockChainCodes(const secure_bytes_t& unlockKey) const;
+    void                                    setChainCodeUnlockKey(const secure_bytes_t& newUnlockKey);
 
-    enum account_ownership_t {
-        ACCOUNT_OWNER_US = 0x01,
-        ACCOUNT_OWNER_NOT_US = 0x02,
-        ACCOUNT_OWNER_ANY = 0x03
-    };
-        
-    // Account operations
-    bool accountExists(const std::string& account_name) const;
-    void newAccount(const std::string& name, unsigned int minsigs, const std::vector<std::string>& keychain_names, bool is_ours = true);
-    void eraseAccount(const std::string& name) const;
-    void renameAccount(const std::string& old_name, const std::string& new_name);
-    std::vector<AccountInfo> getAccounts(account_ownership_t ownership = ACCOUNT_OWNER_US) const;
-    std::shared_ptr<Account> getAccount(const std::string& name) const;
-    bytes_t exportAccount(const std::string& account_name, const std::string& filepath) const;
-    bytes_t importAccount(const std::string& account_name, const std::string& filepath, bool is_ours = true);
+    /////////////////////////
+    // KEYCHAIN OPERATIONS //
+    /////////////////////////
+    void                                    exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
+    std::shared_ptr<Keychain>               importKeychain(const std::string& filepath, bool& importprivkeys, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
+    bool                                    keychainExists(const std::string& keychain_name) const;
+    bool                                    keychainExists(const bytes_t& keychain_hash) const;
+    std::shared_ptr<Keychain>               newKeychain(const std::string& keychain_name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
+    //void eraseKeychain(const std::string& keychain_name) const;
+    void                                    renameKeychain(const std::string& old_name, const std::string& new_name);
+    std::shared_ptr<Keychain>               getKeychain(const std::string& keychain_name) const;
+    std::vector<std::shared_ptr<Keychain>>  getAllKeychains(bool root_only = false) const;
+    std::vector<KeychainView>               getRootKeychainViews(const std::string& account_name = std::string()) const;
+    secure_bytes_t                          getKeychainExtendedKey(const std::string& keychain_name, bool get_private) const;
 
-    std::vector<std::shared_ptr<SigningScriptView>> getSigningScriptViews(const std::string& account_name, int flags = SigningScript::ALL) const;
+    // The following private key lock/unlock methods do not maintain a database session open so they only
+    // store and erase the unlock keys in a member map to be used by the other class methods.
+    void                                    lockAllKeychains();
+    void                                    lockKeychain(const std::string& keychain_name);
+    void                                    unlockKeychain(const std::string& keychain_name, const secure_bytes_t& unlock_key);
 
-    unsigned long getScriptCount(const std::string& account_name, SigningScript::status_t status) const;
+    ////////////////////////
+    // ACCOUNT OPERATIONS //
+    ////////////////////////
+    void                                    exportAccount(const std::string& account_name, const std::string& filepath, bool exportprivkeys = false, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
+    std::shared_ptr<Account>                importAccount(const std::string& filepath, unsigned int& privkeysimported, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t()); // pass privkeysimported = 0 to not inport any private keys.
+    bool                                    accountExists(const std::string& account_name) const;
+    void                                    newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL));
+    //void                                  eraseAccount(const std::string& name) const;
+    void                                    renameAccount(const std::string& old_name, const std::string& new_name);
+    std::shared_ptr<Account>                getAccount(const std::string& account_name) const;
+    AccountInfo                             getAccountInfo(const std::string& account_name) const;
+    std::vector<AccountInfo>                getAllAccountInfo() const;
+    uint64_t                                getAccountBalance(const std::string& account_name, unsigned int min_confirmations = 1, int tx_flags = Tx::ALL) const;
+    std::shared_ptr<AccountBin>             addAccountBin(const std::string& account_name, const std::string& bin_name);
+    std::shared_ptr<SigningScript>          issueSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "");
+    void                                    refillAccountPool(const std::string& account_name);
 
-    unsigned long generateLookaheadScripts(const std::string& account_name, unsigned long lookahead);
+    // empty account_name or bin_name means do not filter on those fields
+    std::vector<SigningScriptView>          getSigningScriptViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int flags = SigningScript::ALL) const;
+    std::vector<TxOutView>                  getTxOutViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int role_flags = TxOut::ROLE_BOTH, int txout_status_flags = TxOut::BOTH, int tx_status_flags = Tx::ALL, bool hide_change = true) const;
 
-    // Tag operations
-    bool scriptTagExists(const bytes_t& txoutscript) const;
-    void addScriptTag(const bytes_t& txoutscript, const std::string& description);
-    void updateScriptTag(const bytes_t& txoutscript, const std::string& description);
-    void deleteScriptTag(const bytes_t& txoutscript);
+    ////////////////////////////
+    // ACCOUNT BIN OPERATIONS //
+    ////////////////////////////
+    std::shared_ptr<AccountBin> getAccountBin(const std::string& account_name, const std::string& bin_name) const;
 
-    // Tx operations
-    std::vector<std::shared_ptr<TxOut>> getTxOuts(const std::string& account_name) const;
-    std::vector<std::shared_ptr<TxOutView>> getTxOutViews(const std::string& account_name, bool unspentonly = true) const;
+    ///////////////////
+    // TX OPERATIONS //
+    ///////////////////
+    std::shared_ptr<Tx>                     getTx(const bytes_t& hash) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException/
+    std::shared_ptr<Tx>                     insertTx(std::shared_ptr<Tx> tx); // Inserts transaction only if it affects one of our accounts. Returns transaction in vault if change occured. Otherwise returns nullptr.
+    std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
+    void                                    deleteTx(const bytes_t& tx_hash); // Tries both signed and unsigned hashes. Throws TxNotFoundException.
+    SigningRequest                          getSigningRequest(const bytes_t& unsigned_hash, bool include_raw_tx = false) const; // Tries only unsigned hashes. Throws TxNotFoundException.
+    std::shared_ptr<Tx>                     signTx(const bytes_t& unsigned_hash, bool update = false); // Tries only unsigned hashes. Throws TxNotFoundException.
 
-    std::shared_ptr<TxOut> newTxOut(const std::string& account_name, const std::string& label, uint64_t value = 0);
-
-    // set max_height to 0xffffffff to also get unconfirmed transactions.
-    std::vector<std::shared_ptr<AccountTxOutView>> getAccountHistory(const std::string& account_name, int type_flags = TxOut::ALL, int status_flags = Tx::ALL, uint32_t min_height = 0, uint32_t max_height = 0xffffffff) const;
-
-    // returns true iff transaction belongs to one of our accounts.
-    // otherwise, transaction is ignored and false is returned.
-    bool addTx(std::shared_ptr<Tx> tx, bool delete_conflicting_txs = false);
-
-    // returns true iff transaction was in vault.
-    // otherwise, transaction is ignored and false is returned.
-    bool deleteTx(const bytes_t& txhash);
-
-    // constructs an unsigned transaction, fills inputs and change outputs automatically.
-    // tx_version = 1 and tx_locktime = 0 are standard.
-    std::shared_ptr<Tx> newTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, const Tx::txouts_t& payment_txouts, uint64_t fee, unsigned int maxchangeouts);
-
-    static bool isSigned(std::shared_ptr<Tx> tx);
-    std::shared_ptr<Tx> signTx(std::shared_ptr<Tx> tx) const;
-
-    std::shared_ptr<Tx> getTx(const bytes_t& hash) const;
-
-    bool insertBlock(const ChainBlock& block, bool reinsert_tx = false);
-    bool deleteBlock(const bytes_t& hash);
-
-    bool insertMerkleBlock(const ChainMerkleBlock& merkleblock);
-    bool deleteMerkleBlock(const bytes_t& hash);
-
-    // checks all transactions with null blockheader to see if they match any merkleblock hashes, then updates the blockheader.
-    // returns count of transactions updated.
-    unsigned int updateUnconfirmed(const bytes_t& txhash = bytes_t());
-
-    uint32_t getFirstAccountTimeCreated() const;
-    uint32_t getBestHeight() const;
-    std::shared_ptr<BlockHeader> getBestBlockHeader() const;
-
-    std::vector<bytes_t> getLocatorHashes() const;
-
-    Coin::BloomFilter getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags = 0) const;
-
-    // EVENT SUBSCRIPTIONS
-    void subscribeAddTx(tx_slot_t slot) { notifyAddTx.connect(slot); }
-    void subscribeInsertBlock(chain_block_slot_t slot) { notifyInsertBlock.connect(slot); }
+    //////////////////////
+    // BLOCK OPERATIONS //
+    //////////////////////
+    uint32_t                                getBestHeight() const;
+    std::shared_ptr<BlockHeader>            getBlockHeader(const bytes_t& hash) const;
+    std::shared_ptr<BlockHeader>            getBlockHeader(uint32_t height) const;
+    std::shared_ptr<BlockHeader>            getBestBlockHeader() const;
+    std::shared_ptr<MerkleBlock>            insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock);
+    unsigned int                            deleteMerkleBlock(const bytes_t& hash);
+    unsigned int                            deleteMerkleBlock(uint32_t height);
 
 protected:
-    // unwrapped methods must be called from within a session and transaction
-    void persistKeychain_unwrapped(Keychain& keychain);
-    void updateKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
+    ///////////////////////
+    // GLOBAL OPERATIONS //
+    ///////////////////////
+    uint32_t                                getHorizonTimestamp_unwrapped() const;
+    uint32_t                                getMaxFirstBlockTimestamp_unwrapped() const;
+    uint32_t                                getHorizonHeight_unwrapped() const;
+    std::vector<bytes_t>                    getLocatorHashes_unwrapped() const;
+    Coin::BloomFilter                       getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
 
-    unsigned long generateLookaheadScripts_unwrapped(const std::string& account_name, unsigned long lookahead);
+    ///////////////////////////
+    // CHAIN CODE OPERATIONS //
+    ///////////////////////////
+    void                                    verifyChainCodeUnlockKey_unwrapped(const secure_bytes_t& unlockKey) const;
+    void                                    setChainCodeUnlockKey_unwrapped(const secure_bytes_t& newUnlockKey);
 
-    result_t insertTx_unwrapped(std::shared_ptr<Tx>& tx, bool delete_conflicting_txs = false);
-    bool deleteTx_unwrapped(const bytes_t& txhash);
-    bool deleteBlock_unwrapped(const bytes_t& hash);
-    bool deleteMerkleBlock_unwrapped(const bytes_t& hash);
-    unsigned int updateUnconfirmed_unwrapped(const bytes_t& txhash = bytes_t());
-    uint32_t getFirstAccountTimeCreated_unwrapped() const;
+    /////////////////////////
+    // KEYCHAIN OPERATIONS //
+    /////////////////////////
+    bool                                    keychainExists_unwrapped(const std::string& keychain_name) const;
+    bool                                    keychainExists_unwrapped(const bytes_t& keychain_hash) const;
+    std::shared_ptr<Keychain>               getKeychain_unwrapped(const std::string& keychain_name) const;
+    void                                    persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
+    void                                    exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
+    std::shared_ptr<Keychain>               importKeychain_unwrapped(const std::string& filepath, bool& importprivkeys, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
+    secure_bytes_t                          getKeychainExtendedKey_unwrapped(std::shared_ptr<Keychain> keychain, bool get_private) const;
+    std::vector<KeychainView>               getRootKeychainViews_unwrapped(std::shared_ptr<Account> account = nullptr) const;
 
-    mutable boost::mutex mutex;
+    // All the keychain unlock methods use the global keys by default
 
-    CoinQSignal<const Coin::Transaction&> notifyAddTx;
-    CoinQSignal<const ChainBlock&> notifyInsertBlock;
+    // The following methods throw KeychainChainCodeUnlockFailedException
+    void                                    unlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain, const secure_bytes_t& overrideChainCodeUnlockKey = secure_bytes_t()) const;
+    void                                    unlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain, const secure_bytes_t& overridePrivateKeyUnlockKey = secure_bytes_t()) const;
 
+    // The following methods return true iff successful
+    bool                                    tryUnlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain, const secure_bytes_t& overrideChainCodeUnlockKey = secure_bytes_t()) const;
+    bool                                    tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain, const secure_bytes_t& overridePrivateKeyUnlockKey = secure_bytes_t()) const;
+
+    ////////////////////////
+    // Account operations //
+    ////////////////////////
+    // The following methods try to use the vault's global chainCodeUnlockKey by default.
+    void                                    exportAccount_unwrapped(const std::shared_ptr<Account> account, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
+    std::shared_ptr<Account>                importAccount_unwrapped(const std::string& filepath, unsigned int& privkeysimported, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
+
+    // The following method throws KeychainChainCodeUnlockFailedException
+    void                                    unlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account, const secure_bytes_t& overrideChainCodeUnlockKey = secure_bytes_t()) const;
+
+    // The following method returns true iff successful for all keychains
+    bool                                    tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account, const secure_bytes_t& overrideChainCodeUnlockKey = secure_bytes_t()) const;
+
+    // The following method throws KeychainChainCodeLockedException
+    void                                    refillAccountPool_unwrapped(std::shared_ptr<Account> account);
+
+    bool                                    accountExists_unwrapped(const std::string& account_name) const;
+    std::shared_ptr<Account>                getAccount_unwrapped(const std::string& account_name) const; // throws AccountNotFoundException
+
+    ////////////////////////////
+    // ACCOUNT BIN OPERATIONS //
+    ////////////////////////////
+    std::shared_ptr<AccountBin>             getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;
+    std::shared_ptr<SigningScript>          issueAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> account_bin, const std::string& label = "");
+    void                                    refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin);
+
+    ///////////////////
+    // TX OPERATIONS //
+    ///////////////////
+    std::shared_ptr<Tx>                     getTx_unwrapped(const bytes_t& hash) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException/
+    std::shared_ptr<Tx>                     insertTx_unwrapped(std::shared_ptr<Tx> tx);
+    std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
+    void                                    deleteTx_unwrapped(std::shared_ptr<Tx> tx);
+    void                                    updateTx_unwrapped(std::shared_ptr<Tx> tx);
+    SigningRequest                          getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
+    unsigned int                            signTx_unwrapped(std::shared_ptr<Tx> tx); // Tries to sign as many as it can with the unlocked keychains.
+
+    ///////////////////////////
+    // BLOCKCHAIN OPERATIONS //
+    ///////////////////////////
+    uint32_t                                getBestHeight_unwrapped() const;
+    std::shared_ptr<BlockHeader>            getBlockHeader_unwrapped(const bytes_t& hash) const;
+    std::shared_ptr<BlockHeader>            getBlockHeader_unwrapped(uint32_t height) const;
+    std::shared_ptr<BlockHeader>            getBestBlockHeader_unwrapped() const;
+    std::shared_ptr<MerkleBlock>            insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
+    unsigned int                            deleteMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
+    unsigned int                            deleteMerkleBlock_unwrapped(uint32_t height);
+    unsigned int                            updateConfirmations_unwrapped(std::shared_ptr<Tx> tx = nullptr); // If parameter is null, updates all unconfirmed transactions.
+                                                                                                     // Returns the number of transaction previously unconfirmed that are now confirmed.
 private:
+    mutable boost::mutex mutex;
     std::shared_ptr<odb::core::database> db_;
+
+    mutable secure_bytes_t chainCodeUnlockKey;
+    mutable std::map<std::string, secure_bytes_t> mapPrivateKeyUnlock;
 };
 
 }
-

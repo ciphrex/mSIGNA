@@ -105,6 +105,9 @@ private slots:
     //////////////////////
     // KEYCHAIN OPERATIONS
     void newKeychain();
+    void unlockKeychain();
+    void lockKeychain();
+    void lockAllKeychains();
     void importKeychain(QString fileName = QString());
     void exportKeychain(bool exportPrivate);
     void backupKeychain();
@@ -237,6 +240,9 @@ private:
 
     // keychain actions
     QAction* newKeychainAction;
+    QAction* unlockKeychainAction;
+    QAction* lockKeychainAction;
+    QAction* lockAllKeychainsAction;
     bool     importPrivate;
     QAction* importPrivateAction;
     QAction* importPublicAction;
@@ -283,6 +289,14 @@ private:
     QAction* stopResyncAction;
     QAction* networkSettingsAction;
 
+    // network sync state
+    network_state_t networkState;
+
+    // network sync icons
+    QPixmap* notConnectedIcon;
+    QMovie* synchingMovie;
+    QPixmap* synchedIcon;
+
     // about/help actions
     QAction* aboutAction;
 
@@ -307,14 +321,6 @@ private:
 
     // dialogs
     RequestPaymentDialog* requestPaymentDialog;
-
-    // network sync state
-    network_state_t networkState;
-
-    // network sync icons
-    QPixmap* notConnectedIcon;
-    QMovie* synchingMovie;
-    QPixmap* synchedIcon;
 };
 
 #endif // VAULT_MAINWINDOW_H

@@ -30,6 +30,7 @@ In addition, CoinVault depends on the following:
         * boost_filesystem
         * boost_regex
         * boost_thread
+        * boost_serialization
 
     - OpenSSL (including EC module)             http://www.openssl.org/
         * crypto

@@ -29,6 +29,7 @@ public:
 
 public slots:
     void setCurrentAccount(const QString& accountName);
+    void clearInvoice();
 
 private slots:
     void setAccounts(const QStringList& accountNames);
