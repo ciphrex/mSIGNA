@@ -380,7 +380,11 @@ cli::result_t cmd_listscripts(bool bHelp, const cli::params_t& params)
         return "listscripts <db file> [account_name = @all] [bin_name = @all] [flags = PENDING | RECEIVED] - display list of signing script. (flags: UNUSED=1, CHANGE=2, PENDING=4, RECEIVED=8, CANCELED=16)";
 
     std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
+    if (account_name == "@all") account_name = "";
+
     std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
+    if (bin_name == "@all") bin_name = "";
+
     int flags = params.size() > 3 ? (int)strtoul(params[3].c_str(), NULL, 0) : ((int)SigningScript::ISSUED | (int)SigningScript::USED);
     
     Vault vault(params[0], false);
@@ -399,7 +403,11 @@ cli::result_t cmd_history(bool bHelp, const cli::params_t& params)
         return "history <db file> [account name = @all] [bin name = @all] [hide change = true]- display transaction history.";
 
     std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
+    if (account_name == "@all") account_name = "";
+
     std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
+    if (bin_name == "@all") bin_name = "";
+
     bool hide_change = params.size() > 3 ? params[3] == "true" : true;
     
     Vault vault(params[0], false);
@@ -570,7 +578,9 @@ cli::result_t cmd_signtx(bool bHelp, const cli::params_t& params)
     vault.unlockKeychain(params[2], secure_bytes_t());
 
     stringstream ss;
-    if (vault.signTx(uchar_vector(params[1]), true))
+    std::vector<std::string> keychain_names;
+    keychain_names.push_back(params[2]);
+    if (vault.signTx(uchar_vector(params[1]), keychain_names, true))
     {
         ss << "Signatures added.";
     }

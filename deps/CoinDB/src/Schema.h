@@ -1129,22 +1129,23 @@ struct TxOutView
         }
     }
 
-    std::vector<TxOutView> getSplitRoles(TxOut::role_t first = TxOut::ROLE_RECEIVER)
+    std::vector<TxOutView> getSplitRoles(TxOut::role_t first = TxOut::ROLE_RECEIVER, const std::string& account_name = "")
     {
         std::vector<TxOutView> split_views;
-        if (role_flags == TxOut::ROLE_NONE)
+
+        if ((role_flags & TxOut::ROLE_RECEIVER) && (account_name.empty() || account_name == receiving_account_name))
         {
-            split_views.push_back(*this);
+            split_views.push_back(TxOutView(*this, TxOut::ROLE_RECEIVER));
         }
-        else if (first == TxOut::ROLE_RECEIVER)
+
+        if ((role_flags & TxOut::ROLE_SENDER) && (account_name.empty() || account_name == sending_account_name))
         {
-            if (role_flags & TxOut::ROLE_RECEIVER)  { split_views.push_back(TxOutView(*this, TxOut::ROLE_RECEIVER));  }
-            if (role_flags & TxOut::ROLE_SENDER)    { split_views.push_back(TxOutView(*this, TxOut::ROLE_SENDER));    }
+            split_views.push_back(TxOutView(*this, TxOut::ROLE_SENDER));
         }
-        else
+
+        if (first == TxOut::ROLE_SENDER)
         {
-            if (role_flags & TxOut::ROLE_SENDER)    { split_views.push_back(TxOutView(*this, TxOut::ROLE_SENDER));    }
-            if (role_flags & TxOut::ROLE_RECEIVER)  { split_views.push_back(TxOutView(*this, TxOut::ROLE_RECEIVER));  }
+            std::reverse(split_views.begin(), split_views.end());
         }
 
         return split_views;

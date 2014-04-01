@@ -1027,8 +1027,8 @@ std::vector<SigningScriptView> Vault::getSigningScriptViews(const std::string& a
 
     typedef odb::query<SigningScriptView> query_t;
     query_t query(query_t::SigningScript::status.in_range(statusRange.begin(), statusRange.end()));
-    if (account_name != "@all") query = (query && query_t::Account::name == account_name);
-    if (bin_name != "@all")     query = (query && query_t::AccountBin::name == bin_name);
+    if (!account_name.empty()) query = (query && query_t::Account::name == account_name);
+    if (!bin_name.empty())     query = (query && query_t::AccountBin::name == bin_name);
     query += "ORDER BY" + query_t::Account::name + "ASC," + query_t::AccountBin::name + "ASC," + query_t::SigningScript::status + "DESC," + query_t::SigningScript::index + "ASC";
 
     boost::lock_guard<boost::mutex> lock(mutex);
@@ -1047,21 +1047,24 @@ std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, con
 
     typedef odb::query<TxOutView> query_t;
     query_t query(query_t::receiving_account::id != 0 || query_t::sending_account::id != 0);
-    if (account_name != "@all")
+    if (!account_name.empty())
     {
         query_t role_query(1 == 1);
         if (role_flags & TxOut::ROLE_SENDER)    role_query = (role_query && (query_t::sending_account::name == account_name));
         if (role_flags & TxOut::ROLE_RECEIVER)  role_query = (role_query || (query_t::receiving_account::name == account_name));
         query = query && role_query;
     }
-    if (bin_name != "@all")                     query = (query && query_t::AccountBin::name == bin_name);
+    if (!bin_name.empty())                      query = (query && query_t::AccountBin::name == bin_name);
     if (hide_change)                            query = (query && (query_t::TxOut::account_bin.is_null() || query_t::AccountBin::name != CHANGE_BIN_NAME));
 
     std::vector<TxOut::status_t> txout_statuses = TxOut::getStatusFlags(txout_status_flags);
     query = (query && query_t::TxOut::status.in_range(txout_statuses.begin(), txout_statuses.end()));
 
-    std::vector<Tx::status_t> tx_statuses = Tx::getStatusFlags(tx_status_flags);
-    query = (query && query_t::Tx::status.in_range(tx_statuses.begin(), tx_statuses.end()));
+    if (tx_status_flags != Tx::ALL)
+    {
+        std::vector<Tx::status_t> tx_statuses = Tx::getStatusFlags(tx_status_flags);
+        query = (query && query_t::Tx::status.in_range(tx_statuses.begin(), tx_statuses.end()));
+    }
 
     query += "ORDER BY" + query_t::BlockHeader::height + "DESC," + query_t::Tx::timestamp + "DESC," + query_t::Tx::id + "DESC";
 
@@ -1072,7 +1075,7 @@ std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, con
     for (auto& view: r)
     {
         view.updateRole(role_flags);
-        std::vector<TxOutView> split_views = view.getSplitRoles(TxOut::ROLE_RECEIVER);
+        std::vector<TxOutView> split_views = view.getSplitRoles(TxOut::ROLE_RECEIVER, account_name);
         for (auto& split_view: split_views) { views.push_back(split_view); }
     }
     return views;
@@ -1529,9 +1532,9 @@ SigningRequest Vault::getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool i
     return SigningRequest(sigs_needed, keychain_info, rawtx);
 }
 
-std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, bool update, std::vector<std::string> keychain_names)
+std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, std::vector<std::string>& keychain_names, bool update)
 {
-    LOGGER(trace) << "Vault::signTx(" << uchar_vector(unsigned_hash).getHex() << ", " << (update ? "update" : "no update") << ")" << std::endl;
+    LOGGER(trace) << "Vault::signTx(" << uchar_vector(unsigned_hash).getHex() << ", [" << stdutils::delimited_list(keychain_names, ", ") << "], " << (update ? "update" : "no update") << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
@@ -1550,7 +1553,7 @@ std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, bool update, std
     return sigcount ? tx : nullptr;
 }
 
-unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::string> keychain_names)
+unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::string>& keychain_names)
 {
     using namespace CoinQ::Script;
     using namespace CoinCrypto;
@@ -1561,6 +1564,8 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
     // If the keychain name list is not empty, only try keys belonging to the named keychains
     if (!keychain_names.empty())
         privkey_query = privkey_query && odb::query<Key>::root_keychain->name.in_range(keychain_names.begin(), keychain_names.end());
+
+    KeychainSet keychains_signed;
 
     unsigned int sigsadded = 0;
     for (auto& txin: tx->txins())
@@ -1613,6 +1618,7 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
             signature.push_back(SIGHASH_ALL);
             script.addSig(key.pubkey(), signature);
             LOGGER(debug) << "Vault::signTx_unwrapped - PUBLIC KEY: " << uchar_vector(key.pubkey()).getHex() << " SIGNATURE: " << uchar_vector(signature).getHex() << std::endl;
+            keychains_signed.insert(key.root_keychain());
             sigsadded++;
             sigsneeded--;
             if (sigsneeded == 0) break;
@@ -1621,8 +1627,10 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
         txin->script(script.txinscript(sigsneeded ? Script::EDIT : Script::BROADCAST));
     }
 
+    keychain_names.clear();
     if (!sigsadded) return 0;
 
+    for (auto& keychain: keychains_signed) { keychain_names.push_back(keychain->name()); }
     tx->updateStatus();
     return sigsadded;
 }
