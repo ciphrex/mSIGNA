@@ -36,8 +36,6 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
-const std::size_t MAXSQLCLAUSES = 500;
-
 using namespace CoinDB;
 
 /*
