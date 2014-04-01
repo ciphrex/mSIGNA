@@ -25,6 +25,8 @@
 #include <QApplication>
 #include <QClipboard>
 
+#include <logger.h>
+
 TxActions::TxActions(TxModel* model, TxView* view, CoinQ::Network::NetworkSync* sync)
     : txModel(model), txView(view), networkSync(sync), currentRow(-1)
 {
@@ -80,11 +82,13 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
 
 void TxActions::signTx()
 {
-    try {
+    try
+    {
         txModel->signTx(currentRow);
         txView->update();
     }
-    catch (const std::exception& e) {
+    catch (const std::exception& e)
+    {
         emit error(e.what());
     }
 }

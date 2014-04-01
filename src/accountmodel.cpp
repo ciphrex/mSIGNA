@@ -216,7 +216,8 @@ std::shared_ptr<Tx> AccountModel::insertTx(std::shared_ptr<Tx> tx, bool sign)
     if (tx->status() == Tx::UNSIGNED && sign)
     {
         LOGGER(trace) << "Attempting to sign tx " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
-        vault->signTx(tx->unsigned_hash(), true);
+        std::vector<std::string> keychain_names;
+        tx = vault->signTx(tx->unsigned_hash(), keychain_names, true);
     }
 
     update();
@@ -236,9 +237,11 @@ std::shared_ptr<Tx> AccountModel::insertTx(const Coin::Transaction& coinTx, Tx::
     tx = vault->insertTx(tx);
     if (!tx) throw std::runtime_error("Transaction not inserted.");
 
-    if (tx->status() == Tx::UNSIGNED && sign) {
+    if (tx->status() == Tx::UNSIGNED && sign)
+    {
         LOGGER(trace) << "Attempting to sign tx " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
-        vault->signTx(tx->unsigned_hash(), true);
+        std::vector<std::string> keychain_names;
+        vault->signTx(tx->unsigned_hash(), keychain_names, true);
     }
 
     update();

@@ -134,9 +134,13 @@ MainWindow::MainWindow() :
 
     // Transaction tab page
     txModel = new TxModel();
+    connect(txModel, SIGNAL(txSigned(const QString&)), this, SLOT(showUpdate(const QString&)));
+
     txView = new TxView();
     txView->setModel(txModel);
     txActions = new TxActions(txModel, txView, &networkSync);
+    connect(txActions, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
+
     txView->setMenu(txActions->getMenu());
 
     tabWidget = new QTabWidget();
@@ -293,6 +297,11 @@ void MainWindow::showError(const QString& errorMsg)
 {
     updateStatusMessage(tr("Operation failed"));
     QMessageBox::critical(this, tr("Error"), errorMsg);
+}
+
+void MainWindow::showUpdate(const QString& updateMsg)
+{
+    QMessageBox::information(this, tr("Update"), updateMsg);
 }
 
 void MainWindow::newVault(QString fileName)

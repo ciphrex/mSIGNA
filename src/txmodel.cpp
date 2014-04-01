@@ -13,6 +13,8 @@
 #include <CoinQ_script.h>
 #include <CoinQ_netsync.h>
 
+#include <stdutils/stringutils.h>
+
 #include <QStandardItemModel>
 #include <QDateTime>
 #include <QMessageBox>
@@ -82,7 +84,7 @@ void TxModel::update()
 
     std::shared_ptr<BlockHeader> bestHeader = vault->getBestBlockHeader();
 
-    std::vector<TxOutView> txoutviews = vault->getTxOutViews(accountName.toStdString(), "@all", TxOut::ROLE_BOTH, TxOut::BOTH, Tx::ALL, true);
+    std::vector<TxOutView> txoutviews = vault->getTxOutViews(accountName.toStdString(), "", TxOut::ROLE_BOTH, TxOut::BOTH, Tx::ALL, true);
     bytes_t last_txhash;
     typedef std::pair<unsigned long, uint32_t> sorting_info_t;
     typedef std::pair<QList<QStandardItem*>, int64_t> value_row_t; // used to associate output values with rows for computing balance
@@ -221,11 +223,15 @@ void TxModel::signTx(int row)
     uchar_vector txhash;
     txhash.setHex(txHashItem->text().toStdString());
 
-    std::shared_ptr<Tx> tx = vault->signTx(txhash, true);
+    std::vector<std::string> keychainNames;
+    std::shared_ptr<Tx> tx = vault->signTx(txhash, keychainNames, true);
     if (!tx) throw std::runtime_error(tr("No new signatures were added.").toStdString());
 
     LOGGER(trace) << "TxModel::signTx - signature(s) added. raw tx: " << uchar_vector(tx->raw()).getHex() << std::endl;
     update();
+
+    QString msg = tr("Signatures added using keychain(s) ") + QString::fromStdString(stdutils::delimited_list(keychainNames, ", ")) + tr(".");
+    emit txSigned(msg);
 }
 
 void TxModel::sendTx(int row, CoinQ::Network::NetworkSync* networkSync)

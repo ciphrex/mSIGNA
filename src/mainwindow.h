@@ -93,6 +93,7 @@ protected slots:
     void updateNetworkState(network_state_t newState = NETWORK_STATE_UNKNOWN);
     void updateVaultStatus(const QString& name = QString());
     void showError(const QString& errorMsg);
+    void showUpdate(const QString& updateMsg);
 
 private slots:
     ///?/////?/////////
