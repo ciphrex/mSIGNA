@@ -1529,7 +1529,7 @@ SigningRequest Vault::getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool i
     return SigningRequest(sigs_needed, keychain_info, rawtx);
 }
 
-std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, bool update)
+std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, bool update, std::vector<std::string> keychain_names)
 {
     LOGGER(trace) << "Vault::signTx(" << uchar_vector(unsigned_hash).getHex() << ", " << (update ? "update" : "no update") << ")" << std::endl;
 
@@ -1541,7 +1541,7 @@ std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, bool update)
     if (tx_r.empty()) throw TxNotFoundException(unsigned_hash);
     std::shared_ptr<Tx> tx(tx_r.begin().load());
 
-    unsigned int sigcount = signTx_unwrapped(tx);
+    unsigned int sigcount = signTx_unwrapped(tx, keychain_names);
     if (sigcount && update)
     {
         updateTx_unwrapped(tx);
@@ -1550,10 +1550,18 @@ std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, bool update)
     return sigcount ? tx : nullptr;
 }
 
-unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
+unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::string> keychain_names)
 {
     using namespace CoinQ::Script;
     using namespace CoinCrypto;
+
+    // No point in trying nonprivate keys
+    odb::query<Key> privkey_query(odb::query<Key>::is_private != 0);
+
+    // If the keychain name list is not empty, only try keys belonging to the named keychains
+    if (!keychain_names.empty())
+        privkey_query = privkey_query && odb::query<Key>::root_keychain->name.in_range(keychain_names.begin(), keychain_names.end());
+
     unsigned int sigsadded = 0;
     for (auto& txin: tx->txins())
     {
@@ -1564,7 +1572,7 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx)
         std::vector<bytes_t> pubkeys = script.missingsigs();
         if (pubkeys.empty()) continue;
 
-        odb::result<Key> key_r(db_->query<Key>(odb::query<Key>::is_private != 0 && odb::query<Key>::pubkey.in_range(pubkeys.begin(), pubkeys.end())));
+        odb::result<Key> key_r(db_->query<Key>(privkey_query && odb::query<Key>::pubkey.in_range(pubkeys.begin(), pubkeys.end())));
         if (key_r.empty()) continue;
 
         // Prepare the inputs for hashing

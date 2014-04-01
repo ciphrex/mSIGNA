@@ -106,7 +106,8 @@ public:
     std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
     void                                    deleteTx(const bytes_t& tx_hash); // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     SigningRequest                          getSigningRequest(const bytes_t& unsigned_hash, bool include_raw_tx = false) const; // Tries only unsigned hashes. Throws TxNotFoundException.
-    std::shared_ptr<Tx>                     signTx(const bytes_t& unsigned_hash, bool update = false); // Tries only unsigned hashes. Throws TxNotFoundException.
+    // signTx tries only unsigned hashes for named keychains. If no keychains are named, tries all keychains. Throws TxNotFoundException.
+    std::shared_ptr<Tx>                     signTx(const bytes_t& unsigned_hash, bool update = false, std::vector<std::string> keychain_names = std::vector<std::string>());
 
     //////////////////////
     // BLOCK OPERATIONS //
@@ -192,7 +193,7 @@ protected:
     void                                    deleteTx_unwrapped(std::shared_ptr<Tx> tx);
     void                                    updateTx_unwrapped(std::shared_ptr<Tx> tx);
     SigningRequest                          getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
-    unsigned int                            signTx_unwrapped(std::shared_ptr<Tx> tx); // Tries to sign as many as it can with the unlocked keychains.
+    unsigned int                            signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::string> keychain_names = std::vector<std::string>()); // Tries to sign as many as it can with the unlocked keychains.
 
     ///////////////////////////
     // BLOCKCHAIN OPERATIONS //
