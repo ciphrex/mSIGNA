@@ -1705,8 +1705,8 @@ void MainWindow::createMenus()
     accountMenu->addAction(requestPaymentAction);
     accountMenu->addAction(sendPaymentAction);
     accountMenu->addSeparator();
-    accountMenu->addAction(deleteAccountAction);
-    accountMenu->addSeparator();
+    //accountMenu->addAction(deleteAccountAction);
+    //accountMenu->addSeparator();
     accountMenu->addAction(importAccountAction);
     accountMenu->addAction(exportAccountAction);
     accountMenu->addSeparator();
