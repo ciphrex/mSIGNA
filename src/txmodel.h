@@ -43,6 +43,7 @@ public:
     Qt::ItemFlags flags(const QModelIndex& index) const;
 
 signals:
+    void txSigned(const QString& keychainNames);
     void txDeleted();
 
 private:

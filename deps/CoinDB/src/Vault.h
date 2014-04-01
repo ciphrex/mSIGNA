@@ -90,8 +90,8 @@ public:
     void                                    refillAccountPool(const std::string& account_name);
 
     // empty account_name or bin_name means do not filter on those fields
-    std::vector<SigningScriptView>          getSigningScriptViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int flags = SigningScript::ALL) const;
-    std::vector<TxOutView>                  getTxOutViews(const std::string& account_name = "@all", const std::string& bin_name = "@all", int role_flags = TxOut::ROLE_BOTH, int txout_status_flags = TxOut::BOTH, int tx_status_flags = Tx::ALL, bool hide_change = true) const;
+    std::vector<SigningScriptView>          getSigningScriptViews(const std::string& account_name = "", const std::string& bin_name = "", int flags = SigningScript::ALL) const;
+    std::vector<TxOutView>                  getTxOutViews(const std::string& account_name = "", const std::string& bin_name = "", int role_flags = TxOut::ROLE_BOTH, int txout_status_flags = TxOut::BOTH, int tx_status_flags = Tx::ALL, bool hide_change = true) const;
 
     ////////////////////////////
     // ACCOUNT BIN OPERATIONS //
@@ -106,7 +106,8 @@ public:
     std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
     void                                    deleteTx(const bytes_t& tx_hash); // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     SigningRequest                          getSigningRequest(const bytes_t& unsigned_hash, bool include_raw_tx = false) const; // Tries only unsigned hashes. Throws TxNotFoundException.
-    std::shared_ptr<Tx>                     signTx(const bytes_t& unsigned_hash, bool update = false); // Tries only unsigned hashes. Throws TxNotFoundException.
+    // signTx tries only unsigned hashes for named keychains. If no keychains are named, tries all keychains. Throws TxNotFoundException.
+    std::shared_ptr<Tx>                     signTx(const bytes_t& unsigned_hash, std::vector<std::string>& keychain_names, bool update = false);
 
     //////////////////////
     // BLOCK OPERATIONS //
@@ -192,7 +193,7 @@ protected:
     void                                    deleteTx_unwrapped(std::shared_ptr<Tx> tx);
     void                                    updateTx_unwrapped(std::shared_ptr<Tx> tx);
     SigningRequest                          getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
-    unsigned int                            signTx_unwrapped(std::shared_ptr<Tx> tx); // Tries to sign as many as it can with the unlocked keychains.
+    unsigned int                            signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::string>& keychain_names); // Tries to sign as many as it can with the unlocked keychains.
 
     ///////////////////////////
     // BLOCKCHAIN OPERATIONS //

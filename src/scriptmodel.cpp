@@ -66,7 +66,7 @@ void ScriptModel::update()
 
     if (!vault || accountName.isEmpty()) return;
 
-    std::vector<SigningScriptView> scripts = vault->getSigningScriptViews(accountName.toStdString(), "@all", SigningScript::CHANGE | SigningScript::ISSUED | SigningScript::USED);
+    std::vector<SigningScriptView> scripts = vault->getSigningScriptViews(accountName.toStdString(), "", SigningScript::CHANGE | SigningScript::ISSUED | SigningScript::USED);
     for (auto& script: scripts) {
         QList<QStandardItem*> row;
         QString address = QString::fromStdString(getAddressForTxOutScript(script.txoutscript, getDefaultSettings().getBase58Versions()));
