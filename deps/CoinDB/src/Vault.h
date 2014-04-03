@@ -65,6 +65,7 @@ public:
     std::vector<std::shared_ptr<Keychain>>  getAllKeychains(bool root_only = false) const;
     std::vector<KeychainView>               getRootKeychainViews(const std::string& account_name = std::string()) const;
     secure_bytes_t                          getKeychainExtendedKey(const std::string& keychain_name, bool get_private) const;
+    std::shared_ptr<Keychain>               importKeychainExtendedKey(const std::string& keychain_name, const secure_bytes_t& extkey, bool try_private, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
 
     // The following private key lock/unlock methods do not maintain a database session open so they only
     // store and erase the unlock keys in a member map to be used by the other class methods.

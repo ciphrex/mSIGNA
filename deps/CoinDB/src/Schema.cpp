@@ -34,19 +34,22 @@ Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const
 {
     if (name.empty() || name[0] == '@') throw std::runtime_error("Invalid keychain name.");
 
-    Coin::HDSeed hdSeed(entropy);
-    Coin::HDKeychain hdKeychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
+    if (!entropy.empty())
+    {
+        Coin::HDSeed hdSeed(entropy);
+        Coin::HDKeychain hdKeychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
 
-    depth_ = (uint32_t)hdKeychain.depth();
-    parent_fp_ = hdKeychain.parent_fp();
-    child_num_ = hdKeychain.child_num();
-    chain_code_ = hdKeychain.chain_code();
-    privkey_ = hdKeychain.key();
-    pubkey_ = hdKeychain.pubkey();
-    hash_ = hdKeychain.full_hash();
+        depth_ = (uint32_t)hdKeychain.depth();
+        parent_fp_ = hdKeychain.parent_fp();
+        child_num_ = hdKeychain.child_num();
+        chain_code_ = hdKeychain.chain_code();
+        privkey_ = hdKeychain.key();
+        pubkey_ = hdKeychain.pubkey();
+        hash_ = hdKeychain.full_hash();
 
-    setPrivateKeyUnlockKey(lock_key, salt);
-    setChainCodeUnlockKey(lock_key, salt);
+        setPrivateKeyUnlockKey(lock_key, salt);
+        setChainCodeUnlockKey(lock_key, salt);
+    }
 }
 
 Keychain& Keychain::operator=(const Keychain& source)
@@ -281,6 +284,29 @@ void Keychain::importPrivateKey(const Keychain& source)
 {
     privkey_ciphertext_ = source.privkey_ciphertext_;
     privkey_salt_ = source.privkey_salt_;
+}
+
+void Keychain::extkey(const secure_bytes_t& extkey, bool try_private, const secure_bytes_t& lock_key, const bytes_t& salt)
+{
+    Coin::HDKeychain hdKeychain(extkey);
+
+    depth_ = (uint32_t)hdKeychain.depth();
+    parent_fp_ = hdKeychain.parent_fp();
+    child_num_ = hdKeychain.child_num();
+    chain_code_ = hdKeychain.chain_code();
+    if (hdKeychain.isPrivate() && try_private)
+    {
+        privkey_ = hdKeychain.key();
+    }
+    else
+    {
+        privkey_.clear();
+    }
+    pubkey_ = hdKeychain.pubkey();
+    hash_ = hdKeychain.full_hash();
+
+    setPrivateKeyUnlockKey(lock_key, salt);
+    setChainCodeUnlockKey(lock_key, salt);
 }
 
 secure_bytes_t Keychain::extkey(bool get_private) const

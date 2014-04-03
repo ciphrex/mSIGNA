@@ -448,6 +448,24 @@ secure_bytes_t Vault::getKeychainExtendedKey_unwrapped(std::shared_ptr<Keychain>
     return keychain->extkey(get_private);
 }
 
+std::shared_ptr<Keychain> Vault::importKeychainExtendedKey(const std::string& keychain_name, const secure_bytes_t& extkey, bool try_private, const secure_bytes_t& lockKey, const bytes_t& salt)
+{
+    LOGGER(trace) << "Vault::importKeychainExtendedKey(" << keychain_name << ", ...)" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session session;
+    odb::core::transaction t(db_->begin());
+    odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
+    if (!r.empty()) throw KeychainAlreadyExistsException(keychain_name);
+
+    std::shared_ptr<Keychain> keychain(new Keychain(keychain_name, secure_bytes_t(), lockKey, salt));
+    keychain->extkey(extkey, try_private);
+    persistKeychain_unwrapped(keychain);
+    t.commit();
+
+    return keychain;
+}
+
 void Vault::unlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account, const secure_bytes_t& overrideChainCodeUnlockKey) const
 {
     for (auto& keychain: account->keychains())

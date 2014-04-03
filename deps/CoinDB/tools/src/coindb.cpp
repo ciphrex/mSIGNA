@@ -203,6 +203,39 @@ cli::result_t cmd_importkeychain(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_exportbip32extkey(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 2 || params.size() > 4)
+        return "exportbip32extkey <db file> <keychain> [try export private key = false] - export a keychain to BIP32 extended key format.";
+
+    bool export_privkey = params.size() > 2 ? (params[2] == "true") : false;
+
+    Vault vault(params[0], false);
+    secure_bytes_t extkey = vault.getKeychainExtendedKey(params[1], export_privkey);
+
+    stringstream ss;
+    ss << toBase58Check(extkey);
+    return ss.str();
+}
+
+cli::result_t cmd_importbip32extkey(bool bHelp, const cli::params_t& params)
+{
+    if (bHelp || params.size() < 2 || params.size() > 3)
+        return "importbip32extkey <db file> <bip32 base58> [try import private key = true] - import a keychain from BIP32 extended key format.";
+/*
+    bool import_privkey = params.size() > 2 ? (params[2] == "true") : true;
+//    secure_bytes_t extkey = fromBase58Check(
+
+    Vault vault(params[0], false);
+    std::shared_ptr<Keychain> keychain = vault.importKeychainExtendedKey(params[1], import_privkey);
+
+    stringstream ss;
+    ss << (import_privkey ? "Private" : "Public") << " keychain " << keychain->name() << " imported from " << params[1] << ".";
+    return ss.str();
+*/
+    return "";
+}
+
 // Account operations
 cli::result_t cmd_accountexists(bool bHelp, const cli::params_t& params)
 {
@@ -756,6 +789,8 @@ int main(int argc, char* argv[])
     cmds.add("listkeychains", &cmd_listkeychains);
     cmds.add("exportkeychain", &cmd_exportkeychain);
     cmds.add("importkeychain", &cmd_importkeychain);
+    cmds.add("exportbip32extkey", &cmd_exportbip32extkey);
+    cmds.add("importbip32extkey", &cmd_importbip32extkey);
 
     // Account operations
     cmds.add("accountexists", &cmd_accountexists);
