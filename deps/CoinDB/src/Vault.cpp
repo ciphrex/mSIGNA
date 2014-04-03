@@ -458,8 +458,9 @@ std::shared_ptr<Keychain> Vault::importKeychainExtendedKey(const std::string& ke
     odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
     if (!r.empty()) throw KeychainAlreadyExistsException(keychain_name);
 
-    std::shared_ptr<Keychain> keychain(new Keychain(keychain_name, secure_bytes_t(), lockKey, salt));
-    keychain->extkey(extkey, try_private);
+    std::shared_ptr<Keychain> keychain(new Keychain(keychain_name, secure_bytes_t()));
+    keychain->extkey(extkey, try_private, lockKey, salt);
+    keychain->setChainCodeUnlockKey(chainCodeUnlockKey);
     persistKeychain_unwrapped(keychain);
     t.commit();
 

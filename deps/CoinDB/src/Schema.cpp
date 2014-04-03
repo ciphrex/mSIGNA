@@ -297,6 +297,7 @@ void Keychain::extkey(const secure_bytes_t& extkey, bool try_private, const secu
     if (hdKeychain.isPrivate() && try_private)
     {
         privkey_ = hdKeychain.key();
+        setPrivateKeyUnlockKey(lock_key, salt);
     }
     else
     {
@@ -304,9 +305,6 @@ void Keychain::extkey(const secure_bytes_t& extkey, bool try_private, const secu
     }
     pubkey_ = hdKeychain.pubkey();
     hash_ = hdKeychain.full_hash();
-
-    setPrivateKeyUnlockKey(lock_key, salt);
-    setChainCodeUnlockKey(lock_key, salt);
 }
 
 secure_bytes_t Keychain::extkey(bool get_private) const

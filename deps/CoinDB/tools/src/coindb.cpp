@@ -197,18 +197,24 @@ cli::result_t cmd_exportbip32(const cli::params_t& params)
 
 cli::result_t cmd_importbip32(const cli::params_t& params)
 {
-/*
-    bool import_privkey = params.size() > 2 ? (params[2] == "true") : true;
-//    secure_bytes_t extkey = fromBase58Check(
+    bool import_privkey = params.size() > 3;
+    secure_bytes_t lock_key;
+    bytes_t salt;
+    if (import_privkey)
+    {
+        lock_key = sha256_2(params[3]);
+        // TODO: add salt
+    }
+
+    secure_bytes_t extkey;
+    if (!fromBase58Check(params[2], extkey)) throw std::runtime_error("Invalid BIP32.");
 
     Vault vault(params[0], false);
-    std::shared_ptr<Keychain> keychain = vault.importKeychainExtendedKey(params[1], import_privkey);
+    std::shared_ptr<Keychain> keychain = vault.importKeychainExtendedKey(params[1], extkey, import_privkey, lock_key);
 
     stringstream ss;
-    ss << (import_privkey ? "Private" : "Public") << " keychain " << keychain->name() << " imported from " << params[1] << ".";
+    ss << (keychain->isPrivate() ? "Private" : "Public") << " keychain " << keychain->name() << " imported from BIP32.";
     return ss.str();
-*/
-    return "";
 }
 
 // Account operations
