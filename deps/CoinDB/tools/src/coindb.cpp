@@ -203,14 +203,20 @@ cli::result_t cmd_importkeychain(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
-cli::result_t cmd_exportbip32extkey(bool bHelp, const cli::params_t& params)
+cli::result_t cmd_exportbip32(bool bHelp, const cli::params_t& params)
 {
-    if (bHelp || params.size() < 2 || params.size() > 4)
-        return "exportbip32extkey <db file> <keychain> [try export private key = false] - export a keychain to BIP32 extended key format.";
+    if (bHelp || params.size() < 2 || params.size() > 3)
+        return "exportbip32 <db file> <keychain> [passphrase] - export a keychain to BIP32 extended key format.";
 
-    bool export_privkey = params.size() > 2 ? (params[2] == "true") : false;
+    bool export_privkey = params.size() > 2;
 
     Vault vault(params[0], false);
+    vault.unlockChainCodes(uchar_vector("1234"));
+    if (export_privkey)
+    {
+        secure_bytes_t unlock_key = sha256_2(params[2]);
+        vault.unlockKeychain(params[1], unlock_key);
+    }
     secure_bytes_t extkey = vault.getKeychainExtendedKey(params[1], export_privkey);
 
     stringstream ss;
@@ -218,10 +224,10 @@ cli::result_t cmd_exportbip32extkey(bool bHelp, const cli::params_t& params)
     return ss.str();
 }
 
-cli::result_t cmd_importbip32extkey(bool bHelp, const cli::params_t& params)
+cli::result_t cmd_importbip32(bool bHelp, const cli::params_t& params)
 {
     if (bHelp || params.size() < 2 || params.size() > 3)
-        return "importbip32extkey <db file> <bip32 base58> [try import private key = true] - import a keychain from BIP32 extended key format.";
+        return "importbip32 <db file> <bip32 base58> [passphrase] - import a keychain from BIP32 extended key format.";
 /*
     bool import_privkey = params.size() > 2 ? (params[2] == "true") : true;
 //    secure_bytes_t extkey = fromBase58Check(
@@ -773,7 +779,7 @@ int main(int argc, char* argv[])
 {
     INIT_LOGGER("debug.log");
 
-    cli::command_map cmds("CoinDB by Eric Lombrozo v0.2.4");
+    cli::command_map cmds("CoinDB by Eric Lombrozo v0.2.5");
 
     // Global operations
     cmds.add("create", &cmd_create);
@@ -789,8 +795,8 @@ int main(int argc, char* argv[])
     cmds.add("listkeychains", &cmd_listkeychains);
     cmds.add("exportkeychain", &cmd_exportkeychain);
     cmds.add("importkeychain", &cmd_importkeychain);
-    cmds.add("exportbip32extkey", &cmd_exportbip32extkey);
-    cmds.add("importbip32extkey", &cmd_importbip32extkey);
+    cmds.add("exportbip32", &cmd_exportbip32);
+    cmds.add("importbip32", &cmd_importbip32);
 
     // Account operations
     cmds.add("accountexists", &cmd_accountexists);
