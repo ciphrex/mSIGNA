@@ -13,7 +13,7 @@
 
 #include <QStandardItemModel>
 
-#include <CoinQ_vault.h>
+#include <Vault.h>
 
 class ScriptModel : public QStandardItemModel
 {
@@ -21,16 +21,16 @@ class ScriptModel : public QStandardItemModel
 
 public:
     ScriptModel(QObject* parent = NULL);
-    ScriptModel(CoinQ::Vault::Vault* vault, const QString& accountName, QObject* parent = NULL);
+    ScriptModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent = NULL);
 
-    void setVault(CoinQ::Vault::Vault* vault);
+    void setVault(CoinDB::Vault* vault);
     void setAccount(const QString& accountName);
     void update();
 
 private:
     void initColumns();
 
-    CoinQ::Vault::Vault* vault;
+    CoinDB::Vault* vault;
     QString accountName; // empty when not loaded
 };
 

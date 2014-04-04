@@ -25,6 +25,8 @@
 #include <QApplication>
 #include <QClipboard>
 
+#include <logger.h>
+
 TxActions::TxActions(TxModel* model, TxView* view, CoinQ::Network::NetworkSync* sync)
     : txModel(model), txView(view), networkSync(sync), currentRow(-1)
 {
@@ -39,14 +41,14 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
     if (txModel && currentRow != -1) {
         QStandardItem* typeItem = txModel->item(currentRow, 6);
         int type = typeItem->data(Qt::UserRole).toInt();
-        if (type == CoinQ::Vault::Tx::UNSIGNED) {
+        if (type == CoinDB::Tx::UNSIGNED) {
             signTxAction->setEnabled(true);
         }
         else {
             signTxAction->setEnabled(false);
         }
 
-        if (type == CoinQ::Vault::Tx::UNSENT) {
+        if (type == CoinDB::Tx::UNSENT) {
             sendTxAction->setText(tr("Send Transaction"));
             sendTxAction->setEnabled(networkSync && networkSync->isConnected());
         }
@@ -55,7 +57,7 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
             sendTxAction->setEnabled(networkSync && networkSync->isConnected() && typeItem->text() == "0");
         }
 
-        if (type == CoinQ::Vault::Tx::RECEIVED) {
+        if (type == CoinDB::Tx::PROPAGATED || type == CoinDB::Tx::CONFIRMED) {
             viewTxOnWebAction->setEnabled(true);
         }
         else {
@@ -80,11 +82,13 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
 
 void TxActions::signTx()
 {
-    try {
+    try
+    {
         txModel->signTx(currentRow);
         txView->update();
     }
-    catch (const std::exception& e) {
+    catch (const std::exception& e)
+    {
         emit error(e.what());
     }
 }
@@ -103,7 +107,7 @@ void TxActions::sendTx()
 void TxActions::viewRawTx()
 {
     try {
-        std::shared_ptr<CoinQ::Vault::Tx> tx = txModel->getTx(currentRow);
+        std::shared_ptr<CoinDB::Tx> tx = txModel->getTx(currentRow);
         RawTxDialog rawTxDlg(tr("Raw Transaction"));
         rawTxDlg.setRawTx(tx->raw());
         rawTxDlg.exec();
@@ -116,7 +120,7 @@ void TxActions::viewRawTx()
 void TxActions::copyTxIDToClipboard()
 {
     try {
-        std::shared_ptr<CoinQ::Vault::Tx> tx = txModel->getTx(currentRow);
+        std::shared_ptr<CoinDB::Tx> tx = txModel->getTx(currentRow);
         QClipboard* clipboard = QApplication::clipboard();
         clipboard->setText(QString::fromStdString(uchar_vector(tx->hash()).getHex()));
     }
@@ -128,7 +132,7 @@ void TxActions::copyTxIDToClipboard()
 void TxActions::copyRawTxToClipboard()
 {
     try {
-        std::shared_ptr<CoinQ::Vault::Tx> tx = txModel->getTx(currentRow);
+        std::shared_ptr<CoinDB::Tx> tx = txModel->getTx(currentRow);
         QClipboard* clipboard = QApplication::clipboard();
         clipboard->setText(QString::fromStdString(uchar_vector(tx->raw()).getHex()));
     }
@@ -142,7 +146,7 @@ void TxActions::viewTxOnWeb()
     const QString URL_PREFIX("https://blockchain.info/tx/");
 
     try {
-        std::shared_ptr<CoinQ::Vault::Tx> tx = txModel->getTx(currentRow);
+        std::shared_ptr<CoinDB::Tx> tx = txModel->getTx(currentRow);
         if (!QDesktopServices::openUrl(QUrl(URL_PREFIX + QString::fromStdString(uchar_vector(tx->hash()).getHex())))) {
             throw std::runtime_error(tr("Unable to open browser.").toStdString());
         }

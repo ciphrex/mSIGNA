@@ -13,14 +13,19 @@
 
 #include "accountmodel.h"
 
+#include <CoinQ_script.h>
 #include <CoinQ_netsync.h>
+
+#include <random.h>
+
+#include <stdutils/stringutils.h>
 
 #include <QStandardItemModel>
 #include <QFile>
 
 #include "severitylogger.h"
 
-using namespace CoinQ::Vault;
+using namespace CoinDB;
 using namespace CoinQ::Script;
 using namespace std;
 
@@ -31,7 +36,7 @@ AccountModel::AccountModel()
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
     QStringList columns;
-    columns << tr("Account Name") << tr("Policy") << tr("Scripts Remaining") << tr("Balance") << "";
+    columns << tr("Account") << tr("Policy") << tr("Balance") << "";
     setHorizontalHeaderLabels(columns);
 }
 
@@ -46,36 +51,19 @@ void AccountModel::update()
     }
 
     QStringList accountNames;
-    std::vector<AccountInfo> accounts = vault->getAccounts();
+    std::vector<AccountInfo> accounts = vault->getAllAccountInfo();
     for (auto& account: accounts) {
         QString accountName = QString::fromStdString(account.name());
+        QString policy = QString::number(account.minsigs()) + tr(" of ") + QString::fromStdString(stdutils::delimited_list(account.keychain_names(), ", "));
+        QString balance = QString::number(vault->getAccountBalance(account.name(), 0)/100000000.0, 'g', 8);
         accountNames << accountName;
+
         QList<QStandardItem*> row;
         row.append(new QStandardItem(accountName));
-
-        QString m_of_n = QString::number(account.minsigs()) + tr(" of ");
-
-        std::vector<std::string> keychains = account.keychain_names();
-        std::sort(keychains.begin(), keychains.end());
-
-        QString keychainNames;
-        bool first = true;
-        for (auto& name: keychains) {
-            if (first)  { first = false; }
-            else        { keychainNames += ", "; }
-            keychainNames += QString::fromStdString(name);
-            if (name.empty()) {
-                keychainNames = QString::number(account.keychain_names().size());
-                break;
-            }
-        }
-        m_of_n += keychainNames;
-        row.append(new QStandardItem(m_of_n));
-
-        row.append(new QStandardItem(QString::number(account.scripts_remaining())));
-        QString balance;
-        row.append(new QStandardItem(QString::number(account.balance()/100000000.0, 'g', 8)));
+        row.append(new QStandardItem(policy));
+        row.append(new QStandardItem(balance));
         appendRow(row);
+
     }
     numAccounts = accountNames.size();
 
@@ -85,31 +73,15 @@ void AccountModel::update()
 void AccountModel::create(const QString& fileName)
 {
     close ();
-
-    int argc = 3;
-    char prog[] = "prog";
-    char opt[] = "--database";
-    char buf[255];
-    std::strcpy(buf, fileName.toStdString().c_str());
-    char* argv[] = {prog, opt, buf};
-    vault = new Vault(argc, argv, true);
-
+    vault = new Vault(fileName.toStdString(), true);
     emit updateSyncHeight(0);
 }
 
 void AccountModel::load(const QString& fileName)
 {
     close();
-
-    int argc = 3;
-    char prog[] = "prog";
-    char opt[] = "--database";
-    char buf[255];
-    std::strcpy(buf, fileName.toStdString().c_str());
-    char* argv[] = {prog, opt, buf};
-    vault = new Vault(argc, argv, false);
+    vault = new Vault(fileName.toStdString(), false);
     update();
-
     emit updateSyncHeight(vault->getBestHeight());
 }
 
@@ -130,23 +102,13 @@ Coin::BloomFilter AccountModel::getBloomFilter(double falsePositiveRate, uint32_
     return vault->getBloomFilter(falsePositiveRate, nTweak, nFlags);
 }
 
-void AccountModel::newKeychain(const QString& name, unsigned long numkeys)
+void AccountModel::newKeychain(const QString& name, const secure_bytes_t& entropy)
 {
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
 
-    vault->newKeychain(name.toStdString(), numkeys);
-    update();
-}
-
-void AccountModel::newHDKeychain(const QString& name, const bytes_t& extkey, unsigned long numkeys)
-{
-    if (!vault) {
-        throw std::runtime_error("No vault is loaded.");
-    }
-
-    vault->newHDKeychain(name.toStdString(), extkey, numkeys);
+    vault->newKeychain(name.toStdString(), entropy);
     update();
 }
 
@@ -181,13 +143,14 @@ void AccountModel::exportAccount(const QString& name, const QString& filePath) c
     vault->exportAccount(name.toStdString(), filePath.toStdString());
 }
 
-void AccountModel::importAccount(const QString& name, const QString& filePath)
+void AccountModel::importAccount(const QString& /*name*/, const QString& filePath)
 {
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
 
-    vault->importAccount(name.toStdString(), filePath.toStdString());
+    unsigned int privkeysimported = 0;
+    vault->importAccount(filePath.toStdString(), privkeysimported);
     update();
 }
 
@@ -197,8 +160,11 @@ void AccountModel::deleteAccount(const QString& name)
         throw std::runtime_error("No vault is loaded.");
     }
 
+    throw std::runtime_error("Not implemented.");
+/*
     vault->eraseAccount(name.toStdString());
     update();
+*/
 } 
 
 QPair<QString, bytes_t> AccountModel::issueNewScript(const QString& accountName, const QString& label)
@@ -207,20 +173,20 @@ QPair<QString, bytes_t> AccountModel::issueNewScript(const QString& accountName,
         throw std::runtime_error("No vault is loaded.");
     }
 
-    std::shared_ptr<TxOut> txout = vault->newTxOut(accountName.toStdString(), label.toStdString());
-    QString address = QString::fromStdString(getAddressForTxOutScript(txout->script(), base58_versions));
+    std::shared_ptr<SigningScript> signingscript = vault->issueSigningScript(accountName.toStdString(), DEFAULT_BIN_NAME, label.toStdString());
+    QString address = QString::fromStdString(getAddressForTxOutScript(signingscript->txoutscript(), base58_versions));
     update();
 
-    return qMakePair(address, txout->script());
+    return qMakePair(address, signingscript->txoutscript());
 }
 
-uint32_t AccountModel::getFirstAccountTimeCreated() const
+uint32_t AccountModel::getMaxFirstBlockTimestamp() const
 {
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
 
-    return vault->getFirstAccountTimeCreated();
+    return vault->getMaxFirstBlockTimestamp();
 }
 
 bool AccountModel::insertRawTx(const bytes_t& rawTx)
@@ -232,12 +198,32 @@ bool AccountModel::insertRawTx(const bytes_t& rawTx)
     std::shared_ptr<Tx> tx(new Tx());
     tx->set(rawTx);
     tx->timestamp(time(NULL));
-    if (vault->addTx(tx)) {
+    if (vault->insertTx(tx)) {
         update();
         return true;
     }
 
     return false;
+}
+
+std::shared_ptr<Tx> AccountModel::insertTx(std::shared_ptr<Tx> tx, bool sign)
+{
+    if (!vault) return nullptr;
+
+    tx = vault->insertTx(tx);
+    if (!tx) throw std::runtime_error("Transaction not inserted.");
+
+    if (tx->status() == Tx::UNSIGNED && sign)
+    {
+        LOGGER(trace) << "Attempting to sign tx " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
+        std::vector<std::string> keychain_names;
+        tx = vault->signTx(tx->unsigned_hash(), keychain_names, true);
+    }
+
+    update();
+    emit newTx(tx->hash());
+
+    return tx;
 }
 
 std::shared_ptr<Tx> AccountModel::insertTx(const Coin::Transaction& coinTx, Tx::status_t status, bool sign)
@@ -248,17 +234,27 @@ std::shared_ptr<Tx> AccountModel::insertTx(const Coin::Transaction& coinTx, Tx::
 
     std::shared_ptr<Tx> tx(new Tx());
     tx->set(coinTx, time(NULL), status);
+    tx = vault->insertTx(tx);
+    if (!tx) throw std::runtime_error("Transaction not inserted.");
 
-    if (sign) {
+    if (tx->status() == Tx::UNSIGNED && sign)
+    {
         LOGGER(trace) << "Attempting to sign tx " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
-        tx = vault->signTx(tx);
+        std::vector<std::string> keychain_names;
+        vault->signTx(tx->unsigned_hash(), keychain_names, true);
     }
 
-    if (vault->addTx(tx)) {
-        update();
-        emit newTx(tx->hash());
-    }
+    update();
+    emit newTx(tx->hash());
 
+    return tx;
+}
+
+std::shared_ptr<CoinDB::Tx> AccountModel::createTx(const QString& accountName, std::vector<std::shared_ptr<CoinDB::TxOut>> txouts, uint64_t fee)
+{
+    if (!vault) throw std::runtime_error("No vault is loaded.");
+ 
+    std::shared_ptr<Tx> tx = vault->createTx(accountName.toStdString(), 1, 0, txouts, fee,  1);
     return tx;
 }
 
@@ -274,16 +270,18 @@ Coin::Transaction AccountModel::createTx(const QString& accountName, const std::
         throw std::runtime_error("No vault is loaded.");
     }
  
-    Tx::txouts_t txouts;
+    txouts_t txouts;
     for (auto& output: outputs) {
         std::shared_ptr<TxOut> txout(new TxOut(output.value(), output.script()));
         txouts.push_back(txout);
+/*
         if (output.isTagged() && !vault->scriptTagExists(output.script())) {
             vault->addScriptTag(output.script(), output.tag());
         }
+*/
     }
 
-    std::shared_ptr<Tx> tx = vault->newTx(accountName.toStdString(), 1, 0, txouts, fee,  1);
+    std::shared_ptr<Tx> tx = vault->createTx(accountName.toStdString(), 1, 0, txouts, fee,  1);
     update();
     return tx->toCoinClasses();
 }
@@ -294,10 +292,14 @@ bytes_t AccountModel::signRawTx(const bytes_t& rawTx)
         throw std::runtime_error("No vault is loaded.");
     }
 
+    throw std::runtime_error("Not implemented.");
+/*
     std::shared_ptr<Tx> tx(new Tx());
     tx->set(rawTx);
     tx = vault->signTx(tx);
     return tx->raw();
+*/
+    return bytes_t();
 }
 
 std::vector<bytes_t> AccountModel::getLocatorHashes() const
@@ -315,6 +317,8 @@ bool AccountModel::insertBlock(const ChainBlock& block)
         return false;
     }
 
+    throw std::runtime_error("Not implemented.");
+/* 
     try {
         if (vault->insertBlock(block)) {
             emit newBlock(block.blockHeader.getHashLittleEndian(), block.height);
@@ -324,7 +328,7 @@ bool AccountModel::insertBlock(const ChainBlock& block)
     catch (const std::exception& e) {
         emit error(QString::fromStdString(e.what()));
     }
-
+*/
     return false;
 }
 
@@ -335,7 +339,8 @@ bool AccountModel::insertMerkleBlock(const ChainMerkleBlock& merkleBlock)
     }
 
     try {
-        if (vault->insertMerkleBlock(merkleBlock)) {
+        std::shared_ptr<MerkleBlock> merkleblock(new MerkleBlock(merkleBlock));
+        if (vault->insertMerkleBlock(merkleblock)) {
             emit newBlock(merkleBlock.blockHeader.getHashLittleEndian(), merkleBlock.height);
             return true;
         }

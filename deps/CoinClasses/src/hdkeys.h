@@ -54,6 +54,12 @@ private:
     bytes_t master_chain_code_;
 };
 
+class InvalidHDKeychainException : public std::runtime_error
+{
+public:
+    InvalidHDKeychainException()
+        : std::runtime_error("Keychain is invalid.") { }
+};
 
 class HDKeychain
 {
@@ -61,7 +67,7 @@ public:
     HDKeychain() { }
     HDKeychain(const bytes_t& key, const bytes_t& chain_code, uint32_t child_num = 0, uint32_t parent_fp = 0, uint32_t depth = 0);
     HDKeychain(const bytes_t& extkey);
-    HDKeychain(HDKeychain&& source);
+    HDKeychain(const HDKeychain& source);
 
     HDKeychain& operator=(const HDKeychain& rhs);    
 
@@ -85,12 +91,32 @@ public:
     bytes_t privkey() const;
     const bytes_t& pubkey() const { return pubkey_; }
 
-    bool isPrivate() const { return ( key_.size() == 33 && key_[0] == 0x00); }
+    bool isPrivate() const { return (key_.size() == 33 && key_[0] == 0x00); }
     bytes_t hash() const; // hash is ripemd160(sha256(pubkey))
     uint32_t fp() const; // fingerprint is first 32 bits of hash
+    bytes_t full_hash() const; // full_hash is ripemd160(sha256(pubkey + chain_code))
 
     HDKeychain getPublic() const;
     HDKeychain getChild(uint32_t i) const;
+    HDKeychain getChildNode(uint32_t i, bool private_derivation = false) const
+    {
+        uint32_t mask = private_derivation ? 0x80000000ull : 0x00000000ull;
+        return getChild(mask).getChild(i);
+    }
+
+    // Precondition: i >= 1
+    bytes_t getPrivateSigningKey(uint32_t i) const
+    {
+//        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
+        return getChild(i).privkey();
+    }
+
+    // Precondition: i >= 1
+    bytes_t getPublicSigningKey(uint32_t i) const
+    {
+//        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
+        return getChild(i).pubkey();
+    }
 
     static void setVersions(uint32_t priv_version, uint32_t pub_version) { priv_version_ = priv_version; pub_version_ = pub_version; }
 

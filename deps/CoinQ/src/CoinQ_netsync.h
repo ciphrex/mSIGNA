@@ -91,10 +91,6 @@ private:
     boost::thread* io_service_thread;
     CoinQ::Peer peer;
 
-    std::string host;
-    int port;
-    int resyncHeight;
-
     std::string blockTreeFile;
     CoinQBlockTreeMem blockTree;
     bool blockTreeFlushed;

@@ -1,20 +1,23 @@
-                               V A U L T (TM)
+                               C O I N V A U L T (TM)
 ===============================================================================
-Copyright (c) 2013 Ciphrex LLC, All Rights Reserved.
+Copyright (c) 2013-2014 Ciphrex LLC, All Rights Reserved.
 
 
-Vault is an interactive desktop application for transacting on the bitcoin network
+CoinVault is an interactive desktop application for transacting on the bitcoin network
 supporting m-of-n signature policies and multiuser/multidevice account management.
+While the current release builds only support bitcoin, it is possible to compile it 
+to support other bitcoin-like blockchain-based cryptocurrencies. 
 
-It is built atop two custom libraries, CoinClasses and CoinQ, which provide
-all core functionality for managing bitcoin data structures and connecting to peers.
+It is built atop three custom libraries, CoinClasses, CoinQ, and CoinDB, which provide
+all core functionality for managing bitcoin data structures, connecting to peers, and
+handling persistent storage.
 
     -CoinClasses is licensed under the MIT license.
 
-    -CoinQ is licensed under the GPLv2 license.
+    -CoinQ and CoinDB are licensed under the GPLv2 license.
 
 
-In addition, Vault depends on the following:
+In addition, CoinVault depends on the following:
 
     - Qt5 application and UI framework          http://qt-project.org/
         * Qt5Core
@@ -27,6 +30,7 @@ In addition, Vault depends on the following:
         * boost_filesystem
         * boost_regex
         * boost_thread
+        * boost_serialization
 
     - OpenSSL (including EC module)             http://www.openssl.org/
         * crypto
@@ -36,9 +40,18 @@ In addition, Vault depends on the following:
         * Common Runtime Library (libodb)
         * SQLite Database Runtime Library (libodb-sqlite)
 
-Vault has been built in Linux using gcc 4.6.3 and greater for both 64-bit Linux
+    - SQLite transactional database engine      http://www.sqlite.org/
+        * sqlite3
+
+CoinVault has been built in Linux using gcc 4.6.3 and greater for both 64-bit Linux
 and 64-bit Windows (cross-build, mingw64). It has also been built using
-clang (4.1 and greater) in OS X (10.7 and greater).
+clang (Xcode 4.1 and greater) in OS X (10.7 and greater).
+
+Recommended compilers:
+    - gcc4.8 or greater
+    - clang with llvm v3.3 or greater
+
+Earlier compilers will no longer be supported.
 
 For instructions on setting up a build environment, look inside the docs directory.
 
@@ -52,7 +65,8 @@ For instructions on setting up a build environment, look inside the docs directo
     $ ./build-all.sh osx
 
 
-An optional second parameter can be specified [debug|release]. Default is release.
+An optional parameter can be specified [debug|release]. Default is release.
+You may also specify additional parameters to be passed to make.
 
 ===============================================================================
 

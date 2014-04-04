@@ -18,7 +18,7 @@
 
 #include <QVBoxLayout>
 
-ScriptDialog::ScriptDialog(CoinQ::Vault::Vault* vault, const QString& accountName, QWidget* parent)
+ScriptDialog::ScriptDialog(CoinDB::Vault* vault, const QString& accountName, QWidget* parent)
     : QDialog(parent)
 {
     resize(QSize(800, 400));

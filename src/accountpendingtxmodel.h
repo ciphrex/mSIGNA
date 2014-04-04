@@ -13,7 +13,7 @@
 
 #include <QStandardItemModel>
 
-#include <CoinQ_vault.h>
+#include <Vault.h>
 
 class AccountPendingTxModel : public QStandardItemModel
 {
@@ -21,16 +21,16 @@ class AccountPendingTxModel : public QStandardItemModel
 
 public:
     AccountPendingTxModel(QObject* parent = NULL);
-    AccountPendingTxModel(CoinQ::Vault::Vault* vault, const QString& accountName, QObject* parent = NULL);
+    AccountPendingTxModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent = NULL);
 
-    void setVault(CoinQ::Vault::Vault* vault);
+    void setVault(CoinDB::Vault* vault);
     void setAccount(const QString& accountName);
     void update();
 
 private:
     void initColumns();
 
-    CoinQ::Vault::Vault* vault;
+    CoinDB::Vault* vault;
     QString accountName; // empty when not loaded
     uint64_t confirmedBalance;
     uint64_t pendingBalance;

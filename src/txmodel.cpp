@@ -10,7 +10,10 @@
 
 #include "txmodel.h"
 
+#include <CoinQ_script.h>
 #include <CoinQ_netsync.h>
+
+#include <stdutils/stringutils.h>
 
 #include <QStandardItemModel>
 #include <QDateTime>
@@ -21,7 +24,7 @@
 
 #include "severitylogger.h"
 
-using namespace CoinQ::Vault;
+using namespace CoinDB;
 using namespace CoinQ::Script;
 using namespace std;
 
@@ -34,7 +37,7 @@ TxModel::TxModel(QObject* parent)
     initColumns();
 }
 
-TxModel::TxModel(CoinQ::Vault::Vault* vault, const QString& accountName, QObject* parent)
+TxModel::TxModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent)
     : QStandardItemModel(parent)
 {
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
@@ -52,7 +55,7 @@ void TxModel::initColumns()
     setHorizontalHeaderLabels(columns);
 }
 
-void TxModel::setVault(CoinQ::Vault::Vault* vault)
+void TxModel::setVault(CoinDB::Vault* vault)
 {
     this->vault = vault;
     accountName.clear();
@@ -81,63 +84,43 @@ void TxModel::update()
 
     std::shared_ptr<BlockHeader> bestHeader = vault->getBestBlockHeader();
 
-    std::vector<std::shared_ptr<AccountTxOutView>> history = vault->getAccountHistory(accountName.toStdString(), TxOut::DEBIT | TxOut::CREDIT, Tx::ALL);
+    std::vector<TxOutView> txoutviews = vault->getTxOutViews(accountName.toStdString(), "", TxOut::ROLE_BOTH, TxOut::BOTH, Tx::ALL, true);
     bytes_t last_txhash;
     typedef std::pair<unsigned long, uint32_t> sorting_info_t;
     typedef std::pair<QList<QStandardItem*>, int64_t> value_row_t; // used to associate output values with rows for computing balance
     typedef std::pair<sorting_info_t, value_row_t> sortable_row_t;
     QList<sortable_row_t> rows;
-    for (auto& item: history) {
+    for (auto& item: txoutviews) {
         QList<QStandardItem*> row;
 
-        QString time;
-        if (item->block_timestamp) {
-            // If in block, use block timestamp.
-            QDateTime utc;
-            utc.setTime_t(item->block_timestamp.get());
-            time = utc.toLocalTime().toString();
-        }
-        else if (item->txtimestamp != 0xffffffff) {
-            QDateTime utc;
-            utc.setTime_t(item->txtimestamp);
-            time = utc.toLocalTime().toString();
-        }
-        else {
-            time = tr("Not Available");
-        }
+        QDateTime utc;
+        utc.setTime_t(item.tx_timestamp);
+        QString time = utc.toLocalTime().toString();
 
-        QString description;
-        if (item->description) {
-            description = QString::fromStdString(item->description.get());
-        }
-        else {
-            description = tr("Not Available");
-        }
+        QString description = QString::fromStdString(item.role_label());
+        if (description.isEmpty()) description = "Not available";
 
         // The type stuff is just to test the new db schema. It's all wrong, we're not going to use TxOutViews for this.
         QString type;
         QString amount;
         QString fee;
         int64_t value = 0;
-        switch (item->type) {
-        case TxOut::NONE:
+        bytes_t this_txhash = item.tx_status == Tx::UNSIGNED ? item.tx_unsigned_hash : item.tx_hash;
+        switch (item.role_flags) {
+        case TxOut::ROLE_NONE:
             type = tr("None");
             break;
 
-        case TxOut::CHANGE:
-            type = tr("Change");
-            break;
-
-        case TxOut::DEBIT:
+        case TxOut::ROLE_SENDER:
             type = tr("Send");
             amount = "-";
-            value -= item->value;
-            if (item->have_fee && item->fee > 0) {
-                if (item->txhash != last_txhash) {
+            value -= item.value;
+            if (item.have_fee && item.fee > 0) {
+                if (this_txhash != last_txhash) {
                     fee = "-";
-                    fee += QString::number(item->fee/100000000.0, 'g', 8);
-                    value -= item->fee;
-                    last_txhash = item->txhash;
+                    fee += QString::number(item.fee/100000000.0, 'g', 8);
+                    value -= item.fee;
+                    last_txhash = this_txhash;
                 }
                 else {
                     fee = "||";
@@ -145,40 +128,40 @@ void TxModel::update()
             }
             break;
 
-        case TxOut::CREDIT:
+        case TxOut::ROLE_RECEIVER:
             type = tr("Receive");
             amount = "+";
-            value += item->value;
+            value += item.value;
             break;
 
         default:
             type = tr("Unknown");
         }
 
-        amount += QString::number(item->value/100000000.0, 'g', 8);
+        amount += QString::number(item.value/100000000.0, 'g', 8);
 
         uint32_t nConfirmations = 0;
         QString confirmations;
-        if (item->txstatus == Tx::RECEIVED) {
-            if (bestHeader && item->height) {
-                nConfirmations = bestHeader->height() + 1 - item->height.get();
+        if (item.tx_status >= Tx::PROPAGATED) {
+            if (bestHeader && item.height) {
+                nConfirmations = bestHeader->height() + 1 - item.height;
                 confirmations = QString::number(nConfirmations);
             }
             else {
                 confirmations = "0";
             }
         }
-        else if (item->txstatus == Tx::UNSIGNED) {
+        else if (item.tx_status == Tx::UNSIGNED) {
             confirmations = tr("Unsigned");
         }
-        else if (item->txstatus == Tx::UNSENT) {
+        else if (item.tx_status == Tx::UNSENT) {
             confirmations = tr("Unsent");
         }
         QStandardItem* confirmationsItem = new QStandardItem(confirmations);
-        confirmationsItem->setData(item->txstatus, Qt::UserRole);
+        confirmationsItem->setData(item.tx_status, Qt::UserRole);
 
-        QString address = QString::fromStdString(getAddressForTxOutScript(item->script, base58_versions));
-        QString txhash = QString::fromStdString(uchar_vector(item->txhash).getHex());
+        QString address = QString::fromStdString(getAddressForTxOutScript(item.script, base58_versions));
+        QString hash = QString::fromStdString(uchar_vector(this_txhash).getHex());
 
         row.append(new QStandardItem(time));
         row.append(new QStandardItem(description));
@@ -188,9 +171,9 @@ void TxModel::update()
         row.append(new QStandardItem("")); // placeholder for balance, once sorted
         row.append(confirmationsItem);
         row.append(new QStandardItem(address));
-        row.append(new QStandardItem(txhash));
+        row.append(new QStandardItem(hash));
 
-        rows.append(std::make_pair(std::make_pair(item->txid, nConfirmations), std::make_pair(row, value)));
+        rows.append(std::make_pair(std::make_pair(item.tx_id, nConfirmations), std::make_pair(row, value)));
     }
 
     qSort(rows.begin(), rows.end(), [](const sortable_row_t& a, const sortable_row_t& b) {
@@ -224,13 +207,15 @@ void TxModel::update()
 
 void TxModel::signTx(int row)
 {
+    LOGGER(trace) << "TxModel::signTx(" << row << ")" << std::endl;
+
     if (row == -1 || row >= rowCount()) {
         throw std::runtime_error(tr("Invalid row.").toStdString());
     }
 
     QStandardItem* typeItem = item(row, 6);
     int type = typeItem->data(Qt::UserRole).toInt();
-    if (type != CoinQ::Vault::Tx::UNSIGNED) {
+    if (type != CoinDB::Tx::UNSIGNED) {
         throw std::runtime_error(tr("Transaction is already signed.").toStdString());
     }
 
@@ -238,14 +223,15 @@ void TxModel::signTx(int row)
     uchar_vector txhash;
     txhash.setHex(txHashItem->text().toStdString());
 
-    std::shared_ptr<Tx> tx = vault->getTx(txhash);
-    tx = vault->signTx(tx);
+    std::vector<std::string> keychainNames;
+    std::shared_ptr<Tx> tx = vault->signTx(txhash, keychainNames, true);
+    if (!tx) throw std::runtime_error(tr("No new signatures were added.").toStdString());
 
-    LOGGER(trace) << uchar_vector(tx->raw()).getHex() << std::endl;
-
-    vault->addTx(tx, true);
-
+    LOGGER(trace) << "TxModel::signTx - signature(s) added. raw tx: " << uchar_vector(tx->raw()).getHex() << std::endl;
     update();
+
+    QString msg = tr("Signatures added using keychain(s) ") + QString::fromStdString(stdutils::delimited_list(keychainNames, ", ")) + tr(".");
+    emit txSigned(msg);
 }
 
 void TxModel::sendTx(int row, CoinQ::Network::NetworkSync* networkSync)
@@ -260,10 +246,10 @@ void TxModel::sendTx(int row, CoinQ::Network::NetworkSync* networkSync)
 
     QStandardItem* typeItem = item(row, 6);
     int type = typeItem->data(Qt::UserRole).toInt();
-    if (type == CoinQ::Vault::Tx::UNSIGNED) {
+    if (type == CoinDB::Tx::UNSIGNED) {
         throw std::runtime_error(tr("Transaction must be fully signed before sending.").toStdString());
     }
-    else if (type == CoinQ::Vault::Tx::RECEIVED) {
+    else if (type == CoinDB::Tx::PROPAGATED) {
         throw std::runtime_error(tr("Transaction already sent.").toStdString());
     }
 
@@ -271,13 +257,13 @@ void TxModel::sendTx(int row, CoinQ::Network::NetworkSync* networkSync)
     uchar_vector txhash;
     txhash.setHex(txHashItem->text().toStdString());
 
-    std::shared_ptr<CoinQ::Vault::Tx> tx = vault->getTx(txhash);
+    std::shared_ptr<CoinDB::Tx> tx = vault->getTx(txhash);
     Coin::Transaction coin_tx = tx->toCoinClasses();
     networkSync->sendTx(coin_tx);
 
-    // TODO: Check transaction has propagated before changing status to RECEIVED
-    tx->status(CoinQ::Vault::Tx::RECEIVED);
-    vault->addTx(tx, true);
+    // TODO: Check transaction has propagated before changing status to PROPAGATED
+    tx->updateStatus(CoinDB::Tx::PROPAGATED);
+    vault->insertTx(tx);
 
     update();
 //    networkSync->getTx(txhash);

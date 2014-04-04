@@ -16,7 +16,7 @@
 
 #include <QStandardItemModel>
 
-using namespace CoinQ::Vault;
+using namespace CoinDB;
 using namespace CoinQ::Script;
 using namespace std;
 
@@ -26,7 +26,7 @@ ScriptModel::ScriptModel(QObject* parent)
     initColumns();
 }
 
-ScriptModel::ScriptModel(CoinQ::Vault::Vault* vault, const QString& accountName, QObject* parent)
+ScriptModel::ScriptModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent)
     : QStandardItemModel(parent)
 {
     initColumns();
@@ -41,7 +41,7 @@ void ScriptModel::initColumns()
     setHorizontalHeaderLabels(columns);
 }
 
-void ScriptModel::setVault(CoinQ::Vault::Vault* vault)
+void ScriptModel::setVault(CoinDB::Vault* vault)
 {
     this->vault = vault;
     accountName.clear();
@@ -66,30 +66,30 @@ void ScriptModel::update()
 
     if (!vault || accountName.isEmpty()) return;
 
-    std::vector<std::shared_ptr<SigningScriptView>> scripts = vault->getSigningScriptViews(accountName.toStdString(), SigningScript::CHANGE | SigningScript::REQUEST | SigningScript::RECEIPT);
+    std::vector<SigningScriptView> scripts = vault->getSigningScriptViews(accountName.toStdString(), "", SigningScript::CHANGE | SigningScript::ISSUED | SigningScript::USED);
     for (auto& script: scripts) {
         QList<QStandardItem*> row;
-        QString address = QString::fromStdString(getAddressForTxOutScript(script->txoutscript, getDefaultSettings().getBase58Versions()));
+        QString address = QString::fromStdString(getAddressForTxOutScript(script.txoutscript, getDefaultSettings().getBase58Versions()));
 
         QString type;
-        switch (script->status) {
+        switch (script.status) {
         case SigningScript::CHANGE:
             type = tr("Change");
             break;
 
-        case SigningScript::REQUEST:
-            type = tr("Payment Requested");
+        case SigningScript::ISSUED:
+            type = tr("Issued");
             break;
 
-        case SigningScript::RECEIPT:
-            type = tr("Payment Received");
+        case SigningScript::USED:
+            type = tr("Used");
             break;
 
         default:
             type = tr("Unknown");
         }
 
-        QString description = QString::fromStdString(script->label);
+        QString description = QString::fromStdString(script.label);
 
         row.append(new QStandardItem(address));
         row.append(new QStandardItem(type));

@@ -1,8 +1,17 @@
-CXX_FLAGS = -Wall
+CXX_FLAGS += -Wall
 ifdef DEBUG
     CXX_FLAGS += -g
 else
     CXX_FLAGS += -O3
+endif
+
+ifndef OS
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S), Linux)
+        OS = linux
+    else ifeq ($(UNAME_S), Darwin)
+        OS = osx
+    endif
 endif
 
 ifeq ($(OS), linux)
@@ -15,8 +24,8 @@ else ifeq ($(OS), osx)
     CXX = clang++
     ARCHIVER = ar
     CXX_FLAGS += -std=c++11 -stdlib=libc++
-else
-    $(error OS must be set to linux, osx, or mingw64)
+else ifneq ($(MAKECMDGOALS), clean)
+    $(error OS must be set to linux, mingw64, or osx)
 endif
 
 all: lib/liblogger.a
@@ -28,4 +37,4 @@ obj/logger.o: src/logger.cpp src/logger.h
 	$(CXX) $(CXX_FLAGS) -c -o $@ $<
 
 clean:
-	rm -f obj/*.o
+	rm -f obj/*.o lib/*.a

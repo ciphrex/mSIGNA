@@ -108,6 +108,7 @@ public:
     std::vector<bytes_t> missingsigs() const; // returns pubkeys for which we are still missing signatures
     bool addSig(const bytes_t& pubkey, const bytes_t& sig); // returns true iff signature was absent and has been added
     void clearSigs(); // resets all signatures to 0-length placeholders
+    unsigned int mergesigs(const Script& other); // merges the signatures from another script that is otherwise identical. returns number of signatures added.
 
 private:
     type_t type_;

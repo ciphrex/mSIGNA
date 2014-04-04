@@ -26,10 +26,10 @@
 #include <QUrl>
 #include <QDesktopServices>
 
-#include <CoinQ_vault.h>
+#include <Vault.h>
 #include <CoinQ_netsync.h>
 
-AccountHistoryDialog::AccountHistoryDialog(CoinQ::Vault::Vault* vault, const QString& accountName, CoinQ::Network::NetworkSync* networkSync, QWidget* parent)
+AccountHistoryDialog::AccountHistoryDialog(CoinDB::Vault* vault, const QString& accountName, CoinQ::Network::NetworkSync* networkSync, QWidget* parent)
     : QDialog(parent), currentRow(-1)
 {
     resize(QSize(800, 400));
@@ -67,21 +67,21 @@ void AccountHistoryDialog::updateCurrentTx(const QModelIndex& current, const QMo
     if (currentRow != -1) {
         QStandardItem* typeItem = accountHistoryModel->item(currentRow, 6);
         int type = typeItem->data(Qt::UserRole).toInt();
-        if (type == CoinQ::Vault::Tx::UNSIGNED) {
+        if (type == CoinDB::Tx::UNSIGNED) {
             signTxAction->setEnabled(true);
         }
         else {
             signTxAction->setEnabled(false);
         }
 
-        if (networkSync && networkSync->isConnected() && type == CoinQ::Vault::Tx::UNSENT) {
+        if (networkSync && networkSync->isConnected() && type == CoinDB::Tx::UNSENT) {
             sendTxAction->setEnabled(true);
         }
         else {
             sendTxAction->setEnabled(false);
         }
 
-        if (type == CoinQ::Vault::Tx::RECEIVED) {
+        if (type == CoinDB::Tx::PROPAGATED) {
             viewTxOnWebAction->setEnabled(true);
         }
         else {
@@ -123,7 +123,7 @@ void AccountHistoryDialog::sendTx()
 void AccountHistoryDialog::viewRawTx()
 {
     try {
-        std::shared_ptr<CoinQ::Vault::Tx> tx = accountHistoryModel->getTx(currentRow);
+        std::shared_ptr<CoinDB::Tx> tx = accountHistoryModel->getTx(currentRow);
         RawTxDialog rawTxDlg(tr("Raw Transaction"));
         rawTxDlg.setRawTx(tx->raw());
         rawTxDlg.exec();
@@ -138,7 +138,7 @@ void AccountHistoryDialog::viewTxOnWeb()
     const QString URL_PREFIX("https://blockchain.info/tx/");
 
     try {
-        std::shared_ptr<CoinQ::Vault::Tx> tx = accountHistoryModel->getTx(currentRow);
+        std::shared_ptr<CoinDB::Tx> tx = accountHistoryModel->getTx(currentRow);
         if (!QDesktopServices::openUrl(QUrl(URL_PREFIX + QString::fromStdString(uchar_vector(tx->hash()).getHex())))) {
             throw std::runtime_error(tr("Unable to open browser.").toStdString());
         }

@@ -68,6 +68,7 @@ public:
 
     QString getAccountName() const;
     uint64_t getFeeValue() const;
+    std::vector<std::shared_ptr<CoinDB::TxOut>> getTxOuts();
     std::vector<TaggedOutput> getOutputs();
 
     enum status_t { SAVE_ONLY, SIGN_AND_SAVE, SIGN_AND_SEND };

@@ -13,7 +13,7 @@
 
 #include <QStandardItemModel>
 
-#include <CoinQ_vault.h>
+#include <Vault.h>
 
 namespace CoinQ {
     namespace Network {
@@ -27,15 +27,15 @@ class TxModel : public QStandardItemModel
 
 public:
     TxModel(QObject* parent = NULL);
-    TxModel(CoinQ::Vault::Vault* vault, const QString& accountName, QObject* parent = NULL);
+    TxModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent = NULL);
 
-    void setVault(CoinQ::Vault::Vault* vault);
+    void setVault(CoinDB::Vault* vault);
     void setAccount(const QString& accountName);
     void update();
 
     void signTx(int row);
     void sendTx(int row, CoinQ::Network::NetworkSync* networkSync);
-    std::shared_ptr<CoinQ::Vault::Tx> getTx(int row);
+    std::shared_ptr<CoinDB::Tx> getTx(int row);
     void deleteTx(int row);
 
     // Overridden methods
@@ -43,6 +43,7 @@ public:
     Qt::ItemFlags flags(const QModelIndex& index) const;
 
 signals:
+    void txSigned(const QString& keychainNames);
     void txDeleted();
 
 private:
@@ -50,7 +51,7 @@ private:
 
     void initColumns();
 
-    CoinQ::Vault::Vault* vault;
+    CoinDB::Vault* vault;
     QString accountName; // empty when not loaded
     uint64_t confirmedBalance;
     uint64_t pendingBalance;

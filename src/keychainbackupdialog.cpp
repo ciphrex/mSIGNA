@@ -2,7 +2,7 @@
 //
 // CoinVault
 //
-// keychainbackupdialogview.cpp
+// keychainbackupdialog.cpp
 //
 // Copyright (c) 2013 Eric Lombrozo
 //

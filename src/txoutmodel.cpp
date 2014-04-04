@@ -12,7 +12,7 @@
 
 #include <QStandardItemModel>
 
-using namespace CoinQ::Vault;
+using namespace CoinDB;
 using namespace std;
 
 TxOutModel::TxOutModel()
@@ -23,7 +23,7 @@ TxOutModel::TxOutModel()
     setHorizontalHeaderLabels(columns);
 }
 
-void TxOutModel::setVault(CoinQ::Vault::Vault* vault)
+void TxOutModel::setVault(CoinDB::Vault* vault)
 {
     this->vault = vault;
     update();

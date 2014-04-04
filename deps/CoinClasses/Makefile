@@ -1,8 +1,19 @@
-CXX_FLAGS = -Wall
+CXX_FLAGS += -Wall
 ifdef DEBUG
+    C_FLAGS += -g
     CXX_FLAGS += -g
 else
+    C_FLAGS += -O3
     CXX_FLAGS += -O3
+endif
+
+ifndef OS
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S), Linux)
+        OS = linux
+    else ifeq ($(UNAME_S), Darwin)
+        OS = osx
+    endif
 endif
 
 ifeq ($(OS), linux)
@@ -34,11 +45,8 @@ else ifeq ($(OS), osx)
 
     ARCHIVER = ar
 
-else ifeq ($(OS), cygwin)
-    CXX_FLAGS += -Wno-unused-local-typedefs -std=c++0x
-
-else
-    $(error OS must be set to linux, osx, mingw64, or cygwin)
+else ifneq ($(MAKECMDGOALS), clean)
+    $(error OS must be set to linux, mingw64, or osx)
 endif
 
 OBJS = \
@@ -48,7 +56,22 @@ OBJS = \
         obj/hdkeys.o \
         obj/BloomFilter.o \
         obj/MerkleTree.o \
+        obj/secp256k1.o \
         obj/StandardTransactions.o
+
+OBJ_HEADERS = \
+        src/Base58Check.h \
+        src/BigInt.h \
+        src/aes.h \
+        src/encodings.h \
+        src/hash.h \
+        src/hashblock.h \
+        src/jsonResult.h \
+        src/numericdata.h \
+        src/random.h \
+        src/typedefs.h \
+        src/uchar_vector.h \
+        src/uint256.h
 
 SCRYPT_OBJS = \
 	src/scrypt/obj/scrypt.o
@@ -66,14 +89,14 @@ all: lib/libCoinClasses.a $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
 lib/libCoinClasses.a: $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
 	$(ARCHIVER) rcs $@ $^
 
-obj/%.o: src/%.cpp
-	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
+obj/%.o: src/%.cpp src/%.h $(OBJ_HEADERS)
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) -c $< -o $@
 
-src/scrypt/obj/scrypt.o: src/scrypt/scrypt.cpp
-	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
+src/scrypt/obj/scrypt.o: src/scrypt/scrypt.cpp src/scrypt/scrypt.h
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) -c $< -o $@
 
-src/hashfunc/obj/%.o: src/hashfunc/%.c
-	$(CC) -c -o $@ $< $(INCLUDE_PATH)
+src/hashfunc/obj/%.o: src/hashfunc/%.c src/hashfunc/sph_%.h src/hashfunc/sph_types.h
+	$(CC) $(C_FLAGS) $(INCLUDE_PATH) -c $< -o $@
 
 clean:
-	-rm -f obj/*.o lib/*.a
+	-rm -f obj/*.o lib/*.a src/scrypt/obj/*.o src/hashfunc/obj/*.o
