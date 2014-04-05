@@ -268,7 +268,6 @@ public:
     void markSigningScriptIssued(uint32_t script_index);
 
     bool loadKeychains(bool get_private = false);
-    void clearKeychains() { keychains_.clear(); }
     KeychainSet keychains() const { return keychains_; }
 
     bool isChange() const { return index_ == CHANGE_INDEX; }
@@ -288,8 +287,11 @@ private:
     uint32_t script_count_;
     uint32_t next_script_index_; // index of next script in pool that will be issued
 
+    // Keychains are only stored in database for nonderived keychains. Otherwise, they are transient and loaded only via loadKeychains().
     #pragma db value_not_null
-    KeychainSet keychains_; // is kept in a clear state in database and is only transient when derived from root keychains.
+    KeychainSet keychains__; // is kept in a clear state in database and is only transient when derived from root keychains.
+    #pragma db transient
+    KeychainSet keychains_;
 
     friend class boost::serialization::access;
     template<class Archive>
@@ -301,7 +303,7 @@ private:
 
         uint32_t n = keychains_.size();
         ar & n;
-        for (auto& keychain: keychains_)    { ar & *keychain; }
+        for (auto& keychain: keychains__)    { ar & *keychain; }
     }
     template<class Archive>
     void load(Archive& ar, const unsigned int /*version*/)
@@ -317,7 +319,7 @@ private:
         {
             std::shared_ptr<Keychain> keychain(new Keychain(true)); // Load these keychains as hidden keychains.
             ar & *keychain;
-            keychains_.insert(keychain);
+            keychains__.insert(keychain);
         }
         script_count_ = 0;
     }

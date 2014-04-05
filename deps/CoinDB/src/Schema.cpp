@@ -430,11 +430,19 @@ AccountBin::AccountBin(std::shared_ptr<Account> account, uint32_t index, const s
 
 bool AccountBin::loadKeychains(bool get_private)
 {
-    if (!keychains_.empty() || !account()) return false;
-    for (auto& keychain: account()->keychains())
+    if (!keychains_.empty()) return false;
+    if (!account())
     {
-        std::shared_ptr<Keychain> child(keychain->child(index_, get_private));
-        keychains_.insert(child);
+        // If we do not have an account for this bin we cannot derive the keychains, so use the stored values.
+        keychains_ = keychains__;
+    }
+    else
+    {
+        for (auto& keychain: account()->keychains())
+        {
+            std::shared_ptr<Keychain> child(keychain->child(index_, get_private));
+            keychains_.insert(child);
+        }
     }
     return true;
 }
