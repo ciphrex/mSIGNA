@@ -421,30 +421,29 @@ std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
  */
 
 AccountBin::AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name)
-    : account_(account), index_(index), name_(name), script_count_(0), next_script_index_(0)
+    : account_(account), index_(index), name_(name), script_count_(0), next_script_index_(0), minsigs_(account->minsigs())
 {
     if (index == 0) throw std::runtime_error("Account bin index cannot be zero.");
     if (index == CHANGE_INDEX && name != CHANGE_BIN_NAME) throw std::runtime_error("Account bin index reserved for change.");
     if (index == DEFAULT_INDEX && name != DEFAULT_BIN_NAME) throw std::runtime_error("Account bin index reserved for default."); 
 }
 
-bool AccountBin::loadKeychains(bool get_private)
+void AccountBin::loadKeychains() const
 {
-    if (!keychains_.empty()) return false;
+    if (!keychains__.empty()) return;
     if (!account())
     {
         // If we do not have an account for this bin we cannot derive the keychains, so use the stored values.
-        keychains_ = keychains__;
+        keychains__ = keychains_;
     }
     else
     {
         for (auto& keychain: account()->keychains())
         {
-            std::shared_ptr<Keychain> child(keychain->child(index_, get_private));
-            keychains_.insert(child);
+            std::shared_ptr<Keychain> child(keychain->child(index_));
+            keychains__.insert(child);
         }
     }
-    return true;
 }
 
 std::shared_ptr<SigningScript> AccountBin::newSigningScript(const std::string& label)
@@ -459,11 +458,11 @@ void AccountBin::markSigningScriptIssued(uint32_t script_index)
         next_script_index_ = script_index + 1;
 }
 
-void AccountBin::makeExport()
+void AccountBin::makeExport(const std::string& name)
 {
+    name_ = name;
+    keychains_ = keychains();
     account_.reset();
-    loadKeychains(false);
-    keychains__ = keychains_;
 }
 
 
@@ -498,8 +497,8 @@ std::vector<SigningScript::status_t> SigningScript::getStatusFlags(int status)
 SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index, const std::string& label, status_t status)
     : account_(account_bin->account()), account_bin_(account_bin), index_(index), label_(label), status_(status)
 {
-    account_bin_->loadKeychains();
-    for (auto& keychain: account_bin_->keychains())
+    auto& keychains = account_bin_->keychains();
+    for (auto& keychain: keychains)
     {
         std::shared_ptr<Key> key(new Key(keychain, index));
         keys_.push_back(key);
@@ -510,7 +509,7 @@ SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t i
 
     std::vector<bytes_t> pubkeys;
     for (auto& key: keys_) { pubkeys.push_back(key->pubkey()); }
-    CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, account_->minsigs(), pubkeys);
+    CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, account_bin->minsigs(), pubkeys);
     txinscript_ = script.txinscript(CoinQ::Script::Script::EDIT);
     txoutscript_ = script.txoutscript();
 }

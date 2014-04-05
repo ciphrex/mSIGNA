@@ -132,6 +132,9 @@ public:
     // hash = ripemd160(sha256(pubkey + chain_code))
     const bytes_t& hash() const { return hash_; }
 
+    void hidden(bool hidden) { hidden_ = hidden; }
+    bool hidden() const { return hidden_; }
+
     void extkey(const secure_bytes_t& extkey, bool try_private = true, const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
     secure_bytes_t extkey(bool get_private = false) const;
 
@@ -249,7 +252,7 @@ public:
 
     AccountBin() { }
     AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name);
-    AccountBin(const AccountBin& source) : account_(source.account_), index_(source.index_), name_(source.name_), script_count_(source.script_count_), next_script_index_(source.next_script_index_), keychains_(source.keychains_) { }
+    AccountBin(const AccountBin& source) : account_(source.account_), index_(source.index_), name_(source.name_), script_count_(source.script_count_), next_script_index_(source.next_script_index_), minsigs_(source.minsigs_), keychains_(source.keychains_), keychains__(source.keychains__) { }
 
     unsigned long id() const { return id_; }
 
@@ -264,18 +267,22 @@ public:
     uint32_t script_count() const { return script_count_; }
     uint32_t next_script_index() const { return next_script_index_; }
 
+    uint32_t minsigs() const { return minsigs_; }
+
     std::shared_ptr<SigningScript> newSigningScript(const std::string& label = "");
     void markSigningScriptIssued(uint32_t script_index);
 
-    bool loadKeychains(bool get_private = false);
-    KeychainSet keychains() const { return keychains_; }
+    void keychains(const KeychainSet& keychains) { keychains_ = keychains; } // only used for imported account bins
+    const KeychainSet& keychains() const { loadKeychains(); return keychains__; }
 
     bool isChange() const { return index_ == CHANGE_INDEX; }
     bool isDefault() const { return index_ == DEFAULT_INDEX; }
 
-    void makeExport();
+    void makeExport(const std::string& name);
 
 private:
+    void loadKeychains() const;
+
     friend class odb::access;
 
     #pragma db id auto
@@ -289,11 +296,13 @@ private:
     uint32_t script_count_;
     uint32_t next_script_index_; // index of next script in pool that will be issued
 
+    uint32_t minsigs_;
+
     // Keychains are only stored in database for nonderived keychains. Otherwise, they are transient and loaded only via loadKeychains().
     #pragma db value_not_null
-    KeychainSet keychains__; // is kept in a clear state in database and is only transient when derived from root keychains.
-    #pragma db transient
     KeychainSet keychains_;
+    #pragma db transient
+    mutable KeychainSet keychains__;
 
     friend class boost::serialization::access;
     template<class Archive>
@@ -302,6 +311,7 @@ private:
         ar & name_;
         ar & index_;
         ar & next_script_index_;
+        ar & minsigs_;
 
         uint32_t n = keychains_.size();
         ar & n;
@@ -313,6 +323,7 @@ private:
         ar & name_;
         ar & index_;
         ar & next_script_index_;
+        ar & minsigs_;
 
         uint32_t n;
         ar & n;
@@ -394,12 +405,14 @@ private:
     std::vector<std::string>    bin_names_;
 };
 
+const uint32_t DEFAULT_UNUSED_POOL_SIZE = 25;
+
 #pragma db object pointer(std::shared_ptr)
 class Account : public std::enable_shared_from_this<Account>
 {
 public:
     Account() { }
-    Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL));
+    Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = DEFAULT_UNUSED_POOL_SIZE, uint32_t time_created = time(NULL));
 
     void updateHash();
 

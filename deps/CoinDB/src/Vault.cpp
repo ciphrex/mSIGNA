@@ -1069,7 +1069,7 @@ void Vault::refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin)
     odb::result<ScriptCountView> count_result(db_->query<ScriptCountView>(count_query::AccountBin::id == bin->id() && count_query::SigningScript::status == SigningScript::UNUSED));
     uint32_t count = count_result.empty() ? 0 : count_result.begin().load()->count;
 
-    uint32_t unused_pool_size = bin->account()->unused_pool_size();
+    uint32_t unused_pool_size = bin->account() ? bin->account()->unused_pool_size() : DEFAULT_UNUSED_POOL_SIZE;
     for (uint32_t i = count; i < unused_pool_size; i++)
     {
         std::shared_ptr<SigningScript> script = bin->newSigningScript();
@@ -1164,6 +1164,138 @@ std::shared_ptr<AccountBin> Vault::getAccountBin_unwrapped(const std::string& ac
 
     unsigned long bin_id = r.begin().load()->bin_id;
     std::shared_ptr<AccountBin> bin(db_->load<AccountBin>(bin_id));
+    return bin;
+}
+
+void Vault::exportAccountBin(const std::string& account_name, const std::string& bin_name, const std::string& export_name, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey) const
+{
+    LOGGER(trace) << "Vault::exportAccountBin(" << account_name << ", " << bin_name << ", " << filepath << ", ?)" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
+    exportAccountBin_unwrapped(bin, export_name, filepath, exportChainCodeUnlockKey);
+}
+
+void Vault::exportAccountBin_unwrapped(const std::shared_ptr<AccountBin> account_bin, const std::string& export_name, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey) const
+{
+    account_bin->makeExport(export_name);
+    if (!exportChainCodeUnlockKey.empty())
+    {
+        // Reencrypt the chain codes using a different unlock key than our own.
+        for (auto& keychain: account_bin->keychains())
+        {
+            unlockKeychainChainCode_unwrapped(keychain);
+            keychain->setChainCodeUnlockKey(exportChainCodeUnlockKey);
+        }
+    }
+
+    std::ofstream ofs(filepath);
+    boost::archive::text_oarchive oa(ofs);
+    oa << *account_bin;
+}
+
+std::shared_ptr<AccountBin> Vault::importAccountBin(const std::string& filepath, const secure_bytes_t& importChainCodeUnlockKey)
+{
+    LOGGER(trace) << "Vault::importAccountBin(" << filepath << ", ?)" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<AccountBin> bin = importAccountBin_unwrapped(filepath, importChainCodeUnlockKey);
+    t.commit();
+    return bin;
+}
+
+std::shared_ptr<AccountBin> Vault::importAccountBin_unwrapped(const std::string& filepath, const secure_bytes_t& importChainCodeUnlockKey)
+{
+    std::shared_ptr<AccountBin> bin(new AccountBin());
+    {
+        std::ifstream ifs(filepath);
+        boost::archive::text_iarchive ia(ifs);
+        ia >> *bin;
+    }
+
+    // In case of bin name conflict
+    std::string bin_name = bin->name();
+    unsigned int append_num = 1;
+    while (true)
+    {
+        odb::result<AccountBin> r(db_->query<AccountBin>(odb::query<AccountBin>::name == bin_name));
+        if (!r.empty()) break;
+
+        std::stringstream ss;
+        ss << bin_name << append_num++;
+        bin->name(ss.str());
+    }
+
+    // Persist keychains
+    auto& loaded_keychains = bin->keychains();
+    KeychainSet stored_keychains = loaded_keychains; // We will replace any duplicate loaded keychains with keychains already in database.
+    for (auto& keychain: loaded_keychains)
+    {
+        odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::hash == keychain->hash()));
+        if (r.empty())
+        {
+            // We do not have this keychain. Import it.
+
+            if (importChainCodeUnlockKey.empty())
+            {
+                unlockKeychainChainCode_unwrapped(keychain);
+            }
+            else
+            {
+                // Reencrypt the chain code using our own unlock key.
+                unlockKeychainChainCode_unwrapped(keychain, importChainCodeUnlockKey);
+                keychain->setChainCodeUnlockKey(chainCodeUnlockKey);
+            }
+
+            std::string keychain_name = keychain->name();
+            unsigned int append_num = 1; // in case of name conflict
+            while (keychainExists_unwrapped(keychain->name()))
+            {
+                std::stringstream ss;
+                ss << keychain_name << append_num++;
+                keychain->name(ss.str());
+            }
+
+            keychain->hidden(true); // Do not display this keychain in UI.
+            db_->persist(keychain);
+        }
+        else
+        {
+            // We already have this keychain. Just replace the loaded one with the stored one.
+
+            std::shared_ptr<Keychain> stored_keychain(r.begin().load());
+            unlockKeychainChainCode_unwrapped(stored_keychain);
+            stored_keychains.erase(keychain);
+            stored_keychains.insert(stored_keychain);
+        }
+    }
+
+    bin->keychains(stored_keychains); // Replace loaded keychains with stored keychains.
+
+    // Create signing scripts and keys and persist account bin
+    db_->persist(bin);
+
+    SigningScript::status_t status = bin->isChange() ? SigningScript::CHANGE : SigningScript::ISSUED;
+    unsigned int next_script_index = bin->next_script_index();
+    for (unsigned int i = 0; i < next_script_index; i++)
+    {
+        std::shared_ptr<SigningScript> script = bin->newSigningScript();
+        script->status(status);
+        for (auto& key: script->keys()) { db_->persist(key); }
+        db_->persist(script);
+    }
+    for (unsigned int i = 0; i < DEFAULT_UNUSED_POOL_SIZE; i++)
+    {
+        std::shared_ptr<SigningScript> script = bin->newSigningScript();
+        for (auto& key: script->keys()) { db_->persist(key); }
+        db_->persist(script);
+    }
+    db_->update(bin);
+    
     return bin;
 }
 
