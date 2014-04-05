@@ -1180,13 +1180,17 @@ void Vault::exportAccountBin(const std::string& account_name, const std::string&
 
 void Vault::exportAccountBin_unwrapped(const std::shared_ptr<AccountBin> account_bin, const std::string& export_name, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey) const
 {
+    if (account_bin->account())
+    {
+        unlockAccountChainCodes_unwrapped(account_bin->account());
+    }
+    
     account_bin->makeExport(export_name);
     if (!exportChainCodeUnlockKey.empty())
     {
         // Reencrypt the chain codes using a different unlock key than our own.
         for (auto& keychain: account_bin->keychains())
         {
-            unlockKeychainChainCode_unwrapped(keychain);
             keychain->setChainCodeUnlockKey(exportChainCodeUnlockKey);
         }
     }
@@ -1223,7 +1227,7 @@ std::shared_ptr<AccountBin> Vault::importAccountBin_unwrapped(const std::string&
     while (true)
     {
         odb::result<AccountBin> r(db_->query<AccountBin>(odb::query<AccountBin>::name == bin_name));
-        if (!r.empty()) break;
+        if (r.empty()) break;
 
         std::stringstream ss;
         ss << bin_name << append_num++;
@@ -1239,7 +1243,6 @@ std::shared_ptr<AccountBin> Vault::importAccountBin_unwrapped(const std::string&
         if (r.empty())
         {
             // We do not have this keychain. Import it.
-
             if (importChainCodeUnlockKey.empty())
             {
                 unlockKeychainChainCode_unwrapped(keychain);

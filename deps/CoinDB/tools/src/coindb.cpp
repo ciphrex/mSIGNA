@@ -414,6 +414,44 @@ cli::result_t cmd_refillaccountpool(const cli::params_t& params)
     return ss.str();
 }
 
+// Account bin operations
+cli::result_t cmd_exportbin(const cli::params_t& params)
+{
+    Vault vault(params[0], false);
+
+    string export_name = params.size() > 3 ? params[3] : (params[1] + "-" + params[2]);
+    secure_bytes_t exportChainCodeUnlockKey;
+    if (params.size() > 4 && !params[4].empty())
+        exportChainCodeUnlockKey = sha256_2(params[4]);
+
+    vault.unlockChainCodes(secure_bytes_t());
+
+    string output_file = params.size() > 5 ? params[5] : (export_name + ".bin");
+    vault.exportAccountBin(params[1], params[2], export_name, output_file, exportChainCodeUnlockKey);
+
+    stringstream ss;
+    ss << "Account bin " << export_name << " exported to " << output_file << ".";
+    return ss.str();
+}
+
+cli::result_t cmd_importbin(const cli::params_t& params)
+{
+    Vault vault(params[0], false);
+
+    secure_bytes_t importChainCodeUnlockKey;
+    if (params.size() > 2 && !params[2].empty())
+        importChainCodeUnlockKey = sha256_2(params[2]);
+
+    vault.unlockChainCodes(secure_bytes_t());
+
+    std::shared_ptr<AccountBin> bin = vault.importAccountBin(params[1], importChainCodeUnlockKey);
+
+    stringstream ss;
+    ss << "Account bin " << bin->name() << " imported from " << params[1] << ".";
+    return ss.str();
+}
+
+// Tx operations
 cli::result_t cmd_txinfo(const cli::params_t& params)
 {
     bool raw = params.size() > 2 ? params[2] == "true" : false;
@@ -700,6 +738,10 @@ int main(int argc, char* argv[])
         command::params(3, "account name = @all", "bin name = @all", "flags = PENDING | RECEIVED")));
     shell.add(command(&cmd_history, "history", "display transaction history", command::params(1, "db file"), command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
     shell.add(command(&cmd_refillaccountpool, "refillaccountpool", "refill signing script pool for account", command::params(2, "db file", "account name")));
+
+    // Account bin operations
+    shell.add(command(&cmd_exportbin, "exportbin", "export account bin to file", command::params(3, "db file", "account name", "bin name"), command::params(3, "export name = account_name-bin_name", "export chain code passphrase", "output file = *.bin")));
+    shell.add(command(&cmd_importbin, "importbin", "import account bin from file", command::params(2, "db file", "bin file"), command::params(1, "import chain code passphrase")));
 
     // Tx operations
     shell.add(command(&cmd_txinfo, "txinfo", "display transaction information", command::params(2, "db file", "tx hash"), command::params(1, "raw hex = false")));
