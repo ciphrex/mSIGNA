@@ -407,11 +407,6 @@ AccountInfo Account::accountInfo() const
     return AccountInfo(id_, name_, minsigs_, keychain_names, unused_pool_size_, time_created_, bin_names);
 }
 
-
-/*
- * class AccountBin
- */
-
 std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
 {
     uint32_t index = bins_.size() + 1;
@@ -419,6 +414,11 @@ std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
     bins_.push_back(bin);
     return bin;
 }
+
+
+/*
+ * class AccountBin
+ */
 
 AccountBin::AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name)
     : account_(account), index_(index), name_(name), script_count_(0), next_script_index_(0)
