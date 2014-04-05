@@ -273,6 +273,8 @@ public:
     bool isChange() const { return index_ == CHANGE_INDEX; }
     bool isDefault() const { return index_ == DEFAULT_INDEX; }
 
+    void makeExport();
+
 private:
     friend class odb::access;
 

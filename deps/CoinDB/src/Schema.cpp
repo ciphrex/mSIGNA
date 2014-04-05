@@ -459,6 +459,12 @@ void AccountBin::markSigningScriptIssued(uint32_t script_index)
         next_script_index_ = script_index + 1;
 }
 
+void AccountBin::makeExport()
+{
+    account_.reset();
+    loadKeychains(false);
+    keychains__ = keychains_;
+}
 
 
 /*
