@@ -430,7 +430,7 @@ AccountBin::AccountBin(std::shared_ptr<Account> account, uint32_t index, const s
 
 bool AccountBin::loadKeychains(bool get_private)
 {
-    if (!keychains_.empty()) return false;
+    if (!keychains_.empty() || !account()) return false;
     for (auto& keychain: account()->keychains())
     {
         std::shared_ptr<Keychain> child(keychain->child(index_, get_private));

@@ -811,7 +811,6 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
         unsigned int next_script_index = bin->next_script_index();
         for (unsigned int i = 0; i < next_script_index; i++)
         {
-            // TODO: SigningScript labels
             std::shared_ptr<SigningScript> script = bin->newSigningScript();
             script->status(status);
             for (auto& key: script->keys()) { db_->persist(key); }
@@ -823,6 +822,7 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
             for (auto& key: script->keys()) { db_->persist(key); }
             db_->persist(script); 
         }
+        bin->clearKeychains(); // No need to store keychains we can derive when needed.
         db_->update(bin);
     } 
 
@@ -886,6 +886,11 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
         for (auto& key: defaultSigningScript->keys()) { db_->persist(key); }
         db_->persist(defaultSigningScript);
     }
+
+    // No need to store keychains we can derive when needed.
+    changeAccountBin->clearKeychains();
+    defaultAccountBin->clearKeychains();
+
     db_->update(changeAccountBin);
     db_->update(defaultAccountBin);
     db_->update(account);

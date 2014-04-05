@@ -268,6 +268,7 @@ public:
     void markSigningScriptIssued(uint32_t script_index);
 
     bool loadKeychains(bool get_private = false);
+    void clearKeychains() { keychains_.clear(); }
     KeychainSet keychains() const { return keychains_; }
 
     bool isChange() const { return index_ == CHANGE_INDEX; }
@@ -279,7 +280,7 @@ private:
     #pragma db id auto
     unsigned long id_;
 
-    #pragma db value_not_null
+    #pragma db null
     std::weak_ptr<Account> account_;
     uint32_t index_;
     std::string name_;
@@ -287,8 +288,8 @@ private:
     uint32_t script_count_;
     uint32_t next_script_index_; // index of next script in pool that will be issued
 
-    #pragma db transient
-    KeychainSet keychains_;
+    #pragma db value_not_null
+    KeychainSet keychains_; // is kept in a clear state in database and is only transient when derived from root keychains.
 
     friend class boost::serialization::access;
     template<class Archive>
@@ -297,7 +298,10 @@ private:
         ar & name_;
         ar & index_;
         ar & next_script_index_;
-//        ar & keychains_; // useful for exporting the account bin independently from account
+
+        uint32_t n = keychains_.size();
+        ar & n;
+        for (auto& keychain: keychains_)    { ar & *keychain; }
     }
     template<class Archive>
     void load(Archive& ar, const unsigned int /*version*/)
@@ -305,7 +309,16 @@ private:
         ar & name_;
         ar & index_;
         ar & next_script_index_;
- //       ar & keychains_; // useful for importing the account bin independently from account
+
+        uint32_t n;
+        ar & n;
+        keychains_.clear();
+        for (uint32_t i = 0; i < n; i++)
+        {
+            std::shared_ptr<Keychain> keychain(new Keychain(true)); // Load these keychains as hidden keychains.
+            ar & *keychain;
+            keychains_.insert(keychain);
+        }
         script_count_ = 0;
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()
