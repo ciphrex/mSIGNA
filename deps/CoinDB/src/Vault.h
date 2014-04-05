@@ -65,8 +65,8 @@ public:
     //void eraseKeychain(const std::string& keychain_name) const;
     void                                    renameKeychain(const std::string& old_name, const std::string& new_name);
     std::shared_ptr<Keychain>               getKeychain(const std::string& keychain_name) const;
-    std::vector<std::shared_ptr<Keychain>>  getAllKeychains(bool root_only = false) const;
-    std::vector<KeychainView>               getRootKeychainViews(const std::string& account_name = std::string()) const;
+    std::vector<std::shared_ptr<Keychain>>  getAllKeychains(bool root_only = false, bool nonhidden_only = true) const;
+    std::vector<KeychainView>               getRootKeychainViews(const std::string& account_name = "") const;
     secure_bytes_t                          getKeychainExtendedKey(const std::string& keychain_name, bool get_private) const;
     std::shared_ptr<Keychain>               importKeychainExtendedKey(const std::string& keychain_name, const secure_bytes_t& extkey, bool try_private, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
 
@@ -153,7 +153,7 @@ protected:
     void                                    exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
     std::shared_ptr<Keychain>               importKeychain_unwrapped(const std::string& filepath, bool& importprivkeys, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
     secure_bytes_t                          getKeychainExtendedKey_unwrapped(std::shared_ptr<Keychain> keychain, bool get_private) const;
-    std::vector<KeychainView>               getRootKeychainViews_unwrapped(std::shared_ptr<Account> account = nullptr) const;
+    std::vector<KeychainView>               getRootKeychainViews_unwrapped(const std::string& account_name = "") const;
 
     // All the keychain unlock methods use the global keys by default
 

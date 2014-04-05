@@ -451,11 +451,17 @@ std::vector<KeychainView> Vault::getRootKeychainViews(const std::string& account
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
+    return getRootKeychainViews_unwrapped(account_name);
+}
 
+std::vector<KeychainView> Vault::getRootKeychainViews_unwrapped(const std::string& account_name) const
+{
     typedef odb::query<KeychainView> query_t;
     query_t query(1 == 1);
     if (!account_name.empty())
         query = query && (query_t::Account::name == account_name);
+    if (getSchemaVersion_unwrapped() >= 4)
+        query = query && (!query_t::Keychain::hidden);
     odb::result<KeychainView> r(db_->query<KeychainView>(query));
     std::vector<KeychainView> views;
     for (auto& view: r)
@@ -464,11 +470,6 @@ std::vector<KeychainView> Vault::getRootKeychainViews(const std::string& account
         views.push_back(view);
     }
     return views;
-}
-
-std::vector<KeychainView> Vault::getRootKeychainViews_unwrapped(std::shared_ptr<Account> account) const
-{
-    return std::vector<KeychainView>();
 }
 
 secure_bytes_t Vault::getKeychainExtendedKey(const std::string& keychain_name, bool get_private) const
@@ -562,17 +563,19 @@ std::shared_ptr<Keychain> Vault::getKeychain_unwrapped(const std::string& keycha
     return keychain;
 }
 
-std::vector<std::shared_ptr<Keychain>> Vault::getAllKeychains(bool root_only) const
+std::vector<std::shared_ptr<Keychain>> Vault::getAllKeychains(bool root_only, bool nonhidden_only) const
 {
     LOGGER(trace) << "Vault::getAllKeychains()" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
-    odb::result<Keychain> r;
-    if (root_only)
-        r = db_->query<Keychain>(odb::query<Keychain>::parent.is_null());
-    else
-        r = db_->query<Keychain>();
+    odb::query<Keychain> query(1 == 1);
+    if (root_only)     { query = query && odb::query<Keychain>::parent.is_null();  }
+    if (getSchemaVersion_unwrapped() >= 4)
+    {
+        if (nonhidden_only) { query = query && !odb::query<Keychain>::hidden; }
+    }
+    odb::result<Keychain> r(db_->query<Keychain>(query));
 
     std::vector<std::shared_ptr<Keychain>> keychains;
     for (auto& keychain: r) { keychains.push_back(keychain.get_shared_ptr()); }

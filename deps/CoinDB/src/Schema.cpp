@@ -30,7 +30,7 @@ using namespace CoinDB;
  */
 
 Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lock_key, const bytes_t& salt)
-    : name_(name)
+    : name_(name), hidden_(false)
 {
     if (name.empty() || name[0] == '@') throw std::runtime_error("Invalid keychain name.");
 
@@ -75,6 +75,8 @@ Keychain& Keychain::operator=(const Keychain& source)
     hashdata += chain_code_;
     hash_ = ripemd160(sha256(hashdata));
 
+    hidden_ = source.hidden_;
+
     return *this;
 }
 
@@ -87,7 +89,7 @@ std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private)
         if (privkey_.empty()) throw std::runtime_error("Private key is locked.");
         Coin::HDKeychain hdkeychain(privkey_, chain_code_, child_num_, parent_fp_, depth_);
         hdkeychain = hdkeychain.getChild(i);
-        std::shared_ptr<Keychain> child(new Keychain());;
+        std::shared_ptr<Keychain> child(new Keychain());
         child->parent_ = get_shared_ptr();
         secure_bytes_t privkey = hdkeychain.privkey();
         // Strip leading zero byte if necessary
