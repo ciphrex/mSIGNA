@@ -44,24 +44,65 @@ using namespace CoinDB;
 Vault::Vault(int argc, char** argv, bool create, uint32_t version)
     : db_(open_database(argc, argv, create))
 {
-    LOGGER(trace) << "Opened Vault" << std::endl;
+    LOGGER(trace) << "Vault::Vault(..., " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
 
-//    if (create) setVersion(version);
+    if (create) setSchemaVersion(version);
 }
 
 #if defined(DATABASE_SQLITE)
 Vault::Vault(const std::string& filename, bool create, uint32_t version)
     : db_(openDatabase(filename, create))
 {
-    LOGGER(trace) << "Opened Vault - filename: " << filename << " create: " << (create ? "true" : "false") << " version: " << version << std::endl;
+    LOGGER(trace) << "Vault::Vault(" << filename << ", " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
 
-//    if (create) setVersion(version);
+    if (create) setSchemaVersion(version);
 }
 #endif
 
 ///////////////////////
 // GLOBAL OPERATIONS //
 ///////////////////////
+uint32_t Vault::getSchemaVersion() const
+{
+    LOGGER(trace) << "Vault::getSchemaVersion()" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    return getSchemaVersion_unwrapped();
+}
+
+uint32_t Vault::getSchemaVersion_unwrapped() const
+{
+    odb::result<Version> r(db_->query<Version>());
+    return r.empty() ? 0 : r.begin()->version();
+}
+
+void Vault::setSchemaVersion(uint32_t version)
+{
+    LOGGER(trace) << "Vault::setSchemaVersion(" << version << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    setSchemaVersion_unwrapped(version);
+    t.commit();
+}
+
+void Vault::setSchemaVersion_unwrapped(uint32_t version)
+{
+    odb::result<Version> r(db_->query<Version>());
+    if (r.empty())
+    {
+        std::shared_ptr<Version> version_obj(new Version(version));
+        db_->persist(version_obj);
+    }
+    else
+    {
+        std::shared_ptr<Version> version_obj(r.begin().load());
+        version_obj->version(version);
+        db_->update(version_obj);
+    }
+}
+
 uint32_t Vault::getHorizonTimestamp() const
 {
     LOGGER(trace) << "Vault::getHorizonTimestamp()" << std::endl;

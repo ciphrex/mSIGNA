@@ -44,10 +44,12 @@ cli::result_t cmd_create(const cli::params_t& params)
 cli::result_t cmd_info(const cli::params_t& params)
 {
     Vault vault(params[0], false);
+    uint32_t schema_version = vault.getSchemaVersion();
     uint32_t horizon_timestamp = vault.getHorizonTimestamp();
 
     stringstream ss;
     ss << "filename:            " << params[0] << endl
+       << "schema version:      " << schema_version << endl
        << "horizon timestamp:   " << horizon_timestamp; 
     return ss.str();
 }

@@ -36,6 +36,9 @@ public:
     ///////////////////////
     // GLOBAL OPERATIONS //
     ///////////////////////
+    uint32_t                                getSchemaVersion() const;
+    void                                    setSchemaVersion(uint32_t version);
+
     uint32_t                                MAX_HORIZON_TIMESTAMP_OFFSET = 6 * 60 * 60; // a good six hours initial tolerance for incorrect clock
     uint32_t                                getHorizonTimestamp() const; // nothing that happened before this should matter to us.
     uint32_t                                getMaxFirstBlockTimestamp() const; // convenience method. getHorizonTimestamp() - MIN_HORIZON_TIMESTAMP_OFFSET
@@ -125,6 +128,9 @@ protected:
     ///////////////////////
     // GLOBAL OPERATIONS //
     ///////////////////////
+    uint32_t                                getSchemaVersion_unwrapped() const;
+    void                                    setSchemaVersion_unwrapped(uint32_t version);
+
     uint32_t                                getHorizonTimestamp_unwrapped() const;
     uint32_t                                getMaxFirstBlockTimestamp_unwrapped() const;
     uint32_t                                getHorizonHeight_unwrapped() const;
