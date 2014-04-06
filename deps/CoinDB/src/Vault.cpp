@@ -1217,8 +1217,8 @@ std::shared_ptr<AccountBin> Vault::importAccountBin_unwrapped(const std::string&
         ia >> *bin;
     }
 
-    // TODO: detect account bin duplicates.
     // In case of bin name conflict
+    // TODO: detect account bin duplicates.
     std::string bin_name = bin->name();
     unsigned int append_num = 1;
     while (true)
@@ -1232,6 +1232,8 @@ std::shared_ptr<AccountBin> Vault::importAccountBin_unwrapped(const std::string&
     }
 
     // Persist keychains
+    std::string keychain_base_name = bin->name();
+    unsigned int keychain_append_num = 1;
     auto& loaded_keychains = bin->keychains();
     KeychainSet stored_keychains; // We will replace any duplicate loaded keychains with keychains already in database.
     for (auto& keychain: loaded_keychains)
@@ -1251,14 +1253,13 @@ std::shared_ptr<AccountBin> Vault::importAccountBin_unwrapped(const std::string&
                 keychain->setChainCodeUnlockKey(chainCodeUnlockKey);
             }
 
-            std::string keychain_name = keychain->name();
-            unsigned int append_num = 1; // in case of name conflict
-            while (keychainExists_unwrapped(keychain->name()))
+            do
             {
                 std::stringstream ss;
-                ss << keychain_name << append_num++;
+                ss << keychain_base_name << "(" << keychain_append_num++ << ")";
                 keychain->name(ss.str());
             }
+            while (keychainExists_unwrapped(keychain->name()));
 
             keychain->hidden(true); // Do not display this keychain in UI.
             db_->persist(keychain);
