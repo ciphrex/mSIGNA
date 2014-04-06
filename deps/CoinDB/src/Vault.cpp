@@ -474,7 +474,7 @@ std::vector<KeychainView> Vault::getRootKeychainViews_unwrapped(const std::strin
 
 secure_bytes_t Vault::getKeychainExtendedKey(const std::string& keychain_name, bool get_private) const
 {
-    LOGGER(debug) << "Vault::getKeychainExtendedKey(" << keychain_name << ", " << (get_private ? "true" : "false") << ")" << std::endl;
+    LOGGER(trace) << "Vault::getKeychainExtendedKey(" << keychain_name << ", " << (get_private ? "true" : "false") << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
@@ -1053,7 +1053,7 @@ void Vault::unlockAccountBinChainCodes_unwrapped(std::shared_ptr<AccountBin> bin
 {
     if (bin->account())
     {
-        unlockAccountChainCodes_unwrapped(bin->account(), overrideChainCodeUnlockKey);
+        unlockAccountChainCodes_unwrapped(bin->account(), overrideChainCodeUnlockKey.empty() ? chainCodeUnlockKey : overrideChainCodeUnlockKey);
     }
     else
     {

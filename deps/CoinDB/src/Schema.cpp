@@ -466,9 +466,10 @@ void AccountBin::markSigningScriptIssued(uint32_t script_index)
 void AccountBin::makeExport(const std::string& name)
 {
     name_ = name;
-    index_ = 0;
-    keychains_ = keychains();
+    loadKeychains();
+    keychains_ = keychains__;
     for (auto& keychain: keychains_) { keychain->name(""); }
+    index_ = 0;
     account_.reset();
 }
 
