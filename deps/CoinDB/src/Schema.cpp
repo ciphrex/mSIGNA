@@ -428,6 +428,11 @@ AccountBin::AccountBin(std::shared_ptr<Account> account, uint32_t index, const s
     if (index == DEFAULT_INDEX && name != DEFAULT_BIN_NAME) throw std::runtime_error("Account bin index reserved for default."); 
 }
 
+std::string AccountBin::account_name() const
+{
+    return account() ? account()->name() : std::string("@null");
+}
+
 void AccountBin::loadKeychains() const
 {
     if (!keychains__.empty()) return;

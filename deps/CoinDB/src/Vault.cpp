@@ -513,19 +513,9 @@ void Vault::unlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account, 
 {
     for (auto& keychain: account->keychains())
     {
-        if (!keychain->unlockChainCode(chainCodeUnlockKey))
+        if (!keychain->unlockChainCode(overrideChainCodeUnlockKey.empty() ? chainCodeUnlockKey : overrideChainCodeUnlockKey))
             throw KeychainChainCodeUnlockFailedException(keychain->name());
     }
-}
-
-bool Vault::tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account, const secure_bytes_t& overrideChainCodeUnlockKey) const
-{
-    for (auto& keychain: account->keychains())
-    {
-        if (!keychain->unlockChainCode(chainCodeUnlockKey))
-            return false;
-    }
-    return true;
 }
 
 void Vault::refillAccountPool(const std::string& account_name)
@@ -862,7 +852,7 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
     }
 
     std::shared_ptr<Account> account(new Account(account_name, minsigs, keychains, unused_pool_size, time_created));
-    tryUnlockAccountChainCodes_unwrapped(account);
+    unlockAccountChainCodes_unwrapped(account);
     db_->persist(account);
 
     // The first bin we create must be the change bin.
@@ -997,7 +987,7 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
     if (binExists) throw AccountBinAlreadyExistsException(account_name, bin_name);
 
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
-    tryUnlockAccountChainCodes_unwrapped(account);
+    unlockAccountChainCodes_unwrapped(account);
 
     std::shared_ptr<AccountBin> bin = account->addBin(bin_name);
     db_->persist(bin);
@@ -1023,7 +1013,7 @@ std::shared_ptr<SigningScript> Vault::issueSigningScript(const std::string& acco
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
-    if (bin->isChange()) throw AccountCannotIssueChangeScriptException(bin->account()->name());
+    if (bin->isChange()) throw AccountCannotIssueChangeScriptException(account_name);
     std::shared_ptr<SigningScript> script = issueAccountBinSigningScript_unwrapped(bin, label);
     t.commit();
     return script;
@@ -1037,7 +1027,7 @@ std::shared_ptr<SigningScript> Vault::issueAccountBinSigningScript_unwrapped(std
     }
     catch (const KeychainChainCodeLockedException& e)
     {
-        LOGGER(debug) << "Vault::issueAccountBinSigningScript_unwrapped(" << bin->account()->name() << "::" << bin->name() << ", " << label << ") - Chain code is locked so pool cannot be replenished." << std::endl;
+        LOGGER(debug) << "Vault::issueAccountBinSigningScript_unwrapped(" << bin->account_name() << "::" << bin->name() << ", " << label << ") - Chain code is locked so pool cannot be replenished." << std::endl;
     }
 
     // Get the next available unused signing script
@@ -1045,7 +1035,7 @@ std::shared_ptr<SigningScript> Vault::issueAccountBinSigningScript_unwrapped(std
     odb::result<SigningScriptView> view_result(db_->query<SigningScriptView>(
         (view_query::AccountBin::id == bin->id() && view_query::SigningScript::status == SigningScript::UNUSED) +
         "ORDER BY" + view_query::SigningScript::index + "LIMIT 1"));
-    if (view_result.empty()) throw AccountBinOutOfScriptsException(bin->account()->name(), bin->name());
+    if (view_result.empty()) throw AccountBinOutOfScriptsException(bin->account_name(), bin->name());
 
     std::shared_ptr<SigningScriptView> view(view_result.begin().load());
 
@@ -1059,9 +1049,25 @@ std::shared_ptr<SigningScript> Vault::issueAccountBinSigningScript_unwrapped(std
     return script;
 }
 
+void Vault::unlockAccountBinChainCodes_unwrapped(std::shared_ptr<AccountBin> bin, const secure_bytes_t& overrideChainCodeUnlockKey) const
+{
+    if (bin->account())
+    {
+        unlockAccountChainCodes_unwrapped(bin->account(), overrideChainCodeUnlockKey);
+    }
+    else
+    {
+        for (auto& keychain: bin->keychains())
+        {
+            if (!keychain->unlockChainCode(overrideChainCodeUnlockKey.empty() ? chainCodeUnlockKey : overrideChainCodeUnlockKey))
+                throw KeychainChainCodeUnlockFailedException(keychain->name());
+        }
+    }
+}
+
 void Vault::refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin)
 {
-    tryUnlockAccountChainCodes_unwrapped(bin->account());
+    unlockAccountBinChainCodes_unwrapped(bin);
 
     typedef odb::query<ScriptCountView> count_query;
     odb::result<ScriptCountView> count_result(db_->query<ScriptCountView>(count_query::AccountBin::id == bin->id() && count_query::SigningScript::status == SigningScript::UNUSED));
@@ -1156,13 +1162,25 @@ std::shared_ptr<AccountBin> Vault::getAccountBin(const std::string& account_name
 
 std::shared_ptr<AccountBin> Vault::getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const
 {
-    typedef odb::query<AccountBinView> query;
-    odb::result<AccountBinView> r(db_->query<AccountBinView>(query::Account::name == account_name && query::AccountBin::name == bin_name));
-    if (r.empty()) throw AccountBinNotFoundException(account_name, bin_name);
-
-    unsigned long bin_id = r.begin().load()->bin_id;
-    std::shared_ptr<AccountBin> bin(db_->load<AccountBin>(bin_id));
-    return bin;
+    unsigned long bin_id;
+    if (account_name.empty())
+    {
+        typedef odb::query<AccountBin> query_t;
+        query_t query(query_t::account.is_null() && query_t::name == bin_name);
+        odb::result<AccountBin> r(db_->query<AccountBin>(query));
+        if (r.empty()) throw AccountBinNotFoundException("@null", bin_name);
+        return r.begin().load();
+    }
+    else
+    {
+        typedef odb::query<AccountBinView> query_t;
+        query_t query(query_t::Account::name == account_name && query_t::AccountBin::name == bin_name);
+        odb::result<AccountBinView> r(db_->query<AccountBinView>(query));
+        if (r.empty()) throw AccountBinNotFoundException(account_name, bin_name);
+        bin_id = r.begin()->bin_id;
+        std::shared_ptr<AccountBin> bin(db_->load<AccountBin>(bin_id));
+        return bin;
+    }
 }
 
 void Vault::exportAccountBin(const std::string& account_name, const std::string& bin_name, const std::string& export_name, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey) const
@@ -1178,10 +1196,7 @@ void Vault::exportAccountBin(const std::string& account_name, const std::string&
 
 void Vault::exportAccountBin_unwrapped(const std::shared_ptr<AccountBin> account_bin, const std::string& export_name, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey) const
 {
-    if (account_bin->account())
-    {
-        unlockAccountChainCodes_unwrapped(account_bin->account());
-    }
+    unlockAccountBinChainCodes_unwrapped(account_bin);
     
     account_bin->makeExport(export_name);
 

@@ -191,6 +191,7 @@ protected:
     ////////////////////////////
     std::shared_ptr<AccountBin>             getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;
     std::shared_ptr<SigningScript>          issueAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> account_bin, const std::string& label = "");
+    void                                    unlockAccountBinChainCodes_unwrapped(std::shared_ptr<AccountBin> bin, const secure_bytes_t& overrideChainCodeUnlockKey = secure_bytes_t()) const;
     void                                    refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin);
     void                                    exportAccountBin_unwrapped(const std::shared_ptr<AccountBin> account_bin, const std::string& export_name, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
     std::shared_ptr<AccountBin>             importAccountBin_unwrapped(const std::string& filepath, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t()); 

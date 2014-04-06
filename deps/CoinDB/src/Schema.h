@@ -261,6 +261,8 @@ public:
     void account(std::shared_ptr<Account> account) { account_ = account; }
     std::shared_ptr<Account> account() const { return account_.lock(); }
 
+    std::string account_name() const;
+
     uint32_t index() const { return index_; }
 
     void name(const std::string& name) { name_ = name; }
@@ -274,7 +276,7 @@ public:
     std::shared_ptr<SigningScript> newSigningScript(const std::string& label = "");
     void markSigningScriptIssued(uint32_t script_index);
 
-    void keychains(const KeychainSet& keychains) { keychains_ = keychains; keychains__ = keychains; } // only used for imported account binsS
+    void keychains(const KeychainSet& keychains) { keychains_ = keychains; keychains__ = keychains; } // only used for imported account bins
     const KeychainSet& keychains() const { loadKeychains(); return keychains__; }
 
     bool isChange() const { return index_ == CHANGE_INDEX; }

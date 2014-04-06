@@ -349,9 +349,11 @@ cli::result_t cmd_newaccountbin(const cli::params_t& params)
 cli::result_t cmd_issuescript(const cli::params_t& params)
 {
     Vault vault(params[0], false);
+    std::string account_name;
+    if (params[1] != "@null") account_name = params[1];
     std::string bin_name = params.size() > 2 ? params[2] : std::string(DEFAULT_BIN_NAME);
     std::string label = params.size() > 3 ? params[3] : std::string("");
-    std::shared_ptr<SigningScript> script = vault.issueSigningScript(params[1], bin_name, label);
+    std::shared_ptr<SigningScript> script = vault.issueSigningScript(account_name, bin_name, label);
 
     std::string address = getAddressFromScript(script->txoutscript());
 
@@ -528,7 +530,7 @@ cli::result_t cmd_newrawtx(const cli::params_t& params)
     uint32_t version = i < params.size() ? strtoul(params[i++].c_str(), NULL, 0) : 1;
     uint32_t locktime = i < params.size() ? strtoul(params[i++].c_str(), NULL, 0) : 0;
 
-    std::shared_ptr<Tx> tx = vault.createTx(params[1], version, locktime, txouts, fee, 1, false);
+    std::shared_ptr<Tx> tx = vault.createTx(params[1], version, locktime, txouts, fee, 1, true);
     return uchar_vector(tx->raw()).getHex();
 }
 
