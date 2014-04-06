@@ -44,7 +44,12 @@ typedef odb::nullable<unsigned long> null_id_t;
 // SCHEMA VERSION //
 ////////////////////
 
-const uint32_t SCHEMA_VERSION = 4;
+#define SCHEMA_BASE_VERSION 4
+#define SCHEMA_VERSION      4
+
+#ifdef ODB_COMPILER
+#pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
+#endif
 
 #pragma db object pointer(std::shared_ptr)
 class Version
