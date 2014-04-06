@@ -272,7 +272,7 @@ public:
     std::shared_ptr<SigningScript> newSigningScript(const std::string& label = "");
     void markSigningScriptIssued(uint32_t script_index);
 
-    void keychains(const KeychainSet& keychains) { keychains_ = keychains; } // only used for imported account bins
+    void keychains(const KeychainSet& keychains) { keychains_ = keychains; keychains__ = keychains; } // only used for imported account binsS
     const KeychainSet& keychains() const { loadKeychains(); return keychains__; }
 
     bool isChange() const { return index_ == CHANGE_INDEX; }

@@ -1186,13 +1186,11 @@ void Vault::exportAccountBin_unwrapped(const std::shared_ptr<AccountBin> account
     }
     
     account_bin->makeExport(export_name);
-    if (!exportChainCodeUnlockKey.empty())
+
+    // Reencrypt the chain codes
+    for (auto& keychain: account_bin->keychains())
     {
-        // Reencrypt the chain codes using a different unlock key than our own.
-        for (auto& keychain: account_bin->keychains())
-        {
-            keychain->setChainCodeUnlockKey(exportChainCodeUnlockKey);
-        }
+        keychain->setChainCodeUnlockKey(exportChainCodeUnlockKey.empty() ? chainCodeUnlockKey : exportChainCodeUnlockKey);
     }
 
     std::ofstream ofs(filepath);
@@ -1236,7 +1234,7 @@ std::shared_ptr<AccountBin> Vault::importAccountBin_unwrapped(const std::string&
 
     // Persist keychains
     auto& loaded_keychains = bin->keychains();
-    KeychainSet stored_keychains = loaded_keychains; // We will replace any duplicate loaded keychains with keychains already in database.
+    KeychainSet stored_keychains; // We will replace any duplicate loaded keychains with keychains already in database.
     for (auto& keychain: loaded_keychains)
     {
         odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::hash == keychain->hash()));
@@ -1265,14 +1263,13 @@ std::shared_ptr<AccountBin> Vault::importAccountBin_unwrapped(const std::string&
 
             keychain->hidden(true); // Do not display this keychain in UI.
             db_->persist(keychain);
+            stored_keychains.insert(keychain);
         }
         else
         {
             // We already have this keychain. Just replace the loaded one with the stored one.
-
             std::shared_ptr<Keychain> stored_keychain(r.begin().load());
             unlockKeychainChainCode_unwrapped(stored_keychain);
-            stored_keychains.erase(keychain);
             stored_keychains.insert(stored_keychain);
         }
     }
@@ -1282,12 +1279,11 @@ std::shared_ptr<AccountBin> Vault::importAccountBin_unwrapped(const std::string&
     // Create signing scripts and keys and persist account bin
     db_->persist(bin);
 
-    SigningScript::status_t status = bin->isChange() ? SigningScript::CHANGE : SigningScript::ISSUED;
     unsigned int next_script_index = bin->next_script_index();
     for (unsigned int i = 0; i < next_script_index; i++)
     {
         std::shared_ptr<SigningScript> script = bin->newSigningScript();
-        script->status(status);
+        script->status(SigningScript::ISSUED);
         for (auto& key: script->keys()) { db_->persist(key); }
         db_->persist(script);
     }

@@ -442,7 +442,7 @@ cli::result_t cmd_importbin(const cli::params_t& params)
     if (params.size() > 2 && !params[2].empty())
         importChainCodeUnlockKey = sha256_2(params[2]);
 
-    vault.unlockChainCodes(secure_bytes_t());
+    vault.unlockChainCodes(uchar_vector("1234"));
 
     std::shared_ptr<AccountBin> bin = vault.importAccountBin(params[1], importChainCodeUnlockKey);
 
