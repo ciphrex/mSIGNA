@@ -852,6 +852,8 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
     }
 
     std::shared_ptr<Account> account(new Account(account_name, minsigs, keychains, unused_pool_size, time_created));
+    r = db_->query<Account>(odb::query<Account>::hash == account->hash());
+    if (!r.empty()) throw AccountAlreadyExistsException(account->name());
     unlockAccountChainCodes_unwrapped(account);
     db_->persist(account);
 
@@ -1218,6 +1220,14 @@ std::shared_ptr<AccountBin> Vault::importAccountBin_unwrapped(const std::string&
         std::ifstream ifs(filepath);
         boost::archive::text_iarchive ia(ifs);
         ia >> *bin;
+    }
+    bin->updateHash();
+
+    odb::result<AccountBin> r(db_->query<AccountBin>(odb::query<AccountBin>::hash == bin->hash()));
+    if (!r.empty())
+    {
+        std::shared_ptr<AccountBin> bin(r.begin().load());
+        throw AccountBinAlreadyExistsException(bin->account_name(), bin->name());
     }
 
     // In case of bin name conflict

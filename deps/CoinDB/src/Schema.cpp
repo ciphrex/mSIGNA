@@ -426,6 +426,8 @@ AccountBin::AccountBin(std::shared_ptr<Account> account, uint32_t index, const s
     if (index == 0) throw std::runtime_error("Account bin index cannot be zero.");
     if (index == CHANGE_INDEX && name != CHANGE_BIN_NAME) throw std::runtime_error("Account bin index reserved for change.");
     if (index == DEFAULT_INDEX && name != DEFAULT_BIN_NAME) throw std::runtime_error("Account bin index reserved for default."); 
+
+    updateHash();
 }
 
 std::string AccountBin::account_name() const
@@ -449,6 +451,21 @@ void AccountBin::loadKeychains() const
             keychains__.insert(child);
         }
     }
+}
+
+void AccountBin::updateHash()
+{
+    loadKeychains();
+
+    std::vector<bytes_t> keychain_hashes;
+    for (auto& keychain: keychains__) { keychain_hashes.push_back(keychain->hash()); }
+    std::sort(keychain_hashes.begin(), keychain_hashes.end());
+
+    uchar_vector data;
+    data.push_back((unsigned char)minsigs_);
+    for (auto& keychain_hash: keychain_hashes) { data += keychain_hash; }
+
+    hash_ = ripemd160(sha256(data));
 }
 
 std::shared_ptr<SigningScript> AccountBin::newSigningScript(const std::string& label)

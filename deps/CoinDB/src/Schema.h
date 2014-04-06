@@ -45,7 +45,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 4
-#define SCHEMA_VERSION      4
+#define SCHEMA_VERSION      5
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -289,6 +289,9 @@ public:
 
     void makeExport(const std::string& name);
 
+    void updateHash();
+    const bytes_t& hash() const { return hash_; }
+
 private:
     void loadKeychains() const;
 
@@ -312,6 +315,9 @@ private:
     KeychainSet keychains_;
     #pragma db transient
     mutable KeychainSet keychains__;
+
+    #pragma db unique
+    bytes_t hash_; // ripemd160(sha256(data)) where data = concat(first byte(minsigs), keychain hash 1, keychain hash 2, ...) and keychain hashes are sorted lexically
 
     friend class boost::serialization::access;
     template<class Archive>
@@ -463,6 +469,8 @@ private:
 
     uint32_t unused_pool_size_; // how many unused scripts we want in our lookahead
     uint32_t time_created_;
+
+    #pragma db unique
     bytes_t hash_; // ripemd160(sha256(data)) where data = concat(first byte(minsigs), keychain hash 1, keychain hash 2, ...) and keychain hashes are sorted lexically
 
     #pragma db value_not_null inverse(account_)

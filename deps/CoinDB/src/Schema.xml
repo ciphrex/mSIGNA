@@ -1,4 +1,18 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="sqlite" version="1">
+  <changeset version="5">
+    <alter-table name="AccountBin">
+      <add-column name="hash" type="BLOB" null="false"/>
+      <add-index name="AccountBin_hash_i" type="UNIQUE">
+        <column name="hash"/>
+      </add-index>
+    </alter-table>
+    <alter-table name="Account">
+      <add-index name="Account_hash_i" type="UNIQUE">
+        <column name="hash"/>
+      </add-index>
+    </alter-table>
+  </changeset>
+
   <model version="4">
     <table name="Version" kind="object">
       <column name="id" type="INTEGER" null="false"/>
