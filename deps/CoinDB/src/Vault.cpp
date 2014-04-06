@@ -1219,12 +1219,13 @@ std::shared_ptr<AccountBin> Vault::importAccountBin_unwrapped(const std::string&
         ia >> *bin;
     }
 
+    // TODO: detect account bin duplicates.
     // In case of bin name conflict
     std::string bin_name = bin->name();
     unsigned int append_num = 1;
     while (true)
     {
-        odb::result<AccountBin> r(db_->query<AccountBin>(odb::query<AccountBin>::name == bin_name));
+        odb::result<AccountBin> r(db_->query<AccountBin>(odb::query<AccountBin>::name == bin->name()));
         if (r.empty()) break;
 
         std::stringstream ss;
