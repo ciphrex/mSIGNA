@@ -1162,25 +1162,13 @@ std::shared_ptr<AccountBin> Vault::getAccountBin(const std::string& account_name
 
 std::shared_ptr<AccountBin> Vault::getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const
 {
-    unsigned long bin_id;
-    if (account_name.empty())
-    {
-        typedef odb::query<AccountBin> query_t;
-        query_t query(query_t::account.is_null() && query_t::name == bin_name);
-        odb::result<AccountBin> r(db_->query<AccountBin>(query));
-        if (r.empty()) throw AccountBinNotFoundException("@null", bin_name);
-        return r.begin().load();
-    }
-    else
-    {
-        typedef odb::query<AccountBinView> query_t;
-        query_t query(query_t::Account::name == account_name && query_t::AccountBin::name == bin_name);
-        odb::result<AccountBinView> r(db_->query<AccountBinView>(query));
-        if (r.empty()) throw AccountBinNotFoundException(account_name, bin_name);
-        bin_id = r.begin()->bin_id;
-        std::shared_ptr<AccountBin> bin(db_->load<AccountBin>(bin_id));
-        return bin;
-    }
+    typedef odb::query<AccountBin> query_t;
+    query_t query(query_t::name == bin_name);
+    if (account_name.empty())   { query = query && query_t::account.is_null();              }
+    else                        { query = query && query_t::account->name == account_name;  }
+    odb::result<AccountBin> r(db_->query<AccountBin>(query));
+    if (r.empty()) throw AccountBinNotFoundException(account_name, bin_name);
+    return r.begin().load();
 }
 
 void Vault::exportAccountBin(const std::string& account_name, const std::string& bin_name, const std::string& export_name, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey) const
