@@ -468,6 +468,7 @@ void AccountBin::makeExport(const std::string& name)
     name_ = name;
     index_ = 0;
     keychains_ = keychains();
+    for (auto& keychain: keychains_) { keychain->name(""); }
     account_.reset();
 }
 
