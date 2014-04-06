@@ -30,6 +30,8 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/set.hpp>
 
+#include <logger.h>
+
 #pragma db namespace session
 namespace CoinDB
 {
@@ -315,7 +317,7 @@ private:
 
         uint32_t n = keychains_.size();
         ar & n;
-        for (auto& keychain: keychains__)    { ar & *keychain; }
+        for (auto& keychain: keychains_)    { ar & *keychain; }
     }
     template<class Archive>
     void load(Archive& ar, const unsigned int /*version*/)
@@ -332,8 +334,9 @@ private:
         {
             std::shared_ptr<Keychain> keychain(new Keychain(true)); // Load these keychains as hidden keychains.
             ar & *keychain;
-            keychains__.insert(keychain);
+            keychains_.insert(keychain);
         }
+        keychains__ = keychains_;
         script_count_ = 0;
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()

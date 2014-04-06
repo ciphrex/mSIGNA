@@ -121,10 +121,12 @@ cli::result_t cmd_keychaininfo(const cli::params_t& params)
 cli::result_t cmd_keychains(const cli::params_t& params)
 {
     std::string account_name;
-    if (params.size() > 1) account_name = params[1];
+    if (params.size() > 1 && params[1] != "@all") account_name = params[1];
+
+    bool show_hidden = params.size() > 2 && params[2] == "true";
 
     Vault vault(params[0], false);
-    vector<KeychainView> views = vault.getRootKeychainViews(account_name);
+    vector<KeychainView> views = vault.getRootKeychainViews(account_name, show_hidden);
 
     stringstream ss;
     ss << formattedKeychainViewHeader();
@@ -718,7 +720,7 @@ int main(int argc, char* argv[])
     shell.add(command(&cmd_newkeychain, "newkeychain", "create a new keychain", command::params(2, "db file", "keychain name")));
     shell.add(command(&cmd_renamekeychain, "renamekeychain", "rename a keychain", command::params(3, "db file", "old name", "new name")));
     shell.add(command(&cmd_keychaininfo, "keychaininfo", "display keychain information about a specific keychain", command::params(2, "db file", "keychain name")));
-    shell.add(command(&cmd_keychains, "keychains", "display keychains", command::params(1, "db file"), command::params(1, "account = @all")));
+    shell.add(command(&cmd_keychains, "keychains", "display keychains", command::params(1, "db file"), command::params(2, "account = @all", "show hidden = false")));
     shell.add(command(&cmd_exportkeychain, "exportkeychain", "export a keychain to file", command::params(2, "db file", "keychain name"), command::params(1, "export private key = false")));
     shell.add(command(&cmd_importkeychain, "importkeychain", "import a keychain from file", command::params(2, "db file", "keychain file"), command::params(1, "import private key = true")));
     shell.add(command(&cmd_exportbip32, "exportbip32", "export a keychain in BIP32 extended key format", command::params(2, "db file", "keychain name"), command::params(1, "passphrase")));
