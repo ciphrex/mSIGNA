@@ -423,7 +423,7 @@ cli::result_t cmd_exportbin(const cli::params_t& params)
 {
     Vault vault(params[0], false);
 
-    string export_name = params.size() > 3 ? params[3] : (params[1] + "-" + params[2]);
+    string export_name = params.size() > 3 ? params[3] : (params[1].empty() ? params[2] : params[1] + "-" + params[2]);
     secure_bytes_t exportChainCodeUnlockKey;
     if (params.size() > 4 && !params[4].empty())
         exportChainCodeUnlockKey = sha256_2(params[4]);
