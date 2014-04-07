@@ -309,3 +309,41 @@ inline std::string formattedAccount(const CoinDB::AccountInfo& info)
     return ss.str();
 }
 
+// Account bins
+inline std::string formattedAccountBinHeader()
+{
+    using namespace std;
+
+    stringstream ss;
+    ss << " ";
+    ss << left  << setw(15) << "account name" << " | "
+       << left  << setw(15) << "bin name" << " | "
+       << right << setw(10) << "account id" << " | "
+       << right << setw(6)  << "bin id" << " | "
+       << left  << setw(40) << "account hash" << " | "
+       << left  << setw(40) << "bin hash";
+    ss << " ";
+
+    size_t header_length = ss.str().size();
+    ss << endl;
+    for (size_t i = 0; i < header_length; i++) { ss << "="; }
+    return ss.str();
+}
+
+inline std::string formattedAccountBinView(const CoinDB::AccountBinView& view)
+{
+    using namespace std;
+    using namespace CoinDB;
+
+    stringstream ss;
+    ss << " ";
+    ss << left  << setw(15) << view.account_name << " | "
+       << left  << setw(15) << view.bin_name << " | "
+       << right << setw(10) << view.account_id << " | "
+       << right << setw(6)  << view.bin_id << " | "
+       << left  << setw(40) << uchar_vector(view.account_hash).getHex() << " | "
+       << left  << setw(40) << uchar_vector(view.bin_hash).getHex();
+    ss << " ";
+    return ss.str();
+}
+

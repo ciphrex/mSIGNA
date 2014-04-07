@@ -1059,11 +1059,15 @@ struct AccountBinView
     unsigned long account_id;
     #pragma db column(Account::name_)
     std::string account_name;
+    #pragma db column(Account::hash_)
+    bytes_t account_hash;
 
     #pragma db column(AccountBin::id_)
     unsigned long bin_id; 
     #pragma db column(AccountBin::name_)
     std::string bin_name;
+    #pragma db column(AccountBin::hash_)
+    bytes_t bin_hash;
 };
 
 #pragma db view \
