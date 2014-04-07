@@ -1173,6 +1173,18 @@ std::shared_ptr<AccountBin> Vault::getAccountBin_unwrapped(const std::string& ac
     return r.begin().load();
 }
 
+std::vector<AccountBinView> Vault::getAllAccountBinViews() const
+{
+    LOGGER(trace) << "Vault::getAllAccountBinViews()" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    odb::result<AccountBinView> r(db_->query<AccountBinView>());
+    std::vector<AccountBinView> views;
+    for (auto& view: r) { views.push_back(view); }
+    return views; 
+}
+
 void Vault::exportAccountBin(const std::string& account_name, const std::string& bin_name, const std::string& export_name, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey) const
 {
     LOGGER(trace) << "Vault::exportAccountBin(" << account_name << ", " << bin_name << ", " << filepath << ", ?)" << std::endl;

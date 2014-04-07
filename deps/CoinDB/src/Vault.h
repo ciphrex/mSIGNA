@@ -101,6 +101,7 @@ public:
     // ACCOUNT BIN OPERATIONS //
     ////////////////////////////
     std::shared_ptr<AccountBin>             getAccountBin(const std::string& account_name, const std::string& bin_name) const;
+    std::vector<AccountBinView>             getAllAccountBinViews() const;
     void                                    exportAccountBin(const std::string& account_name, const std::string& bin_name, const std::string& export_name, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
     std::shared_ptr<AccountBin>             importAccountBin(const std::string& filepath, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t()); 
 
