@@ -346,6 +346,18 @@ cli::result_t cmd_newaccountbin(const cli::params_t& params)
     return ss.str(); 
 }
 
+cli::result_t cmd_listbins(const cli::params_t& params)
+{
+    Vault vault(params[0], false);
+    vector<AccountBinView> bins = vault.getAllAccountBinViews();
+
+    stringstream ss;
+    ss << formattedAccountBinViewHeader();
+    for (auto& bin: bins)
+        ss << endl << formattedAccountBinView(bin);
+    return ss.str();
+}
+
 cli::result_t cmd_issuescript(const cli::params_t& params)
 {
     Vault vault(params[0], false);
@@ -744,6 +756,7 @@ int main(int argc, char* argv[])
     shell.add(command(&cmd_refillaccountpool, "refillaccountpool", "refill signing script pool for account", command::params(2, "db file", "account name")));
 
     // Account bin operations
+    shell.add(command(&cmd_listbins, "listbins", "display list of bins", command::params(1, "db file")));
     shell.add(command(&cmd_exportbin, "exportbin", "export account bin to file", command::params(3, "db file", "account name", "bin name"), command::params(3, "export name = account_name-bin_name", "export chain code passphrase", "output file = *.bin")));
     shell.add(command(&cmd_importbin, "importbin", "import account bin from file", command::params(2, "db file", "bin file"), command::params(1, "import chain code passphrase")));
 

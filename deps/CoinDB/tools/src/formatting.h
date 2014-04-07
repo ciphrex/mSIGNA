@@ -310,7 +310,7 @@ inline std::string formattedAccount(const CoinDB::AccountInfo& info)
 }
 
 // Account bins
-inline std::string formattedAccountBinHeader()
+inline std::string formattedAccountBinViewHeader()
 {
     using namespace std;
 
