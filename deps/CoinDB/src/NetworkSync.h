@@ -1,0 +1,15 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// NetworkSync.h
+//
+// Copyright (c) 2014 Eric Lombrozo
+//
+// All Rights Reserved.
+//
+
+#pragma once
+
+namespace CoinDB
+{
+
+}

@@ -1,0 +1,12 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// NetworkSync.cpp
+//
+// Copyright (c) 2014 Eric Lombrozo
+//
+// All Rights Reserved.
+//
+
+#include "NetworkSync.h"
+
+using namespace CoinDB;
