@@ -102,7 +102,7 @@ void Signal<Values...>::operator()(Values... values) const
     std::lock_guard<std::mutex> lock(mutex_);
     for (auto slot: slots_) slot.second(values...); 
 }
-/*
+
 template<>
 class Signal<void>
 {
@@ -165,9 +165,9 @@ bool Signal<>::disconnect(Connection connection)
     available_.insert(connection);
 
     // remove contiguous available connections from end
-    auto& rit = available_.rbegin();
+    auto rit = available_.rbegin();
     for (; rit != available_.rend() && *rit == next_ - 1; ++rit, --next_);
-    available_.erase(available_.rbegin(), rit); 
+    available_.erase(rit.base(), available_.end());
     return true;
 }
 
@@ -186,5 +186,5 @@ void Signal<>::operator()() const
     std::lock_guard<std::mutex> lock(mutex_);
     for (auto slot: slots_) slot.second(); 
 }
-*/
+
 }

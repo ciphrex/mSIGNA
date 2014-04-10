@@ -15,5 +15,10 @@ int main()
     notifyInt.disconnect(connection);
     for (int n = 9; n >= 0; n--) notifyInt(n);
 
+    Signal<> notifyVoid;
+    connection = notifyVoid.connect([]() { cout << "I don't get passed anything."; });
+
+    notifyVoid();
+
     return 0;
 }
