@@ -33,6 +33,20 @@ public:
     void clear();
     void operator()(Values... values) const;
 
+#ifdef SIGNALS_TEST
+    std::string getTextualState()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::stringstream ss;
+        ss << "next_: " << next_ << std::endl << "available_:";
+        for (auto n: available_) ss << " " << n;
+        ss << std::endl << "slots_:";
+        for (auto& slot: slots_) ss << " " << slot.first;
+        ss << std::endl;
+        return ss.str(); 
+    }
+#endif
+
 private:
     mutable std::mutex mutex_;
     Connection next_;
@@ -116,6 +130,20 @@ public:
     bool disconnect(Connection connection);
     void clear();
     void operator()() const;
+
+#ifdef SIGNALS_TEST
+    std::string getTextualState()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::stringstream ss;
+        ss << "next_: " << next_ << std::endl << "available_:";
+        for (auto n: available_) ss << " " << n;
+        ss << std::endl << "slots_:";
+        for (auto& slot: slots_) ss << " " << slot.first;
+        ss << std::endl;
+        return ss.str(); 
+    }
+#endif
 
 private:
     mutable std::mutex mutex_;
