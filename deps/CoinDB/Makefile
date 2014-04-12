@@ -79,7 +79,7 @@ else ifneq ($(MAKECMDGOALS), clean)
     $(error OS must be set to linux, mingw64, or osx)
 endif
 
-TOOLS_LIBPATH = \
+TOOLS_LIBS = \
     -Llib -lCoinDB \
     -L$(COINQ)/lib -lCoinQ \
     -L$(COINCLASSES)/lib -lCoinClasses \
@@ -140,7 +140,7 @@ obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/SigningRequest.
 # coindb command line tool
 #
 tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp tools/src/formatting.h lib/libCoinDB.a
-	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(TOOLS_INCLUDE_PATH) $< $(TOOLS_LIBPATH) -o $@
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(TOOLS_INCLUDE_PATH) $< -o $@ $(TOOLS_LIBS)
 
 install: install_tools
 
