@@ -12,6 +12,8 @@
 #include <WebSocketServer.h>
 #include <cli.hpp>
 
+#include <formatting.h>
+
 #include <Vault.h>
 #include <Schema-odb.hxx>
 
@@ -20,6 +22,9 @@
 #include <logger.h>
 
 #include <Base58Check.h>
+
+#include <thread>
+#include <chrono>
 
 #include <iostream>
 #include <sstream>
@@ -741,15 +746,33 @@ void closeCallback(WebSocket::Server& server, websocketpp::connection_hdl hdl)
 }
 
 using namespace cli;
-Shell shell("CoinDB by Eric Lombrozo v0.2.5");
+Shell shell("vaultd by Eric Lombrozo v0.0.1");
 
 void requestCallback(WebSocket::Server& server, const WebSocket::Server::client_request_t& req)
 {
+    JsonRpc::Response response;
+
+    const string& cmdname = req.second.getMethod();
+    params_t params;
+    for (auto& param: req.second.getParams()) { params.push_back(param.get_str()); }
+    try
+    {
+        result_t result = shell.exec(cmdname, params);
+        response.setResult(result, req.second.getId());
+    }
+    catch (const std::exception& e)
+    {
+        response.setError(e.what(), req.second.getId());        
+    }
+
+    server.send(req.first, response);
 }
 
 int main(int argc, char* argv[])
 {
     INIT_LOGGER("vaultd.log");
+
+    signal(SIGINT, &finish);
 
     // Global operations
     shell.add(command(&cmd_create, "create", "create a new vault", command::params(1, "db file")));
@@ -807,15 +830,37 @@ int main(int argc, char* argv[])
     // Miscellaneous
     shell.add(command(&cmd_randombytes, "randombytes", "output random bytes in hex", command::params(1, "length")));
 
+    WebSocket::Server wsServer(WS_PORT);
+    wsServer.setOpenCallback(&openCallback);
+    wsServer.setCloseCallback(&closeCallback);
+    wsServer.setRequestCallback(&requestCallback);
+
     try 
     {
-        return shell.exec(argc, argv);
+        LOGGER(debug) << "Starting websocket server on port " << WS_PORT << "..." << endl;
+        wsServer.start();
+        LOGGER(debug) << "Websocket server started." << endl;
     }
     catch (const std::exception& e)
     {
-        cerr << e.what() << endl;
+        LOGGER(error) << "Error starting websocket server: " << e.what() << endl;
         return 1;
     }
+
+    while (!g_bShutdown) { std::this_thread::sleep_for(std::chrono::microseconds(200)); }
+
+    try
+    {
+        LOGGER(debug) << "Stopping websocket server..." << endl;
+        wsServer.stop();
+        LOGGER(debug) << "Websocket server stopped." << endl;
+    }
+    catch (const std::exception& e)
+    {
+        LOGGER(error) << "Error stopping websocket server: " << e.what() << endl;
+        return 2;
+    }
+
     return 0;
 }
 
