@@ -118,6 +118,7 @@ public:
         command_map_.insert(std::pair<std::string, command>(cmd.getName(), cmd));
         tab = cmd.getMinHelpTab(tab);
     }
+    result_t exec(const std::string& cmdname, const params_t& params);
     int exec(int argc, char** argv);
 
 private:
@@ -127,8 +128,34 @@ private:
     command_map_t command_map_;
     unsigned int tab;
 
-    void help();
+    result_t help();
 };
+
+inline result_t Shell::exec(const std::string& cmdname, const params_t& params)
+{
+    if (cmdname == "help")
+    {
+        return help();
+    }
+
+    command_map_t::iterator it = command_map_.find(cmdname);
+    if (it == command_map_.end()) {
+        std::stringstream ss;
+        ss << "Invalid command " << cmdname << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+    bool bHelp = (params.size() == 1 && (params[0] == "-h" || params[0] == "--help"));
+
+    if (!bHelp && it->second.isValidParamCount(params))
+    {
+        return it->second(params);
+    }
+    else
+    {
+        return it->second.getHelpInfo(it->second.getMinHelpTab() + 4);
+    }
+}
 
 inline int Shell::exec(int argc, char** argv)
 {
@@ -143,7 +170,7 @@ inline int Shell::exec(int argc, char** argv)
     try {
         if (cmdname == "-h" || cmdname == "--help")
         {
-            help();
+            std::cout << help() << std::endl;
             return 0;
         }
 
@@ -178,7 +205,7 @@ inline int Shell::exec(int argc, char** argv)
     return 0;
 }
 
-inline void Shell::help()
+inline result_t Shell::help()
 {
     params_t params;
     std::stringstream out;
@@ -187,7 +214,7 @@ inline void Shell::help()
     for (; it != command_map_.end(); ++it) {
         out << std::endl << "  " << it->second.getHelpInfo(tab + 4);
     }
-    std::cout << out.str() << std::endl;
+    return out.str();
 }
 
 }
