@@ -18,6 +18,7 @@ namespace CoinDB
 class KeychainException : public std::runtime_error
 {
 public:
+    virtual ~KeychainException() throw() { }
     const std::string& keychain_name() const { return keychain_name_; }
 
 protected:
@@ -82,6 +83,7 @@ private:
 class AccountException : public std::runtime_error
 {
 public:
+    virtual ~AccountException() throw() { }
     const std::string& account_name() const { return account_name_; }
 
 protected:
@@ -117,6 +119,7 @@ public:
 class AccountBinException : public std::runtime_error
 {
 public:
+    virtual ~AccountBinException() throw() { }
     const std::string& account_name() const { return account_name_; }
     const std::string& bin_name() const { return bin_name_; }
 
@@ -148,6 +151,7 @@ public:
 class TxException : public std::runtime_error
 {
 public:
+    virtual ~TxException() throw() { }
     const bytes_t& hash() const { return hash_; }
 
 protected:
@@ -165,6 +169,7 @@ public:
 class BlockHeaderException : public std::runtime_error
 {
 public:
+    virtual ~BlockHeaderException() throw() { }
     const bytes_t& hash() const { return hash_; }
     uint32_t height() const { return height_; }
 
@@ -188,6 +193,7 @@ public:
 class MerkleBlockException : public std::runtime_error
 {
 public:
+    virtual ~MerkleBlockException() throw() { }
     const bytes_t& hash() const { return hash_; }
     uint32_t height() const { return height_; }
 
@@ -206,6 +212,9 @@ public:
 // CHAIN CODE EXCEPTIONS
 class ChainCodeException : public std::runtime_error
 {
+public:
+    virtual ~ChainCodeException() throw() { }
+
 protected:
     explicit ChainCodeException(const std::string& what) : std::runtime_error(what) { }
 };
