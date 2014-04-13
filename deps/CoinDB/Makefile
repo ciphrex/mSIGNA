@@ -98,7 +98,8 @@ LIBS = \
 OBJS = \
     obj/Schema-odb.o \
     obj/Schema.o \
-    obj/Vault.o
+    obj/Vault.o \
+    obj/SynchedVault.o
 
 TOOLS = \
     tools/build/coindb$(EXE_EXT)
@@ -141,6 +142,12 @@ obj/Schema.o: src/Schema.cpp src/Schema.h
 # vault class
 #
 obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/SigningRequest.h src/Schema.h src/Database.h odb/Schema-odb.hxx
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
+
+#
+# synched vault class
+#
+obj/SynchedVault.o: src/SynchedVault.cpp src/SynchedVault.h src/VaultExceptions.h src/SigningRequest.h src/Schema.h src/Database.h odb/Schema-odb.hxx
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
