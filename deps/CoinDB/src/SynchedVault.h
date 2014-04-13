@@ -32,13 +32,25 @@ public:
     void openVault(const std::string& filename, bool bCreate = false);
     void closeVault();
 
+    void startSync(const std::string& host, const std::string& port);
+    void stopSync();
+    void resyncVault();
+    
+
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return m_notifyMerkleBlockInserted.connect(slot); }
     void clearAllSlots();
 
 private:
     Vault* m_vault;
+
     CoinQ::Network::NetworkSync m_networkSync;
+    bool m_bConnected;
+    bool m_bSynching;
+    bool m_bBlockTreeSynched;
+    bool m_bVaultSynched;
+    uint32_t m_bestHeight;
+    uint32_t m_syncHeight;
 
     mutable std::mutex m_vaultMutex;
 
