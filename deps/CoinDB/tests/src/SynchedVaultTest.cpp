@@ -44,6 +44,18 @@ int main(int argc, char* argv[])
     signal(SIGINT, &finish);
 
     SynchedVault synchedVault;
+    synchedVault.subscribeTxInserted([](std::shared_ptr<Tx> tx)
+    {
+        cout << "Transaction inserted: " << uchar_vector(tx->hash()).getHex() << endl;
+    });
+    synchedVault.subscribeTxStatusChanged([](std::shared_ptr<Tx> tx)
+    {
+        cout << "Transaction status changed: " << uchar_vector(tx->hash()).getHex() << " New status: " << tx->status() << endl;
+    });
+    synchedVault.subscribeMerkleBlockInserted([](std::shared_ptr<MerkleBlock> merkleblock)
+    {
+        cout << "Merkle block inserted: " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " Height: " << merkleblock->blockheader()->height() << endl;
+    });
 
     try
     {

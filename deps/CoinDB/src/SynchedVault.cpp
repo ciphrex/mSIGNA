@@ -126,12 +126,7 @@ SynchedVault::SynchedVault(const std::string& blockTreeFile) :
         {
             std::shared_ptr<Tx> tx(new Tx());
             tx->set(coinTx);
-            tx = m_vault->insertTx(tx);
-            if (tx)
-            {
-                LOGGER(trace) << "Inserted transaction " << uchar_vector(tx->hash()).getHex() << std::endl;
-                m_notifyTxInserted(tx);
-            }
+            m_vault->insertTx(tx);
         }
         catch (const std::exception& e)
         {
@@ -150,13 +145,7 @@ SynchedVault::SynchedVault(const std::string& blockTreeFile) :
         try
         {
             std::shared_ptr<MerkleBlock> merkleblock(new MerkleBlock(chainMerkleBlock));
-            merkleblock = m_vault->insertMerkleBlock(merkleblock);
-            if (merkleblock)
-            {
-                LOGGER(trace) << "Inserted merkle block " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " height: " << merkleblock->blockheader()->height() << std::endl;
-                m_syncHeight = merkleblock->blockheader()->height();
-                m_notifyMerkleBlockInserted(merkleblock);
-            }
+            m_vault->insertMerkleBlock(merkleblock);
         }
         catch (const std::exception& e)
         {
@@ -191,6 +180,13 @@ void SynchedVault::openVault(const std::string& filename, bool bCreate)
     if (m_vault) delete m_vault;
     m_vault = new Vault(filename, bCreate);
     m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
+    m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
+    m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
+    m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
+    {
+        m_syncHeight = merkleblock->blockheader()->height();
+        m_notifyMerkleBlockInserted(merkleblock);
+    });
 }
 
 void SynchedVault::closeVault()
@@ -199,6 +195,7 @@ void SynchedVault::closeVault()
     std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (m_vault)
     {
+        m_vault->clearAllSlots();
         delete m_vault;
         m_vault = nullptr;
     }
