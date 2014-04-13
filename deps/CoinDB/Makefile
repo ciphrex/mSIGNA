@@ -9,12 +9,14 @@ else
 endif
 
 LOGGER = ../logger
+SIGNALS = ../Signals
 COINCLASSES = ../CoinClasses
 COINQ = ../CoinQ
 CLI = ../cli
 
 INCLUDE_PATH = \
     -Isrc \
+    -I$(SIGNALS)/src \
     -I$(COINQ)/src \
     -I$(COINCLASSES)/src \
     -I$(LOGGER)/src \
@@ -26,7 +28,7 @@ ODB_INCLUDE_PATH = \
     -I$(COINCLASSES)/src \
     -I$(LOGGER)/src
 
-TOOLS_INCLUDE_PATH = \
+EXES_INCLUDE_PATH = \
     $(INCLUDE_PATH) \
     -Iodb
 
@@ -79,7 +81,7 @@ else ifneq ($(MAKECMDGOALS), clean)
     $(error OS must be set to linux, mingw64, or osx)
 endif
 
-TOOLS_LIBS = \
+LIBS = \
     -Llib -lCoinDB \
     -L$(COINQ)/lib -lCoinQ \
     -L$(COINCLASSES)/lib -lCoinClasses \
@@ -101,11 +103,16 @@ OBJS = \
 TOOLS = \
     tools/build/coindb$(EXE_EXT)
 
-all: lib tools
+TESTS = \
+    tests/build/SynchedVaultTest$(EXE_EXT)
+
+all: lib tools tests
 
 lib: lib/libCoinDB.a
 
 tools: $(TOOLS) 
+
+tests: $(TESTS)
 
 lib/libCoinDB.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
@@ -140,7 +147,13 @@ obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/SigningRequest.
 # coindb command line tool
 #
 tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp tools/src/formatting.h lib/libCoinDB.a
-	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(TOOLS_INCLUDE_PATH) $< -o $@ $(TOOLS_LIBS)
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(EXES_INCLUDE_PATH) $< -o $@ $(LIBS)
+
+#
+# SynchedVault unit test
+#
+tests/build/SynchedVaultTest$(EXE_EXT): tests/src/SynchedVaultTest.cpp lib/libCoinDB.a
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(EXES_INCLUDE_PATH) $< -o $@ $(LIBS)
 
 install: install_tools
 
