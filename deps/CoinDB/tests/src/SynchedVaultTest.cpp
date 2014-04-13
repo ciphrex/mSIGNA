@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     });
     synchedVault.subscribeTxStatusChanged([](std::shared_ptr<Tx> tx)
     {
-        cout << "Transaction status changed: " << uchar_vector(tx->hash()).getHex() << " New status: " << tx->status() << endl;
+        cout << "Transaction status changed: " << uchar_vector(tx->hash()).getHex() << " New status: " << Tx::getStatusString(tx->status()) << endl;
     });
     synchedVault.subscribeMerkleBlockInserted([](std::shared_ptr<MerkleBlock> merkleblock)
     {

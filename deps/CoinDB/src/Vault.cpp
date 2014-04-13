@@ -1967,6 +1967,7 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
         LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - inserting horizon merkle block. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
         db_->persist(new_blockheader);
         db_->persist(merkleblock);
+        notifyMerkleBlockInserted(merkleblock);
         return merkleblock;
     }
 
@@ -2004,6 +2005,7 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
     LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - inserting merkle block. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
     db_->persist(new_blockheader);
     db_->persist(merkleblock);
+    notifyMerkleBlockInserted(merkleblock);
 
     // Confirm transactions
     const auto& hashes = merkleblock->hashes();
@@ -2018,6 +2020,7 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
         LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - confirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
         tx.blockheader(new_blockheader);
         db_->update(tx);
+        notifyTxStatusChanged(std::make_shared<Tx>(tx));
     }
 
     return merkleblock;     
