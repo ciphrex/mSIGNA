@@ -26,7 +26,7 @@ typedef Signals::Signal<std::shared_ptr<MerkleBlock>> MerkleBlockSignal;
 class SynchedVault
 {
 public:
-    SynchedVault();
+    SynchedVault(const std::string& blockTreeFile = "blocktree.dat");
     ~SynchedVault();
 
     void openVault(const std::string& filename, bool bCreate = false);
@@ -45,6 +45,7 @@ private:
     Vault* m_vault;
 
     CoinQ::Network::NetworkSync m_networkSync;
+    std::string m_blockTreeFile;
     bool m_bConnected;
     bool m_bSynching;
     bool m_bBlockTreeSynched;

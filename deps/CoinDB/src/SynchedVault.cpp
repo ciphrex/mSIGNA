@@ -14,8 +14,9 @@ using namespace CoinDB;
 using namespace CoinQ;
 
 // Constructor
-SynchedVault::SynchedVault() :
+SynchedVault::SynchedVault(const std::string& blockTreeFile) :
     m_vault(nullptr),
+    m_blockTreeFile(blockTreeFile),
     m_bConnected(false),
     m_bSynching(false),
     m_bBlockTreeSynched(false),
@@ -159,6 +160,8 @@ SynchedVault::SynchedVault() :
         m_bestHeight = m_networkSync.getBestHeight();
         // TODO: update state and notify clients
     });
+
+    m_networkSync.initBlockTree(m_blockTreeFile, false);
 }
 
 // Destructor
@@ -176,6 +179,7 @@ void SynchedVault::openVault(const std::string& filename, bool bCreate)
     std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (m_vault) delete m_vault;
     m_vault = new Vault(filename, bCreate);
+    m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
 }
 
 void SynchedVault::closeVault()
