@@ -55,18 +55,18 @@ private:
 };
 
 template<typename... Values>
-Signal<Values...>::Signal() : next_(0)
+inline Signal<Values...>::Signal() : next_(0)
 {
 }
 
 template<typename... Values>
-Signal<Values...>::~Signal()
+inline Signal<Values...>::~Signal()
 {
     std::lock_guard<std::mutex> lock(mutex_);
 }
 
 template<typename... Values>
-Connection Signal<Values...>::connect(Slot slot)
+inline Connection Signal<Values...>::connect(Slot slot)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     Connection connection;
@@ -85,7 +85,7 @@ Connection Signal<Values...>::connect(Slot slot)
 }
 
 template<typename... Values>
-bool Signal<Values...>::disconnect(Connection connection)
+inline bool Signal<Values...>::disconnect(Connection connection)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     const auto& it = slots_.find(connection);
@@ -102,7 +102,7 @@ bool Signal<Values...>::disconnect(Connection connection)
 }
 
 template<typename... Values>
-void Signal<Values...>::clear()
+inline void Signal<Values...>::clear()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     slots_.clear();
@@ -111,7 +111,7 @@ void Signal<Values...>::clear()
 }
 
 template<typename... Values>
-void Signal<Values...>::operator()(Values... values) const
+inline void Signal<Values...>::operator()(Values... values) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
     for (auto slot: slots_) slot.second(values...); 
@@ -153,18 +153,18 @@ private:
 };
 
 template<>
-Signal<>::Signal() : next_(0)
+inline Signal<>::Signal() : next_(0)
 {
 }
 
 template<>
-Signal<>::~Signal()
+inline Signal<>::~Signal()
 {
     std::lock_guard<std::mutex> lock(mutex_);
 }
 
 template<>
-Connection Signal<>::connect(Slot slot)
+inline Connection Signal<>::connect(Slot slot)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     Connection connection;
@@ -183,7 +183,7 @@ Connection Signal<>::connect(Slot slot)
 }
 
 template<>
-bool Signal<>::disconnect(Connection connection)
+inline bool Signal<>::disconnect(Connection connection)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     const auto& it = slots_.find(connection);
@@ -200,7 +200,7 @@ bool Signal<>::disconnect(Connection connection)
 }
 
 template<>
-void Signal<>::clear()
+inline void Signal<>::clear()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     slots_.clear();
@@ -209,7 +209,7 @@ void Signal<>::clear()
 }
 
 template<>
-void Signal<>::operator()() const
+inline void Signal<>::operator()() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
     for (auto slot: slots_) slot.second(); 
