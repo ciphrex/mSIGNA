@@ -76,6 +76,16 @@ SynchedVault::SynchedVault(const std::string& blockTreeFile) :
         LOGGER(trace) << "P2P network sync complete." << std::endl;
         m_bBlockTreeSynched = true;
         // TODO: notify clients
+
+        try
+        {
+            LOGGER(trace) << "Attempting to resync vault." << std::endl;
+            resyncVault();
+        }
+        catch (const std::exception& e)
+        {
+            LOGGER(error) << e.what() << std::endl;
+        }
     });
 
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
