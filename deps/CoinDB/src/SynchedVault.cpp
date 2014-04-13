@@ -18,23 +18,29 @@ SynchedVault::SynchedVault() : m_vault(nullptr)
 
 SynchedVault::~SynchedVault()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (m_vault) delete m_vault;
 }
 
 void SynchedVault::openVault(const std::string& filename, bool bCreate)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (m_vault) delete m_vault;
     m_vault = new Vault(filename, bCreate);
 }
 
 void SynchedVault::closeVault()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (m_vault)
     {
         delete m_vault;
         m_vault = nullptr;
     }
+}
+
+void SynchedVault::clearAllSlots()
+{
+    m_notifyTxInserted.clear();
+    m_notifyMerkleBlockInserted.clear();
 }

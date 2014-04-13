@@ -20,7 +20,8 @@
 namespace CoinDB
 {
 
-typedef Signals::Signal<std::shared_ptr<Tx>>::Slot TxSlot;
+typedef Signals::Signal<std::shared_ptr<Tx>> TxSignal;
+typedef Signals::Signal<std::shared_ptr<MerkleBlock>> MerkleBlockSignal;
 
 class SynchedVault
 {
@@ -31,16 +32,18 @@ public:
     void openVault(const std::string& filename, bool bCreate = false);
     void closeVault();
 
-    void subscribeTxInserted(TxSlot slot) { m_notifyTxInserted.connect(slot); }
+    Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
+    Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return m_notifyMerkleBlockInserted.connect(slot); }
     void clearAllSlots();
 
 private:
     Vault* m_vault;
     CoinQ::Network::NetworkSync m_networkSync;
 
-    mutable std::mutex m_mutex;
+    mutable std::mutex m_vaultMutex;
 
-    Signals::Signal<std::shared_ptr<Tx>> m_notifyTxInserted;
+    TxSignal m_notifyTxInserted;
+    MerkleBlockSignal m_notifyMerkleBlockInserted;
 };
 
 }
