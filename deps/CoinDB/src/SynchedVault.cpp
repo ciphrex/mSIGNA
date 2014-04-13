@@ -154,6 +154,7 @@ SynchedVault::SynchedVault(const std::string& blockTreeFile) :
             if (merkleblock)
             {
                 LOGGER(trace) << "Inserted merkle block " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " height: " << merkleblock->blockheader()->height() << std::endl;
+                m_syncHeight = merkleblock->blockheader()->height();
                 m_notifyMerkleBlockInserted(merkleblock);
             }
         }
@@ -235,6 +236,7 @@ void SynchedVault::clearAllSlots()
 {
     LOGGER(trace) << "SynchedVault::clearAllSlots()" << std::endl;
     m_notifyTxInserted.clear();
+    m_notifyTxStatusChanged.clear();
     m_notifyMerkleBlockInserted.clear();
 }
 

@@ -1387,6 +1387,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                 }
                 stored_tx->updateStatus(tx->status());
                 db_->update(stored_tx);
+                notifyTxStatusChanged(stored_tx);
                 return stored_tx;
             }
             else
@@ -1410,6 +1411,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                     }
                     i++;
                 }
+                if (updated) notifyTxStatusChanged(stored_tx);
                 return updated ? stored_tx : nullptr;
             }
         }
@@ -1423,6 +1425,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                     LOGGER(debug) << "Vault::insertTx_unwrapped - UPDATING TRANSACTION STATUS FROM " << stored_tx->status() << " TO " << tx->status() << ". hash: " << uchar_vector(stored_tx->hash()).getHex() << std::endl;
                     stored_tx->updateStatus(tx->status());
                     db_->update(stored_tx);
+                    notifyTxStatusChanged(stored_tx);
                     return stored_tx;
                 }
                 else
@@ -1567,10 +1570,11 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
         tx->updateStatus(Tx::CONFLICTING);
         for (auto& conflicting_tx: conflicting_txs)
         {
-            if (conflicting_tx->status() != Tx::CONFIRMED)
+            if (conflicting_tx->status() != Tx::CONFIRMED && conflicting_tx->status() != Tx::CONFLICTING)
             {
                 conflicting_tx->updateStatus(Tx::CONFLICTING);
                 db_->update(conflicting_tx);
+                notifyTxStatusChanged(conflicting_tx);
             }
         }
     }
@@ -1591,6 +1595,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
         for (auto& txout:       updated_txouts) { db_->update(txout);       }
 
         if (tx->status() >= Tx::SENT) updateConfirmations_unwrapped(tx);
+        notifyTxInserted(tx);
         return tx;
     }
 
@@ -2051,6 +2056,7 @@ unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
             LOGGER(debug) << "Vault::deleteMerkleBlock_unwrapped - unconfirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
             tx.blockheader(nullptr);
             db_->update(tx);
+            notifyTxStatusChanged(std::make_shared<Tx>(tx));
         }
 
         // Delete merkle block
@@ -2080,6 +2086,7 @@ unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)
         std::shared_ptr<BlockHeader> blockheader(db_->load<BlockHeader>(view.blockheader_id));
         tx->blockheader(blockheader);
         db_->update(tx);
+        notifyTxStatusChanged(tx);
         count++;
         LOGGER(debug) << "Vault::updateConfirmations_unwrapped - transaction " << uchar_vector(tx->hash()).getHex() << " confirmed in block " << uchar_vector(tx->blockheader()->hash()).getHex() << " height: " << tx->blockheader()->height() << std::endl;
     }

@@ -13,8 +13,8 @@
 #include "VaultExceptions.h"
 #include "SigningRequest.h"
 
-#include <CoinQ_signals.h>
-#include <CoinQ_slots.h>
+#include <Signals.h>
+
 #include <CoinQ_blocks.h>
 
 #include <BloomFilter.h>
@@ -23,6 +23,9 @@
 
 namespace CoinDB
 {
+
+typedef Signals::Signal<std::shared_ptr<Tx>> TxSignal;
+typedef Signals::Signal<std::shared_ptr<MerkleBlock>> MerkleBlockSignal;
 
 class Vault
 {
@@ -127,6 +130,19 @@ public:
     unsigned int                            deleteMerkleBlock(const bytes_t& hash);
     unsigned int                            deleteMerkleBlock(uint32_t height);
 
+    ////////////////////////
+    // SLOT SUBSCRIPTIONS //
+    ////////////////////////
+    Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return notifyTxInserted.connect(slot); }
+    Signals::Connection subscribeTxStatusChanged(TxSignal::Slot slot) { return notifyTxStatusChanged.connect(slot); }
+    Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return notifyMerkleBlockInserted.connect(slot); }
+    void clearAllSlots()
+    {
+        notifyTxInserted.clear();
+        notifyTxStatusChanged.clear();
+        notifyMerkleBlockInserted.clear();
+    }
+
 protected:
     ///////////////////////
     // GLOBAL OPERATIONS //
@@ -220,6 +236,14 @@ protected:
     unsigned int                            deleteMerkleBlock_unwrapped(uint32_t height);
     unsigned int                            updateConfirmations_unwrapped(std::shared_ptr<Tx> tx = nullptr); // If parameter is null, updates all unconfirmed transactions.
                                                                                                      // Returns the number of transaction previously unconfirmed that are now confirmed.
+
+    /////////////
+    // SIGNALS //
+    /////////////
+    TxSignal                                notifyTxInserted;
+    TxSignal                                notifyTxStatusChanged;
+    MerkleBlockSignal                       notifyMerkleBlockInserted;
+
 private:
     mutable boost::mutex mutex;
     std::shared_ptr<odb::core::database> db_;
