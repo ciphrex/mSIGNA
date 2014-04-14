@@ -28,7 +28,8 @@
 #include "hash.h"
 #include "secp256k1.h"
 #include "BigInt.h"
-#include "uchar_vector.h"
+
+#include <stdutils/uchar_vector.h>
 
 #include <sstream>
 #include <stdexcept>

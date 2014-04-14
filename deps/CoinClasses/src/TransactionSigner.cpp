@@ -23,7 +23,6 @@
 // THE SOFTWARE.
 
 #include "TransactionSigner.h"
-#include "uchar_vector.h"
 #include "CoinNodeData.h"
 #include "Base58Check.h"
 #include "CoinKey.h"

@@ -25,9 +25,10 @@
 #ifndef __RANDOM_H___
 #define __RANDOM_H___
 
-#include "uchar_vector.h"
 #include <openssl/rand.h>
 #include <openssl/err.h>
+
+#include <stdutils/uchar_vector.h>
 
 #include <stdexcept>
 

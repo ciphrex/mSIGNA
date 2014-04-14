@@ -25,11 +25,12 @@
 #ifndef BASE58CHECK_H_INCLUDED
 #define BASE58CHECK_H_INCLUDED
 
-#include "uchar_vector.h"
 #include "BigInt.h"
 #include "hash.h"
 
 #include "encodings.h"
+
+#include <stdutils/uchar_vector.h>
 
 // unsecure versions, suitable for public keys
 inline unsigned int countLeading0s(const std::vector<unsigned char>& data)

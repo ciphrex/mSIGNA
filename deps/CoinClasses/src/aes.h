@@ -26,7 +26,7 @@
 
 // TODO: Use secure buffers
 
-#include "uchar_vector.h"
+#include <stdutils/char_vector.h>
 
 #include <string.h>
 #include <stdio.h>

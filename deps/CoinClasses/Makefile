@@ -74,7 +74,6 @@ OBJ_HEADERS = \
         src/numericdata.h \
         src/random.h \
         src/typedefs.h \
-        src/uchar_vector.h \
         src/uint256.h
 
 SCRYPT_OBJS = \

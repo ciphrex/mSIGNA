@@ -25,8 +25,9 @@
 #ifndef COIN_MERKLETREE_H__
 #define COIN_MERKLETREE_H__
 
-#include "uchar_vector.h"
 #include "hash.h"
+
+#include <stdutils/uchar_vector.h>
 
 #include <list>
 #include <queue>
