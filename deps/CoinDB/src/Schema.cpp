@@ -549,7 +549,7 @@ void SigningScript::status(status_t status)
  * class BlockHeader
  */
 
-void BlockHeader::fromCoinClasses(const Coin::CoinBlockHeader& blockheader, uint32_t height)
+void BlockHeader::fromCoinCore(const Coin::CoinBlockHeader& blockheader, uint32_t height)
 {
     hash_ = blockheader.getHashLittleEndian();
     height_ = height;
@@ -561,7 +561,7 @@ void BlockHeader::fromCoinClasses(const Coin::CoinBlockHeader& blockheader, uint
     nonce_ = blockheader.nonce;
 }
 
-Coin::CoinBlockHeader BlockHeader::toCoinClasses() const
+Coin::CoinBlockHeader BlockHeader::toCoinCore() const
 {
     return Coin::CoinBlockHeader(version_, timestamp_, bits_, nonce_, prevhash_, merkleroot_);
 }
@@ -571,7 +571,7 @@ Coin::CoinBlockHeader BlockHeader::toCoinClasses() const
  * class MerkleBlock
  */
 
-void MerkleBlock::fromCoinClasses(const Coin::MerkleBlock& merkleblock, uint32_t height)
+void MerkleBlock::fromCoinCore(const Coin::MerkleBlock& merkleblock, uint32_t height)
 {
     blockheader_ = std::shared_ptr<BlockHeader>(new BlockHeader(merkleblock.blockHeader, height));
     txcount_ = merkleblock.nTxs;
@@ -580,10 +580,10 @@ void MerkleBlock::fromCoinClasses(const Coin::MerkleBlock& merkleblock, uint32_t
     flags_ = merkleblock.flags;
 }
 
-Coin::MerkleBlock MerkleBlock::toCoinClasses() const
+Coin::MerkleBlock MerkleBlock::toCoinCore() const
 {
     Coin::MerkleBlock merkleblock;
-    merkleblock.blockHeader = blockheader_->toCoinClasses();
+    merkleblock.blockHeader = blockheader_->toCoinCore();
     merkleblock.nTxs = txcount_;
     merkleblock.hashes.assign(hashes_.begin(), hashes_.end());
     for (auto& hash: merkleblock.hashes) { std::reverse(hash.begin(), hash.end()); }
@@ -613,7 +613,7 @@ TxIn::TxIn(const bytes_t& raw)
     sequence_ = coin_txin.sequence;
 }
 
-Coin::TxIn TxIn::toCoinClasses() const
+Coin::TxIn TxIn::toCoinCore() const
 {
     Coin::TxIn coin_txin;
     coin_txin.previousOut = Coin::OutPoint(outhash_, outindex_);
@@ -624,7 +624,7 @@ Coin::TxIn TxIn::toCoinClasses() const
 
 bytes_t TxIn::raw() const
 {
-    return toCoinClasses().getSerialized();
+    return toCoinCore().getSerialized();
 }
 
 
@@ -706,7 +706,7 @@ void TxOut::signingscript(std::shared_ptr<SigningScript> signingscript)
     signingscript_ = signingscript;
 }
 
-Coin::TxOut TxOut::toCoinClasses() const
+Coin::TxOut TxOut::toCoinCore() const
 {
     Coin::TxOut coin_txout;
     coin_txout.value = value_;
@@ -716,7 +716,7 @@ Coin::TxOut TxOut::toCoinClasses() const
 
 bytes_t TxOut::raw() const
 {
-    return toCoinClasses().getSerialized();
+    return toCoinCore().getSerialized();
 }
 
 
@@ -778,7 +778,7 @@ void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uin
     locktime_ = locktime;
     timestamp_ = timestamp;
 
-    Coin::Transaction coin_tx = toCoinClasses();
+    Coin::Transaction coin_tx = toCoinCore();
 
     if (missingSigCount())  { status_ = UNSIGNED; }
     else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
@@ -789,8 +789,8 @@ void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uin
 
 void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status)
 {
-    LOGGER(trace) << "Tx::set - fromCoinClasses(coin_tx);" << std::endl;
-    fromCoinClasses(coin_tx);
+    LOGGER(trace) << "Tx::set - fromCoinCore(coin_tx);" << std::endl;
+    fromCoinCore(coin_tx);
 
     timestamp_ = timestamp;
 
@@ -804,7 +804,7 @@ void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status)
 void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
 {
     Coin::Transaction coin_tx(raw);
-    fromCoinClasses(coin_tx);
+    fromCoinCore(coin_tx);
     timestamp_ = timestamp;
 
     if (missingSigCount())  { status_ = UNSIGNED; }
@@ -841,7 +841,7 @@ bool Tx::updateStatus(status_t status /* = NO_STATUS */)
             status_ = status;
         }
 
-        hash_ = toCoinClasses().getHashLittleEndian();
+        hash_ = toCoinCore().getHashLittleEndian();
         return true;
     }
 
@@ -855,12 +855,12 @@ bool Tx::updateStatus(status_t status /* = NO_STATUS */)
     return false;
 }
 
-Coin::Transaction Tx::toCoinClasses() const
+Coin::Transaction Tx::toCoinCore() const
 {
     Coin::Transaction coin_tx;
     coin_tx.version = version_;
-    for (auto& txin:  txins_) { coin_tx.inputs.push_back(txin->toCoinClasses()); }
-    for (auto& txout: txouts_) { coin_tx.outputs.push_back(txout->toCoinClasses()); }
+    for (auto& txin:  txins_) { coin_tx.inputs.push_back(txin->toCoinCore()); }
+    for (auto& txout: txouts_) { coin_tx.outputs.push_back(txout->toCoinCore()); }
     coin_tx.lockTime = locktime_;
     return coin_tx;
 }
@@ -880,7 +880,7 @@ void Tx::blockheader(std::shared_ptr<BlockHeader> blockheader)
 
 bytes_t Tx::raw() const
 {
-    return toCoinClasses().getSerialized();
+    return toCoinCore().getSerialized();
 }
 
 void Tx::shuffle_txins()
@@ -897,7 +897,7 @@ void Tx::shuffle_txouts()
     for (auto& txout: txouts_) { txout->txindex(i++); }
 }
 
-void Tx::fromCoinClasses(const Coin::Transaction& coin_tx)
+void Tx::fromCoinCore(const Coin::Transaction& coin_tx)
 {
     version_ = coin_tx.version;
 

@@ -606,13 +606,13 @@ class BlockHeader
 public:
     BlockHeader() { }
 
-    BlockHeader(const Coin::CoinBlockHeader& blockheader, uint32_t height = 0xffffffff) { fromCoinClasses(blockheader, height); }
+    BlockHeader(const Coin::CoinBlockHeader& blockheader, uint32_t height = 0xffffffff) { fromCoinCore(blockheader, height); }
 
     BlockHeader(const bytes_t& hash, uint32_t height, uint32_t version, const bytes_t& prevhash, const bytes_t& merkleroot, uint32_t timestamp, uint32_t bits, uint32_t nonce)
     : hash_(hash), height_(height), version_(version), prevhash_(prevhash), merkleroot_(merkleroot), timestamp_(timestamp), bits_(bits), nonce_(nonce) { }
 
-    void fromCoinClasses(const Coin::CoinBlockHeader& blockheader, uint32_t height = 0xffffffff);
-    Coin::CoinBlockHeader toCoinClasses() const;
+    void fromCoinCore(const Coin::CoinBlockHeader& blockheader, uint32_t height = 0xffffffff);
+    Coin::CoinBlockHeader toCoinCore() const;
 
     unsigned long id() const { return id_; }
     bytes_t hash() const { return hash_; }
@@ -657,10 +657,10 @@ public:
     MerkleBlock(const std::shared_ptr<BlockHeader>& blockheader, uint32_t txcount, const std::vector<bytes_t>& hashes, const bytes_t& flags)
         : blockheader_(blockheader), txcount_(txcount), hashes_(hashes), flags_(flags) { }
 
-    MerkleBlock(const ChainMerkleBlock& merkleblock) { fromCoinClasses(merkleblock, merkleblock.height); }
+    MerkleBlock(const ChainMerkleBlock& merkleblock) { fromCoinCore(merkleblock, merkleblock.height); }
 
-    void fromCoinClasses(const Coin::MerkleBlock& merkleblock, uint32_t height = 0xffffffff);
-    Coin::MerkleBlock toCoinClasses() const;
+    void fromCoinCore(const Coin::MerkleBlock& merkleblock, uint32_t height = 0xffffffff);
+    Coin::MerkleBlock toCoinCore() const;
 
     unsigned long id() const { return id_; }
 
@@ -706,7 +706,7 @@ public:
     TxIn(const Coin::TxIn& coin_txin);
     TxIn(const bytes_t& raw);
 
-    Coin::TxIn toCoinClasses() const;
+    Coin::TxIn toCoinCore() const;
 
     unsigned long id() const { return id_; }
     const bytes_t& outhash() const { return outhash_; }
@@ -793,7 +793,7 @@ public:
     TxOut(const Coin::TxOut& coin_txout);
     TxOut(const bytes_t& raw);
 
-    Coin::TxOut toCoinClasses() const;
+    Coin::TxOut toCoinCore() const;
 
     unsigned long id() const { return id_; }
     uint64_t value() const { return value_; }
@@ -912,7 +912,7 @@ public:
     void set(Coin::Transaction coin_tx, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED);
     void set(const bytes_t& raw, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED);
 
-    Coin::Transaction toCoinClasses() const;
+    Coin::Transaction toCoinCore() const;
 
     void setBlock(std::shared_ptr<BlockHeader> blockheader, uint32_t blockindex);
 
@@ -950,7 +950,7 @@ public:
 private:
     friend class odb::access;
 
-    void fromCoinClasses(const Coin::Transaction& coin_tx);
+    void fromCoinCore(const Coin::Transaction& coin_tx);
 
     #pragma db id auto
     unsigned long id_;

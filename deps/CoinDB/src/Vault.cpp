@@ -1802,7 +1802,7 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
         if (key_r.empty()) continue;
 
         // Prepare the inputs for hashing
-        Coin::Transaction coin_tx = tx->toCoinClasses();
+        Coin::Transaction coin_tx = tx->toCoinCore();
         unsigned int i = 0;
         for (auto& coin_input: coin_tx.inputs)
         {

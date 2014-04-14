@@ -645,7 +645,7 @@ cli::result_t cmd_blockinfo(const cli::params_t& params)
     Vault vault(params[0], false);
     std::shared_ptr<BlockHeader> blockheader = vault.getBlockHeader(height);
 
-    return blockheader->toCoinClasses().toIndentedString();
+    return blockheader->toCoinCore().toIndentedString();
 }
 
 cli::result_t cmd_rawblockheader(const cli::params_t& params)
@@ -691,7 +691,7 @@ cli::result_t cmd_insertrawmerkleblock(const cli::params_t& params)
 
     uchar_vector rawmerkleblock(params[1]);
     std::shared_ptr<MerkleBlock> merkleblock(new MerkleBlock());
-    merkleblock->fromCoinClasses(rawmerkleblock, height);
+    merkleblock->fromCoinCore(rawmerkleblock, height);
 
     Vault vault(params[0], false);
     bool rval = (bool)vault.insertMerkleBlock(merkleblock);
