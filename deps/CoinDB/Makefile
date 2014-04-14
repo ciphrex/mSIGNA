@@ -14,7 +14,7 @@ endif
 
 LOGGER = ../logger
 SIGNALS = ../Signals
-COINCLASSES = ../CoinClasses
+COINCORE = ../CoinCore
 COINQ = ../CoinQ
 CLI = ../cli
 
@@ -81,7 +81,7 @@ endif
 LIBS = \
     -Llib -lCoinDB \
     -L$(COINQ)/lib -lCoinQ \
-    -L$(COINCLASSES)/lib -lCoinClasses \
+    -L$(COINCORE)/lib -lCoinCore \
     -L$(LOGGER)/lib -llogger \
     -lboost_system$(BOOST_SUFFIX) \
     -lboost_filesystem$(BOOST_SUFFIX) \

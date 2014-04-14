@@ -19,10 +19,10 @@
 #include <odb/transaction.hxx>
 #include <odb/session.hxx>
 
-#include <CoinClasses/hash.h>
-#include <CoinClasses/MerkleTree.h>
-#include <CoinClasses/secp256k1.h>
-#include <CoinClasses/BigInt.h>
+#include <CoinCore/hash.h>
+#include <CoinCore/MerkleTree.h>
+#include <CoinCore/secp256k1.h>
+#include <CoinCore/BigInt.h>
 
 #include <logger/logger.h>
 

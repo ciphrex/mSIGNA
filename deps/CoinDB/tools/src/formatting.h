@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <CoinClasses/Base58Check.h>
+#include <CoinCore/Base58Check.h>
 
 #include <CoinQ/CoinQ_script.h>
 

@@ -17,7 +17,7 @@
 
 #include <CoinQ/CoinQ_blocks.h>
 
-#include <CoinClasses/BloomFilter.h>
+#include <CoinCore/BloomFilter.h>
 
 #include <boost/thread.hpp>
 

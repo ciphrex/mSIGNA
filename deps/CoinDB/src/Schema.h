@@ -11,7 +11,7 @@
 #ifndef COINDB_SCHEMA_H
 #define COINDB_SCHEMA_H
 
-#include <CoinClasses/CoinNodeData.h>
+#include <CoinCore/CoinNodeData.h>
 
 #include <CoinQ/CoinQ_typedefs.h>
 #include <CoinQ/CoinQ_blocks.h>

@@ -11,11 +11,10 @@
 
 #include <stdutils/stringutils.h>
 
-#include <CoinClasses/uchar_vector.h>
-#include <CoinClasses/hash.h>
-#include <CoinClasses/CoinNodeData.h>
-#include <CoinClasses/hdkeys.h>
-#include <CoinClasses/aes.h>
+#include <CoinCore/hash.h>
+#include <CoinCore/CoinNodeData.h>
+#include <CoinCore/hdkeys.h>
+#include <CoinCore/aes.h>
 
 #include <CoinQ/CoinQ_script.h>
 
