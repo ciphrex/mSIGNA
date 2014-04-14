@@ -8,11 +8,11 @@ supporting m-of-n signature policies and multiuser/multidevice account managemen
 While the current release builds only support bitcoin, it is possible to compile it 
 to support other bitcoin-like blockchain-based cryptocurrencies. 
 
-It is built atop three custom libraries, CoinClasses, CoinQ, and CoinDB, which provide
+It is built atop three custom libraries, CoinCore, CoinQ, and CoinDB, which provide
 all core functionality for managing bitcoin data structures, connecting to peers, and
 handling persistent storage.
 
-    -CoinClasses is licensed under the MIT license.
+    -CoinCore is licensed under the MIT license.
 
     -CoinQ and CoinDB are licensed under the GPLv2 license.
 
