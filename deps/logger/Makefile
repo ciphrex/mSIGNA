@@ -41,10 +41,14 @@ obj/logger.o: src/logger.cpp src/logger.h
 	$(CXX) $(CXX_FLAGS) -c -o $@ $<
 
 install:
-	-mkdir -p $(SYSROOT)/include
-	-cp -R include/logger $(SYSROOT)/include/
+	-mkdir -p $(SYSROOT)/include/logger
+	-cp src/logger.h $(SYSROOT)/include/logger/
 	-mkdir -p $(SYSROOT)/lib
-	-cp lib/*.a $(SYSROOT)/lib/
+	-cp lib/liblogger.a $(SYSROOT)/lib/
+
+remove:
+	-rm -rf $(SYSROOT)/include/logger
+	-rm $(SYSROOT)/lib/liblogger.a
 
 clean:
 	rm -f obj/*.o lib/*.a/
