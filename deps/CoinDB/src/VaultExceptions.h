@@ -73,6 +73,7 @@ class KeychainInvalidPrivateKeyException: public KeychainException
 {
 public:
     explicit KeychainInvalidPrivateKeyException(const std::string& keychain_name, const bytes_t& pubkey) : KeychainException("Invalid private key for public key.", keychain_name), pubkey_(pubkey) { }
+    virtual ~KeychainInvalidPrivateKeyException() throw() { }
     const bytes_t& pubkey() const { return pubkey_; }
 
 private:
@@ -229,6 +230,7 @@ class ChainCodeUnlockFailedForKeychainException : public ChainCodeException
 {
 public:
     explicit ChainCodeUnlockFailedForKeychainException(const std::string& keychain_name) : ChainCodeException("Chain code is locked for a keychain."), keychain_name_(keychain_name) { }
+    virtual ~ChainCodeUnlockFailedForKeychainException() throw() { }
     const std::string& keychain_name() const { return keychain_name_; }
 
 protected:
@@ -239,6 +241,7 @@ class ChainCodeSetUnlockKeyFailedForKeychainException : public ChainCodeExceptio
 {
 public:
     explicit ChainCodeSetUnlockKeyFailedForKeychainException(const std::string& keychain_name) : ChainCodeException("Failed to set unlock key for keychain chain code."), keychain_name_(keychain_name) { }
+    virtual ~ChainCodeSetUnlockKeyFailedForKeychainException() throw() { }
     const std::string& keychain_name() const { return keychain_name_; }
 
 protected:
