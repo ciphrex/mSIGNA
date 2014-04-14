@@ -8,6 +8,10 @@ else
     CXX_FLAGS += -O3
 endif
 
+ifndef SYSROOT
+    SYSROOT = /usr/local
+endif
+
 LOGGER = ../logger
 SIGNALS = ../Signals
 COINCLASSES = ../CoinClasses
@@ -162,10 +166,17 @@ tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp tools/src/formatting.h lib/li
 tests/build/SynchedVaultTest$(EXE_EXT): tests/src/SynchedVaultTest.cpp lib/libCoinDB.a
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(EXES_INCLUDE_PATH) $< -o $@ $(LIBS)
 
-install: install_tools
+install: install_lib install_tools
 
 install_tools:
-	-cp $(TOOLS) /usr/local/bin/
+	-mkdir -p $(SYSROOT)/bin
+	-cp $(TOOLS) $(SYSROOT)/bin/
+
+install_lib:
+	-mkdir -p $(SYSROOT)/include
+	-cp -R include/CoinDB $(SYSROOT)/include/
+	-mkdir -p $(SYSROOT)/lib
+	-cp lib/*.a $(SYSROOT)/lib/
 
 clean:
 	-rm -f obj/*.o odb/*-odb.* lib/*.a tools/build/*

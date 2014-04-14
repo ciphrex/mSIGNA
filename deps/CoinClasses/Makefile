@@ -7,6 +7,10 @@ else
     CXX_FLAGS += -O3
 endif
 
+ifndef SYSROOT
+    SYSROOT = /usr/local
+endif
+
 ifndef OS
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S), Linux)
@@ -97,6 +101,12 @@ src/scrypt/obj/scrypt.o: src/scrypt/scrypt.cpp src/scrypt/scrypt.h
 
 src/hashfunc/obj/%.o: src/hashfunc/%.c src/hashfunc/sph_%.h src/hashfunc/sph_types.h
 	$(CC) $(C_FLAGS) $(INCLUDE_PATH) -c $< -o $@
+
+install:
+	-mkdir -p $(SYSROOT)/include
+	-cp -R include/CoinClasses $(SYSROOT)/include/
+	-mkdir -p $(SYSROOT)/lib
+	-cp lib/*.a $(SYSROOT)/lib/
 
 clean:
 	-rm -f obj/*.o lib/*.a src/scrypt/obj/*.o src/hashfunc/obj/*.o

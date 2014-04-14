@@ -5,6 +5,10 @@ else
     CXX_FLAGS += -O3
 endif
 
+ifndef SYSROOT
+    SYSROOT = /usr/local
+endif
+
 INCLUDE_PATH = \
     -Isrc \
     -I../CoinClasses/src \
@@ -69,6 +73,12 @@ lib/libCoinQ.a: $(OBJS)
 
 obj/%.o: src/%.cpp
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
+
+install:
+	-mkdir -p $(SYSROOT)/include
+	-cp -R include/CoinQ $(SYSROOT)/include/
+	-mkdir -p $(SYSROOT)/lib
+	-cp lib/*.a $(SYSROOT)/lib/
 
 clean:
 	-rm -f obj/*.o lib/*.a
