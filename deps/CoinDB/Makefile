@@ -19,18 +19,11 @@ COINQ = ../CoinQ
 CLI = ../cli
 
 INCLUDE_PATH = \
-    -Iinclude \
-    -I$(SIGNALS)/include \
-    -I$(COINQ)/include \
-    -I$(COINCLASSES)/include \
-    -I$(LOGGER)/include \
+    -Isrc \
     -I$(CLI)/src
 
 ODB_INCLUDE_PATH = \
-    -Iinclude \
-    -I$(COINQ)/include \
-    -I$(COINCLASSES)/include \
-    -I$(LOGGER)/include
+    -Isrc
 
 EXES_INCLUDE_PATH = \
     $(INCLUDE_PATH) \
@@ -125,7 +118,7 @@ lib/libCoinDB.a: $(OBJS)
 #
 # odb compiled dependencies
 #
-odb/Schema-odb.hxx: include/CoinDB/Schema.h
+odb/Schema-odb.hxx: src/Schema.h
 	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema $(ODB_INCLUDE_PATH) $<
 
 odb/Schema-odb.cxx: odb/Schema-odb.hxx
@@ -133,25 +126,25 @@ odb/Schema-odb.cxx: odb/Schema-odb.hxx
 #
 # odb generated schema object
 #
-obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx include/CoinDB/Schema.h
+obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx src/Schema.h
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
 # schema classes
 #
-obj/Schema.o: src/Schema.cpp include/CoinDB/Schema.h
+obj/Schema.o: src/Schema.cpp src/Schema.h
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
 # vault class
 #
-obj/Vault.o: src/Vault.cpp include/CoinDB/Vault.h include/CoinDB/VaultExceptions.h include/CoinDB/SigningRequest.h include/CoinDB/Schema.h include/CoinDB/Database.h odb/Schema-odb.hxx
+obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/SigningRequest.h src/Schema.h src/Database.h odb/Schema-odb.hxx
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
 # synched vault class
 #
-obj/SynchedVault.o: src/SynchedVault.cpp include/CoinDB/SynchedVault.h include/CoinDB/VaultExceptions.h include/CoinDB/SigningRequest.h include/CoinDB/Schema.h include/CoinDB/Database.h odb/Schema-odb.hxx
+obj/SynchedVault.o: src/SynchedVault.cpp src/SynchedVault.h src/VaultExceptions.h src/SigningRequest.h src/Schema.h src/Database.h odb/Schema-odb.hxx
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
@@ -168,15 +161,24 @@ tests/build/SynchedVaultTest$(EXE_EXT): tests/src/SynchedVaultTest.cpp lib/libCo
 
 install: install_lib install_tools
 
+install_lib:
+	-mkdir -p $(SYSROOT)/include/CoinDB
+	-cp src/*.h $(SYSROOT)/include/CoinDB/
+	-mkdir -p $(SYSROOT)/lib
+	-cp lib/libCoinDB.a $(SYSROOT)/lib/
+
 install_tools:
 	-mkdir -p $(SYSROOT)/bin
 	-cp $(TOOLS) $(SYSROOT)/bin/
 
-install_lib:
-	-mkdir -p $(SYSROOT)/include
-	-cp -R include/CoinDB $(SYSROOT)/include/
-	-mkdir -p $(SYSROOT)/lib
-	-cp lib/*.a $(SYSROOT)/lib/
+remove: remove_lib remove_tools
+
+remove_lib:
+	-rm -rf $(SYSROOT)/include/CoinDB
+	-rm $(SYSROOT)/lib/libCoinDB.a
+
+remove_tools:
+	-rm $(SYSROOT)/bin/coindb$(EXE_EXT)
 
 clean:
 	-rm -f obj/*.o odb/*-odb.* lib/*.a tools/build/*

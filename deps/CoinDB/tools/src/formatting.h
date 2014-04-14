@@ -9,9 +9,9 @@
 
 #pragma once
 
-#include <Base58Check.h>
+#include <CoinClasses/Base58Check.h>
 
-#include <CoinQ_script.h>
+#include <CoinQ/CoinQ_script.h>
 
 #include <Vault.h>
 

@@ -10,7 +10,7 @@
 #include "formatting.h"
 
 #include <cli.hpp>
-#include <Base58Check.h>
+#include <CoinClasses/Base58Check.h>
 
 #include <odb/database.hxx>
 #include <odb/transaction.hxx>
@@ -18,9 +18,9 @@
 #include <Vault.h>
 #include <Schema-odb.hxx>
 
-#include <random.h>
+#include <CoinClasses/random.h>
 
-#include "logger.h"
+#include <logger/logger.h>
 
 #include <iostream>
 #include <sstream>

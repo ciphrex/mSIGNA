@@ -7,8 +7,8 @@
 // All Rights Reserved.
 //
 
-#include <CoinDB/Vault.h>
-#include <CoinDB/Database.h>
+#include "Vault.h"
+#include "Database.h"
 
 #include <CoinQ/CoinQ_script.h>
 #include <CoinQ/CoinQ_blocks.h>

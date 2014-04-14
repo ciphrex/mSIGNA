@@ -8,7 +8,7 @@
 //
 
 #include <SynchedVault.h>
-#include <logger.h>
+#include <logger/logger.h>
 
 #include <iostream>
 #include <signal.h>

@@ -7,7 +7,7 @@
 // All Rights Reserved.
 //
 
-#include <CoinDB/Schema.h>
+#include "Schema.h"
 
 #include <stdutils/stringutils.h>
 
