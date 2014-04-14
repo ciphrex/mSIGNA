@@ -4,7 +4,7 @@ set -x
 cd deps/logger
 make clean
 
-cd ../CoinClasses
+cd ../CoinCore
 make clean
 
 cd ../CoinQ
@@ -12,3 +12,7 @@ make clean
 
 cd ../CoinDB
 make clean
+
+cd ../../sysroot
+rm -rf include
+rm -rf lib

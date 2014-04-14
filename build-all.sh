@@ -89,15 +89,19 @@ set -e
 
 cd deps/logger
 make OS=$OS $OPTIONS
+SYSROOT=../../sysroot make install
 
 cd ../CoinCore
 make OS=$OS $OPTIONS
+SYSROOT=../../sysroot make install
 
 cd ../CoinQ
 make OS=$OS $OPTIONS
+SYSROOT=../../sysroot make install
 
 cd ../CoinDB
 make lib OS=$OS $OPTIONS
+SYSROOT=../../sysroot make install_lib
 
 cd $CURRENT_DIR
 ${QMAKE_PATH}qmake $SPEC CONFIG+=$BUILD_TYPE && make $OPTIONS
