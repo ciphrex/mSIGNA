@@ -90,7 +90,7 @@ set -e
 cd deps/logger
 make OS=$OS $OPTIONS
 
-cd ../CoinClasses
+cd ../CoinCore
 make OS=$OS $OPTIONS
 
 cd ../CoinQ

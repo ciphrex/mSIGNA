@@ -1037,7 +1037,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 if (!connected) {
                     throw std::runtime_error(tr("Must be connected to network to send.").toStdString());
                 }
-                Coin::Transaction coin_tx = tx->toCoinClasses();
+                Coin::Transaction coin_tx = tx->toCoinCore();
                 networkSync.sendTx(coin_tx);
 
                 // TODO: Check transaction has propagated before changing status

@@ -258,7 +258,7 @@ void TxModel::sendTx(int row, CoinQ::Network::NetworkSync* networkSync)
     txhash.setHex(txHashItem->text().toStdString());
 
     std::shared_ptr<CoinDB::Tx> tx = vault->getTx(txhash);
-    Coin::Transaction coin_tx = tx->toCoinClasses();
+    Coin::Transaction coin_tx = tx->toCoinCore();
     networkSync->sendTx(coin_tx);
 
     // TODO: Check transaction has propagated before changing status to PROPAGATED

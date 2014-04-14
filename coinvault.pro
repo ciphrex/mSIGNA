@@ -20,7 +20,7 @@ QMAKE_CXXFLAGS_WARN_ON += -Wno-unknown-pragmas
 
 
 LOGGER = deps/logger
-COINCLASSES = deps/CoinClasses
+COINCORE = deps/CoinCore
 COINQ = deps/CoinQ
 COINDB = deps/CoinDB
 
@@ -28,13 +28,13 @@ INCLUDEPATH += \
     /usr/local/include \
     $$COINDB/src \
     $$COINQ/src \
-    $$COINCLASSES/src \
+    $$COINCORE/src \
     $$LOGGER/src
 
 LIBS += \
     -L$$COINDB/lib -lCoinDB \
     -L$$COINQ/lib -lCoinQ \
-    -L$$COINCLASSES/lib -lCoinClasses \
+    -L$$COINCORE/lib -lCoinCore \
     -L$$LOGGER/lib -llogger
 
 CONFIG(debug, debug|release) {

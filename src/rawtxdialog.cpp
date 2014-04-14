@@ -10,7 +10,7 @@
 
 #include "rawtxdialog.h"
 
-#include <uchar_vector.h>
+#include <stdutils/uchar_vector.h>
 
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
