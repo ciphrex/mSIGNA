@@ -11,7 +11,7 @@
 #ifndef COINVAULT_ACCOUNTHISTORYDIALOG_H
 #define COINVAULT_ACCOUNTHISTORYDIALOG_H
 
-#include <Vault.h>
+#include <CoinDB/Vault.h>
 
 class TxModel;
 class TxView;

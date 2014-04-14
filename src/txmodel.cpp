@@ -10,8 +10,8 @@
 
 #include "txmodel.h"
 
-#include <CoinQ_script.h>
-#include <CoinQ_netsync.h>
+#include <CoinQ/CoinQ_script.h>
+#include <CoinQ/CoinQ_netsync.h>
 
 #include <stdutils/stringutils.h>
 

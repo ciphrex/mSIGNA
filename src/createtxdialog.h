@@ -20,7 +20,7 @@ class QTextEdit;
 #include "accountmodel.h"
 #include "paymentrequest.h"
 
-#include <CoinQ_typedefs.h>
+#include <CoinQ/CoinQ_typedefs.h>
 
 class QComboBox;
 class QLineEdit;

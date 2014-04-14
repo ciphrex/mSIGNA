@@ -11,7 +11,7 @@
 #include "keychainbackupdialog.h"
 
 #include <stdutils/uchar_vector.h>
-#include <Base58Check.h>
+#include <CoinCore/Base58Check.h>
 
 #include <QDialogButtonBox>
 #include <QHBoxLayout>

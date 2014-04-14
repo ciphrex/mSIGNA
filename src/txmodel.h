@@ -13,7 +13,7 @@
 
 #include <QStandardItemModel>
 
-#include <Vault.h>
+#include <CoinDB/Vault.h>
 
 namespace CoinQ {
     namespace Network {

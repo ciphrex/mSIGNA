@@ -13,9 +13,9 @@
 
 #include <QStandardItemModel>
 
-#include <Vault.h>
+#include <CoinDB/Vault.h>
 
-#include <CoinQ_typedefs.h>
+#include <CoinQ/CoinQ_typedefs.h>
 
 class KeychainModel : public QStandardItemModel
 {

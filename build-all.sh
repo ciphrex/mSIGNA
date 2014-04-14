@@ -91,6 +91,12 @@ cd deps/logger
 make OS=$OS $OPTIONS
 SYSROOT=../../sysroot make install
 
+cd ../Signals
+SYSROOT=../../sysroot make install
+
+cd ../stdutils
+SYSROOT=../../sysroot make install
+
 cd ../CoinCore
 make OS=$OS $OPTIONS
 SYSROOT=../../sysroot make install

@@ -19,23 +19,16 @@ QT += widgets network
 QMAKE_CXXFLAGS_WARN_ON += -Wno-unknown-pragmas
 
 
-LOGGER = deps/logger
-COINCORE = deps/CoinCore
-COINQ = deps/CoinQ
-COINDB = deps/CoinDB
-
 INCLUDEPATH += \
-    /usr/local/include \
-    $$COINDB/src \
-    $$COINQ/src \
-    $$COINCORE/src \
-    $$LOGGER/src
+    sysroot/include \
+    /usr/local/include
 
 LIBS += \
-    -L$$COINDB/lib -lCoinDB \
-    -L$$COINQ/lib -lCoinQ \
-    -L$$COINCORE/lib -lCoinCore \
-    -L$$LOGGER/lib -llogger
+    -Lsysroot/lib \
+    -lCoinDB \
+    -lCoinQ \
+    -lCoinCore \
+    -llogger
 
 CONFIG(debug, debug|release) {
     DESTDIR = build/debug

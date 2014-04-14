@@ -12,7 +12,7 @@
 
 #include "settings.h"
 
-#include <CoinQ_script.h>
+#include <CoinQ/CoinQ_script.h>
 
 #include <QStandardItemModel>
 

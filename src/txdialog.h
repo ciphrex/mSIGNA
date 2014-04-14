@@ -11,7 +11,7 @@
 #ifndef COINVAULT_TXDIALOG_H
 #define COINVAULT_TXDIALOG_H
 
-#include <Vault.h>
+#include <CoinDB/Vault.h>
 
 class TxOutModel;
 class TxOutView;

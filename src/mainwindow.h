@@ -32,7 +32,7 @@ class TxActions;
 
 class RequestPaymentDialog;
 
-#include <CoinQ_netsync.h>
+#include <CoinQ/CoinQ_netsync.h>
 
 #include "paymentrequest.h"
 

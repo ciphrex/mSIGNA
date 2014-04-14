@@ -13,7 +13,7 @@
 
 #include <QStandardItemModel>
 
-#include <Vault.h>
+#include <CoinDB/Vault.h>
 
 class ScriptModel : public QStandardItemModel
 {

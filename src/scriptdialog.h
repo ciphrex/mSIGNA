@@ -11,7 +11,7 @@
 #ifndef COINVAULT_SCRIPTDIALOG_H
 #define COINVAULT_SCRIPTDIALOG_H
 
-#include <Vault.h>
+#include <CoinDB/Vault.h>
 
 class ScriptModel;
 class ScriptView;

@@ -13,10 +13,10 @@
 
 #include "accountmodel.h"
 
-#include <CoinQ_script.h>
-#include <CoinQ_netsync.h>
+#include <CoinQ/CoinQ_script.h>
+#include <CoinQ/CoinQ_netsync.h>
 
-#include <random.h>
+#include <CoinCore/random.h>
 
 #include <stdutils/stringutils.h>
 

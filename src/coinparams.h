@@ -11,7 +11,7 @@
 #ifndef COINVAULT_COINPARAMS_H
 #define COINVAULT_COINPARAMS_H
 
-#include <CoinQ_coinparams.h>
+#include <CoinQ/CoinQ_coinparams.h>
 
 extern const CoinQ::CoinParams& getCoinParams();
 

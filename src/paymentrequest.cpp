@@ -11,9 +11,9 @@
 #include "paymentrequest.h"
 #include "numberformats.h"
 
-#include <Base58Check.h>
+#include <CoinCore/Base58Check.h>
 
-#include <typedefs.h>
+#include <CoinQ/CoinQ_typedefs.h>
 
 #include <QUrl>
 #include <QUrlQuery>

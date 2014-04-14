@@ -12,6 +12,6 @@
 #define COINVAULT_SEVERITYLOGGER_H
 
 #define LOGGER_TRACE
-#include <logger.h>
+#include <logger/logger.h>
 
 #endif // COINVAULT_SEVERITYLOGGER_H

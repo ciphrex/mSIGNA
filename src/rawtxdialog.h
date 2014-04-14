@@ -15,7 +15,7 @@ class QTextEdit;
 
 #include <QDialog>
 
-#include <CoinQ_typedefs.h>
+#include <CoinQ/CoinQ_typedefs.h>
 
 class RawTxDialog : public QDialog
 {

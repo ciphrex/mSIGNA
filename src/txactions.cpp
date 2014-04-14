@@ -15,7 +15,7 @@
 
 #include "rawtxdialog.h"
 
-#include <CoinQ_netsync.h>
+#include <CoinQ/CoinQ_netsync.h>
 
 #include <QAction>
 #include <QMenu>
@@ -25,7 +25,7 @@
 #include <QApplication>
 #include <QClipboard>
 
-#include <logger.h>
+#include <logger/logger.h>
 
 TxActions::TxActions(TxModel* model, TxView* view, CoinQ::Network::NetworkSync* sync)
     : txModel(model), txView(view), networkSync(sync), currentRow(-1)

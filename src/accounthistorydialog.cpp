@@ -26,8 +26,8 @@
 #include <QUrl>
 #include <QDesktopServices>
 
-#include <Vault.h>
-#include <CoinQ_netsync.h>
+#include <CoinDB/Vault.h>
+#include <CoinQ/CoinQ_netsync.h>
 
 AccountHistoryDialog::AccountHistoryDialog(CoinDB::Vault* vault, const QString& accountName, CoinQ::Network::NetworkSync* networkSync, QWidget* parent)
     : QDialog(parent), currentRow(-1)

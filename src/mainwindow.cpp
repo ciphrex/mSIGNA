@@ -22,13 +22,13 @@
 #include "mainwindow.h"
 
 // Random
-#include <random.h>
+#include <CoinCore/random.h>
 
 // Coin scripts
-#include <CoinQ_script.h>
+#include <CoinQ/CoinQ_script.h>
 
 // Network
-#include <CoinQ_netsync.h>
+#include <CoinQ/CoinQ_netsync.h>
 
 // Models/Views
 #include "accountmodel.h"
