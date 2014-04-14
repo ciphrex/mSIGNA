@@ -9,7 +9,6 @@
 #ifndef _COINQ_KEYS_H_
 #define _COINQ_KEYS_H_
 
-#include <uchar_vector.h>
 #include <CoinNodeData.h>
 
 #include <set>
