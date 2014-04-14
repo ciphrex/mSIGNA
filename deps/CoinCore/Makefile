@@ -87,9 +87,9 @@ HASH9_OBJS = \
 	src/hashfunc/obj/keccak.o \
 	src/hashfunc/obj/skein.o
 
-all: lib/libCoinClasses.a $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
+all: lib/libCoinCore.a $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
 
-lib/libCoinClasses.a: $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
+lib/libCoinCore.a: $(OBJS) $(SCRYPT_OBJS) $(HASH9_OBJS)
 	$(ARCHIVER) rcs $@ $^
 
 obj/%.o: src/%.cpp src/%.h $(OBJ_HEADERS)
@@ -102,10 +102,18 @@ src/hashfunc/obj/%.o: src/hashfunc/%.c src/hashfunc/sph_%.h src/hashfunc/sph_typ
 	$(CC) $(C_FLAGS) $(INCLUDE_PATH) -c $< -o $@
 
 install:
-	-mkdir -p $(SYSROOT)/include
-	-cp -R include/CoinClasses $(SYSROOT)/include/
+	-mkdir -p $(SYSROOT)/include/CoinCore
+	-cp src/*.h $(SYSROOT)/include/CoinCore/
+	-mkdir -p $(SYSROOT)/include/CoinCore/hashfunc
+	-cp src/hashfunc/*.h $(SYSROOT)/include/CoinCore/hashfunc/
+	-mkdir -p $(SYSROOT)/include/CoinCore/scrypt
+	-cp src/scrypt/*.h $(SYSROOT)/include/CoinCore/scrypt/
 	-mkdir -p $(SYSROOT)/lib
-	-cp lib/*.a $(SYSROOT)/lib/
+	-cp lib/libCoinCore.a $(SYSROOT)/lib/
+
+remove:
+	-rm -rf $(SYSROOT)/include/CoinCore
+	-rm $(SYSROOT)/lib/libCoinCore.a
 
 clean:
 	-rm -f obj/*.o lib/*.a src/scrypt/obj/*.o src/hashfunc/obj/*.o
