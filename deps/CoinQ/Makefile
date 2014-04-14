@@ -65,7 +65,6 @@ OBJS = \
     obj/CoinQ_keys.o \
     obj/CoinQ_filter.o
 
-
 all: lib/libCoinQ.a
 
 lib/libCoinQ.a: $(OBJS)
@@ -75,10 +74,14 @@ obj/%.o: src/%.cpp
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
 
 install:
-	-mkdir -p $(SYSROOT)/include
-	-cp -R include/CoinQ $(SYSROOT)/include/
+	-mkdir -p $(SYSROOT)/include/CoinQ
+	-cp src/*.h  $(SYSROOT)/include/CoinQ/
 	-mkdir -p $(SYSROOT)/lib
-	-cp lib/*.a $(SYSROOT)/lib/
+	-cp lib/libCoinQ.a $(SYSROOT)/lib/
+
+remove:
+	-rm -rf $(SYSROOT)/include/CoinQ
+	-rm $(SYSROOT)/lib/libCoinQ.a
 
 clean:
 	-rm -f obj/*.o lib/*.a
