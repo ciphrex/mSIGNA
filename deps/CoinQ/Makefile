@@ -5,12 +5,15 @@ else
     CXX_FLAGS += -O3
 endif
 
+LOCAL_SYSROOT = ../../sysroot
+
 ifndef SYSROOT
     SYSROOT = /usr/local
 endif
 
 INCLUDE_PATH = \
-    -Isrc
+    -Isrc \
+    -I$(LOCAL_SYSROOT)/include
 
 ifndef OS
     UNAME_S := $(shell uname -s)
