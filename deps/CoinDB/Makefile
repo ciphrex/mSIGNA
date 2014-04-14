@@ -46,6 +46,9 @@ ifeq ($(OS), linux)
 
     ARCHIVER = ar
 
+    PLATFORM_LIBS += \
+        -lpthread
+
 else ifeq ($(OS), mingw64)
     CXX =  x86_64-w64-mingw32-g++
     CC =  x86_64-w64-mingw32-gcc
@@ -158,7 +161,7 @@ tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp tools/src/formatting.h lib/li
 # SynchedVault unit test
 #
 tests/build/SynchedVaultTest$(EXE_EXT): tests/src/SynchedVaultTest.cpp lib/libCoinDB.a
-	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(EXES_INCLUDE_PATH) $< -o $@ $(LIBS)
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(EXES_INCLUDE_PATH) $< -o $@ $(LIBS) $(PLATFORM_LIBS)
 
 install: install_lib install_tools
 
