@@ -27,8 +27,9 @@
 #define COIN_HDKEYS_H
 
 #include "hash.h"
-
 #include "typedefs.h"
+
+#include <stdexcept>
 
 namespace Coin {
 
