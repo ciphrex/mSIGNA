@@ -11,7 +11,7 @@
 
 #include <functional>
 
-#include <CoinNodeData.h>
+#include <CoinClasses/CoinNodeData.h>
 
 // slot types
 typedef std::function<void()>                                       void_slot_t;

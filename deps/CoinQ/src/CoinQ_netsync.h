@@ -23,10 +23,9 @@
 #include <boost/thread.hpp>
 
 #include "CoinQ_typedefs.h"
-
-#include <BloomFilter.h>
-
 #include "CoinQ_coinparams.h"
+
+#include <CoinClasses/BloomFilter.h>
 
 typedef Coin::Transaction coin_tx_t;
 typedef ChainHeader chain_header_t;

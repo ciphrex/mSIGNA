@@ -8,8 +8,7 @@
 
 #include "CoinQ_script.h"
 
-// TODO: Move all base58check stuff to another module.
-#include <Base58Check.h>
+#include <CoinClasses/Base58Check.h>
 
 namespace CoinQ {
 namespace Script {

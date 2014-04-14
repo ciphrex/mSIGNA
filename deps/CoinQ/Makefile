@@ -10,9 +10,7 @@ ifndef SYSROOT
 endif
 
 INCLUDE_PATH = \
-    -Isrc \
-    -I../CoinClasses/src \
-    -I../logger/src
+    -Isrc
 
 ifndef OS
     UNAME_S := $(shell uname -s)

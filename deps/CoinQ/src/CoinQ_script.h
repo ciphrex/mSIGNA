@@ -11,7 +11,7 @@
 
 #include "CoinQ_txs.h"
 
-#include <CoinNodeData.h>
+#include <CoinClasses/CoinNodeData.h>
 
 #include <utility>
 

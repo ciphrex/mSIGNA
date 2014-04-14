@@ -8,11 +8,11 @@
 
 #include "CoinQ_netsync.h"
 
-#include <typedefs.h>
+#include "CoinQ_typedefs.h"
 
 #include <stdint.h>
 
-#include <logger.h>
+#include <logger/logger.h>
 
 using namespace CoinQ::Network;
 

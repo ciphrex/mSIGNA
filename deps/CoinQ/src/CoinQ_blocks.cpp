@@ -8,7 +8,7 @@
 
 #include "CoinQ_blocks.h"
 
-#include <logger.h>
+#include <logger/logger.h>
 
 bool CoinQBlockTreeMem::setBestChain(ChainHeader& header)
 {

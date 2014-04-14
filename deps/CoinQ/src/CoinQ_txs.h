@@ -13,7 +13,7 @@
 #include "CoinQ_keys.h"
 #include "CoinQ_signals.h"
 
-#include <CoinNodeData.h>
+#include <CoinClasses/CoinNodeData.h>
 
 #include <map>
 
