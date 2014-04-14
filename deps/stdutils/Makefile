@@ -5,5 +5,8 @@ endif
 all:
 
 install:
-	-mkdir -p $(SYSROOT)/include
-	-cp -R include/stdutils $(SYSROOT)/include/
+	-mkdir -p $(SYSROOT)/include/stdutils
+	-cp src/*.h $(SYSROOT)/include/stdutils/
+
+remove:
+	-rm -rf $(SYSROOT)/include/stdutils
