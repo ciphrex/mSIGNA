@@ -9,7 +9,7 @@
 #ifndef COINQ_COINPARAMS_H
 #define COINQ_COINPARAMS_H
 
-#include <CoinClasses/CoinNodeData.h>
+#include <CoinCore/CoinNodeData.h>
 
 namespace CoinQ {
 

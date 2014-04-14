@@ -9,7 +9,7 @@
 #ifndef _COINQ_KEYS_H_
 #define _COINQ_KEYS_H_
 
-#include <CoinClasses/CoinNodeData.h>
+#include <CoinCore/CoinNodeData.h>
 
 #include <set>
 #include <string>

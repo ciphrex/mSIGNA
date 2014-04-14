@@ -8,7 +8,7 @@
 
 #include "CoinQ_script.h"
 
-#include <CoinClasses/Base58Check.h>
+#include <CoinCore/Base58Check.h>
 
 namespace CoinQ {
 namespace Script {
