@@ -8,22 +8,22 @@ else
     CXX_FLAGS += -O3
 endif
 
+LOCAL_SYSROOT = ../../sysroot
+
 ifndef SYSROOT
     SYSROOT = /usr/local
 endif
 
-LOGGER = ../logger
-SIGNALS = ../Signals
-COINCORE = ../CoinCore
-COINQ = ../CoinQ
 CLI = ../cli
 
 INCLUDE_PATH = \
     -Isrc \
+    -I$(LOCAL_SYSROOT)/include \
     -I$(CLI)/src
 
 ODB_INCLUDE_PATH = \
-    -Isrc
+    -Isrc \
+    -I$(LOCAL_SYSROOT)/include
 
 EXES_INCLUDE_PATH = \
     $(INCLUDE_PATH) \
@@ -79,10 +79,11 @@ else ifneq ($(MAKECMDGOALS), clean)
 endif
 
 LIBS = \
-    -Llib -lCoinDB \
-    -L$(COINQ)/lib -lCoinQ \
-    -L$(COINCORE)/lib -lCoinCore \
-    -L$(LOGGER)/lib -llogger \
+    -L$(LOCAL_SYSROOT)/lib \
+    -lCoinDB \
+    -lCoinQ \
+    -lCoinCore \
+    -llogger \
     -lboost_system$(BOOST_SUFFIX) \
     -lboost_filesystem$(BOOST_SUFFIX) \
     -lboost_regex$(BOOST_SUFFIX) \
