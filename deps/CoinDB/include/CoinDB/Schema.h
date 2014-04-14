@@ -11,10 +11,10 @@
 #ifndef COINDB_SCHEMA_H
 #define COINDB_SCHEMA_H
 
-#include <CoinNodeData.h>
+#include <CoinClasses/CoinNodeData.h>
 
-#include <CoinQ_typedefs.h>
-#include <CoinQ_blocks.h>
+#include <CoinQ/CoinQ_typedefs.h>
+#include <CoinQ/CoinQ_blocks.h>
 
 #include <odb/core.hxx>
 #include <odb/nullable.hxx>
@@ -30,7 +30,7 @@
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/set.hpp>
 
-#include <logger.h>
+#include <logger/logger.h>
 
 #pragma db namespace session
 namespace CoinDB

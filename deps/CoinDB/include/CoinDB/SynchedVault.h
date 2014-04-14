@@ -11,9 +11,9 @@
 
 #include "Vault.h"
 
-#include <Signals.h>
+#include <Signals/Signals.h>
 
-#include <CoinQ_netsync.h>
+#include <CoinQ/CoinQ_netsync.h>
 
 #include <mutex>
 

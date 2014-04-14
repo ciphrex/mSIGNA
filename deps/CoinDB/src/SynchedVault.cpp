@@ -7,8 +7,8 @@
 // All Rights Reserved.
 //
 
-#include "SynchedVault.h"
-#include <logger.h>
+#include <CoinDB/SynchedVault.h>
+#include <logger/logger.h>
 
 using namespace CoinDB;
 using namespace CoinQ;

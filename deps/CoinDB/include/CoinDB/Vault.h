@@ -13,11 +13,11 @@
 #include "VaultExceptions.h"
 #include "SigningRequest.h"
 
-#include <Signals.h>
+#include <Signals/Signals.h>
 
-#include <CoinQ_blocks.h>
+#include <CoinQ/CoinQ_blocks.h>
 
-#include <BloomFilter.h>
+#include <CoinClasses/BloomFilter.h>
 
 #include <boost/thread.hpp>
 

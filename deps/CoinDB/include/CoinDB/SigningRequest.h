@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <CoinQ_typedefs.h>
+#include <CoinQ/CoinQ_typedefs.h>
 
 #include <set>
 

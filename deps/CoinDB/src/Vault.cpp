@@ -7,30 +7,30 @@
 // All Rights Reserved.
 //
 
-#include "Vault.h"
+#include <CoinDB/Vault.h>
+#include <CoinDB/Database.h>
 
-#include <CoinQ_script.h>
-#include <CoinQ_blocks.h>
+#include <CoinQ/CoinQ_script.h>
+#include <CoinQ/CoinQ_blocks.h>
 
-#include "Database.h"
 
 #include "../odb/Schema-odb.hxx"
 
 #include <odb/transaction.hxx>
 #include <odb/session.hxx>
 
-#include <hash.h>
-#include <MerkleTree.h>
-#include <secp256k1.h>
-#include <BigInt.h>
+#include <CoinClasses/hash.h>
+#include <CoinClasses/MerkleTree.h>
+#include <CoinClasses/secp256k1.h>
+#include <CoinClasses/BigInt.h>
+
+#include <logger/logger.h>
 
 #include <stdutils/stringutils.h>
 
 #include <sstream>
 #include <fstream>
 #include <algorithm>
-
-#include <logger.h>
 
 // support for boost serialization
 #include <boost/archive/text_oarchive.hpp>

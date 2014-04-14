@@ -7,19 +7,19 @@
 // All Rights Reserved.
 //
 
-#include "Schema.h"
+#include <CoinDB/Schema.h>
 
 #include <stdutils/stringutils.h>
 
-#include <uchar_vector.h>
-#include <hash.h>
-#include <CoinNodeData.h>
-#include <hdkeys.h>
-#include <aes.h>
+#include <CoinClasses/uchar_vector.h>
+#include <CoinClasses/hash.h>
+#include <CoinClasses/CoinNodeData.h>
+#include <CoinClasses/hdkeys.h>
+#include <CoinClasses/aes.h>
 
-#include <CoinQ_script.h>
+#include <CoinQ/CoinQ_script.h>
 
-#include <logger.h>
+#include <logger/logger.h>
 
 //#define ENABLE_CRYPTO
 
