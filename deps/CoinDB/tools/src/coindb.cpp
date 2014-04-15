@@ -15,7 +15,6 @@
 #include <odb/transaction.hxx>
 
 #include <Vault.h>
-#include <Schema-odb.hxx>
 
 #include <CoinCore/Base58Check.h>
 #include <CoinCore/random.h>
