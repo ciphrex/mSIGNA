@@ -1023,9 +1023,11 @@ std::shared_ptr<SigningScript> Vault::issueSigningScript(const std::string& acco
 
 std::shared_ptr<SigningScript> Vault::issueAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> bin, const std::string& label)
 {
+    bool refill = false;
     try
     {
         refillAccountBinPool_unwrapped(bin);
+        refill = true;
     }
     catch (const KeychainChainCodeLockedException& e)
     {
@@ -1047,7 +1049,9 @@ std::shared_ptr<SigningScript> Vault::issueAccountBinSigningScript_unwrapped(std
     script->label(label);
     script->status(SigningScript::ISSUED);
     db_->update(script);
-    db_->update(script->account_bin());
+    bin->markSigningScriptIssued(script->index());
+    db_->update(bin);
+    if (refill) { refillAccountBinPool_unwrapped(bin); }
     return script;
 }
 
@@ -1071,8 +1075,27 @@ void Vault::refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin)
 {
     unlockAccountBinChainCodes_unwrapped(bin);
 
-    typedef odb::query<ScriptCountView> count_query;
-    odb::result<ScriptCountView> count_result(db_->query<ScriptCountView>(count_query::AccountBin::id == bin->id() && count_query::SigningScript::status == SigningScript::UNUSED));
+    // get largest signing script index that is not unused
+    typedef odb::query<ScriptCountView> count_query_t;
+    odb::result<ScriptCountView> count_result(db_->query<ScriptCountView>(count_query_t::AccountBin::id == bin->id() && count_query_t::SigningScript::status != SigningScript::UNUSED));
+    unsigned long max_index = count_result.empty() ? 0 : count_result.begin()->max_index;
+
+    if (max_index > 0)
+    {
+        // update any unused signing scripts with smaller index to issued status
+        typedef odb::query<SigningScriptView> script_query_t;
+        odb::result<SigningScriptView> script_result(db_->query<SigningScriptView>(script_query_t::AccountBin::id == bin->id() &&
+            script_query_t::SigningScript::status == SigningScript::UNUSED && script_query_t::SigningScript::index < max_index));
+        for (auto& script_view: script_result)
+        {
+            std::shared_ptr<SigningScript> script(db_->load<SigningScript>(script_view.id));
+            script->status(SigningScript::ISSUED);
+            db_->update(script);
+        }
+    }
+
+    // refill remaining pool
+    count_result = db_->query<ScriptCountView>(count_query_t::AccountBin::id == bin->id() && count_query_t::SigningScript::status == SigningScript::UNUSED);
     uint32_t count = count_result.empty() ? 0 : count_result.begin().load()->count;
 
     uint32_t unused_pool_size = bin->account() ? bin->account()->unused_pool_size() : DEFAULT_UNUSED_POOL_SIZE;
@@ -1499,10 +1522,6 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
         }
     }
 
-    // Stored for later update
-    std::set<std::shared_ptr<SigningScript>> scripts;
-    std::set<std::shared_ptr<AccountBin>> account_bins;
-
     // Check outputs
     bool sent_to_vault = false; // whether any of the outputs are spendable by accounts in vault
     uint64_t output_total = 0;
@@ -1534,8 +1553,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                 {
                     script->status(SigningScript::USED);
                 }
-                scripts.insert(script);
-                account_bins.insert(script->account_bin());
+                db_->update(script);
                 try
                 {
                     refillAccountBinPool_unwrapped(script->account_bin());
@@ -1548,7 +1566,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 
             case SigningScript::ISSUED:
                 script->status(SigningScript::USED);
-                scripts.insert(script);
+                db_->update(script);
                 break;
 
             default:
@@ -1589,9 +1607,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
         for (auto& txin:        tx->txins())    { db_->persist(txin);       }
         for (auto& txout:       tx->txouts())   { db_->persist(txout);      }
 
-        // Update other affected objects
-        for (auto& script:      scripts)        { db_->update(script);      }
-        for (auto& account_bin: account_bins)   { db_->update(account_bin); }
+        // Update other affected txouts
         for (auto& txout:       updated_txouts) { db_->update(txout);       }
 
         if (tx->status() >= Tx::SENT) updateConfirmations_unwrapped(tx);

@@ -1115,6 +1115,9 @@ struct ScriptCountView
 {
     #pragma db column("count(" + SigningScript::id_ + ")")
     uint32_t count;
+
+    #pragma db column("max(" + SigningScript::index_ + ")")
+    unsigned long max_index;
 };
 
 const std::string EMPTY_STRING = "";
