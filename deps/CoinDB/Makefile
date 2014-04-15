@@ -70,6 +70,12 @@ else ifeq ($(OS), mingw64)
 
     EXE_EXT = .exe
 
+    BOOST_SUFFIX = -mt-s
+    BOOST_THREAD_SUFFIX = _win32
+
+    PLATFORM_LIBS += \
+        -lgdi32
+
 else ifeq ($(OS), osx)
     CXX = clang++
     CC = clang
@@ -94,7 +100,7 @@ LIBS = \
     -lboost_system$(BOOST_SUFFIX) \
     -lboost_filesystem$(BOOST_SUFFIX) \
     -lboost_regex$(BOOST_SUFFIX) \
-    -lboost_thread$(BOOST_SUFFIX) \
+    -lboost_thread$(BOOST_THREAD_SUFFIX)$(BOOST_SUFFIX) \
     -lboost_serialization$(BOOST_SUFFIX) \
     -lcrypto \
     -lodb-sqlite \
@@ -159,7 +165,7 @@ obj/SynchedVault.o: src/SynchedVault.cpp src/SynchedVault.h src/VaultExceptions.
 # coindb command line tool
 #
 tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp tools/src/formatting.h lib/libCoinDB.a
-	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS)
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS) $(PLATFORM_LIBS)
 
 #
 # SynchedVault unit test
