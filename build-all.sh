@@ -29,11 +29,26 @@ do
         BUILD_TYPE=release
     ;;
 
+    tools_only)
+        tools_only=true
+    ;;
+
     *)
         OPTIONS="$OPTIONS $OPTION"
     esac
 done
 
+if [[ -z "$OS" ]]
+then
+    UNAME_S=$(uname -s)
+    if [[ "$UNAME_S" == "Linux" ]]
+    then
+        OS=linux
+    elif [[ "$UNAME_S" == "Darwin" ]]
+    then
+        OS=osx
+    fi
+fi
 
 # Set target platform parameters
 case $OS in
@@ -108,6 +123,20 @@ SYSROOT=../../sysroot make install
 cd ../CoinDB
 make lib OS=$OS $OPTIONS
 SYSROOT=../../sysroot make install_lib
+
+if [ $tools_only ]
+then
+    make tools OS=$OS $OPTIONS
+    set +x
+    echo
+    echo "All dependencies built."
+    echo
+    echo "To install coindb, run the following commands:"
+    echo "  $ cd deps/CoinDB"
+    echo "  $ sudo make install_tools"
+    echo
+    exit
+fi
 
 cd $CURRENT_DIR
 ${QMAKE_PATH}qmake $SPEC CONFIG+=$BUILD_TYPE && make $OPTIONS
