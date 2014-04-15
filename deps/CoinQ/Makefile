@@ -11,9 +11,12 @@ ifndef SYSROOT
     SYSROOT = /usr/local
 endif
 
-INCLUDE_PATH = \
-    -Isrc \
-    -I$(LOCAL_SYSROOT)/include
+INCLUDE_PATH += \
+    -Isrc
+
+ifneq ($(wildcard $(LOCAL_SYSROOT)/include),)
+    INCLUDE_PATH += -I$(LOCAL_SYSROOT)/include
+endif
 
 ifndef OS
     UNAME_S := $(shell uname -s)
