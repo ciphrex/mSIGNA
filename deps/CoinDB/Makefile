@@ -16,19 +16,24 @@ endif
 
 CLI = ../cli
 
-INCLUDE_PATH = \
+INCLUDE_PATH += \
     -Isrc \
-    -I$(LOCAL_SYSROOT)/include \
     -I$(CLI)/src
 
-ODB_INCLUDE_PATH = \
-    -Isrc \
-    -I$(LOCAL_SYSROOT)/include
+ODB_INCLUDE_PATH += \
+    -Isrc
 
-EXES_INCLUDE_PATH = \
-    $(INCLUDE_PATH) \
-    -Iodb
+ifneq ($(wildcard $(LOCAL_SYSROOT)/include),)
+    INCLUDE_PATH += -I$(LOCAL_SYSROOT)/include
+    ODB_INCLUDE_PATH += -I$(LOCAL_SYSROOT)/include
+endif
 
+LIB_PATH += \
+    -Llib
+
+ifneq ($(wildcard $(LOCAL_SYSROOT)/lib),)
+    LIB_PATH += -L$(LOCAL_SYSROOT)/lib
+endif
 
 ifndef OS
     UNAME_S := $(shell uname -s)
@@ -82,7 +87,6 @@ else ifneq ($(MAKECMDGOALS), clean)
 endif
 
 LIBS = \
-    -L$(LOCAL_SYSROOT)/lib \
     -lCoinDB \
     -lCoinQ \
     -lCoinCore \
@@ -155,13 +159,13 @@ obj/SynchedVault.o: src/SynchedVault.cpp src/SynchedVault.h src/VaultExceptions.
 # coindb command line tool
 #
 tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp tools/src/formatting.h lib/libCoinDB.a
-	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(EXES_INCLUDE_PATH) $< -o $@ $(LIBS)
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS)
 
 #
 # SynchedVault unit test
 #
 tests/build/SynchedVaultTest$(EXE_EXT): tests/src/SynchedVaultTest.cpp lib/libCoinDB.a
-	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(EXES_INCLUDE_PATH) $< -o $@ $(LIBS) $(PLATFORM_LIBS)
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS) $(PLATFORM_LIBS)
 
 install: install_lib install_tools
 
