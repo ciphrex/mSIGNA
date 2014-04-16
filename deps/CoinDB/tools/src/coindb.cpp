@@ -305,7 +305,7 @@ cli::result_t cmd_exportaccount(const cli::params_t& params)
     if (params.size() > 3 && !params[3].empty())
         vault.unlockChainCodes(sha256_2(params[3]));
 
-    std::string output_file = params.size() > 4 ? params[4] : (params[1] + ".account");
+    std::string output_file = params.size() > 4 ? params[4] : (params[1] + ".acct");
     vault.exportAccount(params[1], output_file, true, exportChainCodeUnlockKey);
 
     stringstream ss;
@@ -802,7 +802,7 @@ int main(int argc, char* argv[])
     shell.add(command(&cmd_renameaccount, "renameaccount", "rename an account", command::params(3, "db file", "old name", "new name")));
     shell.add(command(&cmd_accountinfo, "accountinfo", "display account information", command::params(2, "db file", "account name")));
     shell.add(command(&cmd_listaccounts, "listaccounts", "display list of accounts", command::params(1, "db file")));
-    shell.add(command(&cmd_exportaccount, "exportaccount", "export account to file", command::params(2, "db file", "account name"), command::params(3, "export chain code passphrase", "native chain code passphrase", "output file = *.account")));
+    shell.add(command(&cmd_exportaccount, "exportaccount", "export account to file", command::params(2, "db file", "account name"), command::params(3, "export chain code passphrase", "native chain code passphrase", "output file = *.acct")));
     shell.add(command(&cmd_importaccount, "importaccount", "import account from file", command::params(2, "db file", "account file"), command::params(2, "import chain code passphrase", "native chain code passphrase"))); 
     shell.add(command(&cmd_newaccountbin, "newaccountbin", "add a new account bin", command::params(3, "db file", "account name", "bin name")));
     shell.add(command(&cmd_issuescript, "issuescript", "issue a new signing script", command::params(2, "db file", "account name"), command::params(1, (std::string("bin name = ") + DEFAULT_BIN_NAME).c_str())));
