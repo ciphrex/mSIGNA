@@ -42,9 +42,9 @@ obj/logger.o: src/logger.cpp src/logger.h
 
 install:
 	-mkdir -p $(SYSROOT)/include/logger
-	-cp src/logger.h $(SYSROOT)/include/logger/
+	-rsync -u src/logger.h $(SYSROOT)/include/logger/
 	-mkdir -p $(SYSROOT)/lib
-	-cp lib/liblogger.a $(SYSROOT)/lib/
+	-rsync -u lib/liblogger.a $(SYSROOT)/lib/
 
 remove:
 	-rm -rf $(SYSROOT)/include/logger

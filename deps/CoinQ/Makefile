@@ -79,9 +79,9 @@ obj/%.o: src/%.cpp
 
 install:
 	-mkdir -p $(SYSROOT)/include/CoinQ
-	-cp src/*.h  $(SYSROOT)/include/CoinQ/
+	-rsync -u src/*.h  $(SYSROOT)/include/CoinQ/
 	-mkdir -p $(SYSROOT)/lib
-	-cp lib/libCoinQ.a $(SYSROOT)/lib/
+	-rsync -u lib/libCoinQ.a $(SYSROOT)/lib/
 
 remove:
 	-rm -rf $(SYSROOT)/include/CoinQ

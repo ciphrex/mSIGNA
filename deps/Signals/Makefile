@@ -6,7 +6,7 @@ all:
 
 install:
 	-mkdir $(SYSROOT)/include/Signals
-	-cp src/Signals.h $(SYSROOT)/include/Signals/
+	-rsync -u src/Signals.h $(SYSROOT)/include/Signals/
 
 remove:
 	-rm -rf $(SYSROOT)/include/Signals

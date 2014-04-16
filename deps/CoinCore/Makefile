@@ -108,13 +108,13 @@ src/hashfunc/obj/%.o: src/hashfunc/%.c src/hashfunc/sph_%.h src/hashfunc/sph_typ
 
 install:
 	-mkdir -p $(SYSROOT)/include/CoinCore
-	-cp src/*.h $(SYSROOT)/include/CoinCore/
+	-rsync -u src/*.h $(SYSROOT)/include/CoinCore/
 	-mkdir -p $(SYSROOT)/include/CoinCore/hashfunc
-	-cp src/hashfunc/*.h $(SYSROOT)/include/CoinCore/hashfunc/
+	-rsync -u src/hashfunc/*.h $(SYSROOT)/include/CoinCore/hashfunc/
 	-mkdir -p $(SYSROOT)/include/CoinCore/scrypt
-	-cp src/scrypt/*.h $(SYSROOT)/include/CoinCore/scrypt/
+	-rsync -u src/scrypt/*.h $(SYSROOT)/include/CoinCore/scrypt/
 	-mkdir -p $(SYSROOT)/lib
-	-cp lib/libCoinCore.a $(SYSROOT)/lib/
+	-rsync -u lib/libCoinCore.a $(SYSROOT)/lib/
 
 remove:
 	-rm -rf $(SYSROOT)/include/CoinCore

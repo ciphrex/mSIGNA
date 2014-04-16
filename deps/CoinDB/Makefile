@@ -187,13 +187,13 @@ install: install_lib install_tools
 
 install_lib:
 	-mkdir -p $(SYSROOT)/include/CoinDB
-	-cp src/*.h $(SYSROOT)/include/CoinDB/
+	-rsync -u src/*.h $(SYSROOT)/include/CoinDB/
 	-mkdir -p $(SYSROOT)/lib
-	-cp lib/libCoinDB.a $(SYSROOT)/lib/
+	-rsync -u lib/libCoinDB.a $(SYSROOT)/lib/
 
 install_tools:
 	-mkdir -p $(SYSROOT)/bin
-	-cp $(TOOLS) $(SYSROOT)/bin/
+	-rsync -u $(TOOLS) $(SYSROOT)/bin/
 
 remove: remove_lib remove_tools
 
