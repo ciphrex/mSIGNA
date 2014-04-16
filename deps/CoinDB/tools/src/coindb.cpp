@@ -489,14 +489,20 @@ cli::result_t cmd_importbin(const cli::params_t& params)
 // Tx operations
 cli::result_t cmd_txinfo(const cli::params_t& params)
 {
-    bool raw = params.size() > 2 ? params[2] == "true" : false;
-
     Vault vault(params[0], false);
-    std::shared_ptr<Tx> tx = vault.getTx(uchar_vector(params[1]));
+    std::shared_ptr<Tx> tx;
+    bytes_t hash = uchar_vector(params[1]);
+    if (hash.size() == 32)
+    {
+        tx = vault.getTx(hash);
+    }
+    else
+    {
+        unsigned long tx_id = strtoul(params[1].c_str(), NULL, 0);
+        tx = vault.getTx(tx_id);
+    }
 
-    if (raw) return uchar_vector(tx->raw()).getHex();
-
-    bytes_t hash = tx->status() == Tx::UNSIGNED ? tx->unsigned_hash() : tx->hash();
+    hash = tx->status() == Tx::UNSIGNED ? tx->unsigned_hash() : tx->hash();
 
     stringstream ss;
     ss << "status:      " << Tx::getStatusString(tx->status()) << endl
@@ -514,6 +520,24 @@ cli::result_t cmd_txinfo(const cli::params_t& params)
         ss << endl << formattedTxOut(txout);
     
     return ss.str();
+}
+
+cli::result_t cmd_rawtx(const cli::params_t& params)
+{
+    Vault vault(params[0], false);
+    std::shared_ptr<Tx> tx;
+    bytes_t hash = uchar_vector(params[1]);
+    if (hash.size() == 32)
+    {
+        tx = vault.getTx(hash);
+    }
+    else
+    {
+        unsigned long tx_id = strtoul(params[1].c_str(), NULL, 0);
+        tx = vault.getTx(tx_id);
+    }
+
+    return uchar_vector(tx->raw()).getHex();
 }
 
 cli::result_t cmd_insertrawtx(const cli::params_t& params)
@@ -794,12 +818,13 @@ int main(int argc, char* argv[])
     shell.add(command(&cmd_importbin, "importbin", "import account bin from file", command::params(2, "db file", "bin file"), command::params(1, "import chain code passphrase")));
 
     // Tx operations
-    shell.add(command(&cmd_txinfo, "txinfo", "display transaction information", command::params(2, "db file", "tx hash"), command::params(1, "raw hex = false")));
+    shell.add(command(&cmd_txinfo, "txinfo", "display transaction information", command::params(2, "db file", "tx hash or id")));
+    shell.add(command(&cmd_rawtx, "rawtx", "get transaction in raw hex", command::params(2, "db file", "tx hash or id")));
     shell.add(command(&cmd_insertrawtx, "insertrawtx", "insert a raw hex transaction into database", command::params(2, "db file", "tx raw hex")));
     shell.add(command(&cmd_newrawtx, "newrawtx", "create a new raw transaction", command::params(4, "db file", "account name", "address 1", "value 1"), command::params(6, "address 2", "value 2", "...", "fee = 0", "version = 1", "locktime = 0")));
     shell.add(command(&cmd_deletetx, "deletetx", "delete a transaction", command::params(2, "db file", "tx hash")));
     shell.add(command(&cmd_signingrequest, "signingrequest", "gets signing request for transaction with missing signatures", command::params(2, "db file", "tx hash")));
-    shell.add(command(&cmd_signtx, "signtx", "add signatures to transaction for specified keychain", command::params(4, "db file", "tx hash", "keychain name", "passphrase")));
+    shell.add(command(&cmd_signtx, "signtx", "add signatures to transaction for specified keychain", command::params(4, "db file", "tx hash or id", "keychain name", "passphrase")));
 
     // Blockchain operations
     shell.add(command(&cmd_bestheight, "bestheight", "display the best block height", command::params(1, "db file")));

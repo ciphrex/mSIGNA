@@ -1369,6 +1369,25 @@ std::shared_ptr<Tx> Vault::getTx_unwrapped(const bytes_t& hash) const
     return tx;
 }
 
+std::shared_ptr<Tx> Vault::getTx(unsigned long tx_id) const
+{
+    LOGGER(trace) << "Vault::getTx(" << tx_id << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    return getTx_unwrapped(tx_id);
+}
+
+std::shared_ptr<Tx> Vault::getTx_unwrapped(unsigned long tx_id) const
+{
+    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::id == tx_id));
+    if (r.empty()) throw TxNotFoundException();
+
+    std::shared_ptr<Tx> tx(r.begin().load());
+    return tx;
+}
+
 std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx)
 {
     LOGGER(trace) << "Vault::insertTx(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
