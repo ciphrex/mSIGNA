@@ -563,7 +563,19 @@ cli::result_t cmd_insertrawtx(const cli::params_t& params)
     Vault vault(params[0], false);
 
     std::shared_ptr<Tx> tx(new Tx());
-    tx->set(uchar_vector(params[1]));
+    string rawhex;
+    if (params[1].size() > 3 && params[1].substr(params[1].size() - 3, 3) == ".tx")
+    {
+        ifstream ifs(params[1], ifstream::in);
+        if (ifs.bad()) throw std::runtime_error("Error opening file.");
+        ifs >> rawhex;
+        if (!ifs.good()) throw std::runtime_error("Error reading file.");
+    }
+    else
+    {
+        rawhex = params[1];
+    }
+    tx->set(uchar_vector(rawhex));
     tx = vault.insertTx(tx);
 
     stringstream ss;
