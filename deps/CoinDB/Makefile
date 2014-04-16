@@ -73,7 +73,10 @@ else ifeq ($(OS), mingw64)
     BOOST_THREAD_SUFFIX = _win32
 
     PLATFORM_LIBS += \
-        -lgdi32
+        -static-libgcc -static-libstdc++ \
+        -lgdi32 \
+        -lws2_32 \
+        -lmswsock
 
 else ifeq ($(OS), osx)
     ifndef SYSROOT
