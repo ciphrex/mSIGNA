@@ -609,7 +609,20 @@ cli::result_t cmd_signtx(const cli::params_t& params)
     stringstream ss;
     std::vector<std::string> keychain_names;
     keychain_names.push_back(params[2]);
-    if (vault.signTx(uchar_vector(params[1]), keychain_names, true))
+
+    bytes_t unsigned_hash = uchar_vector(params[1]);
+    std::shared_ptr<Tx> tx;
+    if (unsigned_hash.size() == 32)
+    {
+        tx = vault.signTx(unsigned_hash, keychain_names, true);
+    }
+    else
+    {
+        unsigned long tx_id = strtoul(params[1].c_str(), NULL, 0);
+        tx = vault.signTx(tx_id, keychain_names, true);
+    }
+
+    if (tx)
     {
         ss << "Signatures added.";
     }

@@ -1790,6 +1790,27 @@ std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, std::vector<std:
     return sigcount ? tx : nullptr;
 }
 
+std::shared_ptr<Tx> Vault::signTx(unsigned long tx_id, std::vector<std::string>& keychain_names, bool update)
+{
+    LOGGER(trace) << "Vault::signTx(" << tx_id << ", [" << stdutils::delimited_list(keychain_names, ", ") << "], " << (update ? "update" : "no update") << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+
+    odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::id == tx_id));
+    if (tx_r.empty()) throw TxNotFoundException();
+    std::shared_ptr<Tx> tx(tx_r.begin().load());
+
+    unsigned int sigcount = signTx_unwrapped(tx, keychain_names);
+    if (sigcount && update)
+    {
+        updateTx_unwrapped(tx);
+        t.commit();
+    }
+    return sigcount ? tx : nullptr;
+}
+
 unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::string>& keychain_names)
 {
     using namespace CoinQ::Script;

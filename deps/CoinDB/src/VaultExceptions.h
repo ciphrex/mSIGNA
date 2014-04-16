@@ -163,7 +163,7 @@ protected:
 class TxNotFoundException : public TxException
 {
 public:
-    explicit TxNotFoundException(const bytes_t& hash) : TxException("Transaction not found.", hash) { }
+    explicit TxNotFoundException(const bytes_t& hash = bytes_t()) : TxException("Transaction not found.", hash) { }
 };
 
 // BLOCK HEADER EXCEPTIONS
