@@ -91,10 +91,11 @@ public:
         return tab > mintab ? tab : mintab;
     }
  
-    std::string getHelpInfo(unsigned int tab) const
+    std::string getHelpInfo(unsigned int tab, unsigned int margin, bool singleline) const
     {
         std::stringstream ss;
-        ss << std::left << std::setw(tab) << getHelpTemplate() << cmddesc_;
+        if (singleline) { ss << std::left << std::setw(tab + margin) << getHelpTemplate() << cmddesc_; }
+        else            { ss << std::right << std::setw(margin) << " " << getHelpTemplate() << std::endl << std::right << std::setw(margin * 2 + 2) << "- " << cmddesc_; } 
         return ss.str();
     }
 
@@ -153,7 +154,7 @@ inline result_t Shell::exec(const std::string& cmdname, const params_t& params)
     }
     else
     {
-        return it->second.getHelpInfo(it->second.getMinHelpTab() + 4);
+        return it->second.getHelpInfo(it->second.getMinHelpTab(), 4, false);
     }
 }
 
@@ -194,7 +195,7 @@ inline int Shell::exec(int argc, char** argv)
         }
         else
         {
-            std::cout << it->second.getHelpInfo(it->second.getMinHelpTab() + 4) << std::endl;
+            std::cout << it->second.getHelpInfo(it->second.getMinHelpTab(), 4, false) << std::endl;
         }
     }
     catch (const std::exception& e) {
@@ -212,7 +213,7 @@ inline result_t Shell::help()
     out << "List of commands:";
     command_map_t::iterator it = command_map_.begin();
     for (; it != command_map_.end(); ++it) {
-        out << std::endl << "  " << it->second.getHelpInfo(tab + 4);
+        out << std::endl << it->second.getHelpInfo(tab, 4, false) << std::endl;
     }
     return out.str();
 }
