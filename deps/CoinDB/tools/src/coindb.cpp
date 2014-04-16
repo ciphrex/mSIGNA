@@ -23,6 +23,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <ctime>
 #include <functional>
 
@@ -524,6 +525,8 @@ cli::result_t cmd_txinfo(const cli::params_t& params)
 
 cli::result_t cmd_rawtx(const cli::params_t& params)
 {
+    bool to_file = params.size() > 2 && params[2] == "true";
+
     Vault vault(params[0], false);
     std::shared_ptr<Tx> tx;
     bytes_t hash = uchar_vector(params[1]);
@@ -537,7 +540,22 @@ cli::result_t cmd_rawtx(const cli::params_t& params)
         tx = vault.getTx(tx_id);
     }
 
-    return uchar_vector(tx->raw()).getHex();
+    std::string rawhex = uchar_vector(tx->raw()).getHex();
+    if (to_file)
+    {
+        string filename = uchar_vector(tx->hash()).getHex() + ".tx";
+        ofstream ofs(filename, ofstream::out);
+        ofs << rawhex;
+        ofs.close();
+
+        stringstream ss;
+        ss << "Exported raw transaction to " << filename;
+        return ss.str();
+    }
+    else
+    {
+        return rawhex;
+    }
 }
 
 cli::result_t cmd_insertrawtx(const cli::params_t& params)
@@ -819,7 +837,7 @@ int main(int argc, char* argv[])
 
     // Tx operations
     shell.add(command(&cmd_txinfo, "txinfo", "display transaction information", command::params(2, "db file", "tx hash or id")));
-    shell.add(command(&cmd_rawtx, "rawtx", "get transaction in raw hex", command::params(2, "db file", "tx hash or id")));
+    shell.add(command(&cmd_rawtx, "rawtx", "get transaction in raw hex", command::params(2, "db file", "tx hash or id"), command::params(1, "export to file = false")));
     shell.add(command(&cmd_insertrawtx, "insertrawtx", "insert a raw hex transaction into database", command::params(2, "db file", "tx raw hex")));
     shell.add(command(&cmd_newrawtx, "newrawtx", "create a new raw transaction", command::params(4, "db file", "account name", "address 1", "value 1"), command::params(6, "address 2", "value 2", "...", "fee = 0", "version = 1", "locktime = 0")));
     shell.add(command(&cmd_deletetx, "deletetx", "delete a transaction", command::params(2, "db file", "tx hash")));
