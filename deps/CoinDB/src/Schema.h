@@ -1359,4 +1359,12 @@ struct ConfirmedTxView
 
 }
 
+BOOST_CLASS_VERSION(CoinDB::TxIn, 1)
+BOOST_CLASS_VERSION(CoinDB::TxOut, 1)
+BOOST_CLASS_VERSION(CoinDB::Tx, 1)
+
+BOOST_CLASS_VERSION(CoinDB::Keychain, 1)
+BOOST_CLASS_VERSION(CoinDB::AccountBin, 1)
+BOOST_CLASS_VERSION(CoinDB::Account, 1)
+
 #endif // COINDB_SCHEMA_H
