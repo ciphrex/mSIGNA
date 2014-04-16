@@ -417,6 +417,26 @@ cli::result_t cmd_history(const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_unsigned(const cli::params_t& params)
+{
+    std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
+    if (account_name == "@all") account_name = "";
+
+    std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
+    if (bin_name == "@all") bin_name = "";
+
+    bool hide_change = params.size() > 3 ? params[3] == "true" : true;
+    
+    Vault vault(params[0], false);
+    uint32_t best_height = vault.getBestHeight();
+    vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name, TxOut::ROLE_BOTH, TxOut::BOTH, Tx::UNSIGNED, hide_change);
+    stringstream ss;
+    ss << formattedTxOutViewHeader();
+    for (auto& txOutView: txOutViews)
+        ss << endl << formattedTxOutView(txOutView, best_height);
+    return ss.str();
+}
+
 cli::result_t cmd_refillaccountpool(const cli::params_t& params)
 {
     Vault vault(params[0], false);
@@ -722,7 +742,7 @@ int main(int argc, char* argv[])
     INIT_LOGGER("coindb.log");
 
     using namespace cli;
-    Shell shell("CoinDB by Eric Lombrozo v0.2.6");
+    Shell shell("CoinDB by Eric Lombrozo v0.2.7");
 
     // Global operations
     shell.add(command(&cmd_create, "create", "create a new vault", command::params(1, "db file")));
@@ -752,6 +772,7 @@ int main(int argc, char* argv[])
     shell.add(command(&cmd_listscripts, "listscripts", "display list of signing scripts (flags: UNUSED=1, CHANGE=2, PENDING=4, RECEIVED=8, CANCELED=16)", command::params(1, "db file"),
         command::params(3, "account name = @all", "bin name = @all", "flags = PENDING | RECEIVED")));
     shell.add(command(&cmd_history, "history", "display transaction history", command::params(1, "db file"), command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
+    shell.add(command(&cmd_unsigned, "unsigned", "display unsigned transactions", command::params(1, "db file"), command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
     shell.add(command(&cmd_refillaccountpool, "refillaccountpool", "refill signing script pool for account", command::params(2, "db file", "account name")));
 
     // Account bin operations

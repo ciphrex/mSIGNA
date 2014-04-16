@@ -167,6 +167,7 @@ inline std::string formattedTxOutViewHeader()
        << left  << setw(36) << "address" << " | "
        << right << setw(6)  << "confs" << " | "
        << left  << setw(10) << "tx status" << " | "
+       << right << setw(6)  << "tx id" << " | "
        << left  << setw(64) << "tx hash";
     ss << " ";
 
@@ -198,6 +199,7 @@ inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned in
        << left  << setw(36) << getAddressFromScript(view.script) << " | "
        << right << setw(6)  << confirmations << " | "
        << left  << setw(10) << Tx::getStatusString(view.tx_status) << " | "
+       << right << setw(6)  << view.tx_id << " | "
        << left  << setw(64) << uchar_vector(tx_hash).getHex();
     ss << " ";
     return ss.str();
