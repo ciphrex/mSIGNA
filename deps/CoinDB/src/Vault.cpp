@@ -768,7 +768,6 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
                 ss << keychain_name << append_num++;
                 keychain->name(ss.str());
             }
-
             db_->persist(keychain);
         }
         else
@@ -793,6 +792,7 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
     // Create signing scripts and keys and persist account bins
     for (auto& bin: account->bins())
     {
+        bin->makeImport();
         db_->persist(bin);
 
         SigningScript::status_t status = bin->isChange() ? SigningScript::CHANGE : SigningScript::ISSUED;
@@ -802,7 +802,7 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filep
             std::shared_ptr<SigningScript> script = bin->newSigningScript();
             script->status(status);
             for (auto& key: script->keys()) { db_->persist(key); }
-            db_->persist(script); 
+            db_->persist(script);
         }
         for (unsigned int i = 0; i < account->unused_pool_size(); i++)
         {

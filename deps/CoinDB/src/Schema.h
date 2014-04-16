@@ -288,6 +288,7 @@ public:
     bool isDefault() const { return index_ == DEFAULT_INDEX; }
 
     void makeExport(const std::string& name);
+    void makeImport();
 
     void updateHash();
     const bytes_t& hash() const { return hash_; }

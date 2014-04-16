@@ -489,6 +489,12 @@ void AccountBin::makeExport(const std::string& name)
     account_.reset();
 }
 
+void AccountBin::makeImport()
+{
+    updateHash();
+    keychains_.clear();
+}
+
 
 /*
  * class SigningScript
