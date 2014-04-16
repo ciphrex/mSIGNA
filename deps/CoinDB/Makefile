@@ -10,10 +10,6 @@ endif
 
 LOCAL_SYSROOT = ../../sysroot
 
-ifndef SYSROOT
-    SYSROOT = /usr/local
-endif
-
 CLI = ../cli
 
 INCLUDE_PATH += \
@@ -45,51 +41,62 @@ ifndef OS
 endif
 
 ifeq ($(OS), linux)
+    ifndef SYSROOT
+        SYSROOT = /usr/local
+    endif
+
     CXX = g++
     CC = gcc
     CXX_FLAGS += -Wno-unknown-pragmas -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
-
     ARCHIVER = ar
 
     PLATFORM_LIBS += \
         -lpthread
 
 else ifeq ($(OS), mingw64)
+    ifndef SYSROOT
+        SYSROOT = /usr/x86_64-w64-mingw32
+    endif
+
     CXX =  x86_64-w64-mingw32-g++
     CC =  x86_64-w64-mingw32-gcc
     CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
+    ARCHIVER = x86_64-w64-mingw32-ar
 
-    MINGW64_ROOT = /usr/x86_64-w64-mingw32
-
-    INCLUDE_PATH += -I$(MINGW64_ROOT)/include
+    INCLUDE_PATH += -I$(SYSROOT)/include
 
     # ODB_INCLUDE_PATH must not contain windows system headers
-    ODB_INCLUDE_PATH += -I$(MINGW64_ROOT)/local/include
-
-    ARCHIVER = x86_64-w64-mingw32-ar
+    ODB_INCLUDE_PATH += -I$(SYSROOT)/local/include
 
     EXE_EXT = .exe
 
-    BOOST_SUFFIX = -mt-s
     BOOST_THREAD_SUFFIX = _win32
 
     PLATFORM_LIBS += \
         -lgdi32
 
 else ifeq ($(OS), osx)
+    ifndef SYSROOT
+        SYSROOT = /usr/local
+    endif
+
     CXX = clang++
     CC = clang
     CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
-
-    INCLUDE_PATH += -I/usr/local/include
-    ODB_INCLUDE_PATH += -I/usr/local/include
-
-    BOOST_SUFFIX = -mt
-
     ARCHIVER = ar
+
+    INCLUDE_PATH += -I$(SYSROOT)/include
+    ODB_INCLUDE_PATH += -I$(SYSROOT)/include
 
 else ifneq ($(MAKECMDGOALS), clean)
     $(error OS must be set to linux, mingw64, or osx)
+endif
+
+# Detect boost library filename suffix
+ifneq ($(wildcard $(SYSROOT)/lib/libboost_system-mt.*),)
+    BOOST_SUFFIX = -mt
+else ifneq ($(wildcard $(SYSROOT)/lib/libboost_system-mt-s.*),)
+    BOOST_SUFFIX = -mt-s
 endif
 
 LIBS = \
