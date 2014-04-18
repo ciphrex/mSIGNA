@@ -46,7 +46,7 @@ private slots:
     void signTx();
     void sendTx();
     void viewRawTx();
-    void copyTxIDToClipboard();
+    void copyTxHashToClipboard();
     void copyRawTxToClipboard();
     void viewTxOnWeb();
     void deleteTx();
@@ -65,7 +65,7 @@ private:
     QAction* signTxAction;
     QAction* sendTxAction;
     QAction* viewRawTxAction;
-    QAction* copyTxIDToClipboardAction;
+    QAction* copyTxHashToClipboardAction;
     QAction* copyRawTxToClipboardAction;
     QAction* viewTxOnWebAction;
     QAction* deleteTxAction;

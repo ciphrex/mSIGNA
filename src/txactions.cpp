@@ -64,7 +64,7 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
             viewTxOnWebAction->setEnabled(false);
         }
 
-        copyTxIDToClipboardAction->setEnabled(true);
+        copyTxHashToClipboardAction->setEnabled(true);
         copyRawTxToClipboardAction->setEnabled(true);
         viewRawTxAction->setEnabled(true);
         deleteTxAction->setEnabled(true);
@@ -72,7 +72,7 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
     else {
         signTxAction->setEnabled(false);
         sendTxAction->setEnabled(false);
-        copyTxIDToClipboardAction->setEnabled(false);
+        copyTxHashToClipboardAction->setEnabled(false);
         copyRawTxToClipboardAction->setEnabled(false);
         viewRawTxAction->setEnabled(false);
         viewTxOnWebAction->setEnabled(false);
@@ -117,12 +117,13 @@ void TxActions::viewRawTx()
     }
 }
 
-void TxActions::copyTxIDToClipboard()
+void TxActions::copyTxHashToClipboard()
 {
     try {
         std::shared_ptr<CoinDB::Tx> tx = txModel->getTx(currentRow);
         QClipboard* clipboard = QApplication::clipboard();
-        clipboard->setText(QString::fromStdString(uchar_vector(tx->hash()).getHex()));
+        bytes_t hash = tx->status() == CoinDB::Tx::UNSIGNED ? tx->unsigned_hash() : tx->hash();
+        clipboard->setText(QString::fromStdString(uchar_vector(hash).getHex()));
     }
     catch (const std::exception& e) {
         emit error(e.what());
@@ -188,9 +189,9 @@ void TxActions::createActions()
     viewRawTxAction->setEnabled(false);
     connect(viewRawTxAction, SIGNAL(triggered()), this, SLOT(viewRawTx()));
 
-    copyTxIDToClipboardAction = new QAction(tr("Copy Transaction ID To Clipboard"), this);
-    copyTxIDToClipboardAction->setEnabled(false);
-    connect(copyTxIDToClipboardAction, SIGNAL(triggered()), this, SLOT(copyTxIDToClipboard()));
+    copyTxHashToClipboardAction = new QAction(tr("Copy Transaction Hash To Clipboard"), this);
+    copyTxHashToClipboardAction->setEnabled(false);
+    connect(copyTxHashToClipboardAction, SIGNAL(triggered()), this, SLOT(copyTxHashToClipboard()));
 
     copyRawTxToClipboardAction = new QAction(tr("Copy Raw Transaction To Clipboard"), this);
     copyRawTxToClipboardAction->setEnabled(false);
@@ -212,7 +213,7 @@ void TxActions::createMenus()
     menu->addAction(sendTxAction);
     menu->addSeparator();
     //menu->addAction(viewRawTxAction);
-    menu->addAction(copyTxIDToClipboardAction);
+    menu->addAction(copyTxHashToClipboardAction);
     menu->addAction(copyRawTxToClipboardAction);
     menu->addAction(viewTxOnWebAction);
     menu->addSeparator();

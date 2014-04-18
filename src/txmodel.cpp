@@ -51,7 +51,7 @@ TxModel::TxModel(CoinDB::Vault* vault, const QString& accountName, QObject* pare
 void TxModel::initColumns()
 {
     QStringList columns;
-    columns << tr("Time") << tr("Description") << tr("Type") << tr("Amount") << tr("Fee") << tr("Balance") << tr("Confirmations") << tr("Address") << tr("Transaction ID");
+    columns << tr("Time") << tr("Description") << tr("Type") << tr("Amount") << tr("Fee") << tr("Balance") << tr("Confirmations") << tr("Address") << tr("Transaction Hash");
     setHorizontalHeaderLabels(columns);
 }
 
