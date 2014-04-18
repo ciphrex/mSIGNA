@@ -4,7 +4,7 @@
 //
 // mainwindow.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
@@ -189,8 +189,6 @@ private slots:
 private:
     // License accepted?
     bool licenseAccepted;
-
-    QString lastVaultDir;
 
     void createActions();
     void createMenus();

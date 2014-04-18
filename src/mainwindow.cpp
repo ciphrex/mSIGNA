@@ -4,7 +4,7 @@
 //
 // mainwindow.cpp
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
@@ -60,6 +60,9 @@
 
 // Coin Parameters
 #include "coinparams.h"
+
+// File System
+#include "docdir.h"
 
 boost::mutex repaintMutex;
 
@@ -310,13 +313,13 @@ void MainWindow::newVault(QString fileName)
         fileName = QFileDialog::getSaveFileName(
             this,
             tr("Create New Vault"),
-            lastVaultDir,
+            getDocDir(),
             tr("Vaults (*.vault)"));
     }
     if (fileName.isEmpty()) return;
 
     QFileInfo fileInfo(fileName);
-    lastVaultDir = fileInfo.dir().absolutePath();
+    setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
     try {
@@ -365,7 +368,7 @@ void MainWindow::openVault(QString fileName)
         fileName = QFileDialog::getOpenFileName(
             this,
             tr("Open Vault"),
-            lastVaultDir,
+            getDocDir(),
             tr("Vaults (*.vault)"));
     }
     if (fileName.isEmpty()) return;
@@ -373,7 +376,7 @@ void MainWindow::openVault(QString fileName)
     fileName = QFileInfo(fileName).absoluteFilePath();
 
     QFileInfo fileInfo(fileName);
-    lastVaultDir = fileInfo.dir().absolutePath();
+    setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
     try {
@@ -492,13 +495,13 @@ void MainWindow::importKeychain(QString fileName)
         fileName = QFileDialog::getOpenFileName(
             this,
             tr("Import Keychain"),
-            lastVaultDir,
+            getDocDir(),
             tr("Keychains") + "(*.priv *.pub)");
     }
     if (fileName.isEmpty()) return;
 
     QFileInfo fileInfo(fileName);
-    lastVaultDir = fileInfo.dir().absolutePath();
+    setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
     bool ok;
@@ -564,13 +567,13 @@ void MainWindow::exportKeychain(bool exportPrivate)
     fileName = QFileDialog::getSaveFileName(
         this,
         tr("Exporting ") + (exportPrivate ? tr("Private") : tr("Public")) + tr(" Keychain - ") + name,
-        lastVaultDir + "/" + fileName,
+        getDocDir() + "/" + fileName,
         tr("Keychains (*.priv *.pub)"));
 
     if (fileName.isEmpty()) return;
 
     QFileInfo fileInfo(fileName);
-    lastVaultDir = fileInfo.dir().absolutePath();
+    setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
     try {
@@ -767,14 +770,14 @@ void MainWindow::importAccount(QString fileName)
         fileName = QFileDialog::getOpenFileName(
             this,
             tr("Import Account"),
-            lastVaultDir,
+            getDocDir(),
             tr("Account") + "(*.acct)");
     }
 
     if (fileName.isEmpty()) return;
 
     QFileInfo fileInfo(fileName);
-    lastVaultDir = fileInfo.dir().absolutePath();
+    setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
     bool ok;
@@ -828,13 +831,13 @@ void MainWindow::exportAccount()
     fileName = QFileDialog::getSaveFileName(
         this,
         tr("Exporting Account - ") + name,
-        lastVaultDir + "/" + fileName,
+        getDocDir() + "/" + fileName,
         tr("Accounts (*.acct)"));
 
     if (fileName.isEmpty()) return;
 
     QFileInfo fileInfo(fileName);
-    lastVaultDir = fileInfo.dir().absolutePath();
+    setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
     try {
@@ -1809,7 +1812,7 @@ void MainWindow::loadSettings()
     autoConnect = settings.value("autoconnect", false).toBool();
     resyncHeight = settings.value("resyncheight", 0).toInt();
 
-    lastVaultDir = settings.value("lastvaultdir", getDefaultSettings().getDocumentDir()).toString();
+    setDocDir(settings.value("lastvaultdir", getDefaultSettings().getDocumentDir()).toString());
 }
 
 void MainWindow::saveSettings()
@@ -1823,7 +1826,7 @@ void MainWindow::saveSettings()
     settings.setValue("port", port);
     settings.setValue("autoconnect", autoConnect);
     settings.setValue("resyncheight", resyncHeight);
-    settings.setValue("lastvaultdir", lastVaultDir);
+    settings.setValue("lastvaultdir", getDocDir());
 }
 
 void MainWindow::clearSettings()

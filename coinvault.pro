@@ -51,6 +51,7 @@ HEADERS = \
     src/versioninfo.h \
     src/copyrightinfo.h \
     src/coinparams.h \
+    src/docdir.h \
     src/severitylogger.h \
     src/splashscreen.h \
     src/acceptlicensedialog.h \
@@ -85,6 +86,7 @@ SOURCES = \
     src/filesystem.cpp \
     src/versioninfo.cpp \
     src/coinparams.cpp \
+    src/docdir.cpp \
     src/main.cpp \
     src/splashscreen.cpp \
     src/acceptlicensedialog.cpp \
