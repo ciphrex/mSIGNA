@@ -1388,6 +1388,35 @@ std::shared_ptr<Tx> Vault::getTx_unwrapped(unsigned long tx_id) const
     return tx;
 }
 
+std::vector<TxView> Vault::getTxViews(int tx_status_flags, unsigned long start, int count) const
+{
+    LOGGER(trace) << "Vault::getTxViews(" << Tx::getStatusString(tx_status_flags) << ", " << start << ", " << count << ")" << std::endl;
+
+    typedef odb::query<TxView> query_t;
+    query_t query (1 == 1);
+    if (tx_status_flags != Tx::ALL)
+    {
+        std::vector<Tx::status_t> tx_statuses = Tx::getStatusFlags(tx_status_flags);
+        query = query && query_t::Tx::status.in_range(tx_statuses.begin(), tx_statuses.end());
+    }
+
+    query += "ORDER BY" + query_t::BlockHeader::height + "DESC," + query_t::Tx::timestamp + "DESC," + query_t::Tx::id + "DESC";
+    if (start != 0 || count != -1)
+    {
+        if (count == -1) { count = 0xffffffff; } // TODO: do this correctly
+        std::stringstream ss;
+        ss << "LIMIT " << start << "," << count;
+        query = query + ss.str().c_str();
+    }
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    std::vector<TxView> views;
+    odb::result<TxView> r(db_->query<TxView>(query));
+    for (auto& view: r) { views.push_back(view); }
+    return views; 
+}
+
 std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx)
 {
     LOGGER(trace) << "Vault::insertTx(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;

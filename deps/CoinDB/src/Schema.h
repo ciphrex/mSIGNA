@@ -1122,6 +1122,33 @@ struct ScriptCountView
     unsigned long max_index;
 };
 
+#pragma db view \
+    object(Tx) \
+    object(BlockHeader: Tx::blockheader_)
+struct TxView
+{
+    #pragma db column(Tx::id_)
+    unsigned long id;
+    #pragma db column(Tx::hash_)
+    bytes_t hash;
+    #pragma db column(Tx::unsigned_hash_)
+    bytes_t unsigned_hash;
+    #pragma db column(Tx::version_)
+    uint32_t version;
+    #pragma db column(Tx::locktime_)
+    uint32_t locktime;
+    #pragma db column(Tx::timestamp_)
+    uint32_t timestamp;
+    #pragma db column(Tx::status_)
+    Tx::status_t status;
+    #pragma db column(Tx::have_fee_)
+    bool have_fee;
+    #pragma db column(Tx::fee_)
+    uint64_t fee;
+    #pragma db column(BlockHeader::height_)
+    uint32_t height;
+};
+
 const std::string EMPTY_STRING = "";
 
 #pragma db view \

@@ -205,6 +205,52 @@ inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned in
     return ss.str();
 }
 
+// Transactions
+inline std::string formattedTxViewHeader()
+{
+    using namespace std;
+
+    stringstream ss;
+    ss << " ";
+    ss << right << setw(6)  << "id" << " | "
+       << left  << setw(64) << "hash" << " | "
+       << right << setw(7)  << "version" << " | "
+       << right << setw(11) << "locktime" << " | "
+       << right << setw(11) << "timestamp" << " | "
+       << left  << setw(10) << "status" << " | "
+       << right << setw(6)  << "confs";
+    ss << " ";
+
+    size_t header_length = ss.str().size();
+    ss << endl;
+    for (size_t i = 0; i < header_length; i++) { ss << "="; }
+    return ss.str();
+}
+
+inline std::string formattedTxView(const CoinDB::TxView& view, unsigned int best_height)
+{
+    using namespace std;
+    using namespace CoinDB;
+
+    bytes_t hash = view.status == Tx::UNSIGNED
+        ? view.unsigned_hash : view.hash;
+
+    unsigned int confirmations = view.height == 0
+        ? 0 : best_height - view.height + 1;
+
+    stringstream ss;
+    ss << " ";
+    ss << right << setw(6)  << view.id << " | "
+       << left  << setw(64) << uchar_vector(hash).getHex() << " | "
+       << right << setw(7)  << view.version << " | "
+       << right << setw(11) << view.locktime << " | "
+       << right << setw(11) << view.timestamp << " | "
+       << left  << setw(10) << Tx::getStatusString(view.status) << " | "
+       << right << setw(6)  << confirmations;
+    ss << " ";
+    return ss.str();     
+}
+
 // Keychains
 inline std::string formattedKeychainViewHeader()
 {

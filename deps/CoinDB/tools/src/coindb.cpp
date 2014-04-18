@@ -488,6 +488,19 @@ cli::result_t cmd_importbin(const cli::params_t& params)
 }
 
 // Tx operations
+cli::result_t cmd_listtxs(const cli::params_t& params)
+{
+    int tx_status_flags = params.size() > 1 && params[1] == "unsigned" ? Tx::UNSIGNED : Tx::ALL;
+    Vault vault(params[0], false);
+    uint32_t best_height = vault.getBestHeight();
+    std::vector<TxView> txViews = vault.getTxViews(tx_status_flags);
+    stringstream ss;
+    ss << formattedTxViewHeader();
+    for (auto& txView: txViews)
+        ss << endl << formattedTxView(txView, best_height);
+    return ss.str();
+}
+
 cli::result_t cmd_txinfo(const cli::params_t& params)
 {
     Vault vault(params[0], false);
@@ -856,6 +869,7 @@ int main(int argc, char* argv[])
     shell.add(command(&cmd_importbin, "importbin", "import account bin from file", command::params(2, "db file", "bin file"), command::params(1, "import chain code passphrase")));
 
     // Tx operations
+    shell.add(command(&cmd_listtxs, "listtxs", "list transactions", command::params(1, "db file"), command::params(1, "all | unsigned (default: all)")));
     shell.add(command(&cmd_txinfo, "txinfo", "display transaction information", command::params(2, "db file", "tx hash or id")));
     shell.add(command(&cmd_rawtx, "rawtx", "get transaction in raw hex", command::params(2, "db file", "tx hash or id"), command::params(1, "export to file = false")));
     shell.add(command(&cmd_insertrawtx, "insertrawtx", "insert a raw hex transaction into database", command::params(2, "db file", "tx raw hex or tx file name")));
