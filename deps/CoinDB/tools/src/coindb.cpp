@@ -844,7 +844,7 @@ int main(int argc, char* argv[])
     INIT_LOGGER("coindb.log");
 
     using namespace cli;
-    Shell shell("CoinDB by Eric Lombrozo v0.2.8");
+    Shell shell("CoinDB by Eric Lombrozo v0.3.0");
 
     // Global operations
     shell.add(command(&cmd_create, "create", "create a new vault", command::params(1, "db file")));
