@@ -122,8 +122,7 @@ void TxActions::copyTxHashToClipboard()
     try {
         std::shared_ptr<CoinDB::Tx> tx = txModel->getTx(currentRow);
         QClipboard* clipboard = QApplication::clipboard();
-        bytes_t hash = tx->status() == CoinDB::Tx::UNSIGNED ? tx->unsigned_hash() : tx->hash();
-        clipboard->setText(QString::fromStdString(uchar_vector(hash).getHex()));
+        clipboard->setText(QString::fromStdString(uchar_vector(tx->hash()).getHex()));
     }
     catch (const std::exception& e) {
         emit error(e.what());
