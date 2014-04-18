@@ -25,18 +25,13 @@
 #ifndef BIGINT_H_INCLUDED
 #define BIGINT_H_INCLUDED
 
+#include <openssl/crypto.h>
 #include <openssl/bn.h>
 #include <string>
 #include <vector>
 #include <algorithm>
 #include <cstring>
 #include <stdexcept>
-
-
-#if !defined(OPENSSL_free)
-#include <cstdlib>
-#define OPENSSL_free free
-#endif
 
 class BigInt
 {
