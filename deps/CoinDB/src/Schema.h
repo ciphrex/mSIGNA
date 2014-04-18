@@ -919,8 +919,9 @@ public:
 
     unsigned long id() const { return id_; }
     uint32_t version() const { return version_; }
-    const bytes_t& hash() const { return hash_; }
-    bytes_t unsigned_hash() const { return unsigned_hash_; }
+    const bytes_t& hash() const { return status_ == UNSIGNED ? unsigned_hash_ : hash_; }
+    const bytes_t& signed_hash() const { return hash_; }
+    const bytes_t& unsigned_hash() const { return unsigned_hash_; }
     txins_t txins() const { return txins_; }
     txouts_t txouts() const { return txouts_; }
     uint32_t locktime() const { return locktime_; }

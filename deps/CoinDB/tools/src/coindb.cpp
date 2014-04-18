@@ -503,11 +503,9 @@ cli::result_t cmd_txinfo(const cli::params_t& params)
         tx = vault.getTx(tx_id);
     }
 
-    hash = tx->status() == Tx::UNSIGNED ? tx->unsigned_hash() : tx->hash();
-
     stringstream ss;
     ss << "status:      " << Tx::getStatusString(tx->status()) << endl
-       << "hash:        " << uchar_vector(hash).getHex() << endl
+       << "hash:        " << uchar_vector(tx->hash()).getHex() << endl
        << "version:     " << tx->version() << endl
        << "locktime:    " << tx->locktime() << endl
        << "timestamp:   " << tx->timestamp();
@@ -545,7 +543,7 @@ cli::result_t cmd_rawtx(const cli::params_t& params)
     {
         string filename = uchar_vector(tx->hash()).getHex() + ".tx";
         ofstream ofs(filename, ofstream::out);
-        ofs << rawhex;
+        ofs << rawhex << endl;
         ofs.close();
 
         stringstream ss;
