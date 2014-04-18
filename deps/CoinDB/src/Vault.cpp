@@ -1533,6 +1533,31 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
             // TODO: If the txinscript is in one of our accounts but we don't have the outpoint it means this transaction is orphaned.
             //       We should have an orphaned flag for the transaction. Otherwise out-of-order insertions will result in inconsistent state.
             have_all_outpoints = false;
+            bytes_t txoutscript;
+            try
+            {
+                CoinQ::Script::Script script(txin->script());
+                if (script.type() == CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH) { txoutscript = script.txoutscript(); }
+            }
+            catch (const std::exception& e)
+            {
+                // TODO: handle errors
+            }
+            if (!txoutscript.empty())
+            {
+                odb::result<SigningScript> script_r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == txoutscript));
+                if (!script_r.empty())
+                {
+                    sent_from_vault = true;
+                    if (!sending_account)
+                    {
+                        // Assuming all inputs belong to the same account
+                        // TODO: Allow coin mixing
+                        std::shared_ptr<SigningScript> script(script_r.begin().load());
+                        sending_account = script->account();
+                    }
+                }
+            }
         }
         else
         {
