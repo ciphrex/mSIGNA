@@ -15,6 +15,8 @@
 
 #include "rawtxdialog.h"
 
+#include "docdir.h"
+
 #include <CoinQ/CoinQ_netsync.h>
 
 #include <QAction>
@@ -24,8 +26,11 @@
 #include <QMessageBox>
 #include <QApplication>
 #include <QClipboard>
+#include <QFileDialog>
 
 #include <logger/logger.h>
+
+#include <fstream>
 
 TxActions::TxActions(TxModel* model, TxView* view, CoinQ::Network::NetworkSync* sync)
     : txModel(model), txView(view), networkSync(sync), currentRow(-1)
@@ -66,6 +71,7 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
 
         copyTxHashToClipboardAction->setEnabled(true);
         copyRawTxToClipboardAction->setEnabled(true);
+        saveRawTxToFileAction->setEnabled(true);
         viewRawTxAction->setEnabled(true);
         deleteTxAction->setEnabled(true);
     }
@@ -74,6 +80,7 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
         sendTxAction->setEnabled(false);
         copyTxHashToClipboardAction->setEnabled(false);
         copyRawTxToClipboardAction->setEnabled(false);
+        saveRawTxToFileAction->setEnabled(false);
         viewRawTxAction->setEnabled(false);
         viewTxOnWebAction->setEnabled(false);
         deleteTxAction->setEnabled(false);
@@ -141,6 +148,34 @@ void TxActions::copyRawTxToClipboard()
     }
 }
 
+void TxActions::saveRawTxToFile()
+{
+    try {
+        std::shared_ptr<CoinDB::Tx> tx = txModel->getTx(currentRow);
+        QString fileName = QString::fromStdString(uchar_vector(tx->hash()).getHex()) + ".tx";
+        fileName = QFileDialog::getSaveFileName(
+            nullptr,
+            tr("Save Raw Transaction"),
+            getDocDir() + "/" + fileName,
+            tr("Transactions (*.tx)"));
+        if (fileName.isEmpty()) return;
+
+        fileName = QFileInfo(fileName).absoluteFilePath();
+
+        QFileInfo fileInfo(fileName);
+        setDocDir(fileInfo.dir().absolutePath());
+
+        // TODO: emit settings changed signal
+
+        std::ofstream ofs(fileName.toStdString(), std::ofstream::out);
+        ofs << uchar_vector(tx->raw()).getHex() << std::endl;
+        ofs.close();
+    }
+    catch (const std::exception& e) {
+        emit error(e.what());
+    }
+}
+
 void TxActions::viewTxOnWeb()
 {
     const QString URL_PREFIX("https://blockchain.info/tx/");
@@ -196,6 +231,10 @@ void TxActions::createActions()
     copyRawTxToClipboardAction->setEnabled(false);
     connect(copyRawTxToClipboardAction, SIGNAL(triggered()), this, SLOT(copyRawTxToClipboard()));
 
+    saveRawTxToFileAction = new QAction(tr("Save Raw Transaction To File"), this);
+    saveRawTxToFileAction->setEnabled(false);
+    connect(saveRawTxToFileAction, SIGNAL(triggered()), this, SLOT(saveRawTxToFile()));
+
     viewTxOnWebAction = new QAction(tr("View At Blockchain.info"), this);
     viewTxOnWebAction->setEnabled(false);
     connect(viewTxOnWebAction, SIGNAL(triggered()), this, SLOT(viewTxOnWeb()));
@@ -214,6 +253,7 @@ void TxActions::createMenus()
     //menu->addAction(viewRawTxAction);
     menu->addAction(copyTxHashToClipboardAction);
     menu->addAction(copyRawTxToClipboardAction);
+    menu->addAction(saveRawTxToFileAction);
     menu->addAction(viewTxOnWebAction);
     menu->addSeparator();
     menu->addAction(deleteTxAction);

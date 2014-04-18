@@ -48,6 +48,7 @@ private slots:
     void viewRawTx();
     void copyTxHashToClipboard();
     void copyRawTxToClipboard();
+    void saveRawTxToFile();
     void viewTxOnWeb();
     void deleteTx();
 
@@ -67,6 +68,7 @@ private:
     QAction* viewRawTxAction;
     QAction* copyTxHashToClipboardAction;
     QAction* copyRawTxToClipboardAction;
+    QAction* saveRawTxToFileAction;
     QAction* viewTxOnWebAction;
     QAction* deleteTxAction;
 
