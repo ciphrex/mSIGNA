@@ -34,6 +34,7 @@
 
 
 //#ifdef __APPLE__
+//#include <cstdlib>
 //#define OPENSSL_free free
 //#endif
 
