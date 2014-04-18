@@ -1815,6 +1815,20 @@ SigningRequest Vault::getSigningRequest(const bytes_t& unsigned_hash, bool inclu
     return getSigningRequest_unwrapped(tx, include_raw_tx);
 }
 
+SigningRequest Vault::getSigningRequest(unsigned long tx_id, bool include_raw_tx) const
+{
+    LOGGER(trace) << "Vault::getSigningRequest(" << tx_id << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::id == tx_id));
+    if (r.empty()) throw TxNotFoundException();
+
+    std::shared_ptr<Tx> tx(r.begin().load());
+    return getSigningRequest_unwrapped(tx, include_raw_tx);
+}
+
 SigningRequest Vault::getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx) const
 {
     unsigned int sigs_needed = tx->missingSigCount();
@@ -1829,7 +1843,7 @@ SigningRequest Vault::getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool i
 
     bytes_t rawtx;
     if (include_raw_tx) rawtx = tx->raw();
-    return SigningRequest(sigs_needed, keychain_info, rawtx);
+    return SigningRequest(tx->hash(), sigs_needed, keychain_info, rawtx);
 }
 
 std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, std::vector<std::string>& keychain_names, bool update)

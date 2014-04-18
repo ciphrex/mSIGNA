@@ -119,6 +119,7 @@ public:
     void                                    deleteTx(const bytes_t& tx_hash); // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     void                                    deleteTx(unsigned long tx_id); // Throws TxNotFoundException.
     SigningRequest                          getSigningRequest(const bytes_t& unsigned_hash, bool include_raw_tx = false) const; // Tries only unsigned hashes. Throws TxNotFoundException.
+    SigningRequest                          getSigningRequest(unsigned long tx_id, bool include_raw_tx = false) const; // Throws TxNotFoundException.
     // signTx tries only unsigned hashes for named keychains. If no keychains are named, tries all keychains. Throws TxNotFoundException.
     std::shared_ptr<Tx>                     signTx(const bytes_t& unsigned_hash, std::vector<std::string>& keychain_names, bool update = false);
     std::shared_ptr<Tx>                     signTx(unsigned long tx_id, std::vector<std::string>& keychain_names, bool update = false);

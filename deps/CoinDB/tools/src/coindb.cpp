@@ -654,23 +654,37 @@ cli::result_t cmd_deletetx(const cli::params_t& params)
 cli::result_t cmd_signingrequest(const cli::params_t& params)
 {
     Vault vault(params[0], false);
-    uchar_vector hash(params[1]);
 
-    SigningRequest req = vault.getSigningRequest(hash, true);
-    vector<string>keychain_names;
-    vector<string>keychain_hashes;
+    SigningRequest req;
+    bytes_t hash = uchar_vector(params[1]);
+    if (hash.size() == 32)
+    {
+        req = vault.getSigningRequest(hash, true);
+    }
+    else
+    {
+        unsigned long tx_id = strtoul(params[1].c_str(), NULL, 0);
+        req = vault.getSigningRequest(tx_id, true);
+    }
+
+    vector<string> keychain_names;
+    vector<string> keychain_hashes;
     for (auto& keychain_pair: req.keychain_info())
     {
         keychain_names.push_back(keychain_pair.first);
         keychain_hashes.push_back(uchar_vector(keychain_pair.second).getHex());
     }
+    string hash_str = uchar_vector(req.hash()).getHex();
     string rawtx_str = uchar_vector(req.rawtx()).getHex();
 
     stringstream ss;
-    ss << "signatures needed: " << req.sigs_needed() << endl
-       << "keychain names:    " << stdutils::delimited_list(keychain_names, ", ") << endl
-       << "keychain hashes:   " << stdutils::delimited_list(keychain_hashes, ", ") << endl
-       << "raw tx:            " << rawtx_str;
+    ss << "Signing Request" << endl
+       << "===============" << endl
+       << "  hash:              " << hash_str << endl
+       << "  signatures needed: " << req.sigs_needed() << endl
+       << "  keychain names:    " << stdutils::delimited_list(keychain_names, ", ") << endl
+       << "  keychain hashes:   " << stdutils::delimited_list(keychain_hashes, ", ") << endl
+       << "  raw tx:            " << rawtx_str;
     return ss.str();
 }
 
@@ -875,7 +889,7 @@ int main(int argc, char* argv[])
     shell.add(command(&cmd_insertrawtx, "insertrawtx", "insert a raw hex transaction into database", command::params(2, "db file", "tx raw hex or tx file name")));
     shell.add(command(&cmd_newrawtx, "newrawtx", "create a new raw transaction", command::params(4, "db file", "account name", "address 1", "value 1"), command::params(6, "address 2", "value 2", "...", "fee = 0", "version = 1", "locktime = 0")));
     shell.add(command(&cmd_deletetx, "deletetx", "delete a transaction", command::params(2, "db file", "tx hash or id")));
-    shell.add(command(&cmd_signingrequest, "signingrequest", "gets signing request for transaction with missing signatures", command::params(2, "db file", "tx hash")));
+    shell.add(command(&cmd_signingrequest, "signingrequest", "gets signing request for transaction with missing signatures", command::params(2, "db file", "tx hash or id")));
     shell.add(command(&cmd_signtx, "signtx", "add signatures to transaction for specified keychain", command::params(4, "db file", "tx hash or id", "keychain name", "passphrase")));
 
     // Blockchain operations
