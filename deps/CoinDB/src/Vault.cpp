@@ -1727,6 +1727,21 @@ void Vault::deleteTx(const bytes_t& tx_hash)
     t.commit();
 }
 
+void Vault::deleteTx(unsigned long tx_id)
+{
+    LOGGER(trace) << "Vault::deleteTx(" << tx_id << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::id == tx_id));
+    if (r.empty()) throw TxNotFoundException();
+
+    std::shared_ptr<Tx> tx(r.begin().load());
+    deleteTx_unwrapped(tx);
+    t.commit();
+}
+
 void Vault::deleteTx_unwrapped(std::shared_ptr<Tx> tx)
 {
     // NOTE: signingscript statuses are not updated. once received always received.

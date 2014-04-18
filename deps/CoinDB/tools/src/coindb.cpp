@@ -622,11 +622,21 @@ cli::result_t cmd_newrawtx(const cli::params_t& params)
 cli::result_t cmd_deletetx(const cli::params_t& params)
 {
     Vault vault(params[0], false);
-    uchar_vector hash(params[1]);
-    vault.deleteTx(hash);
+
+    bytes_t hash = uchar_vector(params[1]);
+    std::shared_ptr<Tx> tx;
+    if (hash.size() == 32)
+    {
+        vault.deleteTx(hash);
+    }
+    else
+    {
+        unsigned long tx_id = strtoul(params[1].c_str(), NULL, 0);
+        vault.deleteTx(tx_id);
+    }
 
     stringstream ss;
-    ss << "Tx deleted. hash: " << hash.getHex();
+    ss << "Tx deleted.";
     return ss.str();
 }
 
@@ -852,7 +862,7 @@ int main(int argc, char* argv[])
     shell.add(command(&cmd_rawtx, "rawtx", "get transaction in raw hex", command::params(2, "db file", "tx hash or id"), command::params(1, "export to file = false")));
     shell.add(command(&cmd_insertrawtx, "insertrawtx", "insert a raw hex transaction into database", command::params(2, "db file", "tx raw hex or tx file name")));
     shell.add(command(&cmd_newrawtx, "newrawtx", "create a new raw transaction", command::params(4, "db file", "account name", "address 1", "value 1"), command::params(6, "address 2", "value 2", "...", "fee = 0", "version = 1", "locktime = 0")));
-    shell.add(command(&cmd_deletetx, "deletetx", "delete a transaction", command::params(2, "db file", "tx hash")));
+    shell.add(command(&cmd_deletetx, "deletetx", "delete a transaction", command::params(2, "db file", "tx hash or id")));
     shell.add(command(&cmd_signingrequest, "signingrequest", "gets signing request for transaction with missing signatures", command::params(2, "db file", "tx hash")));
     shell.add(command(&cmd_signtx, "signtx", "add signatures to transaction for specified keychain", command::params(4, "db file", "tx hash or id", "keychain name", "passphrase")));
 
