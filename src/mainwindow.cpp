@@ -78,7 +78,8 @@ MainWindow::MainWindow() :
     doneHeaderSync(false),
     networkState(NETWORK_STATE_NOT_CONNECTED),
     accountModel(nullptr),
-    keychainModel(nullptr)
+    keychainModel(nullptr),
+    txActions(nullptr)
 {
     loadSettings();
 
@@ -141,7 +142,7 @@ MainWindow::MainWindow() :
 
     txView = new TxView();
     txView->setModel(txModel);
-    txActions = new TxActions(txModel, txView, &networkSync);
+    txActions = new TxActions(txModel, txView, accountModel, &networkSync);
     connect(txActions, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
 
     txView->setMenu(txActions->getMenu());
@@ -294,6 +295,8 @@ void MainWindow::updateVaultStatus(const QString& name)
     else {
         setWindowTitle(getDefaultSettings().getAppName());
     }
+
+    if (txActions) txActions->updateVaultStatus();
 }
 
 void MainWindow::showError(const QString& errorMsg)

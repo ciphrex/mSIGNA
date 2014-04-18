@@ -12,6 +12,7 @@
 
 #include "txmodel.h"
 #include "txview.h"
+#include "accountmodel.h"
 
 #include "rawtxdialog.h"
 
@@ -32,8 +33,8 @@
 
 #include <fstream>
 
-TxActions::TxActions(TxModel* model, TxView* view, CoinQ::Network::NetworkSync* sync)
-    : txModel(model), txView(view), networkSync(sync), currentRow(-1)
+TxActions::TxActions(TxModel* model, TxView* view, AccountModel* acctModel, CoinQ::Network::NetworkSync* sync)
+    : txModel(model), txView(view), accountModel(acctModel), networkSync(sync), currentRow(-1)
 {
     createActions();
     createMenus();
@@ -85,6 +86,12 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
         viewTxOnWebAction->setEnabled(false);
         deleteTxAction->setEnabled(false);
     }
+
+}
+
+void TxActions::updateVaultStatus()
+{
+    insertRawTxFromFileAction->setEnabled(accountModel && accountModel->isOpen());
 }
 
 void TxActions::signTx()
@@ -176,6 +183,40 @@ void TxActions::saveRawTxToFile()
     }
 }
 
+void TxActions::insertRawTxFromFile()
+{
+    try {
+        if (!accountModel || !accountModel->isOpen()) throw std::runtime_error("You must create a vault or open an existing vault before inserting transactions.");
+
+        QString fileName = QFileDialog::getOpenFileName(
+            nullptr,
+            tr("Insert Raw Transaction"),
+            getDocDir(),
+            tr("Transactions (*.tx)"));
+        if (fileName.isEmpty()) return;
+
+        fileName = QFileInfo(fileName).absoluteFilePath();
+
+        QFileInfo fileInfo(fileName);
+        setDocDir(fileInfo.dir().absolutePath());
+
+        // TODO: emit settings changed signal
+
+        std::string rawhex;
+        std::ifstream ifs(fileName.toStdString(), std::ifstream::in);
+        if (ifs.bad()) throw std::runtime_error("Error opening file.");
+        ifs >> rawhex;
+        if (!ifs.good()) throw std::runtime_error("Error reading file.");
+
+        std::shared_ptr<CoinDB::Tx> tx(new CoinDB::Tx());
+        tx->set(uchar_vector(rawhex));
+        tx = accountModel->insertTx(tx);
+    }
+    catch (const std::exception& e) {
+        emit error(e.what());
+    } 
+}
+
 void TxActions::viewTxOnWeb()
 {
     const QString URL_PREFIX("https://blockchain.info/tx/");
@@ -235,6 +276,10 @@ void TxActions::createActions()
     saveRawTxToFileAction->setEnabled(false);
     connect(saveRawTxToFileAction, SIGNAL(triggered()), this, SLOT(saveRawTxToFile()));
 
+    insertRawTxFromFileAction = new QAction(tr("Insert Raw Transaction From File"), this);
+    insertRawTxFromFileAction->setEnabled(false);
+    connect(insertRawTxFromFileAction, SIGNAL(triggered()), this, SLOT(insertRawTxFromFile()));
+
     viewTxOnWebAction = new QAction(tr("View At Blockchain.info"), this);
     viewTxOnWebAction->setEnabled(false);
     connect(viewTxOnWebAction, SIGNAL(triggered()), this, SLOT(viewTxOnWeb()));
@@ -254,6 +299,7 @@ void TxActions::createMenus()
     menu->addAction(copyTxHashToClipboardAction);
     menu->addAction(copyRawTxToClipboardAction);
     menu->addAction(saveRawTxToFileAction);
+    menu->addAction(insertRawTxFromFileAction);
     menu->addAction(viewTxOnWebAction);
     menu->addSeparator();
     menu->addAction(deleteTxAction);

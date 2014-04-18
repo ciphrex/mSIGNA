@@ -20,6 +20,7 @@ class QString;
 
 class TxModel;
 class TxView;
+class AccountModel;
 
 namespace CoinQ {
     namespace Network {
@@ -32,11 +33,13 @@ class TxActions : public QObject
     Q_OBJECT
 
 public:
-    TxActions(TxModel* model, TxView* view, CoinQ::Network::NetworkSync* sync = NULL); // model and view must be valid, non-null.
+    TxActions(TxModel* model, TxView* view, AccountModel* acctModel, CoinQ::Network::NetworkSync* sync = NULL); // model and view must be valid, non-null.
 
     void setNetworkSync(CoinQ::Network::NetworkSync* sync) { networkSync = sync; }
 
     QMenu* getMenu() const { return menu; }
+
+    void updateVaultStatus();
 
 signals:
     void error(const QString& message);
@@ -49,6 +52,7 @@ private slots:
     void copyTxHashToClipboard();
     void copyRawTxToClipboard();
     void saveRawTxToFile();
+    void insertRawTxFromFile();
     void viewTxOnWeb();
     void deleteTx();
 
@@ -58,6 +62,8 @@ private:
 
     TxModel* txModel;
     TxView* txView;
+
+    AccountModel* accountModel;
 
     CoinQ::Network::NetworkSync* networkSync;
 
@@ -69,6 +75,7 @@ private:
     QAction* copyTxHashToClipboardAction;
     QAction* copyRawTxToClipboardAction;
     QAction* saveRawTxToFileAction;
+    QAction* insertRawTxFromFileAction;
     QAction* viewTxOnWebAction;
     QAction* deleteTxAction;
 
