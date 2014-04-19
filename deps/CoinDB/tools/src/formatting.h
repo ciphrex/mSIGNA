@@ -38,6 +38,8 @@ inline std::string getAddressFromScript(const bytes_t& script)
 }
 
 
+const int COIN_EXP = 100000000ull;
+
 ////////////
 // Tables //
 ////////////
@@ -103,14 +105,25 @@ inline std::string formattedTxIn(const std::shared_ptr<CoinDB::TxIn>& txin)
     using namespace std;
     using namespace CoinDB;
 
-    stringstream outpoint;
-    outpoint << uchar_vector(txin->outhash()).getHex() << ":" << txin->outindex();
+    stringstream outpoint_str;
+    outpoint_str << uchar_vector(txin->outhash()).getHex() << ":" << txin->outindex();
+
+    std::shared_ptr<TxOut> outpoint = txin->outpoint();
+    stringstream value;
+    if (outpoint)
+    {
+        value << fixed << setprecision(8) << 1.0*outpoint->value()/COIN_EXP;
+    }
+    else
+    {
+        value << "N/A";
+    }
 
     stringstream ss;
     ss << " ";
     ss << right << setw(5)  << txin->txindex() << " | "
-       << left  << setw(68) << outpoint.str() << " | "
-       << right << setw(15) << "";
+       << left  << setw(68) << outpoint_str.str() << " | "
+       << right << setw(15) << value.str();
     ss << " ";
     return ss.str();
 }
@@ -145,7 +158,7 @@ inline std::string formattedTxOut(const std::shared_ptr<CoinDB::TxOut>& txout)
     stringstream ss;
     ss << " ";
     ss << right << setw(6)  << txout->txindex() << " | "
-       << right << setw(15) << txout->value() << " | "
+       << right << setw(15) << fixed << setprecision(8) << 1.0*txout->value()/COIN_EXP << " | "
        << left  << setw(50) << uchar_vector(txout->script()).getHex() << " | "
        << left  << setw(36) << getAddressFromScript(txout->script()) << " | "
        << left  << setw(7)  << status;
@@ -177,7 +190,6 @@ inline std::string formattedTxOutViewHeader()
     return ss.str();
 }
 
-const int COIN_EXP = 100000000ull;
 inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned int best_height)
 {
     using namespace std;
@@ -218,7 +230,10 @@ inline std::string formattedTxViewHeader()
        << right << setw(11) << "locktime" << " | "
        << right << setw(11) << "timestamp" << " | "
        << left  << setw(10) << "status" << " | "
-       << right << setw(6)  << "confs";
+       << right << setw(6)  << "confs" << " | "
+       << right << setw(15) << "txin total" << " | "
+       << right << setw(15) << "txout total" << " | "
+       << right << setw(9)  << "fee";
     ss << " ";
 
     size_t header_length = ss.str().size();
@@ -238,6 +253,21 @@ inline std::string formattedTxView(const CoinDB::TxView& view, unsigned int best
     unsigned int confirmations = view.height == 0
         ? 0 : best_height - view.height + 1;
 
+    stringstream txin_total;
+    stringstream txout_total;
+    stringstream fee;
+    if (view.have_fee)
+    {
+        txin_total << fixed << setprecision(8) << 1.0*view.txin_total/COIN_EXP;
+        fee << fixed << setprecision(8) << 1.0*view.fee/COIN_EXP;
+    }
+    else
+    {
+        txin_total << "N/A";
+        fee << "N/A";
+    }
+    txout_total << fixed << setprecision(8) << 1.0*view.txout_total/COIN_EXP;
+
     stringstream ss;
     ss << " ";
     ss << right << setw(6)  << view.id << " | "
@@ -246,7 +276,10 @@ inline std::string formattedTxView(const CoinDB::TxView& view, unsigned int best
        << right << setw(11) << view.locktime << " | "
        << right << setw(11) << view.timestamp << " | "
        << left  << setw(10) << Tx::getStatusString(view.status) << " | "
-       << right << setw(6)  << confirmations;
+       << right << setw(6)  << confirmations << " | "
+       << right << setw(15) << txin_total.str() << " | "
+       << right << setw(15) << txout_total.str() << " | "
+       << right << setw(9)  << fee.str();
     ss << " ";
     return ss.str();     
 }

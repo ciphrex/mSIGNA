@@ -1,4 +1,20 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="sqlite" version="1">
+  <changeset version="6">
+    <alter-table name="TxIn">
+      <add-column name="outpoint" type="INTEGER" null="true"/>
+      <add-foreign-key name="outpoint_fk" deferrable="DEFERRED">
+        <column name="outpoint"/>
+        <references table="TxOut">
+          <column name="id"/>
+        </references>
+      </add-foreign-key>
+    </alter-table>
+    <alter-table name="Tx">
+      <add-column name="txin_total" type="INTEGER" null="false"/>
+      <add-column name="txout_total" type="INTEGER" null="false"/>
+    </alter-table>
+  </changeset>
+
   <changeset version="5">
     <alter-table name="AccountBin">
       <add-column name="hash" type="BLOB" null="false"/>

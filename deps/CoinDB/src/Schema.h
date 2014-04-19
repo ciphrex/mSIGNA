@@ -45,7 +45,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 4
-#define SCHEMA_VERSION      5
+#define SCHEMA_VERSION      6
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -600,6 +600,8 @@ private:
 /////////////////////////////
 
 class Tx;
+class TxIn;
+class TxOut;
 
 #pragma db object pointer(std::shared_ptr)
 class BlockHeader
@@ -725,6 +727,9 @@ public:
     void txindex(unsigned int txindex) { txindex_ = txindex; }
     uint32_t txindex() const { return txindex_; }
 
+    void outpoint(std::shared_ptr<TxOut> outpoint);
+    const std::shared_ptr<TxOut> outpoint() const { return outpoint_.lock(); }
+
 private:
     friend class odb::access;
     TxIn() { }
@@ -741,6 +746,9 @@ private:
     std::weak_ptr<Tx> tx_;
 
     uint32_t txindex_;
+
+    #pragma db null
+    std::weak_ptr<TxOut> outpoint_;
 
     friend class boost::serialization::access;
     template<class Archive>
@@ -907,7 +915,7 @@ public:
     static std::vector<status_t>    getStatusFlags(int status);
 
     Tx(uint32_t version = 1, uint32_t locktime = 0, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED)
-        : version_(version), locktime_(locktime), timestamp_(timestamp), status_(status), have_fee_(false), fee_(0) { }
+        : version_(version), locktime_(locktime), timestamp_(timestamp), status_(status), txin_total_(0), txout_total_(0), have_fee_(false), fee_(0) { }
 
     void set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED);
     void set(Coin::Transaction coin_tx, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED);
@@ -932,6 +940,10 @@ public:
 
     bool updateStatus(status_t status = NO_STATUS); // Will keep the status it already had if it didn't change and no parameter is passed. Returns true iff status changed.
     status_t status() const { return status_; }
+
+    void updateTotals();
+    uint64_t txin_total() const { return txin_total_; }
+    uint64_t txout_total() const { return txout_total_; }
 
     void fee(uint64_t fee) { have_fee_ = true; fee_ = fee; }
     uint64_t fee() const { return fee_; }
@@ -980,6 +992,9 @@ private:
     uint32_t timestamp_;
 
     status_t status_;
+
+    uint64_t txin_total_;
+    uint64_t txout_total_;
 
     // Due to issue with odb::nullable<uint64_t> in mingw-w64, we use a second bool variable.
     bool have_fee_;
@@ -1141,9 +1156,13 @@ struct TxView
     uint32_t timestamp;
     #pragma db column(Tx::status_)
     Tx::status_t status;
+    #pragma db column(Tx::txin_total_)
+    uint64_t txin_total;
+    #pragma db column(Tx::txout_total_)
+    uint64_t txout_total;
     #pragma db column(Tx::have_fee_)
     bool have_fee;
-    #pragma db column(Tx::fee_)
+    #pragma db column(Tx::txin_total_ + "-" + Tx::txout_total_)
     uint64_t fee;
     #pragma db column(BlockHeader::height_)
     uint32_t height;

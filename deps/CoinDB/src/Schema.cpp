@@ -633,6 +633,16 @@ bytes_t TxIn::raw() const
     return toCoinCore().getSerialized();
 }
 
+void TxIn::outpoint(std::shared_ptr<TxOut> outpoint)
+{
+    outpoint_ = outpoint;
+    if (!outpoint) return;
+
+    std::shared_ptr<Tx> tx = outpoint->tx();
+    if (outindex_ != outpoint->txindex() || !tx || tx->status() == Tx::UNSIGNED || outhash_ != tx->hash())
+        throw std::runtime_error("TxIn::outpoint - invalid outpoint.");
+}
+
 
 /*
  * class TxOut
@@ -677,7 +687,7 @@ std::vector<TxOut::role_t> TxOut::getRoleFlags(int flags)
 }
 
 TxOut::TxOut(uint64_t value, std::shared_ptr<SigningScript> signingscript)
-    : value_(value)
+    : value_(value), status_(UNSPENT)
 {
     this->signingscript(signingscript);
 }
@@ -791,6 +801,7 @@ void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uin
 
     coin_tx.clearScriptSigs();
     unsigned_hash_ = coin_tx.getHashLittleEndian();
+    updateTotals();
 }
 
 void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status)
@@ -805,6 +816,7 @@ void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status)
 
     coin_tx.clearScriptSigs();
     unsigned_hash_ = coin_tx.getHashLittleEndian();
+    updateTotals();
 }
 
 void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
@@ -818,6 +830,7 @@ void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
 
     coin_tx.clearScriptSigs();
     unsigned_hash_ = coin_tx.getHashLittleEndian();
+    updateTotals();
 }
 
 bool Tx::updateStatus(status_t status /* = NO_STATUS */)
@@ -887,6 +900,32 @@ void Tx::blockheader(std::shared_ptr<BlockHeader> blockheader)
 bytes_t Tx::raw() const
 {
     return toCoinCore().getSerialized();
+}
+
+void Tx::updateTotals()
+{
+    have_fee_ = true;
+    txin_total_ = 0;
+    for (auto& txin: txins_)
+    {
+        std::shared_ptr<TxOut> outpoint = txin->outpoint();
+        if (!outpoint)
+        {
+            have_fee_ = false;
+        }
+        else
+        {
+            txin_total_ += outpoint->value();
+        }
+    }
+
+    txout_total_ = 0;
+    for (auto& txout: txouts_)
+    {
+        txout_total_ += txout->value(); 
+    }
+
+    fee_ = have_fee_ ? (txin_total_ - txout_total_) : 0; 
 }
 
 void Tx::shuffle_txins()

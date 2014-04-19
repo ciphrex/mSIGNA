@@ -1516,7 +1516,9 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
     // If we get here it means we've either never seen this transaction before or it doesn't affect our accounts.
 
     std::set<std::shared_ptr<Tx>> conflicting_txs;
+    std::set<std::shared_ptr<TxIn>> updated_txins;
     std::set<std::shared_ptr<TxOut>> updated_txouts;
+    std::set<std::shared_ptr<Tx>> updated_txs;
 
     // Check inputs
     bool sent_from_vault = false; // whether any of the inputs belong to vault
@@ -1530,8 +1532,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
         tx_r = db_->query<Tx>(odb::query<Tx>::hash == txin->outhash());
         if (tx_r.empty())
         {
-            // TODO: If the txinscript is in one of our accounts but we don't have the outpoint it means this transaction is orphaned.
-            //       We should have an orphaned flag for the transaction. Otherwise out-of-order insertions will result in inconsistent state.
+            // The txinscript is in one of our accounts but we don't have the outpoint, 
             have_all_outpoints = false;
             bytes_t txoutscript;
             try
@@ -1566,6 +1567,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
             uint32_t outindex = txin->outindex();
             if (outpoints.size() <= outindex) throw std::runtime_error("Vault::insertTx_unwrapped - outpoint out of range.");
             std::shared_ptr<TxOut>& outpoint = outpoints[outindex];
+            txin->outpoint(outpoint);
 
             // Check for double spend, track conflicted transaction so we can update status if necessary later.
             std::shared_ptr<TxIn> conflict_txin = outpoint->spent();
@@ -1652,6 +1654,15 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
             {
                 std::shared_ptr<TxIn> txin(txin_r.begin().load());
                 txout->spent(txin);
+                txin->outpoint(txout); // We now have the outpoint. TODO: deal with conflicts.
+                updated_txins.insert(txin);
+
+                std::shared_ptr<Tx> tx(txin->tx());
+                if (tx)
+                {
+                    tx->updateTotals();
+                    updated_txs.insert(tx);
+                }
             }
         }
     }
@@ -1673,15 +1684,18 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
     if (sent_from_vault || sent_to_vault)
     {
         LOGGER(debug) << "Vault::insertTx_unwrapped - INSERTING NEW TRANSACTION. hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
-        if (have_all_outpoints) { tx->fee(input_total - output_total); }
+        tx->updateTotals();
+        //if (have_all_outpoints) { tx->fee(input_total - output_total); }
 
         // Persist the transaction
         db_->persist(*tx);
         for (auto& txin:        tx->txins())    { db_->persist(txin);       }
         for (auto& txout:       tx->txouts())   { db_->persist(txout);      }
 
-        // Update other affected txouts
+        // Update other affected obkects
+        for (auto& txin:        updated_txins)  { db_->update(txin);        }
         for (auto& txout:       updated_txouts) { db_->update(txout);       }
+        for (auto& tx:          updated_txs)    { db_->update(tx);          }
 
         if (tx->status() >= Tx::SENT) updateConfirmations_unwrapped(tx);
         notifyTxInserted(tx);
