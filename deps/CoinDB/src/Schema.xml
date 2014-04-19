@@ -1,35 +1,5 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="sqlite" version="1">
-  <changeset version="6">
-    <alter-table name="TxIn">
-      <add-column name="outpoint" type="INTEGER" null="true"/>
-      <add-foreign-key name="outpoint_fk" deferrable="DEFERRED">
-        <column name="outpoint"/>
-        <references table="TxOut">
-          <column name="id"/>
-        </references>
-      </add-foreign-key>
-    </alter-table>
-    <alter-table name="Tx">
-      <add-column name="txin_total" type="INTEGER" null="false"/>
-      <add-column name="txout_total" type="INTEGER" null="false"/>
-    </alter-table>
-  </changeset>
-
-  <changeset version="5">
-    <alter-table name="AccountBin">
-      <add-column name="hash" type="BLOB" null="false"/>
-      <add-index name="AccountBin_hash_i" type="UNIQUE">
-        <column name="hash"/>
-      </add-index>
-    </alter-table>
-    <alter-table name="Account">
-      <add-index name="Account_hash_i" type="UNIQUE">
-        <column name="hash"/>
-      </add-index>
-    </alter-table>
-  </changeset>
-
-  <model version="4">
+  <model version="7">
     <table name="Version" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="version" type="INTEGER" null="false"/>
@@ -122,6 +92,7 @@
       <column name="script_count" type="INTEGER" null="false"/>
       <column name="next_script_index" type="INTEGER" null="false"/>
       <column name="minsigs" type="INTEGER" null="false"/>
+      <column name="hash" type="BLOB" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
@@ -131,6 +102,9 @@
           <column name="id"/>
         </references>
       </foreign-key>
+      <index name="AccountBin_hash_i" type="UNIQUE">
+        <column name="hash"/>
+      </index>
     </table>
     <table name="AccountBin_keychains" kind="container">
       <column name="object_id" type="INTEGER" null="false"/>
@@ -163,6 +137,9 @@
       </primary-key>
       <index name="Account_name_i" type="UNIQUE">
         <column name="name"/>
+      </index>
+      <index name="Account_hash_i" type="UNIQUE">
+        <column name="hash"/>
       </index>
     </table>
     <table name="Account_keychains" kind="container">
@@ -292,12 +269,19 @@
       <column name="sequence" type="INTEGER" null="false"/>
       <column name="tx" type="INTEGER" null="false"/>
       <column name="txindex" type="INTEGER" null="false"/>
+      <column name="outpoint" type="INTEGER" null="true"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
       <foreign-key name="tx_fk" deferrable="DEFERRED">
         <column name="tx"/>
         <references table="Tx">
+          <column name="id"/>
+        </references>
+      </foreign-key>
+      <foreign-key name="outpoint_fk" deferrable="DEFERRED">
+        <column name="outpoint"/>
+        <references table="TxOut">
           <column name="id"/>
         </references>
       </foreign-key>
@@ -364,8 +348,9 @@
       <column name="locktime" type="INTEGER" null="false"/>
       <column name="timestamp" type="INTEGER" null="false"/>
       <column name="status" type="INTEGER" null="false"/>
-      <column name="have_fee" type="INTEGER" null="false"/>
-      <column name="fee" type="INTEGER" null="false"/>
+      <column name="have_all_outpoints" type="INTEGER" null="false"/>
+      <column name="txin_total" type="INTEGER" null="false"/>
+      <column name="txout_total" type="INTEGER" null="false"/>
       <column name="blockheader" type="INTEGER" null="true"/>
       <column name="blockindex" type="INTEGER" null="true"/>
       <primary-key auto="true">

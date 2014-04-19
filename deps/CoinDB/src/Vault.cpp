@@ -1522,8 +1522,6 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 
     // Check inputs
     bool sent_from_vault = false; // whether any of the inputs belong to vault
-    bool have_all_outpoints = true; // whether we have all outpoints (for fee calculation)
-    uint64_t input_total = 0;
     std::shared_ptr<Account> sending_account;
 
     for (auto& txin: tx->txins())
@@ -1533,7 +1531,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
         if (tx_r.empty())
         {
             // The txinscript is in one of our accounts but we don't have the outpoint, 
-            have_all_outpoints = false;
+            txin->outpoint(nullptr);
             bytes_t txoutscript;
             try
             {
@@ -1577,8 +1575,6 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                 conflicting_txs.insert(conflict_txin->tx());
             } 
 
-            input_total += outpoint->value();
-
             // Was this transaction signed using one of our accounts?
             odb::result<SigningScript> script_r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == outpoint->script()));
             if (!script_r.empty())
@@ -1599,15 +1595,12 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 
     // Check outputs
     bool sent_to_vault = false; // whether any of the outputs are spendable by accounts in vault
-    uint64_t output_total = 0;
-
     for (auto& txout: tx->txouts())
     {
         // Assume all inputs sent from same account.
         // TODO: Allow coin mixing.
         if (sending_account) { txout->sending_account(sending_account); }
 
-        output_total += txout->value();
         odb::result<SigningScript> script_r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == txout->script()));
         if (!script_r.empty())
         {
@@ -1685,7 +1678,6 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
     {
         LOGGER(debug) << "Vault::insertTx_unwrapped - INSERTING NEW TRANSACTION. hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
         tx->updateTotals();
-        //if (have_all_outpoints) { tx->fee(input_total - output_total); }
 
         // Persist the transaction
         db_->persist(*tx);

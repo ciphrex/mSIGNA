@@ -904,14 +904,14 @@ bytes_t Tx::raw() const
 
 void Tx::updateTotals()
 {
-    have_fee_ = true;
+    have_all_outpoints_ = true;
     txin_total_ = 0;
     for (auto& txin: txins_)
     {
         std::shared_ptr<TxOut> outpoint = txin->outpoint();
         if (!outpoint)
         {
-            have_fee_ = false;
+            have_all_outpoints_ = false;
         }
         else
         {
@@ -924,8 +924,6 @@ void Tx::updateTotals()
     {
         txout_total_ += txout->value(); 
     }
-
-    fee_ = have_fee_ ? (txin_total_ - txout_total_) : 0; 
 }
 
 void Tx::shuffle_txins()

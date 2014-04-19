@@ -44,8 +44,8 @@ typedef odb::nullable<unsigned long> null_id_t;
 // SCHEMA VERSION //
 ////////////////////
 
-#define SCHEMA_BASE_VERSION 4
-#define SCHEMA_VERSION      6
+#define SCHEMA_BASE_VERSION 7
+#define SCHEMA_VERSION      7
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -915,7 +915,7 @@ public:
     static std::vector<status_t>    getStatusFlags(int status);
 
     Tx(uint32_t version = 1, uint32_t locktime = 0, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED)
-        : version_(version), locktime_(locktime), timestamp_(timestamp), status_(status), txin_total_(0), txout_total_(0), have_fee_(false), fee_(0) { }
+        : version_(version), locktime_(locktime), timestamp_(timestamp), status_(status), have_all_outpoints_(false), txin_total_(0), txout_total_(0) { }
 
     void set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED);
     void set(Coin::Transaction coin_tx, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED);
@@ -942,13 +942,10 @@ public:
     status_t status() const { return status_; }
 
     void updateTotals();
+    bool have_all_outpoints() const { return have_all_outpoints_; }
     uint64_t txin_total() const { return txin_total_; }
     uint64_t txout_total() const { return txout_total_; }
-
-    void fee(uint64_t fee) { have_fee_ = true; fee_ = fee; }
-    uint64_t fee() const { return fee_; }
-
-    bool have_fee() const { return have_fee_; }
+    uint64_t fee() const { return have_all_outpoints_ ? txin_total_ - txout_total_ : 0; }
 
     void block(std::shared_ptr<BlockHeader> header, uint32_t index) { blockheader_ = header, blockindex_ = index; }
 
@@ -993,12 +990,10 @@ private:
 
     status_t status_;
 
+    // Due to issue with odb::nullable<uint64_t> in mingw-w64, we use a second bool variable.
+    bool have_all_outpoints_;
     uint64_t txin_total_;
     uint64_t txout_total_;
-
-    // Due to issue with odb::nullable<uint64_t> in mingw-w64, we use a second bool variable.
-    bool have_fee_;
-    uint64_t fee_;
 
     #pragma db null
     std::shared_ptr<BlockHeader> blockheader_;
@@ -1156,12 +1151,12 @@ struct TxView
     uint32_t timestamp;
     #pragma db column(Tx::status_)
     Tx::status_t status;
+    #pragma db column(Tx::have_all_outpoints_)
+    bool have_all_outpoints;
     #pragma db column(Tx::txin_total_)
     uint64_t txin_total;
     #pragma db column(Tx::txout_total_)
     uint64_t txout_total;
-    #pragma db column(Tx::have_fee_)
-    bool have_fee;
     #pragma db column(Tx::txin_total_ + "-" + Tx::txout_total_)
     uint64_t fee;
     #pragma db column(BlockHeader::height_)
@@ -1320,14 +1315,20 @@ struct TxOutView
     #pragma db column(Tx::status_)
     Tx::status_t tx_status;
 
+    #pragma db column(Tx::have_all_outpoints_)
+    bool tx_has_all_outpoints;
+
+    #pragma db column(Tx::txin_total_)
+    uint64_t tx_txin_total;
+
+    #pragma db column(Tx::txout_total_)
+    uint64_t tx_txout_total;
+
+    #pragma db column(Tx::txin_total_ + "-" + Tx::txout_total_)
+    uint64_t tx_fee;
+
     #pragma db column(TxOut::txindex_)
     uint32_t tx_index;
-
-    #pragma db column(Tx::have_fee_)
-    bool have_fee;
-
-    #pragma db column(Tx::fee_)
-    uint64_t fee;
 
     #pragma db column(BlockHeader::height_)
     uint32_t height;
