@@ -748,7 +748,6 @@ std::string Tx::getStatusString(int status)
     if (status & UNSENT) flags.push_back("UNSENT");
     if (status & SENT) flags.push_back("SENT");
     if (status & PROPAGATED) flags.push_back("PROPAGATED");
-    if (status & CONFLICTING) flags.push_back("CONFLICTING");
     if (status & CANCELED) flags.push_back("CANCELED");
     if (status & CONFIRMED) flags.push_back("CONFIRMED");
     if (flags.empty()) return "NO_STATUS";
@@ -763,13 +762,12 @@ std::vector<Tx::status_t> Tx::getStatusFlags(int status)
     if (status & UNSENT) flags.push_back(UNSENT);
     if (status & SENT) flags.push_back(SENT);
     if (status & PROPAGATED) flags.push_back(PROPAGATED);
-    if (status & CONFLICTING) flags.push_back(CONFLICTING);
     if (status & CANCELED) flags.push_back(CANCELED);
     if (status & CONFIRMED) flags.push_back(CONFIRMED);
     return flags;
 }
 
-void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp, status_t status)
+void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp, status_t status, bool conflicting)
 {
     version_ = version;
 
@@ -799,12 +797,14 @@ void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uin
     if (missingSigCount())  { status_ = UNSIGNED; }
     else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
 
+    conflicting_ = conflicting;
+
     coin_tx.clearScriptSigs();
     unsigned_hash_ = coin_tx.getHashLittleEndian();
     updateTotals();
 }
 
-void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status)
+void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status, bool conflicting)
 {
     LOGGER(trace) << "Tx::set - fromCoinCore(coin_tx);" << std::endl;
     fromCoinCore(coin_tx);
@@ -814,12 +814,14 @@ void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status)
     if (missingSigCount())  { status_ = UNSIGNED; }
     else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
 
+    conflicting_ = conflicting;
+
     coin_tx.clearScriptSigs();
     unsigned_hash_ = coin_tx.getHashLittleEndian();
     updateTotals();
 }
 
-void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
+void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status, bool conflicting)
 {
     Coin::Transaction coin_tx(raw);
     fromCoinCore(coin_tx);
@@ -827,6 +829,8 @@ void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
 
     if (missingSigCount())  { status_ = UNSIGNED; }
     else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
+
+    conflicting_ = conflicting;
 
     coin_tx.clearScriptSigs();
     unsigned_hash_ = coin_tx.getHashLittleEndian();

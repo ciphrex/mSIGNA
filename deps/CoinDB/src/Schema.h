@@ -45,7 +45,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 7
-#define SCHEMA_VERSION      7
+#define SCHEMA_VERSION      8
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -905,7 +905,6 @@ public:
         UNSENT       =  1 << 1, // signed but not yet broadcast to network
         SENT         =  1 << 2, // sent to at least one peer but possibly not propagated
         PROPAGATED   =  1 << 3, // received from at least one peer
-        CONFLICTING  =  1 << 4, // unconfirmed and spends the same output as another transaction
         CANCELED     =  1 << 5, // either will never be broadcast or will never confirm
         CONFIRMED    =  1 << 6, // exists in blockchain
         ALL          = (1 << 7) - 1
@@ -914,12 +913,12 @@ public:
     static std::string              getStatusString(int status);
     static std::vector<status_t>    getStatusFlags(int status);
 
-    Tx(uint32_t version = 1, uint32_t locktime = 0, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED)
-        : version_(version), locktime_(locktime), timestamp_(timestamp), status_(status), have_all_outpoints_(false), txin_total_(0), txout_total_(0) { }
+    Tx(uint32_t version = 1, uint32_t locktime = 0, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false)
+        : version_(version), locktime_(locktime), timestamp_(timestamp), status_(status), conflicting_(conflicting),  have_all_outpoints_(false), txin_total_(0), txout_total_(0) { }
 
-    void set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED);
-    void set(Coin::Transaction coin_tx, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED);
-    void set(const bytes_t& raw, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED);
+    void set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false);
+    void set(Coin::Transaction coin_tx, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false);
+    void set(const bytes_t& raw, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false);
 
     Coin::Transaction toCoinCore() const;
 
@@ -940,6 +939,9 @@ public:
 
     bool updateStatus(status_t status = NO_STATUS); // Will keep the status it already had if it didn't change and no parameter is passed. Returns true iff status changed.
     status_t status() const { return status_; }
+
+    void conflicting(bool conflicting) { conflicting_ = conflicting; }
+    bool conflicting() const { return conflicting_; }
 
     void updateTotals();
     bool have_all_outpoints() const { return have_all_outpoints_; }
@@ -989,6 +991,8 @@ private:
     uint32_t timestamp_;
 
     status_t status_;
+
+    bool conflicting_;
 
     // Due to issue with odb::nullable<uint64_t> in mingw-w64, we use a second bool variable.
     bool have_all_outpoints_;

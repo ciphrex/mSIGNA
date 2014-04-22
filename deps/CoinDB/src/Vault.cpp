@@ -1662,12 +1662,12 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 
     if (!conflicting_txs.empty())
     {
-        tx->updateStatus(Tx::CONFLICTING);
+        tx->conflicting(true);
         for (auto& conflicting_tx: conflicting_txs)
         {
-            if (conflicting_tx->status() != Tx::CONFIRMED && conflicting_tx->status() != Tx::CONFLICTING)
+            if (conflicting_tx->status() != Tx::CONFIRMED)
             {
-                conflicting_tx->updateStatus(Tx::CONFLICTING);
+                conflicting_tx->conflicting(true);
                 db_->update(conflicting_tx);
                 notifyTxStatusChanged(conflicting_tx);
             }

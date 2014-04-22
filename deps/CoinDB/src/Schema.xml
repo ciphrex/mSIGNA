@@ -1,4 +1,6 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="sqlite" version="1">
+  <changeset version="8"/>
+
   <model version="7">
     <table name="Version" kind="object">
       <column name="id" type="INTEGER" null="false"/>
@@ -348,6 +350,7 @@
       <column name="locktime" type="INTEGER" null="false"/>
       <column name="timestamp" type="INTEGER" null="false"/>
       <column name="status" type="INTEGER" null="false"/>
+      <column name="conflicting" type="INTEGER" null="false"/>
       <column name="have_all_outpoints" type="INTEGER" null="false"/>
       <column name="txin_total" type="INTEGER" null="false"/>
       <column name="txout_total" type="INTEGER" null="false"/>
