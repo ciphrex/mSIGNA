@@ -46,6 +46,7 @@ Vault::Vault(int argc, char** argv, bool create, uint32_t version)
 {
     LOGGER(trace) << "Vault::Vault(..., " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
 
+    if (argc >= 2) name_ = argv[1];
     if (create) setSchemaVersion(version);
 }
 
@@ -55,6 +56,7 @@ Vault::Vault(const std::string& filename, bool create, uint32_t version)
 {
     LOGGER(trace) << "Vault::Vault(" << filename << ", " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
 
+    name_ = filename;
     if (create) setSchemaVersion(version);
 }
 #endif

@@ -28,6 +28,7 @@ public:
 
     void openVault(const std::string& filename, bool bCreate = false);
     void closeVault();
+    Vault* getVault() { return m_vault; }
 
     void startSync(const std::string& host, const std::string& port);
     void stopSync();

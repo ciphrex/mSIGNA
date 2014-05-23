@@ -39,6 +39,7 @@ public:
     ///////////////////////
     // GLOBAL OPERATIONS //
     ///////////////////////
+    const std::string&                      getName() const { return name_; }
     uint32_t                                getSchemaVersion() const;
     void                                    setSchemaVersion(uint32_t version);
 
@@ -253,6 +254,7 @@ protected:
 private:
     mutable boost::mutex mutex;
     std::shared_ptr<odb::core::database> db_;
+    std::string name_;
 
     mutable secure_bytes_t chainCodeUnlockKey;
     mutable std::map<std::string, secure_bytes_t> mapPrivateKeyUnlock;
