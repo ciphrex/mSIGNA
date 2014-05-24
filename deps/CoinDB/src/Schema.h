@@ -730,6 +730,8 @@ public:
     void outpoint(std::shared_ptr<TxOut> outpoint);
     const std::shared_ptr<TxOut> outpoint() const { return outpoint_.lock(); }
 
+    std::string toJson() const;
+
 private:
     friend class odb::access;
     TxIn() { }
@@ -835,6 +837,8 @@ public:
     const std::shared_ptr<SigningScript> signingscript() const { return signingscript_; }
 
     status_t status() const { return status_; }
+
+    std::string toJson() const;
 
 private:
     friend class odb::access;
@@ -949,7 +953,7 @@ public:
     uint64_t txout_total() const { return txout_total_; }
     uint64_t fee() const { return have_all_outpoints_ ? txin_total_ - txout_total_ : 0; }
 
-    void block(std::shared_ptr<BlockHeader> header, uint32_t index) { blockheader_ = header, blockindex_ = index; }
+    void block(std::shared_ptr<BlockHeader> header, uint32_t index) { blockheader_ = header; blockindex_ = index; }
 
     void blockheader(std::shared_ptr<BlockHeader> blockheader);
     std::shared_ptr<BlockHeader> blockheader() const { return blockheader_; }
@@ -959,6 +963,8 @@ public:
 
     unsigned int missingSigCount() const;
     std::set<bytes_t> missingSigPubkeys() const;
+
+    std::string toJson() const;
 
 private:
     friend class odb::access;

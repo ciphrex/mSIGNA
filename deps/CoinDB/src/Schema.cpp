@@ -643,6 +643,18 @@ void TxIn::outpoint(std::shared_ptr<TxOut> outpoint)
         throw std::runtime_error("TxIn::outpoint - invalid outpoint.");
 }
 
+std::string TxIn::toJson() const
+{
+    std::stringstream ss;
+    ss << "{"
+       << "\"outhash\":\"" << uchar_vector(outhash_).getHex() << "\","
+       << "\"outindex\":" << outindex_ << ","
+       << "\"script\":\"" << uchar_vector(script_).getHex() << "\","
+       << "\"sequence\":" << sequence_
+       << "}";
+    return ss.str();
+}
+
 
 /*
  * class TxOut
@@ -733,6 +745,18 @@ Coin::TxOut TxOut::toCoinCore() const
 bytes_t TxOut::raw() const
 {
     return toCoinCore().getSerialized();
+}
+
+std::string TxOut::toJson() const
+{
+    std::stringstream ss;
+    ss << "{"
+       << "\"value\":" << value_ << ","
+       << "\"script\":\"" << uchar_vector(script_).getHex() << "\","
+       << "\"sending_label\":\"" << sending_label_ << "\","
+       << "\"receiving_label\":\"" << receiving_label_ << "\""
+       << "}";
+    return ss.str(); 
 }
 
 
@@ -998,3 +1022,36 @@ std::set<bytes_t> Tx::missingSigPubkeys() const
     return pubkeys;
 }
 
+std::string Tx::toJson() const
+{
+    std::stringstream ss;
+    ss << "{"
+       << "\"version\":" << version_ << ","
+       << "\"locktime\":" << locktime_ << ","
+       << "\"hash\":\"" << uchar_vector(hash()).getHex() << "\","
+       << "\"status\":\"" << getStatusString(status_) << "\","
+       << "\"height\":";
+    if (blockheader_)   { ss << blockheader_->height(); }
+    else                { ss << "null"; }
+    ss << ","
+       << "\"txins\":[";
+    bool addComma = false;
+    for (auto& txin: txins_)
+    {
+        if (addComma)   { ss << ","; }
+        else            { addComma = true; }
+        ss << txin->toJson();
+    }
+    ss << "],"
+       << "\"txouts\":[";
+    addComma = false;
+    for (auto& txout: txouts_)
+    {
+        if (addComma)   { ss << ","; }
+        else            { addComma = true; }
+        ss << txout->toJson();
+    }
+    ss << "]"
+       << "}";
+    return ss.str();
+}
