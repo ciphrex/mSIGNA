@@ -169,8 +169,7 @@ SynchedVault::SynchedVault(const std::string& blockTreeFile) :
 SynchedVault::~SynchedVault()
 {
     LOGGER(trace) << "SynchedVault::~SynchedVault()" << std::endl;
-    std::lock_guard<std::mutex> lock(m_vaultMutex);
-    if (m_vault) delete m_vault;
+    closeVault();
 }
 
 // Vault operations
