@@ -630,6 +630,8 @@ public:
     uint32_t bits() const { return bits_; }
     uint32_t nonce() const { return nonce_; }
 
+    std::string toJson() const;
+
 private:
     friend class odb::access;
 
@@ -679,6 +681,8 @@ public:
 
     void flags(const bytes_t& flags) { flags_ = flags; }
     const bytes_t& flags() const { return flags_; }
+
+    std::string toJson() const;
 
 private:
     friend class odb::access;

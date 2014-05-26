@@ -572,6 +572,22 @@ Coin::CoinBlockHeader BlockHeader::toCoinCore() const
     return Coin::CoinBlockHeader(version_, timestamp_, bits_, nonce_, prevhash_, merkleroot_);
 }
 
+std::string BlockHeader::toJson() const
+{
+    std::stringstream ss;
+    ss << "{"
+       << "\"hash\":\"" << uchar_vector(hash_).getHex() << ","
+       << "\"height\":" << height_ << ","
+       << "\"version\":" << version_ << ","
+       << "\"prevhash\":\"" << uchar_vector(prevhash_).getHex() << "\","
+       << "\"merkleroot\":\"" << uchar_vector(merkleroot_).getHex() << "\","
+       << "\"timestamp\":" << timestamp_ << ","
+       << "\"bits\":" << bits_ << ","
+       << "\"nonce\":" << nonce_
+       << "}";
+    return ss.str();
+}
+
 
 /*
  * class MerkleBlock
@@ -595,6 +611,26 @@ Coin::MerkleBlock MerkleBlock::toCoinCore() const
     for (auto& hash: merkleblock.hashes) { std::reverse(hash.begin(), hash.end()); }
     merkleblock.flags = flags_;
     return merkleblock;
+}
+
+std::string MerkleBlock::toJson() const
+{
+    std::stringstream ss;
+    ss << "{"
+       << "\"header\":" << blockheader_->toJson() << ","
+       << "\"txcount\":" << txcount_ << ","
+       << "\"hashes\":[";
+    bool addComma = false;
+    for (auto& hash: hashes_)
+    {
+        if (addComma)   { ss << ","; }
+        else            { addComma = true; }
+        ss << "\"" << uchar_vector(hash).getHex() << "\""; 
+    }
+    ss << "],"
+       << "\"flags\":\"" << uchar_vector(flags_).getHex() << "\""
+       << "}";
+    return ss.str();
 }
 
 
