@@ -576,7 +576,7 @@ std::string BlockHeader::toJson() const
 {
     std::stringstream ss;
     ss << "{"
-       << "\"hash\":\"" << uchar_vector(hash_).getHex() << ","
+       << "\"hash\":\"" << uchar_vector(hash_).getHex() << "\","
        << "\"height\":" << height_ << ","
        << "\"version\":" << version_ << ","
        << "\"prevhash\":\"" << uchar_vector(prevhash_).getHex() << "\","
