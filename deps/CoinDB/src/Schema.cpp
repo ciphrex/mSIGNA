@@ -801,16 +801,16 @@ std::string TxOut::toJson() const
  */
 
 // static
-std::string Tx::getStatusString(int status)
+std::string Tx::getStatusString(int status, bool lowercase)
 {
     std::vector<std::string> flags;
-    if (status & UNSIGNED) flags.push_back("UNSIGNED");
-    if (status & UNSENT) flags.push_back("UNSENT");
-    if (status & SENT) flags.push_back("SENT");
-    if (status & PROPAGATED) flags.push_back("PROPAGATED");
-    if (status & CANCELED) flags.push_back("CANCELED");
-    if (status & CONFIRMED) flags.push_back("CONFIRMED");
-    if (flags.empty()) return "NO_STATUS";
+    if (status & UNSIGNED) flags.push_back(lowercase ? "unsigned" : "UNSIGNED");
+    if (status & UNSENT) flags.push_back(lowercase ? "unsent" : "UNSENT");
+    if (status & SENT) flags.push_back(lowercase ? "send" : "SENT");
+    if (status & PROPAGATED) flags.push_back(lowercase ? "propagated" : "PROPAGATED");
+    if (status & CANCELED) flags.push_back(lowercase ? "canceled" : "CANCELED");
+    if (status & CONFIRMED) flags.push_back(lowercase ? "confirmed" : "CONFIRMED");
+    if (flags.empty()) return lowercase ? "no_status" : "NO_STATUS";
     return stdutils::delimited_list(flags, " | ");
 }
 
@@ -1065,7 +1065,7 @@ std::string Tx::toJson() const
        << "\"version\":" << version_ << ","
        << "\"locktime\":" << locktime_ << ","
        << "\"hash\":\"" << uchar_vector(hash()).getHex() << "\","
-       << "\"status\":\"" << getStatusString(status_) << "\","
+       << "\"status\":\"" << getStatusString(status_, true) << "\","
        << "\"height\":";
     if (blockheader_)   { ss << blockheader_->height(); }
     else                { ss << "null"; }

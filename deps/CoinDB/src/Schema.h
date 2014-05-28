@@ -918,7 +918,7 @@ public:
         ALL          = (1 << 7) - 1
     };
 
-    static std::string              getStatusString(int status);
+    static std::string              getStatusString(int status, bool lowercase = false);
     static std::vector<status_t>    getStatusFlags(int status);
 
     Tx(uint32_t version = 1, uint32_t locktime = 0, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false)
