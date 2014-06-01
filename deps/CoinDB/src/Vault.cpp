@@ -1390,7 +1390,7 @@ std::shared_ptr<Tx> Vault::getTx_unwrapped(unsigned long tx_id) const
     return tx;
 }
 
-std::vector<TxView> Vault::getTxViews(int tx_status_flags, unsigned long start, int count) const
+std::vector<TxView> Vault::getTxViews(int tx_status_flags, unsigned long start, int count, uint32_t minheight) const
 {
     LOGGER(trace) << "Vault::getTxViews(" << Tx::getStatusString(tx_status_flags) << ", " << start << ", " << count << ")" << std::endl;
 
@@ -1400,6 +1400,11 @@ std::vector<TxView> Vault::getTxViews(int tx_status_flags, unsigned long start, 
     {
         std::vector<Tx::status_t> tx_statuses = Tx::getStatusFlags(tx_status_flags);
         query = query && query_t::Tx::status.in_range(tx_statuses.begin(), tx_statuses.end());
+    }
+
+    if (minheight > 0)
+    {
+        query = query && (query_t::BlockHeader::height >= minheight);
     }
 
     query += "ORDER BY" + query_t::BlockHeader::height + "DESC," + query_t::Tx::timestamp + "DESC," + query_t::Tx::id + "DESC";
