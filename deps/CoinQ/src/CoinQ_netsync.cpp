@@ -160,7 +160,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coin_params)
             uint32_t bestHeight = blockTree.getBestHeight();
             if (resynching)
             {
-                if (bestHeight > header.height) // We still need to fetch more blocks
+                if (bestHeight > (uint32_t)header.height) // We still need to fetch more blocks
                 {
                     const ChainHeader& nextHeader = blockTree.getHeader(header.height + 1);
                     uchar_vector blockHash = nextHeader.getHashLittleEndian();
