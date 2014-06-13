@@ -104,7 +104,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coin_params)
                 blockTreeFlushed = true;
                 notifyStatus("Done flushing block chain to file");
                 notifyDoneSync();
-                peer.getMempool();
+                //peer.getMempool();
             }
         }
         catch (const std::exception& e) {
@@ -157,7 +157,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coin_params)
             ChainHeader header = blockTree.getHeader(hash);
             notifyMerkleBlock(ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork));
 
-            if (resynching && blockTree.getBestHeight() > header.height) {
+            if (/*resynching &&*/ blockTree.getBestHeight() > header.height) {
                 const ChainHeader& nextHeader = blockTree.getHeader(header.height + 1);
                 uchar_vector blockHash = nextHeader.getHashLittleEndian();
                 LOGGER(debug) << "Asking for block " << blockHash.getHex() << " / height: " << nextHeader.height << std::endl;
@@ -169,7 +169,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coin_params)
             else {
                 resynching = false;
                 notifyDoneResync();
-                peer.getMempool();
+                //peer.getMempool();
             }
         }
         catch (const std::exception& e) {
@@ -240,7 +240,7 @@ void NetworkSync::initBlockFilter()
         }
 
         notifyBlock(block);
-        if (resynching && blockTree.getBestHeight() > block.height) {
+        if (/*resynching &&*/ blockTree.getBestHeight() > block.height) {
             const ChainHeader& nextHeader = blockTree.getHeader(block.height + 1);
             uchar_vector blockHash = nextHeader.getHashLittleEndian();
             std::stringstream status;
@@ -251,7 +251,7 @@ void NetworkSync::initBlockFilter()
         else {
             resynching = false;
             notifyDoneResync();
-            peer.getMempool();
+            //peer.getMempool();
         }
     });
 }
@@ -402,6 +402,15 @@ void NetworkSync::getTx(uchar_vector& hash)
     }
 
     peer.getTx(hash);
+}
+
+void NetworkSync::getMempool()
+{
+    if (!isConnected_) {
+        throw std::runtime_error("Must be connected to get mempool.");
+    }
+
+    peer.getMempool();
 }
 
 void NetworkSync::setBloomFilter(const Coin::BloomFilter& bloomFilter_)

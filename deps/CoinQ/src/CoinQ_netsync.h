@@ -60,6 +60,7 @@ public:
     // MESSAGES TO PEER
     void sendTx(Coin::Transaction& tx);
     void getTx(uchar_vector& hash);
+    void getMempool();
 
     // SYNC EVENT SUBSCRIPTIONS
     void subscribeStarted(void_slot_t slot) { notifyStarted.connect(slot); }
