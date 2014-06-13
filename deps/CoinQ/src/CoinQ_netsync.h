@@ -99,6 +99,7 @@ private:
 
     boost::mutex mutex;
     bool resynching;
+    uint32_t lastResyncHeight;
 
     bool isConnected_;
 

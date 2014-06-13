@@ -157,19 +157,27 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coin_params)
             ChainHeader header = blockTree.getHeader(hash);
             notifyMerkleBlock(ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork));
 
-            if (/*resynching &&*/ blockTree.getBestHeight() > header.height) {
-                const ChainHeader& nextHeader = blockTree.getHeader(header.height + 1);
-                uchar_vector blockHash = nextHeader.getHashLittleEndian();
-                LOGGER(debug) << "Asking for block " << blockHash.getHex() << " / height: " << nextHeader.height << std::endl;
-                std::stringstream status;
-                status << "Asking for block " << blockHash.getHex() << " / height: " << nextHeader.height;
-                notifyStatus(status.str());
-                peer.getFilteredBlock(blockHash);
-            }
-            else {
-                resynching = false;
-                notifyDoneResync();
-                //peer.getMempool();
+            uint32_t bestHeight = blockTree.getBestHeight();
+            if (resynching)
+            {
+                if (bestHeight > header.height) // We still need to fetch more blocks
+                {
+                    const ChainHeader& nextHeader = blockTree.getHeader(header.height + 1);
+                    uchar_vector blockHash = nextHeader.getHashLittleEndian();
+                    LOGGER(debug) << "Asking for block " << blockHash.getHex() << " / height: " << nextHeader.height << std::endl;
+                    std::stringstream status;
+                    status << "Asking for block " << blockHash.getHex() << " / height: " << nextHeader.height;
+                    notifyStatus(status.str());
+                    lastResyncHeight = nextHeader.height;
+                    peer.getFilteredBlock(blockHash);
+                }
+
+                if (bestHeight == lastResyncHeight)
+                {
+                    resynching = false;
+                    notifyDoneResync();
+                    //peer.getMempool();
+                }
             }
         }
         catch (const std::exception& e) {
@@ -313,12 +321,13 @@ void NetworkSync::resync(const std::vector<bytes_t>& locatorHashes, uint32_t sta
         status << "Asking for block " << blockHash.getHex();
         LOGGER(debug) << status.str() << std::endl;
         notifyStatus(status.str());
+        lastResyncHeight = (uint32_t)resyncHeight;
         peer.getFilteredBlock(blockHash);
     }
     else {
         resynching = false;
         notifyDoneResync();
-        peer.getMempool();
+        //peer.getMempool();
     }
 }
 
@@ -346,10 +355,11 @@ void NetworkSync::resync(int resyncHeight)
         status.str("");
         status << "Asking for block " << blockHash.getHex();
         notifyStatus(status.str());
+        lastResyncHeight = (uint32_t)resyncHeight;
         peer.getFilteredBlock(blockHash);
     }
 
-    peer.getMempool();
+    //peer.getMempool();
 }
 
 void NetworkSync::stopResync()
