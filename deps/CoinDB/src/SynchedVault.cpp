@@ -89,6 +89,13 @@ SynchedVault::SynchedVault(const std::string& blockTreeFile) :
         }
     });
 
+    m_networkSync.subscribeDoneResync([this]()
+    {
+        LOGGER(trace) << "Block tree resync complete." << std::endl;
+        LOGGER(info) << "Fetching mempool." << std::endl;
+        m_networkSync.getMempool();
+    });
+
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
     {
         LOGGER(trace) << "P2P network added best chain. New best height: " << header.height << std::endl;
