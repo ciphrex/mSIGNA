@@ -184,7 +184,18 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coin_params)
             std::stringstream err;
             err << "NetworkSync merkle block handler - block hash: " << hash.getHex() << " - " << e.what();
             LOGGER(error) << err.str() << std::endl;
-            notifyStatus(err.str());
+            notifyError(err.str());
+
+            try {
+                LOGGER(debug) << "NetworkSync merkle block handler - possible reorg - attempting to fetch block headers..." << std::endl;
+                peer.getHeaders(blockTree.getLocatorHashes(-1));
+            }
+            catch (const std::exception& e) {
+                err.clear();
+                err << "NetworkSync merkle block handler - error fetching block headers: " << e.what();
+                LOGGER(error) << err.str() << std::endl;
+                notifyError(e.what());
+            } 
         }
     });
 }
