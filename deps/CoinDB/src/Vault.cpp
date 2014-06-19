@@ -1902,7 +1902,7 @@ std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, std::vector<std:
         updateTx_unwrapped(tx);
         t.commit();
     }
-    return sigcount ? tx : nullptr;
+    return tx;
 }
 
 std::shared_ptr<Tx> Vault::signTx(unsigned long tx_id, std::vector<std::string>& keychain_names, bool update)
@@ -1923,7 +1923,7 @@ std::shared_ptr<Tx> Vault::signTx(unsigned long tx_id, std::vector<std::string>&
         updateTx_unwrapped(tx);
         t.commit();
     }
-    return sigcount ? tx : nullptr;
+    return tx;
 }
 
 unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::string>& keychain_names)
