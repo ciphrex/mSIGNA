@@ -230,7 +230,15 @@ void TxModel::signTx(int row)
     LOGGER(trace) << "TxModel::signTx - signature(s) added. raw tx: " << uchar_vector(tx->raw()).getHex() << std::endl;
     update();
 
-    QString msg = tr("Signatures added using keychain(s) ") + QString::fromStdString(stdutils::delimited_list(keychainNames, ", ")) + tr(".");
+    QString msg;
+    if (keychainNames.empty())
+    {
+        msg = tr("No new signatures were added.");
+    }
+    else
+    {
+        msg = tr("Signatures added using keychain(s) ") + QString::fromStdString(stdutils::delimited_list(keychainNames, ", ")) + tr(".");
+    }
     emit txSigned(msg);
 }
 
