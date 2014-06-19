@@ -1190,6 +1190,7 @@ void MainWindow::doneSync()
 void MainWindow::doneResync()
 {
     stopResyncAction->setEnabled(false);
+    networkSync.getMempool();
 //    updateStatusMessage(tr("Finished resynch"));
     emit status(tr("Finished resynch"));
 }
