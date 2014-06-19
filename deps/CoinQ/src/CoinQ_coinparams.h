@@ -68,6 +68,12 @@ inline CoinParams getBitcoinParams()
         Coin::CoinBlockHeader(1, 1231006505, 486604799, 2083236893, uchar_vector(32, 0), uchar_vector("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")));
 }
 
+inline CoinParams getBitcoinTestnet3Params()
+{
+    return CoinParams(0x0709110bul, 70001, "18333", 0x6f, 0xc4, "Testnet3", "testnet3", &sha256_2, &sha256_2,
+        Coin::CoinBlockHeader(1, 1296688602, 486604799, 414098458, uchar_vector(32, 0), uchar_vector("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")));
+}
+
 inline CoinParams getLitecoinParams()
 {
     return CoinParams(0xdbb6c0fbul, 70002, "9333", 0x30, 0x05, "Litecoin", "litecoin", &sha256_2, &scrypt_1024_1_1_256,
