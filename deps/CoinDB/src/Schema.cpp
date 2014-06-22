@@ -1065,6 +1065,7 @@ std::string Tx::toJson() const
        << "\"version\":" << version_ << ","
        << "\"locktime\":" << locktime_ << ","
        << "\"hash\":\"" << uchar_vector(hash()).getHex() << "\","
+       << "\"unsignedhash\":\"" << uchar_vector(unsigned_hash()).getHex() << "\","
        << "\"status\":\"" << getStatusString(status_, true) << "\","
        << "\"height\":";
     if (blockheader_)   { ss << blockheader_->height(); }
