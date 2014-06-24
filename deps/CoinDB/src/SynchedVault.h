@@ -35,8 +35,8 @@ public:
     void resyncVault();
     void updateBloomFilter();
 
-    void sendTx(const bytes_t& hash);
-    void sendTx(unsigned long tx_id);
+    std::shared_ptr<Tx> sendTx(const bytes_t& hash);
+    std::shared_ptr<Tx> sendTx(unsigned long tx_id);
 
     // P2P network state events
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
