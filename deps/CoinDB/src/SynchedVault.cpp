@@ -257,6 +257,9 @@ void SynchedVault::sendTx(const bytes_t& hash)
     if (!m_vault) throw std::runtime_error("No vault is open.");
 
     std::shared_ptr<Tx> tx = m_vault->getTx(hash);
+    if (tx->status() == Tx::UNSIGNED)
+        throw std::runtime_error("Transaction is missing signatures.");
+
     Coin::Transaction coin_tx = tx->toCoinCore();
     m_networkSync.sendTx(coin_tx); 
 }
@@ -271,6 +274,9 @@ void SynchedVault::sendTx(unsigned long tx_id)
     if (!m_vault) throw std::runtime_error("No vault is open.");
 
     std::shared_ptr<Tx> tx = m_vault->getTx(tx_id);
+    if (tx->status() == Tx::UNSIGNED)
+        throw std::runtime_error("Transaction is missing signatures.");
+
     Coin::Transaction coin_tx = tx->toCoinCore();
     m_networkSync.sendTx(coin_tx); 
 }
