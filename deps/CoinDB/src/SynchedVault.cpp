@@ -262,6 +262,8 @@ std::shared_ptr<Tx> SynchedVault::sendTx(const bytes_t& hash)
 
     Coin::Transaction coin_tx = tx->toCoinCore();
     m_networkSync.sendTx(coin_tx);
+    uchar_vector txhash(tx->hash());
+    m_networkSync.getTx(txhash); // To ensure propagation
 
     return tx;
 }
@@ -281,6 +283,8 @@ std::shared_ptr<Tx> SynchedVault::sendTx(unsigned long tx_id)
 
     Coin::Transaction coin_tx = tx->toCoinCore();
     m_networkSync.sendTx(coin_tx);
+    uchar_vector txhash(tx->hash());
+    m_networkSync.getTx(txhash); // To ensure propagation
 
     return tx;
 }
