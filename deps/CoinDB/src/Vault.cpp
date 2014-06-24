@@ -1839,15 +1839,15 @@ void Vault::deleteTx_unwrapped(std::shared_ptr<Tx> tx)
     db_->erase(tx);
 }
 
-SigningRequest Vault::getSigningRequest(const bytes_t& unsigned_hash, bool include_raw_tx) const
+SigningRequest Vault::getSigningRequest(const bytes_t& hash, bool include_raw_tx) const
 {
-    LOGGER(trace) << "Vault::getSigningRequest(" << uchar_vector(unsigned_hash).getHex() << ")" << std::endl;
+    LOGGER(trace) << "Vault::getSigningRequest(" << uchar_vector(hash).getHex() << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
-    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::unsigned_hash == unsigned_hash));
-    if (r.empty()) throw TxNotFoundException(unsigned_hash);
+    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == hash || odb::query<Tx>::unsigned_hash == hash));
+    if (r.empty()) throw TxNotFoundException(hash);
 
     std::shared_ptr<Tx> tx(r.begin().load());
     return getSigningRequest_unwrapped(tx, include_raw_tx);
@@ -1884,16 +1884,24 @@ SigningRequest Vault::getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool i
     return SigningRequest(tx->hash(), sigs_needed, keychain_info, rawtx);
 }
 
-std::shared_ptr<Tx> Vault::signTx(const bytes_t& unsigned_hash, std::vector<std::string>& keychain_names, bool update)
+std::shared_ptr<Tx> Vault::signTx(const bytes_t& hash, std::vector<std::string>& keychain_names, bool update)
 {
-    LOGGER(trace) << "Vault::signTx(" << uchar_vector(unsigned_hash).getHex() << ", [" << stdutils::delimited_list(keychain_names, ", ") << "], " << (update ? "update" : "no update") << ")" << std::endl;
+    LOGGER(trace) << "Vault::signTx(" << uchar_vector(hash).getHex() << ", [" << stdutils::delimited_list(keychain_names, ", ") << "], " << (update ? "update" : "no update") << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
 
-    odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::unsigned_hash == unsigned_hash));
-    if (tx_r.empty()) throw TxNotFoundException(unsigned_hash);
+    odb::result<Tx> tx_r;
+    tx_r = db_->query<Tx>(odb::query<Tx>::hash == hash);
+    if (!tx_r.empty())
+    {
+        std::shared_ptr<Tx> tx(tx_r.begin().load());
+        return tx;
+    }
+
+    tx_r = db_->query<Tx>(odb::query<Tx>::unsigned_hash == hash);
+    if (tx_r.empty()) throw TxNotFoundException(hash);
     std::shared_ptr<Tx> tx(tx_r.begin().load());
 
     unsigned int sigcount = signTx_unwrapped(tx, keychain_names);
