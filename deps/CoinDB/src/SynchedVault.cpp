@@ -235,6 +235,18 @@ void SynchedVault::resyncVault()
     m_networkSync.resync(locatorHashes, startTime);
 }
 
+void SynchedVault::updateBloomFilter()
+{
+    LOGGER(trace) << "SynchedVault::updateBloomFilter()" << std::endl;
+    if (!m_bConnected) throw std::runtime_error("Not connected.");
+
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+    std::lock_guard<std::mutex> lock(m_vaultMutex);
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+
+    m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
+}
+
 // Event subscriptions
 void SynchedVault::clearAllSlots()
 {

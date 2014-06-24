@@ -33,6 +33,7 @@ public:
     void startSync(const std::string& host, const std::string& port);
     void stopSync();
     void resyncVault();
+    void updateBloomFilter();
 
     // P2P network state events
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
