@@ -247,6 +247,35 @@ void SynchedVault::updateBloomFilter()
     m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
 }
 
+void SynchedVault::sendTx(const bytes_t& hash)
+{
+    LOGGER(trace) << "SynchedVault::sendTx(" << uchar_vector(hash).getHex() << ")" << std::endl;
+    if (!m_bConnected) throw std::runtime_error("Not connected.");
+
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+    std::lock_guard<std::mutex> lock(m_vaultMutex);
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+
+    std::shared_ptr<Tx> tx = m_vault->getTx(hash);
+    Coin::Transaction coin_tx = tx->toCoinCore();
+    m_networkSync.sendTx(coin_tx); 
+}
+
+void SynchedVault::sendTx(unsigned long tx_id)
+{
+    LOGGER(trace) << "SynchedVault::sendTx(" << tx_id << ")" << std::endl;
+    if (!m_bConnected) throw std::runtime_error("Not connected.");
+
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+    std::lock_guard<std::mutex> lock(m_vaultMutex);
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+
+    std::shared_ptr<Tx> tx = m_vault->getTx(tx_id);
+    Coin::Transaction coin_tx = tx->toCoinCore();
+    m_networkSync.sendTx(coin_tx); 
+}
+
+
 // Event subscriptions
 void SynchedVault::clearAllSlots()
 {
