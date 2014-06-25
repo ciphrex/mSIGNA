@@ -1300,6 +1300,7 @@ void MainWindow::networkError(const QString& error)
     emit status(message);
     connected = false;
     disconnectAction->setEnabled(false);
+    disconnectAction->setText(tr("Disconnect from ") + host);
     connectAction->setEnabled(true);
     sendRawTxAction->setEnabled(false);
 
@@ -1325,6 +1326,7 @@ void MainWindow::networkStopped()
     updateNetworkState();
     resyncAction->setEnabled(false);
     disconnectAction->setEnabled(false);
+    disconnectAction->setText(tr("Disconnect from ") + host);
     connectAction->setEnabled(true);
     sendRawTxAction->setEnabled(false);
 }
@@ -1335,6 +1337,7 @@ void MainWindow::networkTimeout()
 //    updateStatusMessage(tr("Network timed out"));
     emit status(tr("Network timed out"));
     disconnectAction->setEnabled(false);
+    disconnectAction->setText(tr("Disconnect from ") + host);
     connectAction->setEnabled(true);
     sendRawTxAction->setEnabled(false);
     //networkStateLabel->setText(tr("Disconnected"));
@@ -1350,6 +1353,8 @@ void MainWindow::networkSettings()
         port = dlg.getPort();
         autoConnect = dlg.getAutoConnect();
         connectAction->setText(tr("Connect to ") + host);
+        if (!connected)
+            disconnectAction->setText(tr("Disconnect from ") + host);
 
         QSettings settings("Ciphrex", getDefaultSettings().getAppName());
         settings.setValue("host", host);
