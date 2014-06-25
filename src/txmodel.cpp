@@ -270,11 +270,11 @@ void TxModel::sendTx(int row, CoinQ::Network::NetworkSync* networkSync)
     networkSync->sendTx(coin_tx);
 
     // TODO: Check transaction has propagated before changing status to PROPAGATED
-    tx->updateStatus(CoinDB::Tx::PROPAGATED);
-    vault->insertTx(tx);
+//    tx->updateStatus(CoinDB::Tx::PROPAGATED);
+//    vault->insertTx(tx);
 
-    update();
-//    networkSync->getTx(txhash);
+//    update();
+    networkSync->getTx(txhash);
 }
 
 std::shared_ptr<Tx> TxModel::getTx(int row)
