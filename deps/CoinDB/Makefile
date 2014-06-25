@@ -1,5 +1,8 @@
 ODB_DB = \
-    -DDATABASE_SQLITE
+    -DDATABASE_MYSQL
+
+ODB_COMPILER_DB = \
+    -d mysql
 
 CXX_FLAGS += -Wall
 ifdef DEBUG
@@ -113,7 +116,7 @@ LIBS = \
     -lboost_thread$(BOOST_THREAD_SUFFIX)$(BOOST_SUFFIX) \
     -lboost_serialization$(BOOST_SUFFIX) \
     -lcrypto \
-    -lodb-sqlite \
+    -lodb-mysql \
     -lodb
 
 OBJS = \
@@ -143,7 +146,7 @@ lib/libCoinDB.a: $(OBJS)
 # odb compiled dependencies
 #
 odb/Schema-odb.hxx: src/Schema.h
-	odb --output-dir odb/ --std c++11 -d sqlite --generate-query --generate-schema $(ODB_INCLUDE_PATH) $<
+	odb --output-dir odb/ --std c++11 $(ODB_COMPILER_DB) --generate-query --generate-schema $(ODB_INCLUDE_PATH) $<
 
 odb/Schema-odb.cxx: odb/Schema-odb.hxx
 

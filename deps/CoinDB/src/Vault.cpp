@@ -36,6 +36,9 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
+#define DBUSER "root"
+#define DBPASSWD "test"
+
 using namespace CoinDB;
 
 /*
@@ -50,16 +53,19 @@ Vault::Vault(int argc, char** argv, bool create, uint32_t version)
     if (create) setSchemaVersion(version);
 }
 
-#if defined(DATABASE_SQLITE)
+#if defined(DATABASE_MYSQL)
+Vault::Vault(const std::string& filename, bool create, uint32_t version)
+    : db_(openDatabase(DBUSER, DBPASSWD, filename))
+#elif defined(DATABASE_SQLITE)
 Vault::Vault(const std::string& filename, bool create, uint32_t version)
     : db_(openDatabase(filename, create))
+#endif
 {
     LOGGER(trace) << "Vault::Vault(" << filename << ", " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
 
     name_ = filename;
     if (create) setSchemaVersion(version);
 }
-#endif
 
 ///////////////////////
 // GLOBAL OPERATIONS //

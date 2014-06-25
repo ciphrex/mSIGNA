@@ -99,7 +99,14 @@ open_database (int& argc, char* argv[], bool create = false)
   return db;
 }
 
-#if defined(DATABASE_SQLITE)
+#if defined(DATABASE_MYSQL)
+inline std::unique_ptr<odb::database>
+openDatabase(const std::string& user, const std::string& passwd, const std::string& dbname)
+{
+    std::unique_ptr<odb::database> db(new odb::mysql::database(user, passwd, dbname));
+    return db;
+}
+#elif defined(DATABASE_SQLITE)
 inline std::unique_ptr<odb::database>
 openDatabase(const std::string& filename, bool create = false)
 {

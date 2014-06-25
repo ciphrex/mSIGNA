@@ -38,7 +38,8 @@ namespace CoinDB
 
 typedef odb::nullable<unsigned long> null_id_t;
 
-#pragma db value(bytes_t) type("BLOB")
+#pragma db value(std::string) type("VARCHAR(255)")
+#pragma db value(bytes_t) type("VARBINARY(255)")
 
 ////////////////////
 // SCHEMA VERSION //

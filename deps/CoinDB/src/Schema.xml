@@ -1,373 +1,373 @@
-<changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="sqlite" version="1">
-  <changeset version="8"/>
-
-  <model version="7">
-    <table name="Version" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="version" type="INTEGER" null="false"/>
+<changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="mysql" version="1">
+  <changeset version="8">
+    <add-table name="Version" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="version" type="INT UNSIGNED" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
-    </table>
-    <table name="Keychain" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="name" type="TEXT" null="false"/>
-      <column name="depth" type="INTEGER" null="false"/>
-      <column name="parent_fp" type="INTEGER" null="false"/>
-      <column name="child_num" type="INTEGER" null="false"/>
-      <column name="pubkey" type="BLOB" null="false"/>
-      <column name="chain_code_ciphertext" type="BLOB" null="false"/>
-      <column name="chain_code_salt" type="BLOB" null="false"/>
-      <column name="privkey_ciphertext" type="BLOB" null="false"/>
-      <column name="privkey_salt" type="BLOB" null="false"/>
-      <column name="parent" type="INTEGER" null="true"/>
-      <column name="hash" type="BLOB" null="false"/>
-      <column name="hidden" type="INTEGER" null="false"/>
+    </add-table>
+    <add-table name="Keychain" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="name" type="VARCHAR(255)" null="false"/>
+      <column name="depth" type="INT UNSIGNED" null="false"/>
+      <column name="parent_fp" type="INT UNSIGNED" null="false"/>
+      <column name="child_num" type="INT UNSIGNED" null="false"/>
+      <column name="pubkey" type="VARBINARY(255)" null="false"/>
+      <column name="chain_code_ciphertext" type="VARBINARY(255)" null="false"/>
+      <column name="chain_code_salt" type="VARBINARY(255)" null="false"/>
+      <column name="privkey_ciphertext" type="VARBINARY(255)" null="false"/>
+      <column name="privkey_salt" type="VARBINARY(255)" null="false"/>
+      <column name="parent" type="BIGINT UNSIGNED" null="true"/>
+      <column name="hash" type="VARBINARY(255)" null="false"/>
+      <column name="hidden" type="TINYINT(1)" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
-      <foreign-key name="parent_fk" deferrable="DEFERRED">
+      <foreign-key name="Keychain_parent_fk" deferrable="DEFERRED">
         <column name="parent"/>
         <references table="Keychain">
           <column name="id"/>
         </references>
       </foreign-key>
-      <index name="Keychain_name_i" type="UNIQUE">
+      <index name="name_i" type="UNIQUE">
         <column name="name"/>
       </index>
-    </table>
-    <table name="Keychain_derivation_path" kind="container">
-      <column name="object_id" type="INTEGER" null="false"/>
-      <column name="index" type="INTEGER" null="false"/>
-      <column name="value" type="INTEGER" null="false"/>
-      <foreign-key name="object_id_fk" on-delete="CASCADE">
+    </add-table>
+    <add-table name="Keychain_derivation_path" options="ENGINE=InnoDB" kind="container">
+      <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="index" type="BIGINT UNSIGNED" null="false"/>
+      <column name="value" type="INT UNSIGNED" null="false"/>
+      <foreign-key name="Keychain_derivation_path_object_id_fk" on-delete="CASCADE">
         <column name="object_id"/>
         <references table="Keychain">
           <column name="id"/>
         </references>
       </foreign-key>
-      <index name="Keychain_derivation_path_object_id_i">
+      <index name="object_id_i">
         <column name="object_id"/>
       </index>
-      <index name="Keychain_derivation_path_index_i">
+      <index name="index_i">
         <column name="index"/>
       </index>
-    </table>
-    <table name="Key" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="root_keychain" type="INTEGER" null="true"/>
-      <column name="index" type="INTEGER" null="false"/>
-      <column name="pubkey" type="BLOB" null="false"/>
-      <column name="is_private" type="INTEGER" null="false"/>
+    </add-table>
+    <add-table name="Key" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="root_keychain" type="BIGINT UNSIGNED" null="true"/>
+      <column name="index" type="INT UNSIGNED" null="false"/>
+      <column name="pubkey" type="VARBINARY(255)" null="false"/>
+      <column name="is_private" type="TINYINT(1)" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
-      <foreign-key name="root_keychain_fk" deferrable="DEFERRED">
+      <foreign-key name="Key_root_keychain_fk" deferrable="DEFERRED">
         <column name="root_keychain"/>
         <references table="Keychain">
           <column name="id"/>
         </references>
       </foreign-key>
-    </table>
-    <table name="Key_derivation_path" kind="container">
-      <column name="object_id" type="INTEGER" null="false"/>
-      <column name="index" type="INTEGER" null="false"/>
-      <column name="value" type="INTEGER" null="false"/>
-      <foreign-key name="object_id_fk" on-delete="CASCADE">
+    </add-table>
+    <add-table name="Key_derivation_path" options="ENGINE=InnoDB" kind="container">
+      <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="index" type="BIGINT UNSIGNED" null="false"/>
+      <column name="value" type="INT UNSIGNED" null="false"/>
+      <foreign-key name="Key_derivation_path_object_id_fk" on-delete="CASCADE">
         <column name="object_id"/>
         <references table="Key">
           <column name="id"/>
         </references>
       </foreign-key>
-      <index name="Key_derivation_path_object_id_i">
+      <index name="object_id_i">
         <column name="object_id"/>
       </index>
-      <index name="Key_derivation_path_index_i">
+      <index name="index_i">
         <column name="index"/>
       </index>
-    </table>
-    <table name="AccountBin" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="account" type="INTEGER" null="true"/>
-      <column name="index" type="INTEGER" null="false"/>
-      <column name="name" type="TEXT" null="false"/>
-      <column name="script_count" type="INTEGER" null="false"/>
-      <column name="next_script_index" type="INTEGER" null="false"/>
-      <column name="minsigs" type="INTEGER" null="false"/>
-      <column name="hash" type="BLOB" null="false"/>
+    </add-table>
+    <add-table name="AccountBin" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="account" type="BIGINT UNSIGNED" null="true"/>
+      <column name="index" type="INT UNSIGNED" null="false"/>
+      <column name="name" type="VARCHAR(255)" null="false"/>
+      <column name="script_count" type="INT UNSIGNED" null="false"/>
+      <column name="next_script_index" type="INT UNSIGNED" null="false"/>
+      <column name="minsigs" type="INT UNSIGNED" null="false"/>
+      <column name="hash" type="VARBINARY(255)" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
-      <foreign-key name="account_fk" deferrable="DEFERRED">
+      <foreign-key name="AccountBin_account_fk" deferrable="DEFERRED">
         <column name="account"/>
         <references table="Account">
           <column name="id"/>
         </references>
       </foreign-key>
-      <index name="AccountBin_hash_i" type="UNIQUE">
+      <index name="hash_i" type="UNIQUE">
         <column name="hash"/>
       </index>
-    </table>
-    <table name="AccountBin_keychains" kind="container">
-      <column name="object_id" type="INTEGER" null="false"/>
-      <column name="value" type="INTEGER" null="false"/>
-      <foreign-key name="object_id_fk" on-delete="CASCADE">
+    </add-table>
+    <add-table name="AccountBin_keychains" options="ENGINE=InnoDB" kind="container">
+      <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="value" type="BIGINT UNSIGNED" null="false"/>
+      <foreign-key name="AccountBin_keychains_object_id_fk" on-delete="CASCADE">
         <column name="object_id"/>
         <references table="AccountBin">
           <column name="id"/>
         </references>
       </foreign-key>
-      <index name="AccountBin_keychains_object_id_i">
+      <index name="object_id_i">
         <column name="object_id"/>
       </index>
-      <foreign-key name="value_fk" deferrable="DEFERRED">
+      <foreign-key name="AccountBin_keychains_value_fk" deferrable="DEFERRED">
         <column name="value"/>
         <references table="Keychain">
           <column name="id"/>
         </references>
       </foreign-key>
-    </table>
-    <table name="Account" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="name" type="TEXT" null="false"/>
-      <column name="minsigs" type="INTEGER" null="false"/>
-      <column name="unused_pool_size" type="INTEGER" null="false"/>
-      <column name="time_created" type="INTEGER" null="false"/>
-      <column name="hash" type="BLOB" null="false"/>
+    </add-table>
+    <add-table name="Account" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="name" type="VARCHAR(255)" null="false"/>
+      <column name="minsigs" type="INT UNSIGNED" null="false"/>
+      <column name="unused_pool_size" type="INT UNSIGNED" null="false"/>
+      <column name="time_created" type="INT UNSIGNED" null="false"/>
+      <column name="hash" type="VARBINARY(255)" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
-      <index name="Account_name_i" type="UNIQUE">
+      <index name="name_i" type="UNIQUE">
         <column name="name"/>
       </index>
-      <index name="Account_hash_i" type="UNIQUE">
+      <index name="hash_i" type="UNIQUE">
         <column name="hash"/>
       </index>
-    </table>
-    <table name="Account_keychains" kind="container">
-      <column name="object_id" type="INTEGER" null="false"/>
-      <column name="value" type="INTEGER" null="false"/>
-      <foreign-key name="object_id_fk" on-delete="CASCADE">
+    </add-table>
+    <add-table name="Account_keychains" options="ENGINE=InnoDB" kind="container">
+      <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="value" type="BIGINT UNSIGNED" null="false"/>
+      <foreign-key name="Account_keychains_object_id_fk" on-delete="CASCADE">
         <column name="object_id"/>
         <references table="Account">
           <column name="id"/>
         </references>
       </foreign-key>
-      <index name="Account_keychains_object_id_i">
+      <index name="object_id_i">
         <column name="object_id"/>
       </index>
-      <foreign-key name="value_fk" deferrable="DEFERRED">
+      <foreign-key name="Account_keychains_value_fk" deferrable="DEFERRED">
         <column name="value"/>
         <references table="Keychain">
           <column name="id"/>
         </references>
       </foreign-key>
-    </table>
-    <table name="SigningScript" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="account" type="INTEGER" null="true"/>
-      <column name="account_bin" type="INTEGER" null="true"/>
-      <column name="index" type="INTEGER" null="false"/>
-      <column name="label" type="TEXT" null="false"/>
-      <column name="status" type="INTEGER" null="false"/>
-      <column name="txinscript" type="BLOB" null="false"/>
-      <column name="txoutscript" type="BLOB" null="false"/>
+    </add-table>
+    <add-table name="SigningScript" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="account" type="BIGINT UNSIGNED" null="true"/>
+      <column name="account_bin" type="BIGINT UNSIGNED" null="true"/>
+      <column name="index" type="INT UNSIGNED" null="false"/>
+      <column name="label" type="VARCHAR(255)" null="false"/>
+      <column name="status" type="INT UNSIGNED" null="false"/>
+      <column name="txinscript" type="VARBINARY(255)" null="false"/>
+      <column name="txoutscript" type="VARBINARY(255)" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
-      <foreign-key name="account_fk" deferrable="DEFERRED">
+      <foreign-key name="SigningScript_account_fk" deferrable="DEFERRED">
         <column name="account"/>
         <references table="Account">
           <column name="id"/>
         </references>
       </foreign-key>
-      <foreign-key name="account_bin_fk" deferrable="DEFERRED">
+      <foreign-key name="SigningScript_account_bin_fk" deferrable="DEFERRED">
         <column name="account_bin"/>
         <references table="AccountBin">
           <column name="id"/>
         </references>
       </foreign-key>
-    </table>
-    <table name="SigningScript_keys" kind="container">
-      <column name="object_id" type="INTEGER" null="false"/>
-      <column name="index" type="INTEGER" null="false"/>
-      <column name="value" type="INTEGER" null="true"/>
-      <foreign-key name="object_id_fk" on-delete="CASCADE">
+    </add-table>
+    <add-table name="SigningScript_keys" options="ENGINE=InnoDB" kind="container">
+      <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="index" type="BIGINT UNSIGNED" null="false"/>
+      <column name="value" type="BIGINT UNSIGNED" null="true"/>
+      <foreign-key name="SigningScript_keys_object_id_fk" on-delete="CASCADE">
         <column name="object_id"/>
         <references table="SigningScript">
           <column name="id"/>
         </references>
       </foreign-key>
-      <index name="SigningScript_keys_object_id_i">
+      <index name="object_id_i">
         <column name="object_id"/>
       </index>
-      <index name="SigningScript_keys_index_i">
+      <index name="index_i">
         <column name="index"/>
       </index>
-      <foreign-key name="value_fk" deferrable="DEFERRED">
+      <foreign-key name="SigningScript_keys_value_fk" deferrable="DEFERRED">
         <column name="value"/>
         <references table="Key">
           <column name="id"/>
         </references>
       </foreign-key>
-    </table>
-    <table name="BlockHeader" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="hash" type="BLOB" null="false"/>
-      <column name="height" type="INTEGER" null="false"/>
-      <column name="version" type="INTEGER" null="false"/>
-      <column name="prevhash" type="BLOB" null="false"/>
-      <column name="merkleroot" type="BLOB" null="false"/>
-      <column name="timestamp" type="INTEGER" null="false"/>
-      <column name="bits" type="INTEGER" null="false"/>
-      <column name="nonce" type="INTEGER" null="false"/>
+    </add-table>
+    <add-table name="BlockHeader" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="hash" type="VARBINARY(255)" null="false"/>
+      <column name="height" type="INT UNSIGNED" null="false"/>
+      <column name="version" type="INT UNSIGNED" null="false"/>
+      <column name="prevhash" type="VARBINARY(255)" null="false"/>
+      <column name="merkleroot" type="VARBINARY(255)" null="false"/>
+      <column name="timestamp" type="INT UNSIGNED" null="false"/>
+      <column name="bits" type="INT UNSIGNED" null="false"/>
+      <column name="nonce" type="INT UNSIGNED" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
-      <index name="BlockHeader_hash_i" type="UNIQUE">
+      <index name="hash_i" type="UNIQUE">
         <column name="hash"/>
       </index>
-      <index name="BlockHeader_height_i" type="UNIQUE">
+      <index name="height_i" type="UNIQUE">
         <column name="height"/>
       </index>
-    </table>
-    <table name="MerkleBlock" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="blockheader" type="INTEGER" null="false"/>
-      <column name="txcount" type="INTEGER" null="false"/>
-      <column name="flags" type="BLOB" null="false"/>
+    </add-table>
+    <add-table name="MerkleBlock" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="blockheader" type="BIGINT UNSIGNED" null="false"/>
+      <column name="txcount" type="INT UNSIGNED" null="false"/>
+      <column name="flags" type="VARBINARY(255)" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
-      <foreign-key name="blockheader_fk" deferrable="DEFERRED">
+      <foreign-key name="MerkleBlock_blockheader_fk" deferrable="DEFERRED">
         <column name="blockheader"/>
         <references table="BlockHeader">
           <column name="id"/>
         </references>
       </foreign-key>
-    </table>
-    <table name="MerkleBlock_hashes" kind="container">
-      <column name="object_id" type="INTEGER" null="false"/>
-      <column name="index" type="INTEGER" null="false"/>
-      <column name="value" type="BLOB" null="false"/>
-      <foreign-key name="object_id_fk" on-delete="CASCADE">
+    </add-table>
+    <add-table name="MerkleBlock_hashes" options="ENGINE=InnoDB" kind="container">
+      <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="index" type="BIGINT UNSIGNED" null="false"/>
+      <column name="value" type="VARBINARY(255)" null="false"/>
+      <foreign-key name="MerkleBlock_hashes_object_id_fk" on-delete="CASCADE">
         <column name="object_id"/>
         <references table="MerkleBlock">
           <column name="id"/>
         </references>
       </foreign-key>
-      <index name="MerkleBlock_hashes_object_id_i">
+      <index name="object_id_i">
         <column name="object_id"/>
       </index>
-      <index name="MerkleBlock_hashes_index_i">
+      <index name="index_i">
         <column name="index"/>
       </index>
-    </table>
-    <table name="TxIn" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="outhash" type="BLOB" null="false"/>
-      <column name="outindex" type="INTEGER" null="false"/>
-      <column name="script" type="BLOB" null="false"/>
-      <column name="sequence" type="INTEGER" null="false"/>
-      <column name="tx" type="INTEGER" null="false"/>
-      <column name="txindex" type="INTEGER" null="false"/>
-      <column name="outpoint" type="INTEGER" null="true"/>
+    </add-table>
+    <add-table name="TxIn" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="outhash" type="VARBINARY(255)" null="false"/>
+      <column name="outindex" type="INT UNSIGNED" null="false"/>
+      <column name="script" type="VARBINARY(255)" null="false"/>
+      <column name="sequence" type="INT UNSIGNED" null="false"/>
+      <column name="tx" type="BIGINT UNSIGNED" null="false"/>
+      <column name="txindex" type="INT UNSIGNED" null="false"/>
+      <column name="outpoint" type="BIGINT UNSIGNED" null="true"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
-      <foreign-key name="tx_fk" deferrable="DEFERRED">
+      <foreign-key name="TxIn_tx_fk" deferrable="DEFERRED">
         <column name="tx"/>
         <references table="Tx">
           <column name="id"/>
         </references>
       </foreign-key>
-      <foreign-key name="outpoint_fk" deferrable="DEFERRED">
+      <foreign-key name="TxIn_outpoint_fk" deferrable="DEFERRED">
         <column name="outpoint"/>
         <references table="TxOut">
           <column name="id"/>
         </references>
       </foreign-key>
-    </table>
-    <table name="TxOut" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="value" type="INTEGER" null="false"/>
-      <column name="script" type="BLOB" null="false"/>
-      <column name="tx" type="INTEGER" null="false"/>
-      <column name="txindex" type="INTEGER" null="false"/>
-      <column name="spent" type="INTEGER" null="true"/>
-      <column name="sending_account" type="INTEGER" null="true"/>
-      <column name="sending_label" type="TEXT" null="false"/>
-      <column name="receiving_account" type="INTEGER" null="true"/>
-      <column name="receiving_label" type="TEXT" null="false"/>
-      <column name="account_bin" type="INTEGER" null="true"/>
-      <column name="signingscript" type="INTEGER" null="true"/>
-      <column name="status" type="INTEGER" null="false"/>
+    </add-table>
+    <add-table name="TxOut" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="value" type="BIGINT UNSIGNED" null="false"/>
+      <column name="script" type="VARBINARY(255)" null="false"/>
+      <column name="tx" type="BIGINT UNSIGNED" null="false"/>
+      <column name="txindex" type="INT UNSIGNED" null="false"/>
+      <column name="spent" type="BIGINT UNSIGNED" null="true"/>
+      <column name="sending_account" type="BIGINT UNSIGNED" null="true"/>
+      <column name="sending_label" type="VARCHAR(255)" null="false"/>
+      <column name="receiving_account" type="BIGINT UNSIGNED" null="true"/>
+      <column name="receiving_label" type="VARCHAR(255)" null="false"/>
+      <column name="account_bin" type="BIGINT UNSIGNED" null="true"/>
+      <column name="signingscript" type="BIGINT UNSIGNED" null="true"/>
+      <column name="status" type="ENUM('NEITHER', 'UNSPENT', 'SPENT', 'BOTH')" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
-      <foreign-key name="tx_fk" deferrable="DEFERRED">
+      <foreign-key name="TxOut_tx_fk" deferrable="DEFERRED">
         <column name="tx"/>
         <references table="Tx">
           <column name="id"/>
         </references>
       </foreign-key>
-      <foreign-key name="spent_fk" deferrable="DEFERRED">
+      <foreign-key name="TxOut_spent_fk" deferrable="DEFERRED">
         <column name="spent"/>
         <references table="TxIn">
           <column name="id"/>
         </references>
       </foreign-key>
-      <foreign-key name="sending_account_fk" deferrable="DEFERRED">
+      <foreign-key name="TxOut_sending_account_fk" deferrable="DEFERRED">
         <column name="sending_account"/>
         <references table="Account">
           <column name="id"/>
         </references>
       </foreign-key>
-      <foreign-key name="receiving_account_fk" deferrable="DEFERRED">
+      <foreign-key name="TxOut_receiving_account_fk" deferrable="DEFERRED">
         <column name="receiving_account"/>
         <references table="Account">
           <column name="id"/>
         </references>
       </foreign-key>
-      <foreign-key name="account_bin_fk" deferrable="DEFERRED">
+      <foreign-key name="TxOut_account_bin_fk" deferrable="DEFERRED">
         <column name="account_bin"/>
         <references table="AccountBin">
           <column name="id"/>
         </references>
       </foreign-key>
-      <foreign-key name="signingscript_fk" deferrable="DEFERRED">
+      <foreign-key name="TxOut_signingscript_fk" deferrable="DEFERRED">
         <column name="signingscript"/>
         <references table="SigningScript">
           <column name="id"/>
         </references>
       </foreign-key>
-    </table>
-    <table name="Tx" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="hash" type="BLOB" null="false"/>
-      <column name="unsigned_hash" type="BLOB" null="false"/>
-      <column name="version" type="INTEGER" null="false"/>
-      <column name="locktime" type="INTEGER" null="false"/>
-      <column name="timestamp" type="INTEGER" null="false"/>
-      <column name="status" type="INTEGER" null="false"/>
-      <column name="conflicting" type="INTEGER" null="false"/>
-      <column name="have_all_outpoints" type="INTEGER" null="false"/>
-      <column name="txin_total" type="INTEGER" null="false"/>
-      <column name="txout_total" type="INTEGER" null="false"/>
-      <column name="blockheader" type="INTEGER" null="true"/>
-      <column name="blockindex" type="INTEGER" null="true"/>
+    </add-table>
+    <add-table name="Tx" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="hash" type="VARBINARY(255)" null="false"/>
+      <column name="unsigned_hash" type="VARBINARY(255)" null="false"/>
+      <column name="version" type="INT UNSIGNED" null="false"/>
+      <column name="locktime" type="INT UNSIGNED" null="false"/>
+      <column name="timestamp" type="INT UNSIGNED" null="false"/>
+      <column name="status" type="INT UNSIGNED" null="false"/>
+      <column name="conflicting" type="TINYINT(1)" null="false"/>
+      <column name="have_all_outpoints" type="TINYINT(1)" null="false"/>
+      <column name="txin_total" type="BIGINT UNSIGNED" null="false"/>
+      <column name="txout_total" type="BIGINT UNSIGNED" null="false"/>
+      <column name="blockheader" type="BIGINT UNSIGNED" null="true"/>
+      <column name="blockindex" type="INT UNSIGNED" null="true"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
-      <foreign-key name="blockheader_fk" deferrable="DEFERRED">
+      <foreign-key name="Tx_blockheader_fk" deferrable="DEFERRED">
         <column name="blockheader"/>
         <references table="BlockHeader">
           <column name="id"/>
         </references>
       </foreign-key>
-      <index name="Tx_unsigned_hash_i" type="UNIQUE">
+      <index name="unsigned_hash_i" type="UNIQUE">
         <column name="unsigned_hash"/>
       </index>
-    </table>
-  </model>
+    </add-table>
+  </changeset>
+
+  <model version="7"/>
 </changelog>
