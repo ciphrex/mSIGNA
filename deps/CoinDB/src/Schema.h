@@ -1339,8 +1339,13 @@ struct TxOutView
     #pragma db column(Tx::txout_total_)
     uint64_t tx_txout_total;
 
-    #pragma db column(Tx::txin_total_ + "-" + Tx::txout_total_)
-    uint64_t tx_fee;
+    uint64_t tx_fee() const
+    {
+        if (tx_txin_total >= tx_txout_total)
+            return tx_txin_total - tx_txout_total;
+        else
+            return 0;
+    }
 
     #pragma db column(TxOut::txindex_)
     uint32_t tx_index;
