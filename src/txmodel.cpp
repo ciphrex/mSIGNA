@@ -115,11 +115,11 @@ void TxModel::update()
             type = tr("Send");
             amount = "-";
             value -= item.value;
-            if (item.tx_has_all_outpoints && item.tx_fee > 0) {
+            if (item.tx_has_all_outpoints && item.tx_fee() > 0) {
                 if (this_txhash != last_txhash) {
                     fee = "-";
-                    fee += QString::number(item.tx_fee/100000000.0, 'g', 8);
-                    value -= item.tx_fee;
+                    fee += QString::number(item.tx_fee()/100000000.0, 'g', 8);
+                    value -= item.tx_fee();
                     last_txhash = this_txhash;
                 }
                 else {
