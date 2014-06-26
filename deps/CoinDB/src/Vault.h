@@ -31,10 +31,8 @@ class Vault
 {
 public:
     Vault(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION);
-
-//#if defined(DATABASE_SQLITE)
-    Vault(const std::string& filename, bool create = false, uint32_t version = SCHEMA_VERSION);
-//#endif
+    Vault(const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION);
+    Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION);
 
     ///////////////////////
     // GLOBAL OPERATIONS //

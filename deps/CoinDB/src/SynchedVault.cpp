@@ -180,12 +180,28 @@ SynchedVault::~SynchedVault()
 }
 
 // Vault operations
-void SynchedVault::openVault(const std::string& filename, bool bCreate)
+void SynchedVault::openVault(const std::string& dbname, bool bCreate)
 {
-    LOGGER(trace) << "SynchedVault::openVault(" << filename << ", " << (bCreate ? "true" : "false") << ")" << std::endl;
+    LOGGER(trace) << "SynchedVault::openVault(" << dbname << ", " << (bCreate ? "true" : "false") << ")" << std::endl;
     std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (m_vault) delete m_vault;
-    m_vault = new Vault(filename, bCreate);
+    m_vault = new Vault(dbname, bCreate);
+    m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
+    m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
+    m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
+    m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
+    {
+        m_syncHeight = merkleblock->blockheader()->height();
+        m_notifyMerkleBlockInserted(merkleblock);
+    });
+}
+
+void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate)
+{
+    LOGGER(trace) << "SynchedVault::openVault(" << dbuser << ", ..., " << dbname << ", " << (bCreate ? "true" : "false") << ")" << std::endl;
+    std::lock_guard<std::mutex> lock(m_vaultMutex);
+    if (m_vault) delete m_vault;
+    m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate);
     m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
     m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
     m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });

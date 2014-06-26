@@ -99,17 +99,12 @@ open_database (int& argc, char* argv[], bool create = false)
   return db;
 }
 
+inline std::unique_ptr<odb::database>
+openDatabase(const std::string& user, const std::string& passwd, const std::string& dbname, bool create = false)
+{
 #if defined(DATABASE_MYSQL)
-inline std::unique_ptr<odb::database>
-openDatabase(const std::string& user, const std::string& passwd, const std::string& dbname)
-{
     std::unique_ptr<odb::database> db(new odb::mysql::database(user, passwd, dbname));
-    return db;
-}
 #elif defined(DATABASE_SQLITE)
-inline std::unique_ptr<odb::database>
-openDatabase(const std::string& filename, bool create = false)
-{
     using namespace odb::core;
 
     int flags = SQLITE_OPEN_READWRITE;
@@ -131,9 +126,9 @@ openDatabase(const std::string& filename, bool create = false)
 
         c->execute ("PRAGMA foreign_keys=ON");
     }
+#endif
 
     return db;
 }
-#endif
 
 }

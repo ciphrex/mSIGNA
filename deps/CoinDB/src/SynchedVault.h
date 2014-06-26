@@ -26,7 +26,8 @@ public:
     SynchedVault(const std::string& blockTreeFile = "blocktree.dat");
     ~SynchedVault();
 
-    void openVault(const std::string& filename, bool bCreate = false);
+    void openVault(const std::string& dbname, bool bCreate = false);
+    void openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate = false);
     void closeVault();
     Vault* getVault() { return m_vault; }
 

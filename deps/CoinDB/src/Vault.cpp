@@ -36,9 +36,6 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
-#define DBUSER "root"
-#define DBPASSWD "test"
-
 using namespace CoinDB;
 
 /*
@@ -53,17 +50,21 @@ Vault::Vault(int argc, char** argv, bool create, uint32_t version)
     if (create) setSchemaVersion(version);
 }
 
-#if defined(DATABASE_MYSQL)
-Vault::Vault(const std::string& filename, bool create, uint32_t version)
-    : db_(openDatabase(DBUSER, DBPASSWD, filename))
-#elif defined(DATABASE_SQLITE)
-Vault::Vault(const std::string& filename, bool create, uint32_t version)
-    : db_(openDatabase(filename, create))
-#endif
+Vault::Vault(const std::string& dbname, bool create, uint32_t version)
+    : db_(openDatabase("", "", dbname, create))
 {
-    LOGGER(trace) << "Vault::Vault(" << filename << ", " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
+    LOGGER(trace) << "Vault::Vault(" << dbname << ", " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
 
-    name_ = filename;
+    name_ = dbname;
+    if (create) setSchemaVersion(version);
+}
+
+Vault::Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version)
+    : db_(openDatabase(dbuser, dbpasswd, dbname, create))
+{
+    LOGGER(trace) << "Vault::Vault(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
+
+    name_ = dbname;
     if (create) setSchemaVersion(version);
 }
 
