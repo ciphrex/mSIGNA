@@ -13,8 +13,13 @@
 #include <CoinQ/CoinQ_script.h>
 #include <CoinQ/CoinQ_blocks.h>
 
-
-#include "../odb/Schema-odb.hxx"
+#if defined(DATABASE_MYSQL)
+    #include "../odb/Schema-odb-mysql.hxx"
+#elif defined(DATABASE_SQLITE)
+    #include "../odb/Schema-odb-sqlite.hxx"
+#else
+    #error "No database engine selected."
+#endif
 
 #include <odb/transaction.hxx>
 #include <odb/session.hxx>

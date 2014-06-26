@@ -109,7 +109,7 @@ openDatabase(const std::string& user, const std::string& passwd, const std::stri
 
     int flags = SQLITE_OPEN_READWRITE;
     if (create) flags |= SQLITE_OPEN_CREATE;
-    std::unique_ptr<database> db(new odb::sqlite::database(filename, flags, false));
+    std::unique_ptr<database> db(new odb::sqlite::database(dbname, flags, false));
 
   // Create the database schema. Due to bugs in SQLite foreign key
   // support for DDL statements, we need to temporarily disable

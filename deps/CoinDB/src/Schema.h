@@ -38,8 +38,14 @@ namespace CoinDB
 
 typedef odb::nullable<unsigned long> null_id_t;
 
-#pragma db value(std::string) type("VARCHAR(255)")
-#pragma db value(bytes_t) type("VARBINARY(255)")
+#if defined(DATABASE_MYSQL)
+    #pragma db value(std::string) type("VARCHAR(255)")
+    #pragma db value(bytes_t) type("VARBINARY(255)")
+#elif defined(DATABASE_SQLITE)
+    #pragma db value(bytes_t) type("BLOB")
+#else
+    #error "No database engine selected."
+#endif
 
 ////////////////////
 // SCHEMA VERSION //

@@ -1,8 +1,15 @@
-ODB_DB = \
-    -DDATABASE_MYSQL
+#use sqlite by default
+ifndef DB
+    DB = sqlite
+endif
 
-ODB_COMPILER_DB = \
-    -d mysql
+ifeq ($(DB), mysql)
+    ODB_DB = -DDATABASE_MYSQL
+else ifeq ($(DB), sqlite)
+    ODB_DB = -DDATABASE_SQLITE
+else
+    $(error OS must be set to linux, mingw64, or osx)
+endif
 
 CXX_FLAGS += -Wall
 ifdef DEBUG
@@ -116,11 +123,11 @@ LIBS = \
     -lboost_thread$(BOOST_THREAD_SUFFIX)$(BOOST_SUFFIX) \
     -lboost_serialization$(BOOST_SUFFIX) \
     -lcrypto \
-    -lodb-mysql \
+    -lodb-$(DB) \
     -lodb
 
 OBJS = \
-    obj/Schema-odb.o \
+    obj/Schema-odb-$(DB).o \
     obj/Schema.o \
     obj/Vault.o \
     obj/SynchedVault.o
@@ -145,15 +152,15 @@ lib/libCoinDB.a: $(OBJS)
 #
 # odb compiled dependencies
 #
-odb/Schema-odb.hxx: src/Schema.h
-	odb --output-dir odb/ --std c++11 $(ODB_COMPILER_DB) --generate-query --generate-schema $(ODB_INCLUDE_PATH) $<
+odb/Schema-odb-$(DB).hxx: src/Schema.h
+	odb --output-dir odb/ --std c++11 $(ODB_DB) --database $(DB) --odb-file-suffix -odb-$(DB) --changelog-file-suffix -$(DB) --generate-query --generate-schema $(ODB_INCLUDE_PATH) $<
 
-odb/Schema-odb.cxx: odb/Schema-odb.hxx
+odb/Schema-odb-$(DB).cxx: odb/Schema-odb-$(DB).hxx
 
 #
 # odb generated schema object
 #
-obj/Schema-odb.o: odb/Schema-odb.cxx odb/Schema-odb.hxx src/Schema.h
+obj/Schema-odb-$(DB).o: odb/Schema-odb-$(DB).cxx odb/Schema-odb-$(DB).hxx src/Schema.h
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
@@ -165,13 +172,13 @@ obj/Schema.o: src/Schema.cpp src/Schema.h
 #
 # vault class
 #
-obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/SigningRequest.h src/Schema.h src/Database.h odb/Schema-odb.hxx
+obj/Vault.o: src/Vault.cpp src/Vault.h src/VaultExceptions.h src/SigningRequest.h src/Schema.h src/Database.h odb/Schema-odb-$(DB).hxx
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
 # synched vault class
 #
-obj/SynchedVault.o: src/SynchedVault.cpp src/SynchedVault.h src/VaultExceptions.h src/SigningRequest.h src/Schema.h src/Database.h odb/Schema-odb.hxx
+obj/SynchedVault.o: src/SynchedVault.cpp src/SynchedVault.h src/VaultExceptions.h src/SigningRequest.h src/Schema.h src/Database.h odb/Schema-odb-$(DB).hxx
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -c $< -o $@
 
 #
@@ -208,4 +215,4 @@ remove_tools:
 	-rm $(SYSROOT)/bin/coindb$(EXE_EXT)
 
 clean:
-	-rm -f obj/*.o odb/*-odb.* lib/*.a tools/build/*
+	-rm -f obj/*.o odb/*-odb*.* lib/*.a tools/build/*
