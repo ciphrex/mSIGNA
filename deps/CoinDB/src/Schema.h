@@ -1172,8 +1172,15 @@ struct TxView
     uint64_t txin_total;
     #pragma db column(Tx::txout_total_)
     uint64_t txout_total;
-    #pragma db column(Tx::txin_total_ + "-" + Tx::txout_total_)
-    uint64_t fee;
+
+    uint64_t fee() const
+    {
+        if (txin_total >= txout_total)
+            return txin_total - txout_total;
+        else
+            return 0;
+    }
+
     #pragma db column(BlockHeader::height_)
     uint32_t height;
 };

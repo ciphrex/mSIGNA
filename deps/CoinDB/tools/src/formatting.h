@@ -259,7 +259,7 @@ inline std::string formattedTxView(const CoinDB::TxView& view, unsigned int best
     if (view.have_all_outpoints)
     {
         txin_total << fixed << setprecision(8) << 1.0*view.txin_total/COIN_EXP;
-        fee << fixed << setprecision(8) << 1.0*view.fee/COIN_EXP;
+        fee << fixed << setprecision(8) << 1.0*view.fee()/COIN_EXP;
     }
     else
     {
