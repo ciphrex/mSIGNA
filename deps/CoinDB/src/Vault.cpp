@@ -473,8 +473,12 @@ std::vector<KeychainView> Vault::getRootKeychainViews_unwrapped(const std::strin
         query = query && (!query_t::Keychain::hidden);
     odb::result<KeychainView> r(db_->query<KeychainView>(query));
     std::vector<KeychainView> views;
+    // TODO: figure out why query sometimes returns duplicates.
+    std::set<unsigned long> view_ids;
     for (auto& view: r)
     {
+        if (view_ids.count(view.id)) continue;
+        view_ids.insert(view.id);
         view.is_locked = !mapPrivateKeyUnlock.count(view.name);
         views.push_back(view);
     }
