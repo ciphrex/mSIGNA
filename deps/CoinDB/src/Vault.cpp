@@ -294,6 +294,24 @@ void Vault::exportVault(const std::string& filepath, bool exportprivkeys, const 
  
 void Vault::importVault(const std::string& filepath, bool importprivkeys, const secure_bytes_t& importChainCodeUnlockKey)
 {
+    LOGGER(trace) << "Vault::importVault(" << filepath << ", " << (importprivkeys ? "true" : "false") << ", ...)" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    std::ifstream ifs(filepath);
+    boost::archive::text_iarchive ia(ifs);
+
+    odb::core::transaction t(db_->begin());
+    odb::core::session s;
+
+    // import all accounts
+    uint32_t n;
+    ia >> n;
+    for (uint32_t i = 0; i < n; i++)
+    {
+        unsigned int privkeysimported = importprivkeys;
+        importAccount_unwrapped(ia, privkeysimported, importChainCodeUnlockKey);
+    }
+    t.commit();
 }
 
 ///////////////////////////
