@@ -37,10 +37,6 @@
 #include <fstream>
 #include <algorithm>
 
-// support for boost serialization
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-
 using namespace CoinDB;
 
 /*
@@ -277,6 +273,22 @@ Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint
 
 void Vault::exportVault(const std::string& filepath, bool exportprivkeys, const secure_bytes_t& exportChainCodeUnlockKey) const
 {
+    LOGGER(trace) << "Vault::exportVault(" << filepath << ", " << (exportprivkeys ? "true" : "false") << ", ...)" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    std::ofstream ofs(filepath);
+    boost::archive::text_oarchive oa(ofs);
+
+    odb::core::transaction t(db_->begin());
+
+    // Export all accounts
+    odb::result<Account> account_r(db_->query<Account>());
+    uint32_t n = account_r.size();
+    oa << n;
+    for (auto& account: account_r)
+    {
+        exportAccount_unwrapped(account, oa, exportprivkeys, exportChainCodeUnlockKey);
+    }
 }
  
 void Vault::importVault(const std::string& name, const std::string& filepath, bool importprivkeys, const secure_bytes_t& importChainCodeUnlockKey)
@@ -748,53 +760,53 @@ void Vault::exportAccount(const std::string& account_name, const std::string& fi
     LOGGER(trace) << "Vault::exportAccount(" << account_name << ", " << filepath << ", " << (exportprivkeys ? "true" : "false") << ", ?)" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
+    std::ofstream ofs(filepath);
+    boost::archive::text_oarchive oa(ofs);
+
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
 
-    if (!exportprivkeys)
-        for (auto& keychain: account->keychains()) { keychain->clearPrivateKey(); }
-
-    exportAccount_unwrapped(account, filepath, exportChainCodeUnlockKey);
+    exportAccount_unwrapped(*account, oa, exportprivkeys, exportChainCodeUnlockKey);
 }
 
-void Vault::exportAccount_unwrapped(const std::shared_ptr<Account> account, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey) const
+void Vault::exportAccount_unwrapped(Account& account, boost::archive::text_oarchive& oa, bool exportprivkeys, const secure_bytes_t& exportChainCodeUnlockKey) const
 {
+    if (!exportprivkeys)
+        for (auto& keychain: account.keychains()) { keychain->clearPrivateKey(); }
+
     if (!exportChainCodeUnlockKey.empty())
     {
         // Reencrypt the chain codes using a different unlock key than our own.
-        for (auto& keychain: account->keychains())
+        for (auto& keychain: account.keychains())
         {
             unlockKeychainChainCode_unwrapped(keychain);
             keychain->setChainCodeUnlockKey(exportChainCodeUnlockKey);
         }
     }
 
-    std::ofstream ofs(filepath);
-    boost::archive::text_oarchive oa(ofs);
-    oa << *account;
+    oa << account;
 }
 
 std::shared_ptr<Account> Vault::importAccount(const std::string& filepath, unsigned int& privkeysimported, const secure_bytes_t& importChainCodeUnlockKey)
 {
     LOGGER(trace) << "Vault::importAccount(" << filepath << ", " << privkeysimported << ", ?)" << std::endl;
 
+    std::ifstream ifs(filepath);
+    boost::archive::text_iarchive ia(ifs);
+
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
-    std::shared_ptr<Account> account = importAccount_unwrapped(filepath, privkeysimported, importChainCodeUnlockKey);
+    std::shared_ptr<Account> account = importAccount_unwrapped(ia, privkeysimported, importChainCodeUnlockKey);
     t.commit();
     return account; 
 }
 
-std::shared_ptr<Account> Vault::importAccount_unwrapped(const std::string& filepath, unsigned int& privkeysimported, const secure_bytes_t& importChainCodeUnlockKey)
+std::shared_ptr<Account> Vault::importAccount_unwrapped(boost::archive::text_iarchive& ia, unsigned int& privkeysimported, const secure_bytes_t& importChainCodeUnlockKey)
 {
     std::shared_ptr<Account> account(new Account());
-    {
-        std::ifstream ifs(filepath);
-        boost::archive::text_iarchive ia(ifs);
-        ia >> *account;
-    }
+    ia >> *account;
 
     odb::result<Account> r(db_->query<Account>(odb::query<Account>::hash == account->hash()));
     if (!r.empty()) throw AccountAlreadyExistsException(r.begin().load()->name());

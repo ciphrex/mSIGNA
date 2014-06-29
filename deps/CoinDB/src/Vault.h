@@ -21,6 +21,10 @@
 
 #include <boost/thread.hpp>
 
+// support for boost serialization
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+
 namespace CoinDB
 {
 
@@ -203,8 +207,8 @@ protected:
     // Account operations //
     ////////////////////////
     // The following methods try to use the vault's global chainCodeUnlockKey by default.
-    void                                    exportAccount_unwrapped(const std::shared_ptr<Account> account, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
-    std::shared_ptr<Account>                importAccount_unwrapped(const std::string& filepath, unsigned int& privkeysimported, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
+    void                                    exportAccount_unwrapped(Account& account, boost::archive::text_oarchive& oa, bool exportprivkeys, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
+    std::shared_ptr<Account>                importAccount_unwrapped(boost::archive::text_iarchive& ia, unsigned int& privkeysimported, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
 
     // The following method throws KeychainChainCodeUnlockFailedException
     void                                    unlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account, const secure_bytes_t& overrideChainCodeUnlockKey = secure_bytes_t()) const;
