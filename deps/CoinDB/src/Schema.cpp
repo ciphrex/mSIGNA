@@ -447,7 +447,7 @@ SigningScriptVector AccountBin::generateSigningScripts()
         signingscripts.push_back(signingscript);
     }
 
-    script_count_ = next_script_index_ + account()->unused_pool_size();
+    script_count_ = next_script_index_ + unused_pool_size();
     for (uint32_t i = next_script_index_; i < script_count_; i++)
     {
         std::shared_ptr<SigningScript> signingscript(new SigningScript(shared_from_this(), i));
@@ -455,6 +455,12 @@ SigningScriptVector AccountBin::generateSigningScripts()
     }
 
     return signingscripts;
+}
+
+uint32_t AccountBin::unused_pool_size() const
+{
+    std::shared_ptr<Account> account = account_.lock();
+    return account ? account->unused_pool_size() : DEFAULT_UNUSED_POOL_SIZE;
 }
 
 void AccountBin::loadKeychains() const

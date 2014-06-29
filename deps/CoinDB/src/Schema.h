@@ -293,6 +293,7 @@ public:
 
     uint32_t script_count() const { return script_count_; }
     uint32_t next_script_index() const { return next_script_index_; }
+    uint32_t unused_pool_size() const;
 
     uint32_t minsigs() const { return minsigs_; }
 
