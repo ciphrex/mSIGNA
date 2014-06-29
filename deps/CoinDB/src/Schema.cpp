@@ -434,6 +434,29 @@ std::string AccountBin::account_name() const
     return account() ? account()->name() : std::string("@null");
 }
 
+SigningScriptVector AccountBin::generateSigningScripts()
+{
+    SigningScriptVector signingscripts;
+    for (uint32_t i = 0; i < next_script_index_; i++)
+    {
+        std::string label;
+        auto it = script_label_map_.find(i);
+        if (it != script_label_map_.end())   { label = it->second; }
+        SigningScript::status_t status = (index_ == CHANGE_INDEX) ? SigningScript::CHANGE : SigningScript::ISSUED;
+        std::shared_ptr<SigningScript> signingscript(new SigningScript(shared_from_this(), i, label, status));
+        signingscripts.push_back(signingscript);
+    }
+
+    script_count_ = next_script_index_ + account()->unused_pool_size();
+    for (uint32_t i = next_script_index_; i < script_count_; i++)
+    {
+        std::shared_ptr<SigningScript> signingscript(new SigningScript(shared_from_this(), i));
+        signingscripts.push_back(signingscript);
+    }
+
+    return signingscripts;
+}
+
 void AccountBin::loadKeychains() const
 {
     if (!keychains__.empty()) return;
@@ -495,6 +518,11 @@ void AccountBin::makeImport()
     keychains_.clear();
 }
 
+void AccountBin::setScriptLabel(uint32_t index, const std::string& label)
+{
+    if (!label.empty()) { script_label_map_[index] = label; }
+}
+
 
 /*
  * class SigningScript
@@ -542,6 +570,14 @@ SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t i
     CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, account_bin->minsigs(), pubkeys);
     txinscript_ = script.txinscript(CoinQ::Script::Script::EDIT);
     txoutscript_ = script.txoutscript();
+
+    account_bin_->setScriptLabel(index, label);
+}
+
+void SigningScript::label(const std::string& label)
+{
+    label_ = label;
+    account_bin_->setScriptLabel(index_, label);
 }
 
 void SigningScript::status(status_t status)

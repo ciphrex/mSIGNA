@@ -1,4 +1,21 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="sqlite" version="1">
+  <changeset version="9">
+    <add-table name="AccountBin_script_label_map" kind="container">
+      <column name="object_id" type="INTEGER" null="false"/>
+      <column name="key" type="INTEGER" null="false"/>
+      <column name="value" type="TEXT" null="false"/>
+      <foreign-key name="object_id_fk" on-delete="CASCADE">
+        <column name="object_id"/>
+        <references table="AccountBin">
+          <column name="id"/>
+        </references>
+      </foreign-key>
+      <index name="AccountBin_script_label_map_object_id_i">
+        <column name="object_id"/>
+      </index>
+    </add-table>
+  </changeset>
+
   <changeset version="8"/>
 
   <model version="7">

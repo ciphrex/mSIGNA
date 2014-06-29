@@ -54,7 +54,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 7
-#define SCHEMA_VERSION      8
+#define SCHEMA_VERSION      9
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -88,6 +88,8 @@ private:
 class Account;
 class AccountBin;
 class SigningScript;
+
+typedef std::vector<std::shared_ptr<SigningScript>> SigningScriptVector;
 
 #pragma db object pointer(std::shared_ptr)
 class Keychain : public std::enable_shared_from_this<Keychain>
@@ -254,6 +256,11 @@ typedef std::vector<std::shared_ptr<Key>> KeyVector;
 const std::string CHANGE_BIN_NAME = "@change";
 const std::string DEFAULT_BIN_NAME = "@default";
 
+typedef std::pair<uint32_t, std::string> IndexedLabel;
+#pragma db value(IndexedLabel)
+
+typedef std::map<uint32_t, std::string> IndexedLabelMap;
+
 #pragma db object pointer(std::shared_ptr)
 class AccountBin : public std::enable_shared_from_this<AccountBin>
 {
@@ -282,6 +289,8 @@ public:
     void name(const std::string& name) { name_ = name; }
     std::string name() const { return name_; }
 
+    SigningScriptVector generateSigningScripts(); // generates them anew. expensive, should only be used when creating the AccountBin or when importing.
+
     uint32_t script_count() const { return script_count_; }
     uint32_t next_script_index() const { return next_script_index_; }
 
@@ -303,6 +312,9 @@ public:
     const bytes_t& hash() const { return hash_; }
 
 private:
+    friend class SigningScript;
+    void setScriptLabel(uint32_t index, const std::string& label);
+
     void loadKeychains() const;
 
     friend class odb::access;
@@ -315,8 +327,10 @@ private:
     uint32_t index_;
     std::string name_;
 
-    uint32_t script_count_;
+    IndexedLabelMap script_label_map_;
+    uint32_t script_count_; // number of scripts already persisted in database
     uint32_t next_script_index_; // index of next script in pool that will be issued
+
 
     uint32_t minsigs_;
 
@@ -331,19 +345,31 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void save(Archive& ar, const unsigned int /*version*/) const
+    void save(Archive& ar, const unsigned int version) const
     {
         ar & name_;
         ar & index_;
         ar & next_script_index_;
         ar & minsigs_;
 
-        uint32_t n = keychains_.size();
+        uint32_t n;
+        n = keychains_.size();
         ar & n;
         for (auto& keychain: keychains_)    { ar & *keychain; }
+
+        if (version >= 2)
+        {
+            n = script_label_map_.size();
+            ar & n;
+            for (auto& script_label: script_label_map_)
+            {
+                ar & script_label.first;
+                ar & script_label.second;
+            }    
+        }
     }
     template<class Archive>
-    void load(Archive& ar, const unsigned int /*version*/)
+    void load(Archive& ar, const unsigned int version)
     {
         ar & name_;
         ar & index_;
@@ -360,6 +386,23 @@ private:
             keychains_.insert(keychain);
         }
         keychains__ = keychains_;
+
+        if (version >= 2)
+        {
+            ar & n;
+            script_label_map_.clear();
+            for (uint32_t i = 0; i < n; i++)
+            {
+                uint32_t index;
+                ar & index;
+
+                std::string label;
+                ar & label;
+
+                setScriptLabel(index, label);
+            }
+        }
+
         script_count_ = 0;
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -562,7 +605,7 @@ public:
         : account_(account_bin->account()), account_bin_(account_bin), index_(index), label_(label), status_(status), txinscript_(txinscript), txoutscript_(txoutscript) { }
 
     unsigned long id() const { return id_; }
-    void label(const std::string& label) { label_ = label; }
+    void label(const std::string& label);
     const std::string label() const { return label_; }
 
     void status(status_t status);
@@ -602,6 +645,7 @@ private:
 
     KeyVector keys_;
 };
+
 
 
 /////////////////////////////
@@ -1517,7 +1561,7 @@ BOOST_CLASS_VERSION(CoinDB::TxOut, 1)
 BOOST_CLASS_VERSION(CoinDB::Tx, 1)
 
 BOOST_CLASS_VERSION(CoinDB::Keychain, 1)
-BOOST_CLASS_VERSION(CoinDB::AccountBin, 1)
+BOOST_CLASS_VERSION(CoinDB::AccountBin, 2)
 BOOST_CLASS_VERSION(CoinDB::Account, 1)
 
 #endif // COINDB_SCHEMA_H
