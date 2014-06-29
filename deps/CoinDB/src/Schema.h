@@ -733,6 +733,39 @@ private:
     std::vector<bytes_t> hashes_;
 
     bytes_t flags_;
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void save(Archive& ar, const unsigned int /*version*/) const
+    {
+        ar & *blockheader_;
+        ar & txcount_;
+
+        uint32_t n = hashes_.size();
+        ar & n;
+        for (auto& hash: hashes_)    { ar & hash; }
+
+        ar & flags_;
+    }
+    template<class Archive>
+    void load(Archive& ar, const unsigned int /*version*/)
+    {
+        ar & *blockheader_;
+        ar & txcount_;
+
+        uint32_t n;
+        ar & n;
+        hashes_.clear();
+        for (uint32_t i = 0; i < n; i++)
+        {
+            bytes_t hash;
+            ar & hash;
+            hashes_.push_back(hash);
+        }
+
+        ar & flags_;
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 
@@ -1467,6 +1500,7 @@ struct ConfirmedTxView
 }
 
 BOOST_CLASS_VERSION(CoinDB::BlockHeader, 1)
+BOOST_CLASS_VERSION(CoinDB::MerkleBlock, 1)
 
 BOOST_CLASS_VERSION(CoinDB::TxIn, 1)
 BOOST_CLASS_VERSION(CoinDB::TxOut, 1)
