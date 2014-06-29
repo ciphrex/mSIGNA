@@ -280,6 +280,7 @@ void Vault::exportVault(const std::string& filepath, bool exportprivkeys, const 
     boost::archive::text_oarchive oa(ofs);
 
     odb::core::transaction t(db_->begin());
+    odb::core::session s;
 
     // Export all accounts
     odb::result<Account> account_r(db_->query<Account>());
@@ -291,7 +292,7 @@ void Vault::exportVault(const std::string& filepath, bool exportprivkeys, const 
     }
 }
  
-void Vault::importVault(const std::string& name, const std::string& filepath, bool importprivkeys, const secure_bytes_t& importChainCodeUnlockKey)
+void Vault::importVault(const std::string& filepath, bool importprivkeys, const secure_bytes_t& importChainCodeUnlockKey)
 {
 }
 

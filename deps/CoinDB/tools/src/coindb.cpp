@@ -60,6 +60,47 @@ cli::result_t cmd_info(const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_exportvault(const cli::params_t& params)
+{
+    Vault vault(DBUSER, DBPASSWD, params[0], false);
+
+    bool exportprivkeys = params.size() <= 1 || params[1] == "true";
+
+    secure_bytes_t exportChainCodeUnlockKey;
+    if (params.size() > 2 && !params[2].empty())
+        exportChainCodeUnlockKey = sha256_2(params[2]);
+
+    if (params.size() > 3 && !params[3].empty())
+        vault.unlockChainCodes(sha256_2(params[3]));
+
+    std::string output_file = params.size() > 4 ? params[4] : (params[0] + ".portable");
+    vault.exportVault(output_file, exportprivkeys, exportChainCodeUnlockKey);
+
+    stringstream ss;
+    ss << "Vault " << params[0] << " exported to " << output_file << ".";
+    return ss.str();
+}
+
+cli::result_t cmd_importvault(const cli::params_t& params)
+{
+    Vault vault(DBUSER, DBPASSWD, params[0], true);
+
+    bool importprivkeys = params.size() <= 2 || params[2] == "true";
+
+    secure_bytes_t chainCodeUnlockKey;
+    if (params.size() > 3 && !params[3].empty())
+        chainCodeUnlockKey = sha256_2(params[3]);
+
+    if (params.size() > 4 && !params[4].empty())
+        vault.unlockChainCodes(sha256_2(params[4]));
+
+    vault.importVault(params[1], importprivkeys, chainCodeUnlockKey);
+
+    stringstream ss;
+    ss << "Vault " << params[0] << " imported from " << params[1] << ".";
+    return ss.str();
+}
+
 // Keychain operations
 cli::result_t cmd_keychainexists(const cli::params_t& params)
 {
@@ -859,6 +900,8 @@ int main(int argc, char* argv[])
     // Global operations
     shell.add(command(&cmd_create, "create", "create a new vault", command::params(1, "db file")));
     shell.add(command(&cmd_info, "info", "display general information about file", command::params(1, "db file")));
+    shell.add(command(&cmd_exportvault, "exportvault", "export vault contents to portable file", command::params(1, "db file"), command::params(4, "export private keys = true", "export chain code passphrase", "native chain code passphrase", "output file = *.portable")));
+    shell.add(command(&cmd_importvault, "importvault", "import vault contents from portable file", command::params(2, "db file", "portable file"), command::params(3, "import private keys = true", "import chain code passphrase", "native chain code passphrase")));
 
     // Keychain operations
     shell.add(command(&cmd_keychainexists, "keychainexists", "check if a keychain exists", command::params(1, "db file")));

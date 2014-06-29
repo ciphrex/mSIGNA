@@ -61,7 +61,7 @@ public:
 
     void                                    exportVault(const std::string& filepath, bool exportprivkeys = true, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
 
-    void                                    importVault(const std::string& name, const std::string& filepath, bool importprivkeys = true, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
+    void                                    importVault(const std::string& filepath, bool importprivkeys = true, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
 
     ///////////////////////////
     // CHAIN CODE OPERATIONS //
