@@ -1519,6 +1519,14 @@ struct BlockCountView
 };
 
 #pragma db view \
+    object(MerkleBlock)
+struct MerkleBlockCountView
+{
+    #pragma db column("count(" + MerkleBlock::id_ + ")")
+    unsigned long count;
+};
+
+#pragma db view \
     object(Account)
 struct HorizonTimestampView
 {

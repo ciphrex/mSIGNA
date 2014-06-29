@@ -2371,6 +2371,13 @@ void Vault::exportMerkleBlocks(const std::string& filepath) const
 
 void Vault::exportMerkleBlocks_unwrapped(boost::archive::text_oarchive& oa) const
 {
+    odb::result<MerkleBlockCountView> count_r(db_->query<MerkleBlockCountView>());
+    uint32_t n = count_r.empty() ? 0 : count_r.begin()->count;
+    oa << n;
+
+    typedef odb::query<MerkleBlock> mb_query_t;
+    odb::result<MerkleBlock> mb_r(db_->query<MerkleBlock>("ORDER BY " + mb_query_t::blockheader->height));
+    for (auto& merkleblock: mb_r)   { oa << merkleblock; }
 }
 
 void Vault::importMerkleBlocks(const std::string& filepath)
