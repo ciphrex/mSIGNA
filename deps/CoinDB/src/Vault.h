@@ -48,6 +48,10 @@ public:
     std::vector<bytes_t>                    getLocatorHashes() const;
     Coin::BloomFilter                       getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
 
+    void                                    exportVault(const std::string& filepath, bool exportprivkeys = true, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
+
+    void                                    importVault(const std::string& name, const std::string& filepath, bool importprivkeys = true, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
+
     ///////////////////////////
     // CHAIN CODE OPERATIONS //
     ///////////////////////////

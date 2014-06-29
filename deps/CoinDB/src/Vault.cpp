@@ -226,6 +226,13 @@ Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint
     return filter;
 }
 
+void Vault::exportVault(const std::string& filepath, bool exportprivkeys, const secure_bytes_t& exportChainCodeUnlockKey) const
+{
+}
+ 
+void Vault::importVault(const std::string& name, const std::string& filepath, bool importprivkeys, const secure_bytes_t& importChainCodeUnlockKey)
+{
+}
 
 ///////////////////////////
 // CHAIN CODE OPERATIONS //
