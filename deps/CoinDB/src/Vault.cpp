@@ -47,35 +47,84 @@ using namespace CoinDB;
  * class Vault implementation
 */
 Vault::Vault(int argc, char** argv, bool create, uint32_t version)
-    : db_(open_database(argc, argv, create))
+//    : db_(open_database(argc, argv, create))
 {
     LOGGER(trace) << "Vault::Vault(..., " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
 
-    if (argc >= 2) name_ = argv[1];
-    if (create) setSchemaVersion(version);
+    open(argc, argv, create, version);
+//    if (argc >= 2) name_ = argv[1];
+//    if (create) setSchemaVersion(version);
 }
 
 Vault::Vault(const std::string& dbname, bool create, uint32_t version)
-    : db_(openDatabase("", "", dbname, create))
+//    : db_(openDatabase("", "", dbname, create))
 {
     LOGGER(trace) << "Vault::Vault(" << dbname << ", " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
 
-    name_ = dbname;
-    if (create) setSchemaVersion(version);
+    open("", "", dbname, create, version);
+//    name_ = dbname;
+//    if (create) setSchemaVersion(version);
 }
 
 Vault::Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version)
-    : db_(openDatabase(dbuser, dbpasswd, dbname, create))
+//    : db_(openDatabase(dbuser, dbpasswd, dbname, create))
 {
     LOGGER(trace) << "Vault::Vault(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
 
-    name_ = dbname;
-    if (create) setSchemaVersion(version);
+    open(dbuser, dbpasswd, dbname, create, version);
+//    name_ = dbname;
+//    if (create) setSchemaVersion(version);
+}
+
+Vault::~Vault()
+{
+    LOGGER(trace) << "Vault::~Vault()" << std::endl;
+
+    close();
 }
 
 ///////////////////////
 // GLOBAL OPERATIONS //
 ///////////////////////
+void Vault::open(int argc, char** argv, bool create, uint32_t version)
+{
+    LOGGER(trace) << "Vault::open(..., " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    db_ = open_database(argc, argv, create);
+    if (argc >= 2) name_ = argv[1];
+    if (create)
+    {
+        odb::core::transaction t(db_->begin());
+        setSchemaVersion_unwrapped(version);
+        t.commit();
+    }
+}
+
+void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version)
+{
+    LOGGER(trace) << "Vault::open(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    db_ = openDatabase(dbuser, dbpasswd, dbname, create);
+    name_ = dbname;
+    if (create)
+    {
+        odb::core::transaction t(db_->begin());
+        setSchemaVersion_unwrapped(version);
+        t.commit();
+    }
+}
+
+void Vault::close()
+{
+    LOGGER(trace) << "Vault::close()" << std::endl;
+
+    if (!db_) return;
+    boost::lock_guard<boost::mutex> lock(mutex);
+    db_ = nullptr; 
+}
+
 uint32_t Vault::getSchemaVersion() const
 {
     LOGGER(trace) << "Vault::getSchemaVersion()" << std::endl;

@@ -30,13 +30,20 @@ typedef Signals::Signal<std::shared_ptr<MerkleBlock>> MerkleBlockSignal;
 class Vault
 {
 public:
+    Vault() : db_(nullptr) { }
     Vault(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION);
     Vault(const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION);
     Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION);
 
+    virtual ~Vault();
+
     ///////////////////////
     // GLOBAL OPERATIONS //
     ///////////////////////
+    void                                    open(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION);
+    void                                    open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION);
+    void                                    close();
+
     const std::string&                      getName() const { return name_; }
     uint32_t                                getSchemaVersion() const;
     void                                    setSchemaVersion(uint32_t version);
