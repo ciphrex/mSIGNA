@@ -2356,3 +2356,38 @@ unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)
     return count;
 }
 
+void Vault::exportMerkleBlocks(const std::string& filepath) const
+{
+    LOGGER(trace) << "Vault::exportMerkleBlocks(" << filepath << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    std::ofstream ofs(filepath);
+    boost::archive::text_oarchive oa(ofs);
+
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    exportMerkleBlocks_unwrapped(oa);
+}
+
+void Vault::exportMerkleBlocks_unwrapped(boost::archive::text_oarchive& oa) const
+{
+}
+
+void Vault::importMerkleBlocks(const std::string& filepath)
+{
+    LOGGER(trace) << "Vault::importMerkleBlocks(" << filepath << ")" << std::endl;
+
+    std::ifstream ifs(filepath);
+    boost::archive::text_iarchive ia(ifs);
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    importMerkleBlocks_unwrapped(ia);
+    t.commit();
+}
+
+void Vault::importMerkleBlocks_unwrapped(boost::archive::text_iarchive& ia)
+{
+}
+

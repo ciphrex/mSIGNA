@@ -148,6 +148,8 @@ public:
     std::shared_ptr<MerkleBlock>            insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock);
     unsigned int                            deleteMerkleBlock(const bytes_t& hash);
     unsigned int                            deleteMerkleBlock(uint32_t height);
+    void                                    exportMerkleBlocks(const std::string& filepath) const;
+    void                                    importMerkleBlocks(const std::string& filepath);
 
     ////////////////////////
     // SLOT SUBSCRIPTIONS //
@@ -256,6 +258,9 @@ protected:
     unsigned int                            deleteMerkleBlock_unwrapped(uint32_t height);
     unsigned int                            updateConfirmations_unwrapped(std::shared_ptr<Tx> tx = nullptr); // If parameter is null, updates all unconfirmed transactions.
                                                                                                      // Returns the number of transaction previously unconfirmed that are now confirmed.
+
+    void                                    exportMerkleBlocks_unwrapped(boost::archive::text_oarchive& oa) const;
+    void                                    importMerkleBlocks_unwrapped(boost::archive::text_iarchive& ia);
 
     /////////////
     // SIGNALS //
