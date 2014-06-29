@@ -27,7 +27,7 @@
 #include <ctime>
 #include <functional>
 
-const std::string COINDB_VERSION = "v0.3.3";
+const std::string COINDB_VERSION = "v0.3.4";
 
 // TODO: Set the following in config file
 const std::string DBUSER = "root";
@@ -410,8 +410,8 @@ cli::result_t cmd_issuescript(const cli::params_t& params)
     Vault vault(DBUSER, DBPASSWD, params[0], false);
     std::string account_name;
     if (params[1] != "@null") account_name = params[1];
-    std::string bin_name = params.size() > 2 ? params[2] : std::string(DEFAULT_BIN_NAME);
-    std::string label = params.size() > 3 ? params[3] : std::string("");
+    std::string label = params.size() > 2 ? params[2] : std::string("");
+    std::string bin_name = params.size() > 3 ? params[3] : std::string(DEFAULT_BIN_NAME);
     std::shared_ptr<SigningScript> script = vault.issueSigningScript(account_name, bin_name, label);
 
     std::string address = getAddressFromScript(script->txoutscript());
@@ -923,7 +923,7 @@ int main(int argc, char* argv[])
     shell.add(command(&cmd_exportaccount, "exportaccount", "export account to file", command::params(2, "db file", "account name"), command::params(3, "export chain code passphrase", "native chain code passphrase", "output file = *.acct")));
     shell.add(command(&cmd_importaccount, "importaccount", "import account from file", command::params(2, "db file", "account file"), command::params(2, "import chain code passphrase", "native chain code passphrase"))); 
     shell.add(command(&cmd_newaccountbin, "newaccountbin", "add a new account bin", command::params(3, "db file", "account name", "bin name")));
-    shell.add(command(&cmd_issuescript, "issuescript", "issue a new signing script", command::params(2, "db file", "account name"), command::params(1, (std::string("bin name = ") + DEFAULT_BIN_NAME).c_str())));
+    shell.add(command(&cmd_issuescript, "issuescript", "issue a new signing script", command::params(2, "db file", "account name"), command::params(2, "label", (std::string("bin name = ") + DEFAULT_BIN_NAME).c_str())));
     shell.add(command(&cmd_listscripts, "listscripts", "display list of signing scripts (flags: UNUSED=1, CHANGE=2, PENDING=4, RECEIVED=8, CANCELED=16)", command::params(1, "db file"),
         command::params(3, "account name = @all", "bin name = @all", "flags = PENDING | RECEIVED")));
     shell.add(command(&cmd_history, "history", "display transaction history", command::params(1, "db file"), command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
