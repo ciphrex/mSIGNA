@@ -618,8 +618,8 @@ public:
 
     BlockHeader(const Coin::CoinBlockHeader& blockheader, uint32_t height = 0xffffffff) { fromCoinCore(blockheader, height); }
 
-    BlockHeader(const bytes_t& hash, uint32_t height, uint32_t version, const bytes_t& prevhash, const bytes_t& merkleroot, uint32_t timestamp, uint32_t bits, uint32_t nonce)
-    : hash_(hash), height_(height), version_(version), prevhash_(prevhash), merkleroot_(merkleroot), timestamp_(timestamp), bits_(bits), nonce_(nonce) { }
+    BlockHeader(uint32_t version, const bytes_t& prevhash, const bytes_t& merkleroot, uint32_t timestamp, uint32_t bits, uint32_t nonce, uint32_t height = 0xffffffff)
+    : height_(height), version_(version), prevhash_(prevhash), merkleroot_(merkleroot), timestamp_(timestamp), bits_(bits), nonce_(nonce) { updateHash(); }
 
     void fromCoinCore(const Coin::CoinBlockHeader& blockheader, uint32_t height = 0xffffffff);
     Coin::CoinBlockHeader toCoinCore() const;
@@ -657,6 +657,32 @@ private:
     uint32_t timestamp_;
     uint32_t bits_;
     uint32_t nonce_;
+
+    void updateHash();
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void save(Archive& ar, const unsigned int /*version*/) const
+    {
+        ar & version_;
+        ar & prevhash_;
+        ar & merkleroot_;
+        ar & timestamp_;
+        ar & bits_;
+        ar & nonce_;
+    }
+    template<class Archive>
+    void load(Archive& ar, const unsigned int /*version*/)
+    {
+        ar & version_;
+        ar & prevhash_;
+        ar & merkleroot_;
+        ar & timestamp_;
+        ar & bits_;
+        ar & nonce_;
+        updateHash();
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 
@@ -1439,6 +1465,8 @@ struct ConfirmedTxView
 };
 
 }
+
+BOOST_CLASS_VERSION(CoinDB::BlockHeader, 1)
 
 BOOST_CLASS_VERSION(CoinDB::TxIn, 1)
 BOOST_CLASS_VERSION(CoinDB::TxOut, 1)

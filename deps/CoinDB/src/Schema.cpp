@@ -588,6 +588,11 @@ std::string BlockHeader::toJson() const
     return ss.str();
 }
 
+void BlockHeader::updateHash()
+{
+    hash_ = Coin::CoinBlockHeader(version_, timestamp_, bits_, nonce_, prevhash_, merkleroot_).getHashLittleEndian();
+}
+
 
 /*
  * class MerkleBlock
