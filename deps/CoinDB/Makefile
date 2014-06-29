@@ -153,7 +153,7 @@ lib/libCoinDB.a: $(OBJS)
 # odb compiled dependencies
 #
 odb/Schema-odb-$(DB).hxx: src/Schema.h
-	odb --output-dir odb/ --std c++11 $(ODB_DB) --database $(DB) --odb-file-suffix -odb-$(DB) --changelog-file-suffix -$(DB) --generate-query --generate-schema $(ODB_INCLUDE_PATH) $<
+	odb --output-dir odb/ --std c++11 $(ODB_DB) --database $(DB) --odb-file-suffix -odb-$(DB) --changelog-file-suffix -$(DB) --generate-query --generate-schema --schema-format embedded $(ODB_INCLUDE_PATH) $<
 
 odb/Schema-odb-$(DB).cxx: odb/Schema-odb-$(DB).hxx
 

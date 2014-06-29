@@ -21,6 +21,9 @@
 #include <odb/database.hxx>
 
 #if defined(DATABASE_MYSQL)
+#  include <odb/connection.hxx>
+#  include <odb/transaction.hxx>
+#  include <odb/schema-catalog.hxx>
 #  include <odb/mysql/database.hxx>
 #elif defined(DATABASE_SQLITE)
 #  include <odb/connection.hxx>
@@ -102,31 +105,36 @@ open_database (int& argc, char* argv[], bool create = false)
 inline std::unique_ptr<odb::database>
 openDatabase(const std::string& user, const std::string& passwd, const std::string& dbname, bool create = false)
 {
+    using namespace odb::core;
+
 #if defined(DATABASE_MYSQL)
     std::unique_ptr<odb::database> db(new odb::mysql::database(user, passwd, dbname));
 #elif defined(DATABASE_SQLITE)
-    using namespace odb::core;
-
     int flags = SQLITE_OPEN_READWRITE;
     if (create) flags |= SQLITE_OPEN_CREATE;
     std::unique_ptr<database> db(new odb::sqlite::database(dbname, flags, false));
+#endif
 
   // Create the database schema. Due to bugs in SQLite foreign key
   // support for DDL statements, we need to temporarily disable
   // foreign keys.
   //
-    if (create) {
+    if (create)
+    {
         connection_ptr c(db->connection ());
 
-        c->execute ("PRAGMA foreign_keys=OFF");
-
-        transaction t (c->begin ());
-        schema_catalog::create_schema (*db);
-        t.commit ();
-
-        c->execute ("PRAGMA foreign_keys=ON");
-    }
+#if defined(DATABASE_SQLITE)
+        c->execute("PRAGMA foreign_keys=OFF");
 #endif
+
+        transaction t(c->begin ());
+        schema_catalog::create_schema(*db);
+        t.commit();
+
+#if defined(DATABASE_SQLITE)
+        c->execute("PRAGMA foreign_keys=ON");
+#endif
+    }
 
     return db;
 }
