@@ -905,21 +905,13 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(boost::archive::text_iar
         bin->makeImport();
         db_->persist(bin);
 
-        SigningScript::status_t status = bin->isChange() ? SigningScript::CHANGE : SigningScript::ISSUED;
-        unsigned int next_script_index = bin->next_script_index();
-        for (unsigned int i = 0; i < next_script_index; i++)
+        SigningScriptVector scripts = bin->generateSigningScripts();
+        for (auto& script: scripts)
         {
-            std::shared_ptr<SigningScript> script = bin->newSigningScript();
-            script->status(status);
             for (auto& key: script->keys()) { db_->persist(key); }
             db_->persist(script);
         }
-        for (unsigned int i = 0; i < account->unused_pool_size(); i++)
-        {
-            std::shared_ptr<SigningScript> script = bin->newSigningScript();
-            for (auto& key: script->keys()) { db_->persist(key); }
-            db_->persist(script); 
-        }
+
         db_->update(bin);
     } 
 
