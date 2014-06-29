@@ -39,9 +39,11 @@ namespace CoinDB
 typedef odb::nullable<unsigned long> null_id_t;
 
 #if defined(DATABASE_MYSQL)
+    const std::string DBMS = "MySQL";
     #pragma db value(std::string) type("VARCHAR(255)")
     #pragma db value(bytes_t) type("VARBINARY(255)")
 #elif defined(DATABASE_SQLITE)
+    const std::string DBMS = "SQLite";
     #pragma db value(bytes_t) type("BLOB")
 #else
     #error "No database engine selected."
