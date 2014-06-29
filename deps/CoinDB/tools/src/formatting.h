@@ -51,8 +51,9 @@ inline std::string formattedScriptHeader()
 
     stringstream ss;
     ss << " ";
-    ss << left  << setw(8) << "account" << " | "
-       << left  << setw(8) << "bin" << " | "
+    ss << left  << setw(8)  << "account" << " | "
+       << left  << setw(8)  << "bin" << " | "
+       << left  << setw(8)  << "label" << " | "
        << right << setw(5)  << "index" << " | "
        << left  << setw(50) << "script" << " | "
        << left  << setw(36) << "address" << " | "
@@ -74,6 +75,7 @@ inline std::string formattedScript(const CoinDB::SigningScriptView& view)
     ss << " ";
     ss << left  << setw(8)  << view.account_name << " | "
        << left  << setw(8)  << view.account_bin_name << " | "
+       << left  << setw(8)  << view.label << " | "
        << right << setw(5)  << view.index << " | "
        << left  << setw(50) << uchar_vector(view.txoutscript).getHex() << " | "
        << left  << setw(36) << getAddressFromScript(view.txoutscript) << " | "
