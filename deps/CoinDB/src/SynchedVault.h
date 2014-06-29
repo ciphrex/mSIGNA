@@ -23,8 +23,11 @@ namespace CoinDB
 class SynchedVault
 {
 public:
-    SynchedVault(const std::string& blockTreeFile = "blocktree.dat");
+    SynchedVault();
     ~SynchedVault();
+
+    void loadBlockTree(const std::string& blockTreeFile, bool bCheckProofOfWork = false);
+    bool isBlockTreeLoaded() const { return m_bBlockTreeLoaded; }
 
     void openVault(const std::string& dbname, bool bCreate = false);
     void openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate = false);
@@ -50,6 +53,7 @@ private:
 
     CoinQ::Network::NetworkSync m_networkSync;
     std::string m_blockTreeFile;
+    bool m_bBlockTreeLoaded;
     bool m_bConnected;
     bool m_bSynching;
     bool m_bBlockTreeSynched;
