@@ -881,6 +881,18 @@ cli::result_t cmd_deleteblock(const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_exportmerkleblocks(const cli::params_t& params)
+{
+    Vault vault(DBUSER, DBPASSWD, params[0], false);
+
+    std::string output_file = params.size() > 1 ? params[1] : (params[0] + ".chain");
+    vault.exportMerkleBlocks(output_file);
+
+    stringstream ss;
+    ss << "Merkle blocks exported to " << output_file << ".";
+    return ss.str();
+}
+
 cli::result_t cmd_randombytes(const cli::params_t& params)
 {
     uchar_vector bytes = random_bytes(strtoul(params[0].c_str(), NULL, 0));
@@ -954,6 +966,7 @@ int main(int argc, char* argv[])
     shell.add(command(&cmd_rawmerkleblock, "rawmerkleblock", "construct a raw merkle block", command::params(4, "raw block header", "flags", "nTxs", "nHashes"), command::params(3, "hash 1", "hash 2", "...")));
     shell.add(command(&cmd_insertrawmerkleblock, "insertrawmerkleblock", "insert raw merkle block into database", command::params(2, "db file", "raw merkle block"), command::params(1, "height = 0")));
     shell.add(command(&cmd_deleteblock, "deleteblock", "delete merkle block including all descendants", command::params(1, "db file"), command::params(1, "height = 0")));
+    shell.add(command(&cmd_exportmerkleblocks, "exportmerkleblocks", "export all merkle blocks to file", command::params(1, "db file"), command::params(1, "output file = *.chain")));
 
     // Miscellaneous
     shell.add(command(&cmd_randombytes, "randombytes", "output random bytes in hex", command::params(1, "length")));
