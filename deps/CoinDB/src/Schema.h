@@ -1145,6 +1145,14 @@ struct AccountView
 };
 
 #pragma db view \
+    object(Account)
+struct AccountCountView
+{
+    #pragma db column("count(" + Account::id_ + ")")
+    uint32_t count;
+};
+
+#pragma db view \
     object(AccountBin) \
     object(Account: AccountBin::account_)
 struct AccountBinView

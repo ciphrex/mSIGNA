@@ -283,12 +283,17 @@ void Vault::exportVault(const std::string& filepath, bool exportprivkeys, const 
     odb::core::session s;
 
     // Export all accounts
-    odb::result<Account> account_r(db_->query<Account>());
-    uint32_t n = account_r.size();
+    odb::result<AccountCountView> count_r(db_->query<AccountCountView>());
+    uint32_t n = count_r.empty() ? 0 : count_r.begin()->count;
     oa << n;
-    for (auto& account: account_r)
+
+    if (n > 0)
     {
-        exportAccount_unwrapped(account, oa, exportprivkeys, exportChainCodeUnlockKey);
+        odb::result<Account> account_r(db_->query<Account>());
+        for (auto& account: account_r)
+        {
+            exportAccount_unwrapped(account, oa, exportprivkeys, exportChainCodeUnlockKey);
+        }
     }
 }
  
