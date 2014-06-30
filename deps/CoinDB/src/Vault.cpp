@@ -2396,5 +2396,13 @@ void Vault::importMerkleBlocks(const std::string& filepath)
 
 void Vault::importMerkleBlocks_unwrapped(boost::archive::text_iarchive& ia)
 {
+    uint32_t n;
+    ia >> n;
+    for (uint32_t i = 0; i < n; i++)
+    {
+        std::shared_ptr<MerkleBlock> merkleblock(new MerkleBlock());
+        ia >> *merkleblock;
+        insertMerkleBlock_unwrapped(merkleblock);
+    }
 }
 

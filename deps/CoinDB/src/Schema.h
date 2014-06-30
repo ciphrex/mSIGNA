@@ -796,7 +796,8 @@ private:
     }
     template<class Archive>
     void load(Archive& ar, const unsigned int /*version*/)
-    {
+    { 
+        blockheader_ = std::shared_ptr<BlockHeader>(new BlockHeader());
         ar & *blockheader_;
         ar & txcount_;
 
