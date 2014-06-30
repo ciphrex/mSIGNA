@@ -2125,6 +2125,41 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
     return sigsadded;
 }
 
+void Vault::exportTxs(const std::string& filepath, uint32_t minheight) const
+{
+    LOGGER(trace) << "Vault::exportTxs(" << filepath << ", " << minheight << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    std::ofstream ofs(filepath);
+    boost::archive::text_oarchive oa(ofs);
+
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    exportTxs_unwrapped(oa, minheight);
+}
+
+void Vault::exportTxs_unwrapped(boost::archive::text_oarchive& oa, uint32_t minheight) const
+{
+}
+
+void Vault::importTxs(const std::string& filepath)
+{
+    LOGGER(trace) << "Vault::importTxs(" << filepath << ")" << std::endl;
+
+    std::ifstream ifs(filepath);
+    boost::archive::text_iarchive ia(ifs);
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    importMerkleBlocks_unwrapped(ia);
+    t.commit();
+}
+
+void Vault::importTxs_unwrapped(boost::archive::text_iarchive& ia)
+{
+}
+
 
 ///////////////////////////
 // BLOCKCHAIN OPERATIONS //
