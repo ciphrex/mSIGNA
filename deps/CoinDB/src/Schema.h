@@ -1133,13 +1133,17 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int /*version*/)
+    void serialize(Archive& ar, const unsigned int version)
     {
         ar & version_;
         ar & txins_;
         ar & txouts_;
         ar & locktime_;
         ar & timestamp_; // only used for sorting in UI
+        if (version >= 2)
+        {
+            ar & status_;
+        }
     }
 };
 
@@ -1570,7 +1574,7 @@ BOOST_CLASS_VERSION(CoinDB::MerkleBlock, 1)
 
 BOOST_CLASS_VERSION(CoinDB::TxIn, 1)
 BOOST_CLASS_VERSION(CoinDB::TxOut, 1)
-BOOST_CLASS_VERSION(CoinDB::Tx, 1)
+BOOST_CLASS_VERSION(CoinDB::Tx, 2)
 
 BOOST_CLASS_VERSION(CoinDB::Keychain, 1)
 BOOST_CLASS_VERSION(CoinDB::AccountBin, 2)
