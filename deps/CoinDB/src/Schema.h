@@ -1133,7 +1133,7 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void save(Archive& ar, const unsigned int version) const
+    void save(Archive& ar, const unsigned int /*version*/) const
     {
         ar & version_;
 
@@ -1148,45 +1148,47 @@ private:
 
         ar & locktime_;
         ar & timestamp_; // only used for sorting in UI
-        if (version >= 2)
-        {
-            uint32_t flag = (uint32_t)status_;
-            ar & flag;
-        }
+
+        uint32_t flag = (uint32_t)status_;
+        ar & flag;
     }
     template<class Archive>
-    void load(Archive& ar, const unsigned int version)
+    void load(Archive& ar, const unsigned int /*version*/)
     {
-        ar & version_;
+        uint32_t version__;
+        ar & version__;
 
         uint32_t n;
         ar & n;
-        txins_.clear();
+        txins_t txins;
         for (uint32_t i = 0; i < n; i++)
         {
             std::shared_ptr<TxIn> txin(new TxIn());
             ar & *txin;
-            txins_.push_back(txin);
+            txins.push_back(txin);
         }
 
         ar & n;
-        txouts_.clear();
+        txouts_t txouts;
         for (uint32_t i = 0; i < n; i++)
         {
             std::shared_ptr<TxOut> txout(new TxOut());
             ar & *txout;
-            txouts_.push_back(txout);
+            txouts.push_back(txout);
         }
 
-        ar & locktime_;
-        ar & timestamp_; // only used for sorting in UI
-        if (version >= 2)
-        {
-            uint32_t flag;
-            ar & flag;
-            std::vector<status_t> flags = Tx::getStatusFlags(flag);
-            status_ = flags.empty() ? NO_STATUS : flags[0];
-        }
+        uint32_t locktime;
+        ar & locktime;
+
+        uint32_t timestamp;
+        ar & timestamp; // only used for internal sorting
+
+        uint32_t flag;
+        ar & flag;
+        std::vector<status_t> flags = Tx::getStatusFlags(flag);
+        status_t status = flags.empty() ? NO_STATUS : flags[0];
+
+        set(version__, txins, txouts, locktime, timestamp, status);
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
@@ -1618,7 +1620,7 @@ BOOST_CLASS_VERSION(CoinDB::MerkleBlock, 1)
 
 BOOST_CLASS_VERSION(CoinDB::TxIn, 1)
 BOOST_CLASS_VERSION(CoinDB::TxOut, 1)
-BOOST_CLASS_VERSION(CoinDB::Tx, 2)
+BOOST_CLASS_VERSION(CoinDB::Tx, 1)
 
 BOOST_CLASS_VERSION(CoinDB::Keychain, 1)
 BOOST_CLASS_VERSION(CoinDB::AccountBin, 2)

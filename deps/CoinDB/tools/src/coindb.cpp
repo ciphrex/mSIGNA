@@ -785,7 +785,7 @@ cli::result_t cmd_exporttxs(const cli::params_t& params)
 
 cli::result_t cmd_importtxs(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], true);
+    Vault vault(DBUSER, DBPASSWD, params[0], false);
 
     vault.importTxs(params[1]);
 

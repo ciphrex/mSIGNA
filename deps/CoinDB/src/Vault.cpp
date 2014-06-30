@@ -2168,12 +2168,20 @@ void Vault::importTxs(const std::string& filepath)
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
-    importMerkleBlocks_unwrapped(ia);
+    importTxs_unwrapped(ia);
     t.commit();
 }
 
 void Vault::importTxs_unwrapped(boost::archive::text_iarchive& ia)
 {
+    uint32_t n;
+    ia >> n;
+    for (uint32_t i = 0; i < n; i++)
+    {
+        std::shared_ptr<Tx> tx(new Tx());
+        ia >> *tx;
+        insertTx_unwrapped(tx);
+    }
 }
 
 
