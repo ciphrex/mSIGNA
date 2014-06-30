@@ -2140,6 +2140,16 @@ void Vault::exportTxs(const std::string& filepath, uint32_t minheight) const
 
 void Vault::exportTxs_unwrapped(boost::archive::text_oarchive& oa, uint32_t minheight) const
 {
+    typedef odb::query<Tx> tx_query_t;
+    odb::result<Tx> r;
+
+    // First the confirmed transactions
+    r = db_->query<Tx>((tx_query_t::blockheader.is_not_null() && tx_query_t::blockheader->height >= minheight) + "ORDER BY" + tx_query_t::blockheader + "ASC, " + tx_query_t::timestamp + "ASC");
+    for (auto& tx: r)   { oa << tx; }
+
+    // Then the unconfirmed
+    r = db_->query<Tx>(tx_query_t::blockheader.is_null() + "ORDER BY" + tx_query_t::blockheader + "ASC, " + tx_query_t::timestamp + "ASC");
+    for (auto& tx: r)   { oa << tx; }
 }
 
 void Vault::importTxs(const std::string& filepath)

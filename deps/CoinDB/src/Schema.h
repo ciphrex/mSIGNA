@@ -823,6 +823,7 @@ private:
 class TxIn
 {
 public:
+    TxIn() { }
     TxIn(const bytes_t& outhash, uint32_t outindex, const bytes_t& script, uint32_t sequence)
         : outhash_(outhash), outindex_(outindex), script_(script), sequence_(sequence) { }
 
@@ -854,7 +855,6 @@ public:
 
 private:
     friend class odb::access;
-    TxIn() { }
 
     #pragma db id auto
     unsigned long id_;
@@ -1133,18 +1133,62 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int version)
+    void save(Archive& ar, const unsigned int version) const
     {
         ar & version_;
-        ar & txins_;
-        ar & txouts_;
+
+        uint32_t n;
+        n = txins_.size();
+        ar & n;
+        for (auto& txin: txins_)    { ar & *txin; }
+
+        n = txouts_.size();
+        ar & n;
+        for (auto& txout: txouts_)  { ar & *txout; } 
+
         ar & locktime_;
         ar & timestamp_; // only used for sorting in UI
         if (version >= 2)
         {
-            ar & status_;
+            uint32_t flag = (uint32_t)status_;
+            ar & flag;
         }
     }
+    template<class Archive>
+    void load(Archive& ar, const unsigned int version)
+    {
+        ar & version_;
+
+        uint32_t n;
+        ar & n;
+        txins_.clear();
+        for (uint32_t i = 0; i < n; i++)
+        {
+            std::shared_ptr<TxIn> txin(new TxIn());
+            ar & *txin;
+            txins_.push_back(txin);
+        }
+
+        ar & n;
+        txouts_.clear();
+        for (uint32_t i = 0; i < n; i++)
+        {
+            std::shared_ptr<TxOut> txout(new TxOut());
+            ar & *txout;
+            txouts_.push_back(txout);
+        }
+
+        ar & locktime_;
+        ar & timestamp_; // only used for sorting in UI
+        if (version >= 2)
+        {
+            uint32_t flag;
+            ar & flag;
+            std::vector<status_t> flags = Tx::getStatusFlags(flag);
+            status_ = flags.empty() ? NO_STATUS : flags[0];
+        }
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 
