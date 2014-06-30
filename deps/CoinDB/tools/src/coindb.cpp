@@ -922,67 +922,282 @@ int main(int argc, char* argv[])
     Shell shell(helpMessage.str());
 
     // Global operations
-    shell.add(command(&cmd_create, "create", "create a new vault", command::params(1, "db file")));
-    shell.add(command(&cmd_info, "info", "display general information about file", command::params(1, "db file")));
-    shell.add(command(&cmd_exportvault, "exportvault", "export vault contents to portable file", command::params(1, "db file"), command::params(4, "export private keys = true", "export chain code passphrase", "native chain code passphrase", "output file = *.portable")));
-    shell.add(command(&cmd_importvault, "importvault", "import vault contents from portable file", command::params(2, "db file", "portable file"), command::params(3, "import private keys = true", "import chain code passphrase", "native chain code passphrase")));
+    shell.add(command(
+        &cmd_create,
+        "create",
+        "create a new vault",
+        command::params(1, "db file")));
+    shell.add(command(
+        &cmd_info,
+        "info",
+        "display general information about file",
+        command::params(1, "db file")));
+    shell.add(command(
+        &cmd_exportvault,
+        "exportvault",
+        "export vault contents to portable file",
+        command::params(1, "db file"),
+        command::params(4, "export private keys = true", "export chain code passphrase", "native chain code passphrase", "output file = *.portable")));
+    shell.add(command(
+        &cmd_importvault,
+        "importvault",
+        "import vault contents from portable file",
+        command::params(2, "db file", "portable file"),
+        command::params(3, "import private keys = true", "import chain code passphrase", "native chain code passphrase")));
 
     // Keychain operations
-    shell.add(command(&cmd_keychainexists, "keychainexists", "check if a keychain exists", command::params(1, "db file")));
-    shell.add(command(&cmd_newkeychain, "newkeychain", "create a new keychain", command::params(2, "db file", "keychain name")));
-    shell.add(command(&cmd_renamekeychain, "renamekeychain", "rename a keychain", command::params(3, "db file", "old name", "new name")));
-    shell.add(command(&cmd_keychaininfo, "keychaininfo", "display keychain information about a specific keychain", command::params(2, "db file", "keychain name")));
-    shell.add(command(&cmd_keychains, "keychains", "display keychains", command::params(1, "db file"), command::params(2, "account = @all", "show hidden = false")));
-    shell.add(command(&cmd_exportkeychain, "exportkeychain", "export a keychain to file", command::params(2, "db file", "keychain name"), command::params(1, "export private key = false")));
-    shell.add(command(&cmd_importkeychain, "importkeychain", "import a keychain from file", command::params(2, "db file", "keychain file"), command::params(1, "import private key = true")));
-    shell.add(command(&cmd_exportbip32, "exportbip32", "export a keychain in BIP32 extended key format", command::params(2, "db file", "keychain name"), command::params(1, "passphrase")));
-    shell.add(command(&cmd_importbip32, "importbip32", "import a keychain in BIP32 extended key format", command::params(3, "db file", "keychain name", "BIP32"), command::params(1, "passphrase")));
+    shell.add(command(
+        &cmd_keychainexists,
+        "keychainexists",
+        "check if a keychain exists",
+        command::params(1, "db file")));
+    shell.add(command(
+        &cmd_newkeychain,
+        "newkeychain",
+        "create a new keychain",
+        command::params(2, "db file", "keychain name")));
+    shell.add(command(
+        &cmd_renamekeychain,
+        "renamekeychain",
+        "rename a keychain",
+        command::params(3, "db file", "old name", "new name")));
+    shell.add(command(
+        &cmd_keychaininfo,
+        "keychaininfo",
+        "display keychain information about a specific keychain",
+        command::params(2, "db file", "keychain name")));
+    shell.add(command(
+        &cmd_keychains,
+        "keychains",
+        "display keychains",
+        command::params(1, "db file"),
+        command::params(2, "account = @all", "show hidden = false")));
+    shell.add(command(
+        &cmd_exportkeychain,
+        "exportkeychain",
+        "export a keychain to file",
+        command::params(2, "db file", "keychain name"),
+        command::params(1, "export private key = false")));
+    shell.add(command(
+        &cmd_importkeychain,
+        "importkeychain",
+        "import a keychain from file",
+        command::params(2, "db file", "keychain file"),
+        command::params(1, "import private key = true")));
+    shell.add(command(
+        &cmd_exportbip32,
+        "exportbip32",
+        "export a keychain in BIP32 extended key format",
+        command::params(2, "db file", "keychain name"),
+        command::params(1, "passphrase")));
+    shell.add(command(
+        &cmd_importbip32,
+        "importbip32",
+        "import a keychain in BIP32 extended key format",
+        command::params(3, "db file", "keychain name", "BIP32"),
+        command::params(1, "passphrase")));
 
     // Account operations
-    shell.add(command(&cmd_accountexists, "accountexists", "check if an account exists", command::params(2, "db file", "account name")));
-    shell.add(command(&cmd_newaccount, "newaccount", "create a new account using specified keychains", command::params(4, "db file", "account name", "minsigs", "keychain 1"), command::params(3, "keychain 2", "keychain 3", "...")));
-    shell.add(command(&cmd_renameaccount, "renameaccount", "rename an account", command::params(3, "db file", "old name", "new name")));
-    shell.add(command(&cmd_accountinfo, "accountinfo", "display account information", command::params(2, "db file", "account name")));
-    shell.add(command(&cmd_listaccounts, "listaccounts", "display list of accounts", command::params(1, "db file")));
-    shell.add(command(&cmd_exportaccount, "exportaccount", "export account to file", command::params(2, "db file", "account name"), command::params(3, "export chain code passphrase", "native chain code passphrase", "output file = *.acct")));
-    shell.add(command(&cmd_importaccount, "importaccount", "import account from file", command::params(2, "db file", "account file"), command::params(2, "import chain code passphrase", "native chain code passphrase"))); 
-    shell.add(command(&cmd_newaccountbin, "newaccountbin", "add a new account bin", command::params(3, "db file", "account name", "bin name")));
-    shell.add(command(&cmd_issuescript, "issuescript", "issue a new signing script", command::params(2, "db file", "account name"), command::params(2, "label", (std::string("bin name = ") + DEFAULT_BIN_NAME).c_str())));
-    shell.add(command(&cmd_listscripts, "listscripts", "display list of signing scripts (flags: UNUSED=1, CHANGE=2, PENDING=4, RECEIVED=8, CANCELED=16)", command::params(1, "db file"),
+    shell.add(command(
+        &cmd_accountexists,
+        "accountexists",
+        "check if an account exists",
+        command::params(2, "db file", "account name")));
+    shell.add(command(
+        &cmd_newaccount,
+        "newaccount",
+        "create a new account using specified keychains",
+        command::params(4, "db file", "account name", "minsigs", "keychain 1"),
+        command::params(3, "keychain 2", "keychain 3", "...")));
+    shell.add(command(
+        &cmd_renameaccount,
+        "renameaccount",
+        "rename an account",
+        command::params(3, "db file", "old name", "new name")));
+    shell.add(command(
+        &cmd_accountinfo,
+        "accountinfo",
+        "display account information",
+        command::params(2, "db file", "account name")));
+    shell.add(command(
+        &cmd_listaccounts,
+        "listaccounts",
+        "display list of accounts",
+        command::params(1, "db file")));
+    shell.add(command(
+        &cmd_exportaccount,
+        "exportaccount",
+        "export account to file",
+        command::params(2, "db file", "account name"),
+        command::params(3, "export chain code passphrase", "native chain code passphrase", "output file = *.acct")));
+    shell.add(command(
+        &cmd_importaccount,
+        "importaccount",
+        "import account from file",
+        command::params(2, "db file", "account file"),
+        command::params(2, "import chain code passphrase", "native chain code passphrase"))); 
+    shell.add(command(
+        &cmd_newaccountbin,
+        "newaccountbin",
+        "add a new account bin",
+        command::params(3, "db file", "account name", "bin name")));
+    shell.add(command(
+        &cmd_issuescript,
+        "issuescript",
+        "issue a new signing script",
+        command::params(2, "db file", "account name"),
+        command::params(2, "label", (std::string("bin name = ") + DEFAULT_BIN_NAME).c_str())));
+    shell.add(command(
+        &cmd_listscripts,
+        "listscripts",
+        "display list of signing scripts (flags: UNUSED=1, CHANGE=2, PENDING=4, RECEIVED=8, CANCELED=16)",
+        command::params(1, "db file"),
         command::params(3, "account name = @all", "bin name = @all", "flags = PENDING | RECEIVED")));
-    shell.add(command(&cmd_history, "history", "display transaction history", command::params(1, "db file"), command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
-    shell.add(command(&cmd_unsigned, "unsigned", "display unsigned transactions", command::params(1, "db file"), command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
-    shell.add(command(&cmd_refillaccountpool, "refillaccountpool", "refill signing script pool for account", command::params(2, "db file", "account name")));
+    shell.add(command(
+        &cmd_history,
+        "history",
+        "display transaction history",
+        command::params(1, "db file"),
+        command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
+    shell.add(command(
+        &cmd_unsigned,
+        "unsigned",
+        "display unsigned transactions",
+        command::params(1, "db file"),
+        command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
+    shell.add(command(
+        &cmd_refillaccountpool,
+        "refillaccountpool",
+        "refill signing script pool for account",
+        command::params(2, "db file", "account name")));
 
     // Account bin operations
-    shell.add(command(&cmd_listbins, "listbins", "display list of bins", command::params(1, "db file")));
-    shell.add(command(&cmd_exportbin, "exportbin", "export account bin to file", command::params(3, "db file", "account name", "bin name"), command::params(3, "export name = account_name-bin_name", "export chain code passphrase", "output file = *.bin")));
-    shell.add(command(&cmd_importbin, "importbin", "import account bin from file", command::params(2, "db file", "bin file"), command::params(1, "import chain code passphrase")));
+    shell.add(command(
+        &cmd_listbins,
+        "listbins",
+        "display list of bins",
+        command::params(1, "db file")));
+    shell.add(command(
+        &cmd_exportbin,
+        "exportbin",
+        "export account bin to file",
+        command::params(3, "db file", "account name", "bin name"),
+        command::params(3, "export name = account_name-bin_name", "export chain code passphrase", "output file = *.bin")));
+    shell.add(command(
+        &cmd_importbin,
+        "importbin",
+        "import account bin from file",
+        command::params(2, "db file", "bin file"),
+        command::params(1, "import chain code passphrase")));
 
     // Tx operations
-    shell.add(command(&cmd_listtxs, "listtxs", "list transactions", command::params(1, "db file"), command::params(2, "all | unsigned (default: all)", "minheight (default:0)")));
-    shell.add(command(&cmd_txinfo, "txinfo", "display transaction information", command::params(2, "db file", "tx hash or id")));
-    shell.add(command(&cmd_rawtx, "rawtx", "get transaction in raw hex", command::params(2, "db file", "tx hash or id"), command::params(1, "export to file = false")));
-    shell.add(command(&cmd_insertrawtx, "insertrawtx", "insert a raw hex transaction into database", command::params(2, "db file", "tx raw hex or tx file name")));
-    shell.add(command(&cmd_newrawtx, "newrawtx", "create a new raw transaction", command::params(4, "db file", "account name", "address 1", "value 1"), command::params(6, "address 2", "value 2", "...", "fee = 0", "version = 1", "locktime = 0")));
-    shell.add(command(&cmd_deletetx, "deletetx", "delete a transaction", command::params(2, "db file", "tx hash or id")));
-    shell.add(command(&cmd_signingrequest, "signingrequest", "gets signing request for transaction with missing signatures", command::params(2, "db file", "tx hash or id")));
-    shell.add(command(&cmd_signtx, "signtx", "add signatures to transaction for specified keychain", command::params(4, "db file", "tx hash or id", "keychain name", "passphrase")));
+    shell.add(command(
+        &cmd_listtxs,
+        "listtxs",
+        "list transactions",
+        command::params(1, "db file"),
+        command::params(2, "all | unsigned (default: all)", "minheight (default:0)")));
+    shell.add(command(
+        &cmd_txinfo,
+        "txinfo",
+        "display transaction information",
+        command::params(2, "db file", "tx hash or id")));
+    shell.add(command(
+        &cmd_rawtx,
+        "rawtx",
+        "get transaction in raw hex",
+        command::params(2, "db file", "tx hash or id"),
+        command::params(1, "export to file = false")));
+    shell.add(command(
+        &cmd_insertrawtx,
+        "insertrawtx",
+        "insert a raw hex transaction into database",
+        command::params(2, "db file", "tx raw hex or tx file name")));
+    shell.add(command(
+        &cmd_newrawtx,
+        "newrawtx",
+        "create a new raw transaction",
+        command::params(4, "db file", "account name", "address 1", "value 1"),
+        command::params(6, "address 2", "value 2", "...", "fee = 0", "version = 1", "locktime = 0")));
+    shell.add(command(
+        &cmd_deletetx,
+        "deletetx",
+        "delete a transaction",
+        command::params(2, "db file", "tx hash or id")));
+    shell.add(command(
+        &cmd_signingrequest,
+        "signingrequest",
+        "gets signing request for transaction with missing signatures",
+        command::params(2, "db file", "tx hash or id")));
+    shell.add(command(
+        &cmd_signtx,
+        "signtx",
+        "add signatures to transaction for specified keychain",
+        command::params(4, "db file", "tx hash or id", "keychain name", "passphrase")));
 
     // Blockchain operations
-    shell.add(command(&cmd_bestheight, "bestheight", "display the best block height", command::params(1, "db file")));
-    shell.add(command(&cmd_horizonheight, "horizonheight", "display height of first stored block", command::params(1, "db file")));
-    shell.add(command(&cmd_horizontimestamp, "horizontimestamp", "display timestamp minimum for first stored block", command::params(1, "db file"), command::params(1, "use gmt = false")));
-    shell.add(command(&cmd_blockinfo, "blockinfo", "display block information", command::params(2, "db file", "height")));    
-    shell.add(command(&cmd_rawblockheader, "rawblockheader", "construct a raw block header", command::params(6, "version", "previous block hash", "merkle root", "timestamp", "bits", "nonce")));
-    shell.add(command(&cmd_rawmerkleblock, "rawmerkleblock", "construct a raw merkle block", command::params(4, "raw block header", "flags", "nTxs", "nHashes"), command::params(3, "hash 1", "hash 2", "...")));
-    shell.add(command(&cmd_insertrawmerkleblock, "insertrawmerkleblock", "insert raw merkle block into database", command::params(2, "db file", "raw merkle block"), command::params(1, "height = 0")));
-    shell.add(command(&cmd_deleteblock, "deleteblock", "delete merkle block including all descendants", command::params(1, "db file"), command::params(1, "height = 0")));
-    shell.add(command(&cmd_exportmerkleblocks, "exportmerkleblocks", "export all merkle blocks to file", command::params(1, "db file"), command::params(1, "output file = *.chain")));
-    shell.add(command(&cmd_importmerkleblocks, "importmerkleblocks", "import merkle blocks from file", command::params(2, "db file", "input file")));
+    shell.add(command(
+        &cmd_bestheight,
+        "bestheight",
+        "display the best block height",
+        command::params(1, "db file")));
+    shell.add(command(
+        &cmd_horizonheight,
+        "horizonheight",
+        "display height of first stored block",
+        command::params(1, "db file")));
+    shell.add(command(
+        &cmd_horizontimestamp,
+        "horizontimestamp",
+        "display timestamp minimum for first stored block",
+        command::params(1, "db file"),
+        command::params(1, "use gmt = false")));
+    shell.add(command(
+        &cmd_blockinfo,
+        "blockinfo",
+        "display block information",
+        command::params(2, "db file", "height")));    
+    shell.add(command(
+        &cmd_rawblockheader,
+        "rawblockheader",
+        "construct a raw block header",
+        command::params(6, "version", "previous block hash", "merkle root", "timestamp", "bits", "nonce")));
+    shell.add(command(
+        &cmd_rawmerkleblock,
+        "rawmerkleblock",
+        "construct a raw merkle block",
+        command::params(4, "raw block header", "flags", "nTxs", "nHashes"),
+        command::params(3, "hash 1", "hash 2", "...")));
+    shell.add(command(
+        &cmd_insertrawmerkleblock,
+        "insertrawmerkleblock",
+        "insert raw merkle block into database",
+        command::params(2, "db file", "raw merkle block"),
+        command::params(1, "height = 0")));
+    shell.add(command(
+        &cmd_deleteblock,
+        "deleteblock",
+        "delete merkle block including all descendants",
+        command::params(1, "db file"),
+        command::params(1, "height = 0")));
+    shell.add(command(
+        &cmd_exportmerkleblocks,
+        "exportmerkleblocks",
+        "export all merkle blocks to file",
+        command::params(1, "db file"),
+        command::params(1, "output file = *.chain")));
+    shell.add(command(
+        &cmd_importmerkleblocks,
+        "importmerkleblocks",
+        "import merkle blocks from file",
+        command::params(2, "db file", "input file")));
 
     // Miscellaneous
-    shell.add(command(&cmd_randombytes, "randombytes", "output random bytes in hex", command::params(1, "length")));
+    shell.add(command(
+        &cmd_randombytes,
+        "randombytes",
+        "output random bytes in hex",
+        command::params(1, "length")));
 
     try 
     {
