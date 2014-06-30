@@ -27,7 +27,7 @@
 #include <ctime>
 #include <functional>
 
-const std::string COINDB_VERSION = "v0.3.4";
+const std::string COINDB_VERSION = "v0.3.5";
 
 // TODO: Set the following in config file
 const std::string DBUSER = "root";
@@ -770,6 +770,31 @@ cli::result_t cmd_signtx(const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_exporttxs(const cli::params_t& params)
+{
+    Vault vault(DBUSER, DBPASSWD, params[0], false);
+
+    uint32_t minheight = params.size() > 1 ? strtoul(params[1].c_str(), NULL, 0) : 0;
+    std::string output_file = params.size() > 2 ? params[2] : (params[0] + ".txs");
+    vault.exportTxs(output_file, minheight);
+
+    stringstream ss;
+    ss << "Transactions exported to " << output_file << ".";
+    return ss.str();
+}
+
+cli::result_t cmd_importtxs(const cli::params_t& params)
+{
+    Vault vault(DBUSER, DBPASSWD, params[0], true);
+
+    vault.importTxs(params[1]);
+
+    stringstream ss;
+    ss << "Transactions imported from " << params[1] << ".";
+    return ss.str();
+}
+
+
 // Blockchain operations
 cli::result_t cmd_bestheight(const cli::params_t& params)
 {
@@ -1134,6 +1159,17 @@ int main(int argc, char* argv[])
         "signtx",
         "add signatures to transaction for specified keychain",
         command::params(4, "db file", "tx hash or id", "keychain name", "passphrase")));
+    shell.add(command(
+        &cmd_exporttxs,
+        "exporttxs",
+        "export transactions to file",
+        command::params(1, "db file"),
+        command::params(2, "minheight = 0", "output file = *.txs")));
+    shell.add(command(
+        &cmd_importtxs,
+        "importtxs",
+        "import transactions from file",
+        command::params(2, "db file", "account file")));
 
     // Blockchain operations
     shell.add(command(
