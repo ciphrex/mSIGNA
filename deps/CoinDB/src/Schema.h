@@ -711,6 +711,7 @@ private:
     template<class Archive>
     void save(Archive& ar, const unsigned int /*version*/) const
     {
+        ar & height_;
         ar & version_;
         ar & prevhash_;
         ar & merkleroot_;
@@ -721,6 +722,7 @@ private:
     template<class Archive>
     void load(Archive& ar, const unsigned int /*version*/)
     {
+        ar & height_;
         ar & version_;
         ar & prevhash_;
         ar & merkleroot_;
