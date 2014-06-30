@@ -1149,46 +1149,62 @@ private:
         ar & locktime_;
         ar & timestamp_; // only used for sorting in UI
 
-        uint32_t flag = (uint32_t)status_;
-        ar & flag;
+        uint32_t statusflag = (uint32_t)status_;
+        ar & statusflag;
     }
     template<class Archive>
     void load(Archive& ar, const unsigned int /*version*/)
     {
-        uint32_t version__;
-        ar & version__;
+        ar & version_;
 
         uint32_t n;
         ar & n;
-        txins_t txins;
+        txins_.clear();
         for (uint32_t i = 0; i < n; i++)
         {
             std::shared_ptr<TxIn> txin(new TxIn());
             ar & *txin;
-            txins.push_back(txin);
+            txin->tx(shared_from_this());
+            txin->txindex(i);
+            txins_.push_back(txin);
         }
 
         ar & n;
-        txouts_t txouts;
+        txouts_.clear();
         for (uint32_t i = 0; i < n; i++)
         {
             std::shared_ptr<TxOut> txout(new TxOut());
             ar & *txout;
-            txouts.push_back(txout);
+            txout->tx(shared_from_this());
+            txout->txindex(i);
+            txouts_.push_back(txout);
         }
 
-        uint32_t locktime;
-        ar & locktime;
+        ar & locktime_;
+        ar & timestamp_; // only used for internal sorting
 
-        uint32_t timestamp;
-        ar & timestamp; // only used for internal sorting
+        uint32_t statusflag;
+        ar & statusflag;
 
-        uint32_t flag;
-        ar & flag;
-        std::vector<status_t> flags = Tx::getStatusFlags(flag);
-        status_t status = flags.empty() ? NO_STATUS : flags[0];
-
-        set(version__, txins, txouts, locktime, timestamp, status);
+        Coin::Transaction coin_tx = toCoinCore();
+     
+        if (missingSigCount())
+        {
+            status_ = UNSIGNED;
+            hash_.clear();            
+        }
+        else
+        {
+            std::vector<status_t> flags = Tx::getStatusFlags(statusflag);
+            status_ = flags.empty() ? NO_STATUS : flags[0];
+            hash_ = coin_tx.getHashLittleEndian();
+        }
+     
+        conflicting_ = false;
+     
+        coin_tx.clearScriptSigs();
+        unsigned_hash_ = coin_tx.getHashLittleEndian();
+        updateTotals();
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
