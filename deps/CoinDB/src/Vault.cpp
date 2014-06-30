@@ -282,18 +282,21 @@ void Vault::exportVault(const std::string& filepath, bool exportprivkeys, const 
     odb::core::transaction t(db_->begin());
     odb::core::session s;
 
-    // Export all accounts
     odb::result<AccountCountView> count_r(db_->query<AccountCountView>());
     uint32_t n = count_r.empty() ? 0 : count_r.begin()->count;
-    oa << n;
 
+    oa << n;
     if (n > 0)
     {
+        // Export all accounts
         odb::result<Account> account_r(db_->query<Account>());
         for (auto& account: account_r)
         {
             exportAccount_unwrapped(account, oa, exportprivkeys, exportChainCodeUnlockKey);
         }
+
+        // Export merkle blocks
+        exportMerkleBlocks_unwrapped(oa);
     }
 }
  
@@ -308,13 +311,19 @@ void Vault::importVault(const std::string& filepath, bool importprivkeys, const 
     odb::core::transaction t(db_->begin());
     odb::core::session s;
 
-    // import all accounts
     uint32_t n;
     ia >> n;
-    for (uint32_t i = 0; i < n; i++)
+    if (n > 0)
     {
-        unsigned int privkeysimported = importprivkeys;
-        importAccount_unwrapped(ia, privkeysimported, importChainCodeUnlockKey);
+        // Import all accounts
+        for (uint32_t i = 0; i < n; i++)
+        {
+            unsigned int privkeysimported = importprivkeys;
+            importAccount_unwrapped(ia, privkeysimported, importChainCodeUnlockKey);
+        }
+
+        // Import merkle blocks
+        importMerkleBlocks_unwrapped(ia);
     }
     t.commit();
 }
