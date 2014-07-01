@@ -722,8 +722,15 @@ void TxIn::outpoint(std::shared_ptr<TxOut> outpoint)
     if (!outpoint) return;
 
     std::shared_ptr<Tx> tx = outpoint->tx();
-    if (outindex_ != outpoint->txindex() || !tx || tx->status() == Tx::UNSIGNED || outhash_ != tx->hash())
-        throw std::runtime_error("TxIn::outpoint - invalid outpoint.");
+    // TODO: Tx exception class
+    if (outindex_ != outpoint->txindex())
+        throw std::runtime_error("TxIn::outpoint - incorrect outindex.");
+    if (!tx)
+        throw std::runtime_error("TxIn::outpoint - tx is null.");
+    if (tx->status() == Tx::UNSIGNED)
+        throw std::runtime_error("TxIn::outpoint - tx is missing signatures.");
+    if (outhash_ != tx->hash())
+        throw std::runtime_error("TxIn::outpoint - incorrect outhash.");
 }
 
 std::string TxIn::toJson() const

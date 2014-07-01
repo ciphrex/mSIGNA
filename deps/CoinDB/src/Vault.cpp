@@ -1547,6 +1547,8 @@ std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx)
 
 std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
 {
+    LOGGER(trace) << "Vault::insertTx_unwrapped(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
+
     // TODO: Validate signatures
     tx->updateStatus();
 
@@ -1761,7 +1763,9 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
             odb::result<TxIn> txin_r(db_->query<TxIn>(odb::query<TxIn>::outhash == tx->hash() && odb::query<TxIn>::outindex == txout->txindex()));
             if (!txin_r.empty())
             {
+                LOGGER(debug) << "Vault::insertTx_unwrapped - out of order insertion." << std::endl;
                 std::shared_ptr<TxIn> txin(txin_r.begin().load());
+                if (!txin->tx()) throw std::runtime_error("Tx is null for txin.");
                 txout->spent(txin);
                 txin->outpoint(txout); // We now have the outpoint. TODO: deal with conflicts.
                 updated_txins.insert(txin);
@@ -1800,7 +1804,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
         for (auto& txin:        tx->txins())    { db_->persist(txin);       }
         for (auto& txout:       tx->txouts())   { db_->persist(txout);      }
 
-        // Update other affected obkects
+        // Update other affected objects
         for (auto& txin:        updated_txins)  { db_->update(txin);        }
         for (auto& txout:       updated_txouts) { db_->update(txout);       }
         for (auto& tx:          updated_txs)    { db_->update(tx);          }
@@ -2166,10 +2170,30 @@ void Vault::importTxs(const std::string& filepath)
     boost::archive::text_iarchive ia(ifs);
 
     boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::session s;
-    odb::core::transaction t(db_->begin());
-    importTxs_unwrapped(ia);
-    t.commit();
+    //odb::core::session s;
+    //odb::core::transaction t(db_->begin());
+    {
+        uint32_t n;
+        ia >> n;
+        for (uint32_t i = 0; i < n; i++)
+        {
+            std::shared_ptr<Tx> tx(new Tx());
+            ia >> *tx;
+            odb::core::session s;
+            odb::core::transaction t(db_->begin());
+            try
+            {
+                insertTx_unwrapped(tx);
+                t.commit();
+            }
+            catch (const std::runtime_error& e)
+            {
+                LOGGER(error) << "Vault::importTxs_unwrapped(...) - " << e.what() << std::endl;
+            }
+        }
+    }
+    //importTxs_unwrapped(ia);
+    //t.commit();
 }
 
 void Vault::importTxs_unwrapped(boost::archive::text_iarchive& ia)
@@ -2180,7 +2204,14 @@ void Vault::importTxs_unwrapped(boost::archive::text_iarchive& ia)
     {
         std::shared_ptr<Tx> tx(new Tx());
         ia >> *tx;
-        insertTx_unwrapped(tx);
+        try
+        {
+            insertTx_unwrapped(tx);
+        }
+        catch (const std::runtime_error& e)
+        {
+            LOGGER(error) << "Vault::importTxs_unwrapped(...) - " << e.what() << std::endl;
+        }
     }
 }
 
@@ -2403,6 +2434,7 @@ unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
 
 unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)
 {
+    LOGGER(debug) << "Vault::updateConfirmations(...)" << std::endl;
     unsigned int count = 0;
     typedef odb::query<ConfirmedTxView> query_t;
     query_t query(query_t::Tx::blockheader.is_null());
