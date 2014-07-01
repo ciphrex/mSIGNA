@@ -1,20 +1,20 @@
 CXX = g++
 CXXFLAGS = -std=c++0x -Wall -g
 
-SRCDIR = ../../src
-INCPATH = -I$(SRCDIR)
+ROOTDIR = ../..
+INCPATH = -I$(ROOTDIR)/src
 
 LIBS = \
     -lcrypto \
     -lboost_regex
 
 OBJ = \
-    $(SRCDIR)/obj/MerkleTree.o
+    $(ROOTDIR)/obj/MerkleTree.o
 
 build/partialmerkletree: main.cpp $(OBJ)
 	$(CXX) $(CXXFLAGS)  -o $@ $< $(OBJ) $(INCPATH) $(LIBS)
 
-$(SRCDIR)/obj/%.o: $(SRCDIR)/%.cpp $(SRCDIR)/%.h
+$(ROOTDIR)/obj/%.o: $(ROOTDIR)/src/%.cpp $(ROOTDIR)/src/%.h
 	$(CXX) $(CXXFLAGS) -o $@ -c $< $(INCPATH)
 
 
