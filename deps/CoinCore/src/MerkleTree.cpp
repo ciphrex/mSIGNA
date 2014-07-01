@@ -236,6 +236,10 @@ void PartialMerkleTree::setUncompressed(const std::vector<MerkleLeaf>& leaves, s
     }
 }
 
+void PartialMerkleTree::merge(const PartialMerkleTree& other)
+{
+}
+
 uchar_vector PartialMerkleTree::getFlags() const
 {
     uchar_vector flags;

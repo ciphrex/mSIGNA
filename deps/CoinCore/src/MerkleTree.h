@@ -66,6 +66,8 @@ public:
     void setCompressed(unsigned int nTxs, const std::vector<uchar_vector>& hashes, const uchar_vector& flags, const uchar_vector& merkleRoot = uchar_vector());
     void setUncompressed(const std::vector<MerkleLeaf>& leaves);
 
+    void merge(const PartialMerkleTree& other);
+
     unsigned int getNTxs() const { return nTxs_; }
     unsigned int getDepth() const { return depth_; }
     const std::list<uchar_vector>& getMerkleHashes() const { return merkleHashes_; }
