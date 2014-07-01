@@ -272,12 +272,11 @@ void PartialMerkleTree::merge(const PartialMerkleTree& other)
 void PartialMerkleTree::merge(std::queue<uchar_vector>& hashQueue1, std::queue<uchar_vector>& hashQueue2, std::queue<bool>& bitQueue1, std::queue<bool>& bitQueue2, unsigned int depth)
 {
     bool bit1 = bitQueue1.front();
-    bitQueue1.pop();
-
     bool bit2 = bitQueue2.front();
-    bitQueue2.pop();
-
     bool hasMatch = (bit1 || bit2);
+
+    bitQueue1.pop();
+    bitQueue2.pop();
 
     // We've reached a leaf of the partial merkle tree
     if (depth == 0 || !hasMatch)
@@ -285,7 +284,8 @@ void PartialMerkleTree::merge(std::queue<uchar_vector>& hashQueue1, std::queue<u
         if (hashQueue1.front() != hashQueue2.front())
             throw std::runtime_error("PartialMerkleTree::merge - leaves do not match.");
 
-        merkleHashes_.push_back(hashQueue1.front()); 
+        merkleHashes_.push_back(hashQueue1.front());
+        std::cout << hashQueue1.front().getReverse().getHex() << std::endl;
         if (hasMatch) { txHashes_.push_back(hashQueue1.front()); }
         bits_.push_back(hasMatch);
 
@@ -294,12 +294,12 @@ void PartialMerkleTree::merge(std::queue<uchar_vector>& hashQueue1, std::queue<u
         return;
     }
 
+    bits_.push_back(true);
     depth--;
 
     // Both trees continue down this branch.
     if (bit1 && bit2)
     {
-        bits_.push_back(true);
         merge(hashQueue1, hashQueue2, bitQueue1, bitQueue2, depth);
         return;
     }
@@ -311,16 +311,39 @@ void PartialMerkleTree::merge(std::queue<uchar_vector>& hashQueue1, std::queue<u
         bitQueue1.swap(bitQueue2);
     }
 
-    PartialMerkleTree subtree;
-    subtree.setCompressed(hashQueue1, bitQueue1, depth);
+    PartialMerkleTree leftSubtree;
+    leftSubtree.setCompressed(hashQueue1, bitQueue1, depth);
 
-    if (subtree.root_ != hashQueue2.front())
-        throw std::runtime_error("PartialMerkleTree::merge - inner nodes do not match.");
+    merkleHashes_.splice(merkleHashes_.end(), leftSubtree.merkleHashes_);
+    txHashes_.splice(txHashes_.end(), leftSubtree.txHashes_);
+    bits_.splice(bits_.end(), leftSubtree.bits_);
 
-    merkleHashes_.splice(merkleHashes_.end(), subtree.merkleHashes_);
-    txHashes_.splice(txHashes_.end(), subtree.txHashes_);
-    bits_.push_back(true);
-    bits_.splice(bits_.end(), subtree.bits_);
+    uchar_vector root;
+    if (!hashQueue1.empty())
+    {
+        PartialMerkleTree rightSubtree;
+        rightSubtree.setCompressed(hashQueue1, bitQueue1, depth);
+
+        root = sha256_2(leftSubtree.root_ + rightSubtree.root_);
+        merkleHashes_.splice(merkleHashes_.end(), rightSubtree.merkleHashes_);
+        txHashes_.splice(txHashes_.end(), rightSubtree.txHashes_);
+        bits_.splice(bits_.end(), rightSubtree.bits_);
+    }
+    else
+    {
+        root = sha256_2(leftSubtree.root_ + leftSubtree.root_);
+    }
+
+    if (root != hashQueue2.front())
+    {
+        std::stringstream error;
+        error << "PartialMerkleTree::merge - inner nodes do not match: " << root.getHex() << ", " << hashQueue2.front().getReverse().getHex();
+        
+        throw std::runtime_error(error.str());
+    }
+
+    hashQueue2.pop();
+    bitQueue2.pop();
 }
 
 uchar_vector PartialMerkleTree::getFlags() const
