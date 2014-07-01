@@ -2170,30 +2170,9 @@ void Vault::importTxs(const std::string& filepath)
     boost::archive::text_iarchive ia(ifs);
 
     boost::lock_guard<boost::mutex> lock(mutex);
-    //odb::core::session s;
-    //odb::core::transaction t(db_->begin());
-    {
-        uint32_t n;
-        ia >> n;
-        for (uint32_t i = 0; i < n; i++)
-        {
-            std::shared_ptr<Tx> tx(new Tx());
-            ia >> *tx;
-            odb::core::session s;
-            odb::core::transaction t(db_->begin());
-            try
-            {
-                insertTx_unwrapped(tx);
-                t.commit();
-            }
-            catch (const std::runtime_error& e)
-            {
-                LOGGER(error) << "Vault::importTxs_unwrapped(...) - " << e.what() << std::endl;
-            }
-        }
-    }
-    //importTxs_unwrapped(ia);
-    //t.commit();
+    odb::core::transaction t(db_->begin());
+    importTxs_unwrapped(ia);
+    t.commit();
 }
 
 void Vault::importTxs_unwrapped(boost::archive::text_iarchive& ia)
@@ -2204,14 +2183,8 @@ void Vault::importTxs_unwrapped(boost::archive::text_iarchive& ia)
     {
         std::shared_ptr<Tx> tx(new Tx());
         ia >> *tx;
-        try
-        {
-            insertTx_unwrapped(tx);
-        }
-        catch (const std::runtime_error& e)
-        {
-            LOGGER(error) << "Vault::importTxs_unwrapped(...) - " << e.what() << std::endl;
-        }
+        odb::core::session s;
+        insertTx_unwrapped(tx);
     }
 }
 
