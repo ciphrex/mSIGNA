@@ -11,7 +11,13 @@ LIBS = \
 OBJ = \
     $(ROOTDIR)/obj/MerkleTree.o
 
-build/partialmerkletree: main.cpp $(OBJ)
+TARGETS = \
+    build/set \
+    build/merge
+
+all: $(TARGETS)
+
+build/%: %.cpp $(OBJ)
 	$(CXX) $(CXXFLAGS)  -o $@ $< $(OBJ) $(INCPATH) $(LIBS)
 
 $(ROOTDIR)/obj/%.o: $(ROOTDIR)/src/%.cpp $(ROOTDIR)/src/%.h
