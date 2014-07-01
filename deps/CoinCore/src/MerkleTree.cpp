@@ -171,10 +171,9 @@ void PartialMerkleTree::setUncompressed(const std::vector<MerkleLeaf>& leaves)
     bits_.clear();
 
     // Compute depth = ceiling(log_2(leaves.size()))
-    unsigned int depth = 1;
+    unsigned int depth = 0;
     unsigned int n = nTxs_ - 1;
     while (n > 0) { depth++; n >>= 1; }
-    depth--;
 
     setUncompressed(leaves, 0, leaves.size(), depth);
 }
