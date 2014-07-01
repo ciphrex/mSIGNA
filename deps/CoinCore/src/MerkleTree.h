@@ -109,6 +109,7 @@ private:
 
     void setCompressed(std::queue<uchar_vector>& hashQueue, std::queue<bool>& bitQueue, unsigned int depth);
     void setUncompressed(const std::vector<MerkleLeaf>& leaves, std::size_t begin, std::size_t end, unsigned int depth);
+    void merge(std::queue<uchar_vector>& hashQueue1, std::queue<uchar_vector>& hashQueue2, std::queue<bool>& bitQueue1, std::queue<bool>& bitQueue2, unsigned int depth1, unsigned int depth2);
 };
 
 } // namespace Coin

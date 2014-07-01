@@ -238,6 +238,34 @@ void PartialMerkleTree::setUncompressed(const std::vector<MerkleLeaf>& leaves, s
 
 void PartialMerkleTree::merge(const PartialMerkleTree& other)
 {
+    if (nTxs_ != other.nTxs_)
+        throw std::runtime_error("PartialMerkleTree::merge - nTxs does not match.");
+
+    if (depth_ != other.depth_)
+        throw std::runtime_error("PartialMerkleTree::merge - depth does not match.");
+
+    if (root_ != other.root_)
+        throw std::runtime_error("PartialMerkleTree::merge - root does not match.");
+
+    std::queue<uchar_vector> hashQueue1;
+    for (auto& hash: merkleHashes_) { hashQueue1.push(hash); }
+    std::queue<bool> bitQueue1;
+    for (auto& bit: bits_) { bitQueue1.push(bit); }
+
+    std::queue<uchar_vector> hashQueue2;
+    for (auto& hash: other.merkleHashes_) { hashQueue2.push(hash); }
+    std::queue<bool> bitQueue2;
+    for (auto& bit: other.bits_) { bitQueue2.push(bit); }
+
+    merkleHashes_.clear();
+    txHashes_.clear();
+    bits_.clear();
+
+    merge(hashQueue1, hashQueue2, bitQueue1, bitQueue2, depth_, other.depth_);
+}
+
+void PartialMerkleTree::merge(std::queue<uchar_vector>& hashQueue1, std::queue<uchar_vector>& hashQueue2, std::queue<bool>& bitQueue1, std::queue<bool>& bitQueue2, unsigned int depth1, unsigned int depth2)
+{
 }
 
 uchar_vector PartialMerkleTree::getFlags() const
