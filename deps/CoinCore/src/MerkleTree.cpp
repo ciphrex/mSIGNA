@@ -271,6 +271,25 @@ void PartialMerkleTree::merge(const PartialMerkleTree& other)
 
 void PartialMerkleTree::merge(std::queue<uchar_vector>& hashQueue1, std::queue<uchar_vector>& hashQueue2, std::queue<bool>& bitQueue1, std::queue<bool>& bitQueue2, unsigned int depth)
 {
+    if (hashQueue1.empty())
+    {
+        hashQueue1.swap(hashQueue2);
+        bitQueue1.swap(bitQueue2);
+    }
+
+    if (hashQueue2.empty())
+    {
+        if (hashQueue1.empty()) return;
+
+        PartialMerkleTree tree;
+        tree.setCompressed(hashQueue1, bitQueue1, depth);
+
+        merkleHashes_.splice(merkleHashes_.end(), tree.merkleHashes_);
+        txHashes_.splice(txHashes_.end(), tree.txHashes_);
+        bits_.splice(bits_.end(), tree.bits_);
+        return;
+    }
+
     bool bit1 = bitQueue1.front();
     bool bit2 = bitQueue2.front();
     bool hasMatch = (bit1 || bit2);
@@ -282,7 +301,11 @@ void PartialMerkleTree::merge(std::queue<uchar_vector>& hashQueue1, std::queue<u
     if (depth == 0 || !hasMatch)
     {
         if (hashQueue1.front() != hashQueue2.front())
-            throw std::runtime_error("PartialMerkleTree::merge - leaves do not match.");
+        {
+            std::stringstream error;
+            error << "PartialMerkleTree::merge - leaves do not match: " << hashQueue1.front().getReverse().getHex() << ", " << hashQueue2.front().getReverse().getHex() << std::endl;
+            throw std::runtime_error(error.str());
+        }
 
         merkleHashes_.push_back(hashQueue1.front());
         std::cout << hashQueue1.front().getReverse().getHex() << std::endl;
@@ -300,6 +323,7 @@ void PartialMerkleTree::merge(std::queue<uchar_vector>& hashQueue1, std::queue<u
     // Both trees continue down this branch.
     if (bit1 && bit2)
     {
+        merge(hashQueue1, hashQueue2, bitQueue1, bitQueue2, depth);
         merge(hashQueue1, hashQueue2, bitQueue1, bitQueue2, depth);
         return;
     }
@@ -343,7 +367,6 @@ void PartialMerkleTree::merge(std::queue<uchar_vector>& hashQueue1, std::queue<u
     }
 
     hashQueue2.pop();
-    bitQueue2.pop();
 }
 
 uchar_vector PartialMerkleTree::getFlags() const
