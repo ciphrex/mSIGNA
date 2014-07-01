@@ -297,6 +297,9 @@ void Vault::exportVault(const std::string& filepath, bool exportprivkeys, const 
 
         // Export merkle blocks
         exportMerkleBlocks_unwrapped(oa);
+
+        // Export transactions
+        exportTxs_unwrapped(oa, 0);
     }
 }
  
@@ -309,7 +312,6 @@ void Vault::importVault(const std::string& filepath, bool importprivkeys, const 
     boost::archive::text_iarchive ia(ifs);
 
     odb::core::transaction t(db_->begin());
-    odb::core::session s;
 
     uint32_t n;
     ia >> n;
@@ -319,11 +321,18 @@ void Vault::importVault(const std::string& filepath, bool importprivkeys, const 
         for (uint32_t i = 0; i < n; i++)
         {
             unsigned int privkeysimported = importprivkeys;
+            odb::core::session s;
             importAccount_unwrapped(ia, privkeysimported, importChainCodeUnlockKey);
         }
 
         // Import merkle blocks
-        importMerkleBlocks_unwrapped(ia);
+        {
+            odb::core::session s;
+            importMerkleBlocks_unwrapped(ia);
+        }
+
+        // Import transactions
+        importTxs_unwrapped(ia); 
     }
     t.commit();
 }
