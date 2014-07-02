@@ -112,6 +112,9 @@ SYSROOT=../../sysroot make install
 cd ../stdutils
 SYSROOT=../../sysroot make install
 
+cd ../sysutils
+SYSROOT=../../sysroot make install
+
 cd ../CoinCore
 make OS=$OS $OPTIONS
 SYSROOT=../../sysroot make install

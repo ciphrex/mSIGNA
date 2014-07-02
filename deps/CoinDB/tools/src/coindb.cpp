@@ -7,6 +7,7 @@
 // All Rights Reserved.
 //
 
+#include "config.h"
 #include "formatting.h"
 
 #include <cli.hpp>
@@ -27,20 +28,19 @@
 #include <ctime>
 #include <functional>
 
-const std::string COINDB_VERSION = "v0.3.5";
-
-// TODO: Set the following in config file
-const std::string DBUSER = "root";
-const std::string DBPASSWD = "qwerty";
+const std::string COINDB_VERSION = "v0.4.0";
 
 using namespace std;
 using namespace odb::core;
 using namespace CoinDB;
 
+std::string g_dbuser;
+std::string g_dbpasswd;
+
 // Global operations
 cli::result_t cmd_create(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], true);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], true);
 
     stringstream ss;
     ss << "Vault " << params[0] << " created.";
@@ -49,7 +49,7 @@ cli::result_t cmd_create(const cli::params_t& params)
 
 cli::result_t cmd_info(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     uint32_t schema_version = vault.getSchemaVersion();
     uint32_t horizon_timestamp = vault.getHorizonTimestamp();
 
@@ -62,7 +62,7 @@ cli::result_t cmd_info(const cli::params_t& params)
 
 cli::result_t cmd_exportvault(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     bool exportprivkeys = params.size() <= 1 || params[1] == "true";
 
@@ -83,7 +83,7 @@ cli::result_t cmd_exportvault(const cli::params_t& params)
 
 cli::result_t cmd_importvault(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], true);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], true);
 
     bool importprivkeys = params.size() <= 2 || params[2] == "true";
 
@@ -104,7 +104,7 @@ cli::result_t cmd_importvault(const cli::params_t& params)
 // Keychain operations
 cli::result_t cmd_keychainexists(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     bool bExists = vault.keychainExists(params[1]);
 
     stringstream ss;
@@ -114,7 +114,7 @@ cli::result_t cmd_keychainexists(const cli::params_t& params)
 
 cli::result_t cmd_newkeychain(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     vault.newKeychain(params[1], random_bytes(32));
 
     stringstream ss;
@@ -128,7 +128,7 @@ cli::result_t cmd_erasekeychain(bool bHelp, const cli::params_t& params)
         return "erasekeychain <db file> <keychain_name> - erase a keychain.";
     }
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     if (!vault.keychainExists(params[1]))
         throw runtime_error("Keychain not found.");
 
@@ -141,7 +141,7 @@ cli::result_t cmd_erasekeychain(bool bHelp, const cli::params_t& params)
 */
 cli::result_t cmd_renamekeychain(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     vault.renameKeychain(params[1], params[2]);
 
     stringstream ss;
@@ -151,7 +151,7 @@ cli::result_t cmd_renamekeychain(const cli::params_t& params)
 
 cli::result_t cmd_keychaininfo(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     shared_ptr<Keychain> keychain = vault.getKeychain(params[1]);
 
     stringstream ss;
@@ -172,7 +172,7 @@ cli::result_t cmd_keychains(const cli::params_t& params)
 
     bool show_hidden = params.size() > 2 && params[2] == "true";
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     vector<KeychainView> views = vault.getRootKeychainViews(account_name, show_hidden);
 
     stringstream ss;
@@ -189,7 +189,7 @@ cli::result_t cmd_listkeychains(bool bHelp, const cli::params_t& params)
 
     bool root_only = params.size() > 1 ? (params[1] == "true") : false;
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     vector<shared_ptr<Keychain>> keychains = vault.getAllKeychains(root_only);
 
     stringstream ss;
@@ -208,7 +208,7 @@ cli::result_t cmd_exportkeychain(const cli::params_t& params)
     if (params.size() > 3)  { output_file = params[3]; }
     else                    { output_file = params[1] + (export_privkey ? ".priv" : ".pub"); }
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     vault.exportKeychain(params[1], output_file, export_privkey);
 
     stringstream ss;
@@ -220,7 +220,7 @@ cli::result_t cmd_importkeychain(const cli::params_t& params)
 {
     bool import_privkey = params.size() > 2 ? (params[2] == "true") : true;
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     std::shared_ptr<Keychain> keychain = vault.importKeychain(params[1], import_privkey);
 
     stringstream ss;
@@ -232,7 +232,7 @@ cli::result_t cmd_exportbip32(const cli::params_t& params)
 {
     bool export_privkey = params.size() > 2;
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     vault.unlockChainCodes(uchar_vector("1234"));
     if (export_privkey)
     {
@@ -260,7 +260,7 @@ cli::result_t cmd_importbip32(const cli::params_t& params)
     secure_bytes_t extkey;
     if (!fromBase58Check(params[2], extkey)) throw std::runtime_error("Invalid BIP32.");
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     std::shared_ptr<Keychain> keychain = vault.importKeychainExtendedKey(params[1], extkey, import_privkey, lock_key);
 
     stringstream ss;
@@ -271,7 +271,7 @@ cli::result_t cmd_importbip32(const cli::params_t& params)
 // Account operations
 cli::result_t cmd_accountexists(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     bool bExists = vault.accountExists(params[1]);
 
     stringstream ss;
@@ -290,7 +290,7 @@ cli::result_t cmd_newaccount(const cli::params_t& params)
     for (size_t i = 3; i < params.size(); i++)
         keychain_names.push_back(params[i]);
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     vault.unlockChainCodes(secure_bytes_t());
     vault.newAccount(params[1], minsigs, keychain_names);
 
@@ -301,7 +301,7 @@ cli::result_t cmd_newaccount(const cli::params_t& params)
 
 cli::result_t cmd_renameaccount(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     vault.renameAccount(params[1], params[2]);
 
     stringstream ss;
@@ -311,7 +311,7 @@ cli::result_t cmd_renameaccount(const cli::params_t& params)
 
 cli::result_t cmd_accountinfo(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
     uint64_t balance = vault.getAccountBalance(params[1], 0);
     uint64_t confirmed_balance = vault.getAccountBalance(params[1], 1);
@@ -332,7 +332,7 @@ cli::result_t cmd_accountinfo(const cli::params_t& params)
 
 cli::result_t cmd_listaccounts(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     vector<AccountInfo> accounts = vault.getAllAccountInfo();
 
     stringstream ss;
@@ -344,7 +344,7 @@ cli::result_t cmd_listaccounts(const cli::params_t& params)
 
 cli::result_t cmd_exportaccount(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     secure_bytes_t exportChainCodeUnlockKey;
     if (params.size() > 2 && !params[2].empty())
@@ -363,7 +363,7 @@ cli::result_t cmd_exportaccount(const cli::params_t& params)
 
 cli::result_t cmd_importaccount(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     unsigned int privkeycount = 1;
 
@@ -383,7 +383,7 @@ cli::result_t cmd_importaccount(const cli::params_t& params)
 
 cli::result_t cmd_newaccountbin(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
     vault.unlockChainCodes(secure_bytes_t());
     vault.addAccountBin(params[1], params[2]);
@@ -395,7 +395,7 @@ cli::result_t cmd_newaccountbin(const cli::params_t& params)
 
 cli::result_t cmd_listbins(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     vector<AccountBinView> bins = vault.getAllAccountBinViews();
 
     stringstream ss;
@@ -407,7 +407,7 @@ cli::result_t cmd_listbins(const cli::params_t& params)
 
 cli::result_t cmd_issuescript(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     std::string account_name;
     if (params[1] != "@null") account_name = params[1];
     std::string label = params.size() > 2 ? params[2] : std::string("");
@@ -435,7 +435,7 @@ cli::result_t cmd_listscripts(const cli::params_t& params)
 
     int flags = params.size() > 3 ? (int)strtoul(params[3].c_str(), NULL, 0) : ((int)SigningScript::ISSUED | (int)SigningScript::USED);
     
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     vector<SigningScriptView> scriptViews = vault.getSigningScriptViews(account_name, bin_name, flags);
 
     stringstream ss;
@@ -455,7 +455,7 @@ cli::result_t cmd_history(const cli::params_t& params)
 
     bool hide_change = params.size() > 3 ? params[3] == "true" : true;
     
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     uint32_t best_height = vault.getBestHeight();
     vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name, TxOut::ROLE_BOTH, TxOut::BOTH, Tx::ALL, hide_change);
     stringstream ss;
@@ -475,7 +475,7 @@ cli::result_t cmd_unsigned(const cli::params_t& params)
 
     bool hide_change = params.size() > 3 ? params[3] == "true" : true;
     
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     uint32_t best_height = vault.getBestHeight();
     vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name, TxOut::ROLE_BOTH, TxOut::BOTH, Tx::UNSIGNED, hide_change);
     stringstream ss;
@@ -487,7 +487,7 @@ cli::result_t cmd_unsigned(const cli::params_t& params)
 
 cli::result_t cmd_refillaccountpool(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
     vault.unlockChainCodes(secure_bytes_t());
     vault.refillAccountPool(params[1]);
@@ -500,7 +500,7 @@ cli::result_t cmd_refillaccountpool(const cli::params_t& params)
 // Account bin operations
 cli::result_t cmd_exportbin(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     string export_name = params.size() > 3 ? params[3] : (params[1].empty() ? params[2] : params[1] + "-" + params[2]);
     secure_bytes_t exportChainCodeUnlockKey;
@@ -519,7 +519,7 @@ cli::result_t cmd_exportbin(const cli::params_t& params)
 
 cli::result_t cmd_importbin(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     secure_bytes_t importChainCodeUnlockKey;
     if (params.size() > 2 && !params[2].empty())
@@ -539,7 +539,7 @@ cli::result_t cmd_listtxs(const cli::params_t& params)
 {
     int tx_status_flags = params.size() > 1 && params[1] == "unsigned" ? Tx::UNSIGNED : Tx::ALL;
     uint32_t minheight = params.size() > 2 ? strtoul(params[2].c_str(), NULL, 0) : 0;
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     uint32_t best_height = vault.getBestHeight();
     std::vector<TxView> txViews = vault.getTxViews(tx_status_flags, 0, -1, minheight);
     stringstream ss;
@@ -551,7 +551,7 @@ cli::result_t cmd_listtxs(const cli::params_t& params)
 
 cli::result_t cmd_txinfo(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     std::shared_ptr<Tx> tx;
     bytes_t hash = uchar_vector(params[1]);
     if (hash.size() == 32)
@@ -586,7 +586,7 @@ cli::result_t cmd_rawtx(const cli::params_t& params)
 {
     bool to_file = params.size() > 2 && params[2] == "true";
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     std::shared_ptr<Tx> tx;
     bytes_t hash = uchar_vector(params[1]);
     if (hash.size() == 32)
@@ -619,7 +619,7 @@ cli::result_t cmd_rawtx(const cli::params_t& params)
 
 cli::result_t cmd_insertrawtx(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     std::shared_ptr<Tx> tx(new Tx());
     string rawhex;
@@ -656,7 +656,7 @@ cli::result_t cmd_newrawtx(const cli::params_t& params)
     using namespace CoinQ::Script;
     const size_t MAX_VERSION_LEN = 2;
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     // Get outputs
     size_t i = 2;
@@ -680,7 +680,7 @@ cli::result_t cmd_newrawtx(const cli::params_t& params)
 
 cli::result_t cmd_deletetx(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     bytes_t hash = uchar_vector(params[1]);
     std::shared_ptr<Tx> tx;
@@ -701,7 +701,7 @@ cli::result_t cmd_deletetx(const cli::params_t& params)
 
 cli::result_t cmd_signingrequest(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     SigningRequest req;
     bytes_t hash = uchar_vector(params[1]);
@@ -739,7 +739,7 @@ cli::result_t cmd_signingrequest(const cli::params_t& params)
 // TODO: do something with passphrase
 cli::result_t cmd_signtx(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     vault.unlockChainCodes(uchar_vector("1234"));
     vault.unlockKeychain(params[2], secure_bytes_t());
 
@@ -772,7 +772,7 @@ cli::result_t cmd_signtx(const cli::params_t& params)
 
 cli::result_t cmd_exporttxs(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     uint32_t minheight = params.size() > 1 ? strtoul(params[1].c_str(), NULL, 0) : 0;
     std::string output_file = params.size() > 2 ? params[2] : (params[0] + ".txs");
@@ -785,7 +785,7 @@ cli::result_t cmd_exporttxs(const cli::params_t& params)
 
 cli::result_t cmd_importtxs(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     vault.importTxs(params[1]);
 
@@ -798,7 +798,7 @@ cli::result_t cmd_importtxs(const cli::params_t& params)
 // Blockchain operations
 cli::result_t cmd_bestheight(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     uint32_t best_height = vault.getBestHeight();
 
     stringstream ss;
@@ -808,7 +808,7 @@ cli::result_t cmd_bestheight(const cli::params_t& params)
 
 cli::result_t cmd_horizonheight(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     uint32_t horizon_height = vault.getHorizonHeight();
 
     stringstream ss;
@@ -820,7 +820,7 @@ cli::result_t cmd_horizontimestamp(const cli::params_t& params)
 {
     bool use_gmt = params.size() > 1 && params[1] == "true";
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     long timestamp = vault.getHorizonTimestamp();
 
     std::function<struct tm*(const time_t*)> fConvert = use_gmt ? &gmtime : &localtime;
@@ -836,7 +836,7 @@ cli::result_t cmd_blockinfo(const cli::params_t& params)
 {
     uint32_t height = strtoul(params[1].c_str(), NULL, 0);
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     std::shared_ptr<BlockHeader> blockheader = vault.getBlockHeader(height);
 
     return blockheader->toCoinCore().toIndentedString();
@@ -887,7 +887,7 @@ cli::result_t cmd_insertrawmerkleblock(const cli::params_t& params)
     std::shared_ptr<MerkleBlock> merkleblock(new MerkleBlock());
     merkleblock->fromCoinCore(rawmerkleblock, height);
 
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     bool rval = (bool)vault.insertMerkleBlock(merkleblock);
 
     stringstream ss;
@@ -898,7 +898,7 @@ cli::result_t cmd_insertrawmerkleblock(const cli::params_t& params)
 cli::result_t cmd_deleteblock(const cli::params_t& params)
 {
     uint32_t height = strtoull(params[1].c_str(), NULL, 0);
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     unsigned int count = vault.deleteMerkleBlock(height);
 
     stringstream ss;
@@ -908,7 +908,7 @@ cli::result_t cmd_deleteblock(const cli::params_t& params)
 
 cli::result_t cmd_exportmerkleblocks(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     std::string output_file = params.size() > 1 ? params[1] : (params[0] + ".chain");
     vault.exportMerkleBlocks(output_file);
@@ -920,7 +920,7 @@ cli::result_t cmd_exportmerkleblocks(const cli::params_t& params)
 
 cli::result_t cmd_importmerkleblocks(const cli::params_t& params)
 {
-    Vault vault(DBUSER, DBPASSWD, params[0], false);
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     std::string input_file = params[1];
     vault.importMerkleBlocks(input_file);
@@ -1237,6 +1237,10 @@ int main(int argc, char* argv[])
 
     try 
     {
+        CoinDBConfig config;
+        config.init(argc, argv);
+        g_dbuser = config.getDatabaseUser();
+        g_dbpasswd = config.getDatabasePassword();
         return shell.exec(argc, argv);
     }
     catch (const std::exception& e)

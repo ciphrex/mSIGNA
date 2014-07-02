@@ -134,7 +134,7 @@ private:
 
 inline result_t Shell::exec(const std::string& cmdname, const params_t& params)
 {
-    if (cmdname == "help")
+    if (params.empty() && cmdname == "help")
     {
         return help();
     }
@@ -162,14 +162,14 @@ inline int Shell::exec(int argc, char** argv)
 {
     if (argc == 1) {
         std::cout << proginfo_ << std::endl;
-        std::cout << "Use " << argv[0] << " --help for list of commands." << std::endl;
+        std::cout << "Use " << argv[0] << " help for list of commands." << std::endl;
         return 0;
     }
 
     std::string cmdname(argv[1]);
 
     try {
-        if (cmdname == "-h" || cmdname == "--help")
+        if (cmdname == "help")
         {
             std::cout << help() << std::endl;
             return 0;
