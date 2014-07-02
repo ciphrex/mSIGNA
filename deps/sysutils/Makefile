@@ -109,7 +109,7 @@ tests/build/%$(EXE_EXT): tests/src/%test.cpp lib/libsysutils.a
 lib/libsysutils.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
 
-install: install_lib install_tools
+install: install_lib
 
 install_lib:
 	-mkdir -p $(SYSROOT)/include/sysutils
@@ -117,11 +117,7 @@ install_lib:
 	-mkdir -p $(SYSROOT)/lib
 	-rsync -u lib/libsysutils.a $(SYSROOT)/lib/
 
-install_tools:
-	-mkdir -p $(SYSROOT)/bin
-	-rsync -u $(TOOLS) $(SYSROOT)/bin/
-
-remove: remove_lib remove_tools
+remove: remove_lib
 
 remove_lib:
 	-rm -rf $(SYSROOT)/include/sysutils
