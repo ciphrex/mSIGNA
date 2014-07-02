@@ -113,6 +113,7 @@ cd ../stdutils
 SYSROOT=../../sysroot make install
 
 cd ../sysutils
+make OS=$OS $OPTIONS
 SYSROOT=../../sysroot make install
 
 cd ../CoinCore
