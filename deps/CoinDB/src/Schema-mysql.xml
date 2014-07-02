@@ -1,30 +1,13 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="mysql" version="1">
-  <changeset version="9">
-    <add-table name="AccountBin_script_label_map" options="ENGINE=InnoDB" kind="container">
-      <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
-      <column name="key" type="INT UNSIGNED" null="false"/>
-      <column name="value" type="VARCHAR(255)" null="false"/>
-      <foreign-key name="AccountBin_script_label_map_object_id_fk" on-delete="CASCADE">
-        <column name="object_id"/>
-        <references table="AccountBin">
-          <column name="id"/>
-        </references>
-      </foreign-key>
-      <index name="object_id_i">
-        <column name="object_id"/>
-      </index>
-    </add-table>
-  </changeset>
-
-  <changeset version="8">
-    <add-table name="Version" options="ENGINE=InnoDB" kind="object">
+  <model version="10">
+    <table name="Version" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
       <column name="version" type="INT UNSIGNED" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
-    </add-table>
-    <add-table name="Keychain" options="ENGINE=InnoDB" kind="object">
+    </table>
+    <table name="Keychain" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
       <column name="name" type="VARCHAR(255)" null="false"/>
       <column name="depth" type="INT UNSIGNED" null="false"/>
@@ -50,8 +33,8 @@
       <index name="name_i" type="UNIQUE">
         <column name="name"/>
       </index>
-    </add-table>
-    <add-table name="Keychain_derivation_path" options="ENGINE=InnoDB" kind="container">
+    </table>
+    <table name="Keychain_derivation_path" options="ENGINE=InnoDB" kind="container">
       <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
       <column name="index" type="BIGINT UNSIGNED" null="false"/>
       <column name="value" type="INT UNSIGNED" null="false"/>
@@ -67,8 +50,8 @@
       <index name="index_i">
         <column name="index"/>
       </index>
-    </add-table>
-    <add-table name="Key" options="ENGINE=InnoDB" kind="object">
+    </table>
+    <table name="Key" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
       <column name="root_keychain" type="BIGINT UNSIGNED" null="true"/>
       <column name="index" type="INT UNSIGNED" null="false"/>
@@ -83,8 +66,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="Key_derivation_path" options="ENGINE=InnoDB" kind="container">
+    </table>
+    <table name="Key_derivation_path" options="ENGINE=InnoDB" kind="container">
       <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
       <column name="index" type="BIGINT UNSIGNED" null="false"/>
       <column name="value" type="INT UNSIGNED" null="false"/>
@@ -100,8 +83,8 @@
       <index name="index_i">
         <column name="index"/>
       </index>
-    </add-table>
-    <add-table name="AccountBin" options="ENGINE=InnoDB" kind="object">
+    </table>
+    <table name="AccountBin" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
       <column name="account" type="BIGINT UNSIGNED" null="true"/>
       <column name="index" type="INT UNSIGNED" null="false"/>
@@ -122,8 +105,22 @@
       <index name="hash_i" type="UNIQUE">
         <column name="hash"/>
       </index>
-    </add-table>
-    <add-table name="AccountBin_keychains" options="ENGINE=InnoDB" kind="container">
+    </table>
+    <table name="AccountBin_script_label_map" options="ENGINE=InnoDB" kind="container">
+      <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="key" type="INT UNSIGNED" null="false"/>
+      <column name="value" type="VARCHAR(255)" null="false"/>
+      <foreign-key name="AccountBin_script_label_map_object_id_fk" on-delete="CASCADE">
+        <column name="object_id"/>
+        <references table="AccountBin">
+          <column name="id"/>
+        </references>
+      </foreign-key>
+      <index name="object_id_i">
+        <column name="object_id"/>
+      </index>
+    </table>
+    <table name="AccountBin_keychains" options="ENGINE=InnoDB" kind="container">
       <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
       <column name="value" type="BIGINT UNSIGNED" null="false"/>
       <foreign-key name="AccountBin_keychains_object_id_fk" on-delete="CASCADE">
@@ -141,8 +138,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="Account" options="ENGINE=InnoDB" kind="object">
+    </table>
+    <table name="Account" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
       <column name="name" type="VARCHAR(255)" null="false"/>
       <column name="minsigs" type="INT UNSIGNED" null="false"/>
@@ -158,8 +155,8 @@
       <index name="hash_i" type="UNIQUE">
         <column name="hash"/>
       </index>
-    </add-table>
-    <add-table name="Account_keychains" options="ENGINE=InnoDB" kind="container">
+    </table>
+    <table name="Account_keychains" options="ENGINE=InnoDB" kind="container">
       <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
       <column name="value" type="BIGINT UNSIGNED" null="false"/>
       <foreign-key name="Account_keychains_object_id_fk" on-delete="CASCADE">
@@ -177,16 +174,16 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="SigningScript" options="ENGINE=InnoDB" kind="object">
+    </table>
+    <table name="SigningScript" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
       <column name="account" type="BIGINT UNSIGNED" null="true"/>
       <column name="account_bin" type="BIGINT UNSIGNED" null="true"/>
       <column name="index" type="INT UNSIGNED" null="false"/>
       <column name="label" type="VARCHAR(255)" null="false"/>
       <column name="status" type="INT UNSIGNED" null="false"/>
-      <column name="txinscript" type="VARBINARY(255)" null="false"/>
-      <column name="txoutscript" type="VARBINARY(255)" null="false"/>
+      <column name="txinscript" type="BLOB" null="false"/>
+      <column name="txoutscript" type="BLOB" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
@@ -202,8 +199,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="SigningScript_keys" options="ENGINE=InnoDB" kind="container">
+    </table>
+    <table name="SigningScript_keys" options="ENGINE=InnoDB" kind="container">
       <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
       <column name="index" type="BIGINT UNSIGNED" null="false"/>
       <column name="value" type="BIGINT UNSIGNED" null="true"/>
@@ -225,8 +222,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="BlockHeader" options="ENGINE=InnoDB" kind="object">
+    </table>
+    <table name="BlockHeader" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
       <column name="hash" type="VARBINARY(255)" null="false"/>
       <column name="height" type="INT UNSIGNED" null="false"/>
@@ -245,8 +242,8 @@
       <index name="height_i" type="UNIQUE">
         <column name="height"/>
       </index>
-    </add-table>
-    <add-table name="MerkleBlock" options="ENGINE=InnoDB" kind="object">
+    </table>
+    <table name="MerkleBlock" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
       <column name="blockheader" type="BIGINT UNSIGNED" null="false"/>
       <column name="txcount" type="INT UNSIGNED" null="false"/>
@@ -260,8 +257,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="MerkleBlock_hashes" options="ENGINE=InnoDB" kind="container">
+    </table>
+    <table name="MerkleBlock_hashes" options="ENGINE=InnoDB" kind="container">
       <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
       <column name="index" type="BIGINT UNSIGNED" null="false"/>
       <column name="value" type="VARBINARY(255)" null="false"/>
@@ -277,8 +274,8 @@
       <index name="index_i">
         <column name="index"/>
       </index>
-    </add-table>
-    <add-table name="TxIn" options="ENGINE=InnoDB" kind="object">
+    </table>
+    <table name="TxIn" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
       <column name="outhash" type="VARBINARY(255)" null="false"/>
       <column name="outindex" type="INT UNSIGNED" null="false"/>
@@ -302,8 +299,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="TxOut" options="ENGINE=InnoDB" kind="object">
+    </table>
+    <table name="TxOut" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
       <column name="value" type="BIGINT UNSIGNED" null="false"/>
       <column name="script" type="VARBINARY(255)" null="false"/>
@@ -356,8 +353,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="Tx" options="ENGINE=InnoDB" kind="object">
+    </table>
+    <table name="Tx" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
       <column name="hash" type="VARBINARY(255)" null="false"/>
       <column name="unsigned_hash" type="VARBINARY(255)" null="false"/>
@@ -383,8 +380,6 @@
       <index name="unsigned_hash_i" type="UNIQUE">
         <column name="unsigned_hash"/>
       </index>
-    </add-table>
-  </changeset>
-
-  <model version="7"/>
+    </table>
+  </model>
 </changelog>
