@@ -53,8 +53,8 @@ typedef odb::nullable<unsigned long> null_id_t;
 // SCHEMA VERSION //
 ////////////////////
 
-#define SCHEMA_BASE_VERSION 7
-#define SCHEMA_VERSION      9
+#define SCHEMA_BASE_VERSION 10
+#define SCHEMA_VERSION      10
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -641,7 +641,9 @@ private:
     std::string label_;
     status_t status_;
 
+    #pragma db type("BLOB")
     bytes_t txinscript_; // unsigned (0 byte length placeholders are used for signatures)
+    #pragma db type("BLOB")
     bytes_t txoutscript_;
 
     KeyVector keys_;
