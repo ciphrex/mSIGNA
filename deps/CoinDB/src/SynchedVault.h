@@ -23,6 +23,9 @@ namespace CoinDB
 class SynchedVault
 {
 public:
+    enum status_t { NOT_LOADED, SYNC_STOPPED, SYNCHING, READY };
+    static const std::string getStatusString(status_t status);
+
     SynchedVault();
     ~SynchedVault();
 
@@ -40,6 +43,8 @@ public:
     void resyncVault();
     void updateBloomFilter();
 
+    status_t getStatus() const { return m_status; }
+
     std::shared_ptr<Tx> sendTx(const bytes_t& hash);
     std::shared_ptr<Tx> sendTx(unsigned long tx_id);
 
@@ -51,6 +56,8 @@ public:
 
 private:
     Vault* m_vault;
+
+    status_t m_status;
 
     CoinQ::Network::NetworkSync m_networkSync;
     std::string m_blockTreeFile;

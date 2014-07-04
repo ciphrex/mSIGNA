@@ -14,9 +14,27 @@
 using namespace CoinDB;
 using namespace CoinQ;
 
+const std::string SynchedVault::getStatusString(status_t status)
+{
+    switch (status)
+    {
+    case NOT_LOADED:
+        return "NOT_LOADED";
+    case SYNC_STOPPED:
+        return "SYNC_STOPPED";
+    case SYNCHING:
+        return "SYNCHING";
+    case READY:
+        return "READY";
+    default:
+        return "UNKNOWN";
+    } 
+}
+
 // Constructor
 SynchedVault::SynchedVault() :
     m_vault(nullptr),
+    m_status(NOT_LOADED),
     m_bBlockTreeLoaded(false),
     m_bConnected(false),
     m_bSynching(false),
@@ -48,12 +66,14 @@ SynchedVault::SynchedVault() :
         LOGGER(trace) << "P2P network connection closed." << std::endl;
         m_bConnected = false;
         m_bSynching = false;
+        m_status = m_vault ? SYNC_STOPPED : NOT_LOADED;
     });
 
     m_networkSync.subscribeStarted([this]()
     {
         LOGGER(trace) << "P2P network sync started." << std::endl;
         m_bSynching = true;
+        m_status = m_vault ? SYNCHING : NOT_LOADED;
         //TODO: notify clients
     });
 
@@ -61,6 +81,7 @@ SynchedVault::SynchedVault() :
     {
         LOGGER(trace) << "P2P network sync stopped." << std::endl;
         m_bSynching = false;
+        m_status = m_vault ? SYNC_STOPPED : NOT_LOADED;
         //TODO: notify clients
     });
 
@@ -94,6 +115,7 @@ SynchedVault::SynchedVault() :
         LOGGER(trace) << "Block tree resync complete." << std::endl;
         LOGGER(info) << "Fetching mempool." << std::endl;
         m_networkSync.getMempool();
+        m_status = READY;
     });
 
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
@@ -205,6 +227,8 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
         m_syncHeight = merkleblock->blockheader()->height();
         m_notifyMerkleBlockInserted(merkleblock);
     });
+
+    m_status = m_networkSync.isConnected() ? SYNCHING : SYNC_STOPPED;
 }
 
 void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate)
@@ -221,6 +245,8 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         m_syncHeight = merkleblock->blockheader()->height();
         m_notifyMerkleBlockInserted(merkleblock);
     });
+
+    m_status = m_networkSync.isConnected() ? SYNCHING : SYNC_STOPPED;
 }
 
 void SynchedVault::closeVault()
@@ -232,6 +258,7 @@ void SynchedVault::closeVault()
         m_vault->clearAllSlots();
         delete m_vault;
         m_vault = nullptr;
+        m_status = NOT_LOADED;
     }
 }
 
