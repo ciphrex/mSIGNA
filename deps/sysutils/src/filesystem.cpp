@@ -15,6 +15,24 @@
 #include <algorithm>
 #include <boost/filesystem.hpp>
 
+std::string getUserProfileDir()
+{
+#ifdef _WIN32
+    char path[1024] = "";
+    if (SHGetSpecialFolderPathA(NULL, path, CSIDL_PROFILE, true))
+        return boost::filesystem::path(path).string();
+    else
+        throw std::runtime_error("getDefaultDataDir() - SHGetSpecialFolderPathA() failed.");
+#else
+    boost::filesystem::path dataDirPath;
+    char const* homeDir = getenv("HOME");
+    if (!homeDir || strlen(homeDir) == 0)
+        return boost::filesystem::path("/").string();
+    else
+        return boost::filesystem::path(homeDir).string();
+#endif
+}
+
 std::string getDefaultDataDir(const std::string& appName)
 {
 #ifdef _WIN32

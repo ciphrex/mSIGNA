@@ -13,6 +13,7 @@ using namespace std;
 
 int main()
 {
-    cout << getDefaultDataDir("appname") << endl;
+    cout << "User profile dir: " << getUserProfileDir() << endl;
+    cout << "Default data dir: " << getDefaultDataDir("<appname>") << endl;
     return 0;    
 }

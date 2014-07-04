@@ -10,4 +10,5 @@
 
 #include <string>
 
+std::string getUserProfileDir();
 std::string getDefaultDataDir(const std::string& appName);
