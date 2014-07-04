@@ -937,6 +937,15 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(boost::archive::text_iar
 
     // Persist account
     db_->update(account);
+
+    uint32_t maxFirstBlockTimestamp = getMaxFirstBlockTimestamp_unwrapped();
+    odb::result<BlockHeader> header_r(db_->query<BlockHeader>((odb::query<BlockHeader>::timestamp > maxFirstBlockTimestamp) + "ORDER BY" + odb::query<BlockHeader>::height + "ASC LIMIT 1"));
+    if (!header_r.empty())
+    {
+        uint32_t height = header_r.begin()->height();
+        LOGGER(trace) << "Vault::importAccount_unwrapped - account has horizon at height " << height << ". Blockchain must be resynched." << std::endl;
+        deleteMerkleBlock_unwrapped(height);
+    }    
     return account;
 }
 
