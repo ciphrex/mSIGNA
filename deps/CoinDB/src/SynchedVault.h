@@ -48,6 +48,10 @@ public:
     std::shared_ptr<Tx> sendTx(const bytes_t& hash);
     std::shared_ptr<Tx> sendTx(unsigned long tx_id);
 
+    // Sync state events
+    typedef Signals::Signal<status_t> StatusSignal;
+    Signals::Connection subscribeStatusChanged(StatusSignal::Slot slot) { return m_notifyStatusChanged.connect(slot); }
+
     // P2P network state events
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
     Signals::Connection subscribeTxStatusChanged(TxSignal::Slot slot) { return m_notifyTxStatusChanged.connect(slot); }
@@ -58,6 +62,7 @@ private:
     Vault* m_vault;
 
     status_t m_status;
+    void updateStatus(status_t newStatus);
 
     CoinQ::Network::NetworkSync m_networkSync;
     std::string m_blockTreeFile;
@@ -72,6 +77,7 @@ private:
     bool m_bInsertMerkleBlocks;
     mutable std::mutex m_vaultMutex;
 
+    StatusSignal m_notifyStatusChanged;
     TxSignal m_notifyTxInserted;
     TxSignal m_notifyTxStatusChanged;
     MerkleBlockSignal m_notifyMerkleBlockInserted;

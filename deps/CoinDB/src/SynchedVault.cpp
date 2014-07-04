@@ -66,14 +66,14 @@ SynchedVault::SynchedVault() :
         LOGGER(trace) << "P2P network connection closed." << std::endl;
         m_bConnected = false;
         m_bSynching = false;
-        m_status = m_vault ? SYNC_STOPPED : NOT_LOADED;
+        updateStatus(SYNC_STOPPED);
     });
 
     m_networkSync.subscribeStarted([this]()
     {
         LOGGER(trace) << "P2P network sync started." << std::endl;
         m_bSynching = true;
-        m_status = m_vault ? SYNCHING : NOT_LOADED;
+        updateStatus(SYNCHING);
         //TODO: notify clients
     });
 
@@ -81,7 +81,7 @@ SynchedVault::SynchedVault() :
     {
         LOGGER(trace) << "P2P network sync stopped." << std::endl;
         m_bSynching = false;
-        m_status = m_vault ? SYNC_STOPPED : NOT_LOADED;
+        updateStatus(SYNC_STOPPED);
         //TODO: notify clients
     });
 
@@ -115,7 +115,7 @@ SynchedVault::SynchedVault() :
         LOGGER(trace) << "Block tree resync complete." << std::endl;
         LOGGER(info) << "Fetching mempool." << std::endl;
         m_networkSync.getMempool();
-        m_status = READY;
+        updateStatus(READY);
     });
 
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
@@ -228,7 +228,8 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
         m_notifyMerkleBlockInserted(merkleblock);
     });
 
-    m_status = m_networkSync.isConnected() ? SYNCHING : SYNC_STOPPED;
+    if (m_networkSync.isConnected())    { updateStatus(SYNCHING); }
+    else                                { updateStatus(SYNC_STOPPED); }
 }
 
 void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate)
@@ -246,7 +247,8 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         m_notifyMerkleBlockInserted(merkleblock);
     });
 
-    m_status = m_networkSync.isConnected() ? SYNCHING : SYNC_STOPPED;
+    if (m_networkSync.isConnected())    { updateStatus(SYNCHING); }
+    else                                { updateStatus(SYNC_STOPPED); }
 }
 
 void SynchedVault::closeVault()
@@ -258,7 +260,7 @@ void SynchedVault::closeVault()
         m_vault->clearAllSlots();
         delete m_vault;
         m_vault = nullptr;
-        m_status = NOT_LOADED;
+        updateStatus(NOT_LOADED);
     }
 }
 
@@ -371,3 +373,12 @@ void SynchedVault::clearAllSlots()
     m_notifyMerkleBlockInserted.clear();
 }
 
+void SynchedVault::updateStatus(status_t newStatus)
+{
+    if (!m_vault) { newStatus = NOT_LOADED; }
+    if (m_status != newStatus)
+    {
+        m_status = newStatus;
+        m_notifyStatusChanged(newStatus);
+    }
+}
