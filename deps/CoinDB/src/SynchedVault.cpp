@@ -239,7 +239,7 @@ void SynchedVault::closeVault()
 void SynchedVault::startSync(const std::string& host, const std::string& port)
 {
     LOGGER(trace) << "SynchedVault::startSync(" << host << ", " << port << ")" << std::endl;
-    m_bInsertMerkleBlocks = true;
+    m_bInsertMerkleBlocks = false;
     m_networkSync.start(host, port); 
 }
 
@@ -268,9 +268,15 @@ void SynchedVault::resyncVault()
     std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (!m_vault) throw std::runtime_error("No vault is open.");
 
-    m_bInsertMerkleBlocks = true;
     uint32_t startTime = m_vault->getMaxFirstBlockTimestamp();
+    if (startTime == 0)
+    {
+        m_bInsertMerkleBlocks = false;
+        return;
+    }
+
     std::vector<bytes_t> locatorHashes = m_vault->getLocatorHashes();
+    m_bInsertMerkleBlocks = true;
     m_networkSync.resync(locatorHashes, startTime);
 }
 
