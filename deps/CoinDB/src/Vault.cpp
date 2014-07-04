@@ -7,6 +7,8 @@
 // All Rights Reserved.
 //
 
+#define LOCK_ALL_CALLS
+
 #include "Vault.h"
 #include "Database.h"
 
@@ -125,7 +127,9 @@ uint32_t Vault::getSchemaVersion() const
 {
     LOGGER(trace) << "Vault::getSchemaVersion()" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getSchemaVersion_unwrapped();
 }
@@ -166,7 +170,9 @@ uint32_t Vault::getHorizonTimestamp() const
 {
     LOGGER(trace) << "Vault::getHorizonTimestamp()" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getHorizonTimestamp_unwrapped();
 }
@@ -175,7 +181,9 @@ uint32_t Vault::getMaxFirstBlockTimestamp() const
 {
     LOGGER(trace) << "Vault::getMaxFirstBlockTimestamp()" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getMaxFirstBlockTimestamp_unwrapped();
 }
@@ -198,7 +206,9 @@ uint32_t Vault::getHorizonHeight() const
 {
     LOGGER(trace) << "Vault::getHorizonHeight()" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getHorizonHeight_unwrapped();
 }
@@ -213,7 +223,9 @@ std::vector<bytes_t> Vault::getLocatorHashes() const
 {
     LOGGER(trace) << "Vault::getLocatorHashes()" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getLocatorHashes_unwrapped();
 }
@@ -247,7 +259,9 @@ Coin::BloomFilter Vault::getBloomFilter(double falsePositiveRate, uint32_t nTwea
 {
     LOGGER(trace) << "Vault::getBloomFilter(" << falsePositiveRate << ", " << nTweak << ", " << nFlags << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getBloomFilter_unwrapped(falsePositiveRate, nTweak, nFlags);
 }
@@ -275,7 +289,9 @@ void Vault::exportVault(const std::string& filepath, bool exportprivkeys, const 
 {
     LOGGER(trace) << "Vault::exportVault(" << filepath << ", " << (exportprivkeys ? "true" : "false") << ", ...)" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     std::ofstream ofs(filepath);
     boost::archive::text_oarchive oa(ofs);
 
@@ -401,7 +417,9 @@ void Vault::exportKeychain(const std::string& keychain_name, const std::string& 
 {
     LOGGER(trace) << "Vault::exportKeychain(" << keychain_name << ", " << filepath << ", " << (exportprivkeys ? "true" : "false") << ", ?)" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
     if (exportprivkeys && !keychain->isPrivate()) throw KeychainIsNotPrivateException(keychain_name);
@@ -496,7 +514,9 @@ bool Vault::keychainExists(const std::string& keychain_name) const
 {
     LOGGER(trace) << "Vault::keychainExists(" << keychain_name << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return keychainExists_unwrapped(keychain_name);
 }
@@ -511,7 +531,9 @@ bool Vault::keychainExists(const bytes_t& keychain_hash) const
 {
     LOGGER(trace) << "Vault::keychainExists(@hash = " << uchar_vector(keychain_hash).getHex() << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return keychainExists_unwrapped(keychain_hash);
 }
@@ -543,7 +565,9 @@ void Vault::renameKeychain(const std::string& old_name, const std::string& new_n
 {
     LOGGER(trace) << "Vault::renameKeychain(" << old_name << ", " << new_name << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::session session;
     odb::core::transaction t(db_->begin());
 
@@ -574,7 +598,9 @@ std::vector<KeychainView> Vault::getRootKeychainViews(const std::string& account
 {
     LOGGER(trace) << "Vault::getRootKeychainViews(" << account_name << ", " << (get_hidden ? "true" : "false") << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getRootKeychainViews_unwrapped(account_name, get_hidden);
 }
@@ -605,7 +631,9 @@ secure_bytes_t Vault::getKeychainExtendedKey(const std::string& keychain_name, b
 {
     LOGGER(trace) << "Vault::getKeychainExtendedKey(" << keychain_name << ", " << (get_private ? "true" : "false") << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
     get_private = get_private && keychain->isPrivate();
@@ -668,7 +696,9 @@ std::shared_ptr<Keychain> Vault::getKeychain(const std::string& keychain_name) c
 {
     LOGGER(trace) << "Vault::getKeychain(" << keychain_name << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getKeychain_unwrapped(keychain_name);
 }
@@ -686,7 +716,9 @@ std::vector<std::shared_ptr<Keychain>> Vault::getAllKeychains(bool root_only, bo
 {
     LOGGER(trace) << "Vault::getAllKeychains()" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     odb::query<Keychain> query(1 == 1);
     if (root_only)     { query = query && odb::query<Keychain>::parent.is_null();  }
@@ -802,7 +834,10 @@ void Vault::exportAccount(const std::string& account_name, const std::string& fi
 {
     LOGGER(trace) << "Vault::exportAccount(" << account_name << ", " << filepath << ", " << (exportprivkeys ? "true" : "false") << ", ?)" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+
     // TODO: disallow operation if file is already open
     std::ofstream ofs(filepath);
     boost::archive::text_oarchive oa(ofs);
@@ -953,7 +988,9 @@ bool Vault::accountExists(const std::string& account_name) const
 {
     LOGGER(trace) << "Vault::accountExists(" << account_name << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return accountExists_unwrapped(account_name);
 }
@@ -1016,7 +1053,9 @@ void Vault::renameAccount(const std::string& old_name, const std::string& new_na
 {
     LOGGER(trace) << "Vault::renameAccount(" << old_name << ", " << new_name << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::session session;
     odb::core::transaction t(db_->begin());
 
@@ -1039,7 +1078,9 @@ std::shared_ptr<Account> Vault::getAccount(const std::string& account_name) cons
 {
     LOGGER(trace) << "Vault::getAccount(" << account_name << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getAccount_unwrapped(account_name);
 }
@@ -1057,7 +1098,9 @@ AccountInfo Vault::getAccountInfo(const std::string& account_name) const
 {
     LOGGER(trace) << "Vault::getAccountInfo(" << account_name << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
@@ -1068,7 +1111,9 @@ std::vector<AccountInfo> Vault::getAllAccountInfo() const
 {
     LOGGER(trace) << "Vault::getAllAccountInfo()" << std::endl;
  
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     odb::result<Account> r(db_->query<Account>());
@@ -1083,7 +1128,9 @@ uint64_t Vault::getAccountBalance(const std::string& account_name, unsigned int 
 
     std::vector<Tx::status_t> tx_statuses = Tx::getStatusFlags(tx_flags);
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     typedef odb::query<BalanceView> query_t;
     query_t query(query_t::Account::name == account_name && query_t::TxOut::status == TxOut::UNSPENT && query_t::Tx::status.in_range(tx_statuses.begin(), tx_statuses.end()));
@@ -1103,7 +1150,9 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
 
     if (bin_name.empty() || bin_name[0] == '@') throw std::runtime_error("Invalid account bin name.");
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::session s;
     odb::core::transaction t(db_->begin());
 
@@ -1251,7 +1300,9 @@ std::vector<SigningScriptView> Vault::getSigningScriptViews(const std::string& a
     if (!bin_name.empty())     query = (query && query_t::AccountBin::name == bin_name);
     query += "ORDER BY" + query_t::Account::name + "ASC," + query_t::AccountBin::name + "ASC," + query_t::SigningScript::status + "DESC," + query_t::SigningScript::index + "ASC";
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::session s;
     odb::core::transaction t(db_->begin());
 
@@ -1288,7 +1339,9 @@ std::vector<TxOutView> Vault::getTxOutViews(const std::string& account_name, con
 
     query += "ORDER BY" + query_t::BlockHeader::height + "DESC," + query_t::Tx::timestamp + "DESC," + query_t::Tx::id + "DESC";
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     std::vector<TxOutView> views;
     odb::result<TxOutView> r(db_->query<TxOutView>(query));
@@ -1309,7 +1362,9 @@ std::shared_ptr<AccountBin> Vault::getAccountBin(const std::string& account_name
 {
     LOGGER(trace) << "Vault::getAccountBin(" << account_name << ", " << bin_name << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
@@ -1331,7 +1386,9 @@ std::vector<AccountBinView> Vault::getAllAccountBinViews() const
 {
     LOGGER(trace) << "Vault::getAllAccountBinViews()" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     odb::result<AccountBinView> r(db_->query<AccountBinView>());
     std::vector<AccountBinView> views;
@@ -1343,7 +1400,9 @@ void Vault::exportAccountBin(const std::string& account_name, const std::string&
 {
     LOGGER(trace) << "Vault::exportAccountBin(" << account_name << ", " << bin_name << ", " << filepath << ", ?)" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
@@ -1485,7 +1544,9 @@ std::shared_ptr<Tx> Vault::getTx(const bytes_t& hash) const
 {
     LOGGER(trace) << "Vault::getTx(" << uchar_vector(hash).getHex() << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     return getTx_unwrapped(hash);
@@ -1504,7 +1565,9 @@ std::shared_ptr<Tx> Vault::getTx(unsigned long tx_id) const
 {
     LOGGER(trace) << "Vault::getTx(" << tx_id << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     return getTx_unwrapped(tx_id);
@@ -1545,7 +1608,9 @@ std::vector<TxView> Vault::getTxViews(int tx_status_flags, unsigned long start, 
         query = query + ss.str().c_str();
     }
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     std::vector<TxView> views;
     odb::result<TxView> r(db_->query<TxView>(query));
@@ -1976,7 +2041,9 @@ SigningRequest Vault::getSigningRequest(const bytes_t& hash, bool include_raw_tx
 {
     LOGGER(trace) << "Vault::getSigningRequest(" << uchar_vector(hash).getHex() << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == hash || odb::query<Tx>::unsigned_hash == hash));
@@ -1990,7 +2057,9 @@ SigningRequest Vault::getSigningRequest(unsigned long tx_id, bool include_raw_tx
 {
     LOGGER(trace) << "Vault::getSigningRequest(" << tx_id << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::id == tx_id));
@@ -2153,7 +2222,10 @@ void Vault::exportTxs(const std::string& filepath, uint32_t minheight) const
 {
     LOGGER(trace) << "Vault::exportTxs(" << filepath << ", " << minheight << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+
     //TODO: disable opetation if file is already open
     std::ofstream ofs(filepath);
     boost::archive::text_oarchive oa(ofs);
@@ -2217,7 +2289,9 @@ uint32_t Vault::getBestHeight() const
 {
     LOGGER(trace) << "Vault::getBestHeight()" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getBestHeight_unwrapped();
 }
@@ -2233,7 +2307,9 @@ std::shared_ptr<BlockHeader> Vault::getBlockHeader(const bytes_t& hash) const
 {
     LOGGER(trace) << "Vault::getBlockHeader(" << uchar_vector(hash).getHex() << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getBlockHeader_unwrapped(hash);
 }
@@ -2242,7 +2318,9 @@ std::shared_ptr<BlockHeader> Vault::getBlockHeader(uint32_t height) const
 {
     LOGGER(trace) << "Vault::getBlockHeader(" << height << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getBlockHeader_unwrapped(height);
 }
@@ -2265,7 +2343,9 @@ std::shared_ptr<BlockHeader> Vault::getBestBlockHeader() const
 {
     LOGGER(trace) << "Vault::getBestBlockHeader()" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
     odb::core::transaction t(db_->begin());
     return getBestBlockHeader_unwrapped();
 }
@@ -2454,7 +2534,10 @@ void Vault::exportMerkleBlocks(const std::string& filepath) const
 {
     LOGGER(trace) << "Vault::exportMerkleBlocks(" << filepath << ")" << std::endl;
 
-//    boost::lock_guard<boost::mutex> lock(mutex);
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+
     // TODO: Disable operation if file is already open
     std::ofstream ofs(filepath);
     boost::archive::text_oarchive oa(ofs);
