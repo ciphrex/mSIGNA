@@ -808,7 +808,7 @@ void MainWindow::importAccount(QString fileName)
             this,
             tr("Import Account"),
             getDocDir(),
-            tr("Account") + "(*.acct)");
+            tr("Account") + "(*.acct; *.sharedacct)");
     }
 
     if (fileName.isEmpty()) return;
@@ -879,7 +879,7 @@ void MainWindow::exportAccount()
 
     try {
         updateStatusMessage(tr("Exporting account ") + name + "...");
-        accountModel->exportAccount(name, fileName, true);
+        accountModel->exportAccount(name, fileName, false);
         updateStatusMessage(tr("Saved ") + fileName);
     }
     catch (const exception& e) {
@@ -899,13 +899,13 @@ void MainWindow::exportSharedAccount()
 
     QString name = accountModel->data(indexes.at(0)).toString();
 
-    QString fileName = name + ".acct";
+    QString fileName = name + ".sharedacct";
 
     fileName = QFileDialog::getSaveFileName(
         this,
         tr("Exporting Shared Account - ") + name,
         getDocDir() + "/" + fileName,
-        tr("Accounts (*.shared.acct)"));
+        tr("Accounts (*.sharedacct)"));
 
     if (fileName.isEmpty()) return;
 
@@ -915,7 +915,7 @@ void MainWindow::exportSharedAccount()
 
     try {
         updateStatusMessage(tr("Exporting shared account ") + name + "...");
-        accountModel->exportAccount(name, fileName, false);
+        accountModel->exportAccount(name, fileName, true);
         updateStatusMessage(tr("Saved ") + fileName);
     }
     catch (const exception& e) {

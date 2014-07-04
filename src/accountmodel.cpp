@@ -169,7 +169,7 @@ void AccountModel::importAccount(const QString& /*name*/, const QString& filePat
         throw std::runtime_error("No vault is loaded.");
     }
 
-    unsigned int privkeysimported = 0;
+    unsigned int privkeysimported = 1;
     vault->importAccount(filePath.toStdString(), privkeysimported);
     update();
 }
