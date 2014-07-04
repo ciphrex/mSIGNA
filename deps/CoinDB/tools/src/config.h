@@ -73,6 +73,7 @@ inline void CoinDBConfig::init(int argc, char* argv[])
         return;
     }
 
+    using namespace sysutils::filesystem;
     if (!vm.count("datadir"))       { m_dataDir = getDefaultDataDir(DEFAULT_DATA_DIR); }
     if (!vm.count("config"))        { m_configFile = m_dataDir + "/" + DEFAULT_CONFIG_FILE; }
     else                            { m_configFile = m_dataDir + "/" + m_configFile; }
