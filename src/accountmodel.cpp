@@ -85,6 +85,26 @@ void AccountModel::load(const QString& fileName)
     emit updateSyncHeight(vault->getBestHeight());
 }
 
+void AccountModel::exportVault(const QString& fileName, bool exportPrivKeys) const
+{
+    if (!vault)
+    {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    vault->exportVault(fileName.toStdString(), exportPrivKeys);
+}
+
+void AccountModel::importVault(const QString& fileName)
+{
+    if (!vault)
+    {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    vault->importVault(fileName.toStdString());
+}
+
 void AccountModel::close()
 {
     if (vault) {

@@ -271,6 +271,9 @@ void MainWindow::updateVaultStatus(const QString& name)
     bool isOpen = !name.isEmpty();
 
     // vault actions
+    importVaultAction->setEnabled(isOpen);
+    exportVaultAction->setEnabled(isOpen);
+    exportPublicVaultAction->setEnabled(isOpen);
     closeVaultAction->setEnabled(isOpen);
 
     // keychain actions
@@ -392,6 +395,36 @@ void MainWindow::openVault(QString fileName)
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::openVault - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::importVault(QString fileName)
+{
+}
+
+void MainWindow::exportVault(QString fileName, bool exportPrivKeys)
+{
+    if (fileName.isEmpty()) {
+        fileName = QFileDialog::getSaveFileName(
+            this,
+            tr("Export Vault"),
+            getDocDir(),
+            tr("Portable Vault (*.vault.all)"));
+    }
+    if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    setDocDir(fileInfo.dir().absolutePath());
+    saveSettings();
+
+    try
+    {
+        accountModel->exportVault(fileName, exportPrivKeys);
+    }
+    catch (const exception& e)
+    {
+        LOGGER(debug) << "MainWindow::exportVault - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -1444,6 +1477,21 @@ void MainWindow::createActions()
     openVaultAction->setStatusTip(tr("Open an existing vault"));
     connect(openVaultAction, SIGNAL(triggered()), this, SLOT(openVault())); 
 
+    importVaultAction = new QAction(tr("&Import Vault..."), this);
+    importVaultAction->setStatusTip("Import vault from portable file");
+    importVaultAction->setEnabled(false);
+    connect(importVaultAction, SIGNAL(triggered()), this, SLOT(importVault()));
+
+    exportVaultAction = new QAction(tr("&Export Vault..."), this);
+    exportVaultAction->setStatusTip("Export vault to portable file");
+    exportVaultAction->setEnabled(false);
+    connect(exportVaultAction, &QAction::triggered, [=]() { this->exportVault(QString(), false); });
+
+    exportPublicVaultAction = new QAction(tr("&Export Public Vault..."), this);
+    exportPublicVaultAction->setStatusTip("Export public vault to portable file");
+    exportPublicVaultAction->setEnabled(false);
+    connect(exportPublicVaultAction, &QAction::triggered, [=]() { this->exportVault(QString(), true); });
+
     closeVaultAction = new QAction(QIcon(":/icons/closevault.png"), tr("Close Vault"), this);
     closeVaultAction->setStatusTip(tr("Close vault"));
     closeVaultAction->setEnabled(false);
@@ -1689,8 +1737,10 @@ void MainWindow::createMenus()
     fileMenu->addAction(newVaultAction);
     fileMenu->addAction(openVaultAction);
     fileMenu->addAction(closeVaultAction);
-    // fileMenu->addAction(importVaultAction);
-    // fileMenu->addAction(exportVaultAction);
+    fileMenu->addSeparator();
+    fileMenu->addAction(importVaultAction);
+    fileMenu->addAction(exportVaultAction);
+    fileMenu->addAction(exportPublicVaultAction);
     fileMenu->addSeparator();
     fileMenu->addAction(quitAction);    
 

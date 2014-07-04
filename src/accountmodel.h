@@ -49,6 +49,8 @@ public:
     // Vault operations
     void create(const QString& fileName);
     void load(const QString& fileName);
+    void exportVault(const QString& exportFileName, bool exportPrivKeys) const;
+    void importVault(const QString& importFileName); 
     void close();
     bool isOpen() const { return (vault != NULL); }
     Coin::BloomFilter getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags = 0) const;

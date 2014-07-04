@@ -100,7 +100,8 @@ private slots:
     // VAULT OPERATIONS
     void newVault(QString fileName = QString());
     void openVault(QString fileName = QString());
-//    void backupVault();
+    void importVault(QString fileName = QString());
+    void exportVault(QString fileName = QString(), bool exportPrivKeys = true);
     void closeVault();
 
     //////////////////////
@@ -234,7 +235,9 @@ private:
     // vault actions
     QAction* newVaultAction;
     QAction* openVaultAction;
-    QAction* backupVaultAction;
+    QAction* importVaultAction;
+    QAction* exportVaultAction;
+    QAction* exportPublicVaultAction;
     QAction* closeVaultAction;
 
     // keychain actions
