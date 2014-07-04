@@ -403,7 +403,7 @@ void NetworkSync::start(const std::string& host, int port)
 
 void NetworkSync::stop()
 {
-    resynching = false;
+    stopResync();
     peer.stop();
     notifyStopped();
 }
