@@ -15,7 +15,9 @@
 #include <algorithm>
 #include <boost/filesystem.hpp>
 
-std::string getUserProfileDir()
+using namespace sysutils::filesystem;
+
+std::string sysutils::filesystem::getUserProfileDir()
 {
 #ifdef _WIN32
     char path[1024] = "";
@@ -33,7 +35,7 @@ std::string getUserProfileDir()
 #endif
 }
 
-std::string getDefaultDataDir(const std::string& appName)
+std::string sysutils::filesystem::getDefaultDataDir(const std::string& appName)
 {
 #ifdef _WIN32
     char path[1024] = "";

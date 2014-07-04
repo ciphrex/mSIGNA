@@ -13,7 +13,8 @@ using namespace std;
 
 int main()
 {
-    cout << "User profile dir: " << getUserProfileDir() << endl;
-    cout << "Default data dir: " << getDefaultDataDir("<appname>") << endl;
+    namespace sufs = sysutils::filesystem;
+    cout << "User profile dir: " << sufs::getUserProfileDir() << endl;
+    cout << "Default data dir: " << sufs::getDefaultDataDir("<appname>") << endl;
     return 0;    
 }

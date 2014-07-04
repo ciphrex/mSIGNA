@@ -10,5 +10,9 @@
 
 #include <string>
 
-std::string getUserProfileDir();
-std::string getDefaultDataDir(const std::string& appName);
+namespace sysutils {
+    namespace filesystem {
+        std::string getUserProfileDir();
+        std::string getDefaultDataDir(const std::string& appName);
+    }
+}
