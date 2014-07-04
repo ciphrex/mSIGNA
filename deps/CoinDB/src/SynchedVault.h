@@ -36,6 +36,7 @@ public:
 
     void startSync(const std::string& host, const std::string& port);
     void stopSync();
+    void suspendBlockUpdates();
     void resyncVault();
     void updateBloomFilter();
 
@@ -61,6 +62,7 @@ private:
     uint32_t m_bestHeight;
     uint32_t m_syncHeight;
 
+    bool m_bInsertMerkleBlocks;
     mutable std::mutex m_vaultMutex;
 
     TxSignal m_notifyTxInserted;

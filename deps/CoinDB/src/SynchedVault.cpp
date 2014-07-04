@@ -147,8 +147,10 @@ SynchedVault::SynchedVault() :
         LOGGER(trace) << "P2P network received merkle block " << chainMerkleBlock.blockHeader.getHashLittleEndian().getHex() << " height: " << chainMerkleBlock.height << std::endl;
 
         if (!m_vault) return;
+        if (!m_bInsertMerkleBlocks) return;
         std::lock_guard<std::mutex> lock(m_vaultMutex);
         if (!m_vault) return;
+        if (!m_bInsertMerkleBlocks) return;
 
         try
         {
@@ -237,6 +239,7 @@ void SynchedVault::closeVault()
 void SynchedVault::startSync(const std::string& host, const std::string& port)
 {
     LOGGER(trace) << "SynchedVault::startSync(" << host << ", " << port << ")" << std::endl;
+    m_bInsertMerkleBlocks = true;
     m_networkSync.start(host, port); 
 }
 
@@ -244,6 +247,16 @@ void SynchedVault::stopSync()
 {
     LOGGER(trace) << "SynchedVault::stopSync()" << std::endl;
     m_networkSync.stop();
+}
+
+void SynchedVault::suspendBlockUpdates()
+{
+    LOGGER(trace) << "SynchedVault::suspendBlockUpdates()" << std::endl;
+
+    if (!m_vault) return;
+    if (!m_bInsertMerkleBlocks) return;
+    std::lock_guard<std::mutex> lock(m_vaultMutex);
+    m_bInsertMerkleBlocks = false;
 }
 
 void SynchedVault::resyncVault()
@@ -255,6 +268,7 @@ void SynchedVault::resyncVault()
     std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (!m_vault) throw std::runtime_error("No vault is open.");
 
+    m_bInsertMerkleBlocks = true;
     uint32_t startTime = m_vault->getMaxFirstBlockTimestamp();
     std::vector<bytes_t> locatorHashes = m_vault->getLocatorHashes();
     m_networkSync.resync(locatorHashes, startTime);
