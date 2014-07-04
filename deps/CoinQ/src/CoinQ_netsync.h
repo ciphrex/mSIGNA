@@ -38,27 +38,28 @@ namespace CoinQ {
 class NetworkSync
 {
 public:
-    NetworkSync(const CoinQ::CoinParams& coin_params = CoinQ::getBitcoinParams());
+    NetworkSync(const CoinQ::CoinParams& coinParams = CoinQ::getBitcoinParams());
     ~NetworkSync();
 
-    void initBlockTree(const std::string& blockTreeFile, bool bCheckProofOfWork = true);
+    void loadBlockTree(const std::string& blockTreeFile, bool bCheckProofOfWork = true);
+    bool isBlockTreeFlushed() const { return m_bBlockTreeFlushed; }
     int getBestHeight();
 
     void start();
     void stop();
-    bool isStarted() const { return bStarted; }
+    bool isStarted() const { return m_bStarted; }
 
     void connect(const std::string& host, const std::string& port = "");
     void connect(const std::string& host, int port = -1); 
     void disconnect();
-    bool isConnected() const { return bConnected; }
+    bool isConnected() const { return m_bConnected; }
 
-    void setBloomFilter(const Coin::BloomFilter& bloomFilter_);
+    void setBloomFilter(const Coin::BloomFilter& bloomFilter);
 
     void resync(const std::vector<bytes_t>& locatorHashes, uint32_t startTime);
     void resync(int resyncHeight);
     void stopResync();
-    bool isResynching() const { return bResynching; }
+    bool isResynching() const { return m_bResynching; }
 
     // MESSAGES TO PEER
     void sendTx(Coin::Transaction& tx);
@@ -87,30 +88,29 @@ public:
     void subscribeBlockTreeChanged(void_slot_t slot) { notifyBlockTreeChanged.connect(slot); }
 
 private:
-    CoinQ::CoinParams coin_params_;
+    CoinQ::CoinParams m_coinParams;
 
-    mutable boost::mutex startMutex;
-    bool bStarted;
-    CoinQ::io_service_t io_service;
-    CoinQ::io_service_t::work work;
-    boost::thread io_service_thread;
+    mutable boost::mutex m_blockTreeMutex;
+    std::string m_blockTreeFile;
+    CoinQBlockTreeMem m_blockTree;
+    bool m_bBlockTreeFlushed;
+
+    mutable boost::mutex m_startMutex;
+    bool m_bStarted;
+    CoinQ::io_service_t m_io_service;
+    CoinQ::io_service_t::work m_work;
+    boost::thread m_io_service_thread;
     CoinQ::Peer peer;
 
-    mutable boost::mutex connectionMutex;
-    bool bConnected;
+    mutable boost::mutex m_connectionMutex;
+    bool m_bConnected;
 
-    std::string blockTreeFile;
-    CoinQBlockTreeMem blockTree;
-    bool blockTreeFlushed;
+    mutable boost::mutex m_resyncMutex;
+    bool m_bResynching;
 
-    CoinQBestChainBlockFilter blockFilter;
+    uint32_t m_lastResyncHeight;
 
-    boost::mutex resyncMutex;
-    bool bResynching;
-
-    uint32_t lastResyncHeight;
-
-    Coin::BloomFilter bloomFilter;
+    Coin::BloomFilter m_bloomFilter;
 
     void initBlockFilter();
 

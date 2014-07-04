@@ -17,11 +17,28 @@
 using namespace CoinQ::Network;
 
 NetworkSync::NetworkSync(const CoinQ::CoinParams& coin_params)
-    : coin_params_(coin_params), bStarted(false), work(io_service), peer(io_service), blockFilter(&blockTree), bResynching(false), bConnected(false)
+    : coin_params_(coin_params), bStarted(false), work(io_service), peer(io_service), bResynching(false), bConnected(false)
 {
+    // Select hash functions
     Coin::CoinBlockHeader::setHashFunc(coin_params_.block_header_hash_function());
     Coin::CoinBlockHeader::setPOWHashFunc(coin_params_.block_header_pow_hash_function());
 
+    // Subscribe block tree handlers 
+    blockTree.subscribeRemoveBestChain([&](const ChainHeader& header) {
+        notifyBlockTreeChanged();
+        notifyRemoveBestChain(header);
+    });
+
+    blockTree.subscribeAddBestChain([&](const ChainHeader& header) {
+        notifyBlockTreeChanged();
+        notifyAddBestChain(header);
+        uchar_vector hash = header.getHashLittleEndian();
+        std::stringstream status;
+        status << "Added to best chain: " << hash.getHex() << " Height: " << header.height << " ChainWork: " << header.chainWork.getDec();
+        notifyStatus(status.str());
+    });
+
+    // Subscribe peer handlers
     peer.subscribeOpen([&](CoinQ::Peer& peer) {
         isConnected_ = true;
         notifyOpen();
