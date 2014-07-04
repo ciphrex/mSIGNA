@@ -17,7 +17,7 @@
 using namespace CoinQ::Network;
 
 NetworkSync::NetworkSync(const CoinQ::CoinParams& coin_params)
-    : coin_params_(coin_params), work(io_service), peer(io_service), blockFilter(&blockTree), resynching(false), isConnected_(false)
+    : coin_params_(coin_params), bStarted(false), work(io_service), peer(io_service), blockFilter(&blockTree), bResynching(false), bConnected(false)
 {
     Coin::CoinBlockHeader::setHashFunc(coin_params_.block_header_hash_function());
     Coin::CoinBlockHeader::setPOWHashFunc(coin_params_.block_header_pow_hash_function());
@@ -206,7 +206,7 @@ NetworkSync::~NetworkSync()
     delete io_service_thread;
 }
 
-void NetworkSync::initBlockTree(const std::string& blockTreeFile, bool bCheckProofOfWork)
+void NetworkSync::loadBlockTree(const std::string& blockTreeFile, bool bCheckProofOfWork)
 {
     this->blockTreeFile = blockTreeFile;
     try {

@@ -38,24 +38,27 @@ namespace CoinQ {
 class NetworkSync
 {
 public:
-    // select default coin parameters if desired
     NetworkSync(const CoinQ::CoinParams& coin_params = CoinQ::getBitcoinParams());
     ~NetworkSync();
-
-    bool isConnected() const { return isConnected_; }
 
     void initBlockTree(const std::string& blockTreeFile, bool bCheckProofOfWork = true);
     int getBestHeight();
 
-    void start(const std::string& host, const std::string& port);
-    void start(const std::string& host, int port);
+    void start();
     void stop();
+    bool isStarted() const { return bStarted; }
+
+    void connect(const std::string& host, const std::string& port = "");
+    void connect(const std::string& host, int port = -1); 
+    void disconnect();
+    bool isConnected() const { return bConnected; }
 
     void setBloomFilter(const Coin::BloomFilter& bloomFilter_);
 
     void resync(const std::vector<bytes_t>& locatorHashes, uint32_t startTime);
     void resync(int resyncHeight);
     void stopResync();
+    bool isResynching() const { return bResynching; }
 
     // MESSAGES TO PEER
     void sendTx(Coin::Transaction& tx);
@@ -87,10 +90,14 @@ private:
     CoinQ::CoinParams coin_params_;
 
     mutable boost::mutex startMutex;
+    bool bStarted;
     CoinQ::io_service_t io_service;
     CoinQ::io_service_t::work work;
     boost::thread io_service_thread;
     CoinQ::Peer peer;
+
+    mutable boost::mutex connectionMutex;
+    bool bConnected;
 
     std::string blockTreeFile;
     CoinQBlockTreeMem blockTree;
@@ -98,11 +105,10 @@ private:
 
     CoinQBestChainBlockFilter blockFilter;
 
-    boost::mutex mutex;
-    bool resynching;
-    uint32_t lastResyncHeight;
+    boost::mutex resyncMutex;
+    bool bResynching;
 
-    bool isConnected_;
+    uint32_t lastResyncHeight;
 
     Coin::BloomFilter bloomFilter;
 
