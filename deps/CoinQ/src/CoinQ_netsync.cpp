@@ -17,12 +17,10 @@
 using namespace CoinQ::Network;
 
 NetworkSync::NetworkSync(const CoinQ::CoinParams& coin_params)
-    : coin_params_(coin_params), work(io_service), io_service_thread(NULL), peer(io_service), blockFilter(&blockTree), resynching(false), isConnected_(false)
+    : coin_params_(coin_params), work(io_service), peer(io_service), blockFilter(&blockTree), resynching(false), isConnected_(false)
 {
     Coin::CoinBlockHeader::setHashFunc(coin_params_.block_header_hash_function());
     Coin::CoinBlockHeader::setPOWHashFunc(coin_params_.block_header_pow_hash_function());
-
-    io_service_thread = new boost::thread(boost::bind(&CoinQ::io_service_t::run, &io_service));
 
     peer.subscribeOpen([&](CoinQ::Peer& peer) {
         isConnected_ = true;
@@ -382,14 +380,14 @@ void NetworkSync::stopResync()
 
 void NetworkSync::start(const std::string& host, const std::string& port)
 {
-    // TODO: proper mutexes
+    boost::lock_guard<boost::mutex> lock(startMutex);
+    if (bRunning)
+        throw std::runtime_error("NetworkSync::start() - already started.");
 
-    if (isConnected_) {
-        stop();
-    }
-
+    bRunning = true;
+    resynching = false;
     peer.set(host, port, coin_params_.magic_bytes(), coin_params_.protocol_version(), "Wallet v0.1", 0, false);
-
+    io_service_thread = boost::thread(boost::bind(&CoinQ::io_service_t::run, &io_service));
     peer.start();
     notifyStarted();
 }
@@ -403,25 +401,32 @@ void NetworkSync::start(const std::string& host, int port)
 
 void NetworkSync::stop()
 {
+    if (!bRunning) return;
+    boost::lock_guard<boost::mutex> lock(startMutex);
+    if (!bRunning) return;
+
+    bRunning = false;
     resynching = false;
     peer.stop();
+    io_service_thread.stop();
+    io_service_thread.join(); 
     notifyStopped();
 }
 
 void NetworkSync::sendTx(Coin::Transaction& tx)
 {
-    if (!isConnected_) {
-        throw std::runtime_error("Must be connected to send transactions.");
-    }
+    if (!bConnected) throw std::runtime_error("NetworkSync::sendTx() - Must be connected to send transactions.");
+    boost::lock_guard<boost::mutex> lock(connectionMutex);
+    if (!bConnected) throw std::runtime_error("NetworkSync::sendTx() - Must be connected to send transactions.");
 
     peer.send(tx); 
 }
 
 void NetworkSync::getTx(uchar_vector& hash)
 {
-    if (!isConnected_) {
-        throw std::runtime_error("Must be connected to get transactions.");
-    }
+    if (!bConnected) throw std::runtime_error("NetworkSync::getTx() - Must be connected to send transactions.");
+    boost::lock_guard<boost::mutex> lock(connectionMutex);
+    if (!bRunning) throw std::runtime_error("NetworkSync::getTx() - Must be connected to send transactions.");
 
     peer.getTx(hash);
 }

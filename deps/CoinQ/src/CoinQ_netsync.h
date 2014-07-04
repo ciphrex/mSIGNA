@@ -86,9 +86,10 @@ public:
 private:
     CoinQ::CoinParams coin_params_;
 
+    mutable boost::mutex startMutex;
     CoinQ::io_service_t io_service;
     CoinQ::io_service_t::work work;
-    boost::thread* io_service_thread;
+    boost::thread io_service_thread;
     CoinQ::Peer peer;
 
     std::string blockTreeFile;
