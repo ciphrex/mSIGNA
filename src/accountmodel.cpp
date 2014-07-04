@@ -154,13 +154,13 @@ bool AccountModel::accountExists(const QString& name) const
     return vault->accountExists(name.toStdString());
 }
 
-void AccountModel::exportAccount(const QString& name, const QString& filePath) const
+void AccountModel::exportAccount(const QString& name, const QString& filePath, bool shared) const
 {
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
 
-    vault->exportAccount(name.toStdString(), filePath.toStdString());
+    vault->exportAccount(name.toStdString(), filePath.toStdString(), !shared);
 }
 
 void AccountModel::importAccount(const QString& /*name*/, const QString& filePath)

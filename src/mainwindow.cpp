@@ -722,6 +722,7 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
     }
     deleteAccountAction->setEnabled(isSelected);
     exportAccountAction->setEnabled(isSelected);
+    exportSharedAccountAction->setEnabled(isSelected);
     viewAccountHistoryAction->setEnabled(isSelected);
     viewScriptsAction->setEnabled(isSelected);
     requestPaymentAction->setEnabled(isSelected);
@@ -878,11 +879,47 @@ void MainWindow::exportAccount()
 
     try {
         updateStatusMessage(tr("Exporting account ") + name + "...");
-        accountModel->exportAccount(name, fileName);
+        accountModel->exportAccount(name, fileName, true);
         updateStatusMessage(tr("Saved ") + fileName);
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::exportAccount - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::exportSharedAccount()
+{
+    QItemSelectionModel* selectionModel = accountView->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+    if (indexes.isEmpty()) {
+        showError(tr("No account selected."));
+        return;
+    }
+
+    QString name = accountModel->data(indexes.at(0)).toString();
+
+    QString fileName = name + ".acct";
+
+    fileName = QFileDialog::getSaveFileName(
+        this,
+        tr("Exporting Shared Account - ") + name,
+        getDocDir() + "/" + fileName,
+        tr("Accounts (*.shared.acct)"));
+
+    if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    setDocDir(fileInfo.dir().absolutePath());
+    saveSettings();
+
+    try {
+        updateStatusMessage(tr("Exporting shared account ") + name + "...");
+        accountModel->exportAccount(name, fileName, false);
+        updateStatusMessage(tr("Saved ") + fileName);
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::exportSharedAccount - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -1585,6 +1622,11 @@ void MainWindow::createActions()
     exportAccountAction->setEnabled(false);
     connect(exportAccountAction, SIGNAL(triggered()), this, SLOT(exportAccount()));
 
+    exportSharedAccountAction = new QAction(tr("Export Shared Account..."), this);
+    exportSharedAccountAction->setStatusTip(tr("Export a shared account"));
+    exportSharedAccountAction->setEnabled(false);
+    connect(exportSharedAccountAction, SIGNAL(triggered()), this, SLOT(exportSharedAccount()));
+
     deleteAccountAction = new QAction(tr("Delete Account"), this);
     deleteAccountAction->setStatusTip(tr("Delete current account"));
     deleteAccountAction->setEnabled(false);
@@ -1771,6 +1813,7 @@ void MainWindow::createMenus()
     //accountMenu->addSeparator();
     accountMenu->addAction(importAccountAction);
     accountMenu->addAction(exportAccountAction);
+    accountMenu->addAction(exportSharedAccountAction);
     accountMenu->addSeparator();
     //accountMenu->addAction(viewAccountHistoryAction);
     accountMenu->addAction(viewScriptsAction);

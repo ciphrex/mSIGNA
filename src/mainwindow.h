@@ -124,6 +124,7 @@ private slots:
     void newAccount();
     void importAccount(QString fileName = QString());
     void exportAccount();
+    void exportSharedAccount();
 //    void importAccount();
 //    void exportAccount();
     void deleteAccount();
@@ -259,6 +260,7 @@ private:
     QAction* newAccountAction;
     QAction* importAccountAction;
     QAction* exportAccountAction;
+    QAction* exportSharedAccountAction;
     QAction* deleteAccountAction;
     QAction* viewAccountHistoryAction;
     QAction* viewScriptsAction;

@@ -61,7 +61,7 @@ public:
     // Account operations
     void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames);
     bool accountExists(const QString& name) const;
-    void exportAccount(const QString& name, const QString& filePath) const;
+    void exportAccount(const QString& name, const QString& filePath, bool shared) const;
     void importAccount(const QString& name, const QString& filePath);
     void deleteAccount(const QString& name);
     QPair<QString, bytes_t> issueNewScript(const QString& accountName, const QString& label); // returns qMakePair<address, script>
