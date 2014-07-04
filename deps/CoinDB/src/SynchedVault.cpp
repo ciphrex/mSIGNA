@@ -198,6 +198,7 @@ SynchedVault::SynchedVault() :
 SynchedVault::~SynchedVault()
 {
     LOGGER(trace) << "SynchedVault::~SynchedVault()" << std::endl;
+    stopSync();
     closeVault();
 }
 
@@ -254,6 +255,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
 void SynchedVault::closeVault()
 {
     LOGGER(trace) << "SynchedVault::closeVault()" << std::endl;
+    suspendBlockUpdates();
     std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (m_vault)
     {
@@ -368,6 +370,7 @@ std::shared_ptr<Tx> SynchedVault::sendTx(unsigned long tx_id)
 void SynchedVault::clearAllSlots()
 {
     LOGGER(trace) << "SynchedVault::clearAllSlots()" << std::endl;
+    m_notifyStatusChanged.clear();
     m_notifyTxInserted.clear();
     m_notifyTxStatusChanged.clear();
     m_notifyMerkleBlockInserted.clear();
