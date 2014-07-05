@@ -20,10 +20,16 @@ const std::string SynchedVault::getStatusString(status_t status)
     {
     case NOT_LOADED:
         return "NOT_LOADED";
-    case SYNC_STOPPED:
-        return "SYNC_STOPPED";
-    case SYNCHING:
-        return "SYNCHING";
+    case LOADED:
+        return "LOADED";
+    case STOPPED:
+        return "STOPPED";
+    case STARTING:
+        return "STARTING";
+    case FETCHING_HEADERS:
+        return "FETCHING_HEADERS";
+    case FETCHING_BLOCKS:
+        return "FETCHING_BLOCKS";
     case READY:
         return "READY";
     default:
@@ -66,14 +72,14 @@ SynchedVault::SynchedVault() :
         LOGGER(trace) << "P2P network connection closed." << std::endl;
         m_bConnected = false;
         m_bSynching = false;
-        updateStatus(SYNC_STOPPED);
+        updateStatus(STOPPED);
     });
 
     m_networkSync.subscribeStarted([this]()
     {
         LOGGER(trace) << "P2P network sync started." << std::endl;
         m_bSynching = true;
-        updateStatus(SYNCHING);
+        updateStatus(STARTING);
         //TODO: notify clients
     });
 
@@ -81,7 +87,7 @@ SynchedVault::SynchedVault() :
     {
         LOGGER(trace) << "P2P network sync stopped." << std::endl;
         m_bSynching = false;
-        updateStatus(SYNC_STOPPED);
+        updateStatus(STOPPED);
         //TODO: notify clients
     });
 
@@ -91,6 +97,12 @@ SynchedVault::SynchedVault() :
         m_bConnected = false;
         m_bSynching = false;
         // TODO: notify clients
+    });
+
+    m_networkSync.subscribeFetchingHeaders([this]()
+    {
+        LOGGER(trace) << "P2P fetching headers." << std::endl;
+        updateStatus(FETCHING_HEADERS);
     });
 
     m_networkSync.subscribeHeadersSynched([this]()
@@ -108,6 +120,12 @@ SynchedVault::SynchedVault() :
         {
             LOGGER(error) << e.what() << std::endl;
         }
+    });
+
+    m_networkSync.subscribeFetchingBlocks([this]()
+    {
+        LOGGER(trace) << "P2P fetching blocks." << std::endl;
+        updateStatus(FETCHING_BLOCKS);
     });
 
     m_networkSync.subscribeBlocksSynched([this]()
@@ -228,8 +246,8 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
         m_notifyMerkleBlockInserted(merkleblock);
     });
 
-    if (m_networkSync.connected())      { updateStatus(SYNCHING); }
-    else                                { updateStatus(SYNC_STOPPED); }
+    if (m_networkSync.connected())      { updateStatus(LOADED); }
+    else                                { updateStatus(STOPPED); }
 }
 
 void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate)
@@ -247,8 +265,8 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         m_notifyMerkleBlockInserted(merkleblock);
     });
 
-    if (m_networkSync.connected())      { updateStatus(SYNCHING); }
-    else                                { updateStatus(SYNC_STOPPED); }
+    if (m_networkSync.connected())      { updateStatus(LOADED); }
+    else                                { updateStatus(STOPPED); }
 }
 
 void SynchedVault::closeVault()

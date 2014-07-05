@@ -23,7 +23,17 @@ namespace CoinDB
 class SynchedVault
 {
 public:
-    enum status_t { NOT_LOADED, SYNC_STOPPED, SYNCHING, READY };
+    enum status_t
+    {
+        NOT_LOADED,
+        LOADED,
+        STOPPED,
+        STARTING,
+        FETCHING_HEADERS,
+        FETCHING_BLOCKS,
+        READY
+    };
+
     static const std::string getStatusString(status_t status);
 
     SynchedVault();
