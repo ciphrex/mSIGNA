@@ -41,25 +41,26 @@ public:
     NetworkSync(const CoinQ::CoinParams& coinParams = CoinQ::getBitcoinParams());
     ~NetworkSync();
 
-    void loadBlockTree(const std::string& blockTreeFile, bool bCheckProofOfWork = true);
-    bool isBlockTreeFlushed() const { return m_bBlockTreeFlushed; }
+    void syncHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = true);
+    bool headersSynched() const { return m_bHeadersSynched; }
     int getBestHeight();
 
+/*
     void start();
     void stop();
     bool isStarted() const { return m_bStarted; }
-
-    void connect(const std::string& host, const std::string& port = "");
-    void connect(const std::string& host, int port = -1); 
-    void disconnect();
-    bool isConnected() const { return m_bConnected; }
+*/
+    void start(const std::string& host, const std::string& port = "");
+    void start(const std::string& host, int port = -1); 
+    void stop();
+    bool connected() const { return m_bConnected; }
 
     void setBloomFilter(const Coin::BloomFilter& bloomFilter);
 
-    void resync(const std::vector<bytes_t>& locatorHashes, uint32_t startTime);
-    void resync(int resyncHeight);
-    void stopResync();
-    bool isResynching() const { return m_bResynching; }
+    void syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t startTime);
+    void syncBlocks(int resyncHeight);
+    void stopSyncBlocks();
+    bool blocksSynched() const { return m_bBlocksSynched; }
 
     // MESSAGES TO PEER
     void sendTx(Coin::Transaction& tx);
@@ -73,8 +74,11 @@ public:
     void subscribeTimeout(void_slot_t slot) { notifyTimeout.connect(slot); }
     void subscribeClose(void_slot_t slot) { notifyClose.connect(slot); }
 
-    void subscribeDoneSync(void_slot_t slot) { notifyDoneSync.connect(slot); }
-    void subscribeDoneResync(void_slot_t slot) { notifyDoneResync.connect(slot); }
+    void subscribeFetchingHeaders(void_slot_t slot) { notifyFetchingHeaders.connect(slot); }
+    void subscribeHeadersSynched(void_slot_t slot) { notifyHeadersSynched.connect(slot); }
+
+    void subscribeFetchingBlocks(void_slot_t slot) { notifyFetchingBlocks.connect(slot); }
+    void subscribeBlocksSynched(void_slot_t slot) { notifyBlocksSynched.connect(slot); }
 
     void subscribeStatus(string_slot_t slot) { notifyStatus.connect(slot); }
     void subscribeError(string_slot_t slot) { notifyError.connect(slot); }
@@ -90,25 +94,26 @@ public:
 private:
     CoinQ::CoinParams m_coinParams;
 
-    mutable boost::mutex m_blockTreeMutex;
-    std::string m_blockTreeFile;
-    CoinQBlockTreeMem m_blockTree;
-    bool m_bBlockTreeFlushed;
-
     mutable boost::mutex m_startMutex;
     bool m_bStarted;
-    CoinQ::io_service_t m_io_service;
+    CoinQ::io_service_t m_ioService;
     CoinQ::io_service_t::work m_work;
-    boost::thread m_io_service_thread;
+    boost::thread m_ioServiceThread;
     CoinQ::Peer peer;
 
     mutable boost::mutex m_connectionMutex;
     bool m_bConnected;
 
-    mutable boost::mutex m_resyncMutex;
-    bool m_bResynching;
+    mutable boost::mutex m_headersMutex;
+    std::string m_blockTreeFile;
+    CoinQBlockTreeMem m_blockTree;
+    bool m_bFetchingHeaders;
+    bool m_bHeadersSynched;
 
-    uint32_t m_lastResyncHeight;
+    bool m_bFetchingBlocks;
+    bool m_bBlocksSynched;
+
+    uint32_t m_lastRequestedBlockHeight;
 
     Coin::BloomFilter m_bloomFilter;
 
@@ -121,8 +126,11 @@ private:
     CoinQSignal<void> notifyTimeout;
     CoinQSignal<void> notifyClose;
 
-    CoinQSignal<void> notifyDoneSync;
-    CoinQSignal<void> notifyDoneResync;
+    CoinQSignal<void> notifyFetchingHeaders;
+    CoinQSignal<void> notifyHeadersSynched;
+
+    CoinQSignal<void> notifyFetchingBlocks;
+    CoinQSignal<void> notifyBlocksSynched;
 
     CoinQSignal<const std::string&> notifyStatus;
     CoinQSignal<const std::string&> notifyError;
