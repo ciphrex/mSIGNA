@@ -198,7 +198,6 @@ SynchedVault::SynchedVault() :
 SynchedVault::~SynchedVault()
 {
     LOGGER(trace) << "SynchedVault::~SynchedVault()" << std::endl;
-    stopSync();
     closeVault();
 }
 
@@ -255,7 +254,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
 void SynchedVault::closeVault()
 {
     LOGGER(trace) << "SynchedVault::closeVault()" << std::endl;
-    suspendBlockUpdates();
+//    suspendBlockUpdates();
     std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (m_vault)
     {
@@ -292,12 +291,13 @@ void SynchedVault::suspendBlockUpdates()
 
 void SynchedVault::syncBlocks()
 {
-    LOGGER(trace) << "SynchedVault::resyncVault()" << std::endl;
+    LOGGER(trace) << "SynchedVault::syncBlocks()" << std::endl;
     if (!m_bConnected) throw std::runtime_error("Not connected.");
-
-    if (!m_vault) throw std::runtime_error("No vault is open.");
-    std::lock_guard<std::mutex> lock(m_vaultMutex);
-    if (!m_vault) throw std::runtime_error("No vault is open.");
+    {
+        if (!m_vault) throw std::runtime_error("No vault is open.");
+        std::lock_guard<std::mutex> lock(m_vaultMutex);
+        if (!m_vault) throw std::runtime_error("No vault is open.");
+    }
 
     uint32_t startTime = m_vault->getMaxFirstBlockTimestamp();
     if (startTime == 0)
