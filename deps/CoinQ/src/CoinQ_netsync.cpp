@@ -31,6 +31,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     Coin::CoinBlockHeader::setHashFunc(m_coinParams.block_header_hash_function());
     Coin::CoinBlockHeader::setPOWHashFunc(m_coinParams.block_header_pow_hash_function());
 
+/*
     // Subscribe block tree handlers 
     m_blockTree.subscribeRemoveBestChain([&](const ChainHeader& header)
     {
@@ -47,6 +48,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         status << "Added to best chain: " << hash.getHex() << " Height: " << header.height << " ChainWork: " << header.chainWork.getDec();
         notifyStatus(status.str());
     });
+*/
 
     // Subscribe peer handlers
     m_peer.subscribeOpen([&](CoinQ::Peer& /*peer*/)

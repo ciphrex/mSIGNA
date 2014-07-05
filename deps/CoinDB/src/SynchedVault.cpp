@@ -120,7 +120,7 @@ SynchedVault::SynchedVault() :
 
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
     {
-        LOGGER(trace) << "P2P network added best chain. New best height: " << header.height << std::endl;
+        //LOGGER(trace) << "P2P network added best chain. New best height: " << header.height << std::endl;
         m_bestHeight = header.height;
         // TODO: notify clients
     });
