@@ -99,14 +99,15 @@ private:
     CoinQ::io_service_t m_ioService;
     CoinQ::io_service_t::work m_work;
     boost::thread m_ioServiceThread;
-    CoinQ::Peer peer;
+    CoinQ::Peer m_peer;
 
     mutable boost::mutex m_connectionMutex;
     bool m_bConnected;
 
-    mutable boost::mutex m_headersMutex;
+    mutable boost::mutex m_syncMutex;
     std::string m_blockTreeFile;
     CoinQBlockTreeMem m_blockTree;
+    bool m_blockTreeLoaded;
     bool m_bFetchingHeaders;
     bool m_bHeadersSynched;
 

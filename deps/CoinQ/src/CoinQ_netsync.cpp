@@ -28,17 +28,17 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_bBlocksSynched(false)
 {
     // Select hash functions
-    Coin::CoinBlockHeader::setHashFunc(m_coinParams_.block_header_hash_function());
-    Coin::CoinBlockHeader::setPOWHashFunc(m_coinParams_.block_header_pow_hash_function());
+    Coin::CoinBlockHeader::setHashFunc(m_coinParams.block_header_hash_function());
+    Coin::CoinBlockHeader::setPOWHashFunc(m_coinParams.block_header_pow_hash_function());
 
     // Subscribe block tree handlers 
-    blockTree.subscribeRemoveBestChain([&](const ChainHeader& header)
+    m_blockTree.subscribeRemoveBestChain([&](const ChainHeader& header)
     {
         notifyBlockTreeChanged();
         notifyRemoveBestChain(header);
     });
 
-    blockTree.subscribeAddBestChain([&](const ChainHeader& header)
+    m_blockTree.subscribeAddBestChain([&](const ChainHeader& header)
     {
         notifyBlockTreeChanged();
         notifyAddBestChain(header);
@@ -59,12 +59,12 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
             if (m_bloomFilter.isSet())
             {
                 Coin::FilterLoadMessage filterLoad(m_bloomFilter.getNHashFuncs(), m_bloomFilter.getNTweak(), m_bloomFilter.getNFlags(), m_bloomFilter.getFilter());
-                m_peer.send(m_filterLoad);
+                m_peer.send(filterLoad);
                 LOGGER(trace) << "Sent filter to peer." << std::endl;
             }
 
 //            notifyStatus("Fetching block headers...");
-            m_peer.getHeaders(blockTree.getLocatorHashes(-1));
+            m_peer.getHeaders(m_blockTree.getLocatorHashes(-1));
         }
         catch (const std::exception& e)
         {
@@ -118,7 +118,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         {
             if (headersMessage.headers.size() > 0)
             {
-                boost::lock_guard<boost::mutex> lock(m_blockTreeMutex);
+                boost::lock_guard<boost::mutex> syncLock(m_syncMutex);
                 m_bFetchingHeaders = true;
                 notifyFetchingHeaders();
                 for (auto& item: headersMessage.headers)
@@ -150,20 +150,20 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 status << "Best Height: " << m_blockTree.getBestHeight() << " / " << "Total Work: " << m_blockTree.getTotalWork().getDec();
                 notifyStatus(status.str());
 
-                if (!m_connectionMutex) return;
-                boost::lock_guard<boost::mutex> lock(m_connectionMutex);
-                if (!m_connectionMutex) return;
+                if (!m_bConnected) return;
+                boost::lock_guard<boost::mutex> connectionLock(m_connectionMutex);
+                if (!m_bConnected) return;
                 peer.getHeaders(m_blockTree.getLocatorHashes(1));
             }
             else
             {  
-                if (!m_bBlockTreeLoaded) return
-                boost::lock_guard<boost::mutex> lock(m_blockTreeMutex);
-                if (!m_bBlockTreeLoaded) return;
                 notifyStatus("Flushing block chain to file...");
 
-                m_blockTree.flushToFile(m_blockTreeFile);
-                m_bHeadersSynched = true;
+                {
+                    boost::lock_guard<boost::mutex> syncLock(m_syncMutex);
+                    m_blockTree.flushToFile(m_blockTreeFile);
+                    m_bHeadersSynched = true;
+                }
 
                 notifyStatus("Done flushing block chain to file");
                 notifyHeadersSynched();
@@ -179,7 +179,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_peer.subscribeBlock([&](CoinQ::Peer& /*peer*/, const Coin::CoinBlock& block)
     {
         uchar_vector hash = block.blockHeader.getHashLittleEndian();
-        boost::lock_guard<boost::mutex> lock(m_headersMutex);
+        boost::lock_guard<boost::mutex> lock(m_syncMutex);
         try {
             if (m_blockTree.hasHeader(hash))
             {
@@ -211,14 +211,14 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         LOGGER(trace) << "Received merkle block:" << std::endl << merkleBlock.toIndentedString() << std::endl;
         uchar_vector hash = merkleBlock.blockHeader.getHashLittleEndian();
 
-        boost::lock_guard<boost::mutex> lock(m_headersMutex);
+        boost::lock_guard<boost::mutex> lock(m_syncMutex);
         try {
             if (m_blockTree.hasHeader(hash)) {
                 // Do nothing but skip over last else.
             }
             else if (m_blockTree.insertHeader(merkleBlock.blockHeader)) {
                 notifyStatus("Flushing block chain to file...");
-                m_blockTree.flushToFile(blockTreeFile);
+                m_blockTree.flushToFile(m_blockTreeFile);
                 m_bHeadersSynched = true;
                 notifyHeadersSynched();
                 notifyStatus("Done flushing block chain to file");
@@ -295,14 +295,19 @@ NetworkSync::~NetworkSync()
     if (m_bStarted) stop();
 }
 
-void NetworkSync::loadBlockTree(const std::string& blockTreeFile, bool bCheckProofOfWork)
+void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork)
 {
     this->blockTreeFile = blockTreeFile;
+
     try {
-        blockTree.loadFromFile(blockTreeFile, bCheckProofOfWork);
-        blockTreeFlushed = true;
         std::stringstream status;
-        status << "Best Height: " << blockTree.getBestHeight() << " / " << "Total Work: " << blockTree.getTotalWork().getDec();
+        {
+            boost::lock_guard<boost::mutex> syncLock(m_syncMutex);
+            m_blockTree.loadFromFile(blockTreeFile, bCheckProofOfWork);
+            m_bHeadersSynched = true;
+            status << "Best Height: " << m_blockTree.getBestHeight() << " / " << "Total Work: " << blockTree.getTotalWork().getDec();
+        }
+        notifyHeadersSynched();
         notifyStatus(status.str());
         return;
     }
@@ -310,13 +315,18 @@ void NetworkSync::loadBlockTree(const std::string& blockTreeFile, bool bCheckPro
         notifyStatus(e.what());
     }
 
-    blockTree.clear();
+    {
+        boost::lock_guard<boost::mutex> syncLock(m_syncMutex);
+        m_blockTree.clear();
 
-    blockTree.setGenesisBlock(coin_params_.genesis_block());
-    blockTreeFlushed = false;
+        m_blockTree.setGenesisBlock(m_coinParams.genesis_block());
+        m_bHeadersSynched = true;
+    }
+    notifyHeadersSynched();
     notifyStatus("Block tree file not found. A new one will be created.");
 }
 
+/*
 void NetworkSync::initBlockFilter()
 {
     blockTree.unsubscribeAll();
@@ -346,7 +356,9 @@ void NetworkSync::initBlockFilter()
         }
 
         notifyBlock(block);
-        if (/*resynching &&*/ blockTree.getBestHeight() > block.height) {
+        if (
+            //resynching &&
+             blockTree.getBestHeight() > block.height) {
             const ChainHeader& nextHeader = blockTree.getHeader(block.height + 1);
             uchar_vector blockHash = nextHeader.getHashLittleEndian();
             std::stringstream status;
@@ -361,6 +373,7 @@ void NetworkSync::initBlockFilter()
         }
     });
 }
+*/
 
 int NetworkSync::getBestHeight()
 {
@@ -370,6 +383,7 @@ int NetworkSync::getBestHeight()
 void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t startTime)
 {
     if (!m_bConnected) throw std::runtime_error("NetworkSync::syncBlocks() - must connect before synching.");
+
 /*
     boost::lock_guard<boost::mutex> lock(m_connectionMmutex);
     if (!m_bConnected) throw std::runtime_error("NetworkSync::syncBlocks() - must connect before synching.");
@@ -467,7 +481,7 @@ void NetworkSync::resync(int resyncHeight)
 void NetworkSync::stopSyncBlocks()
 {
     if (!m_bFetchingBlocks) return;
-    boost::lock_guard<boost::mutex> lock(m_headersMutex);
+    boost::lock_guard<boost::mutex> lock(m_syncMutex);
     m_bFetchingBlocks = false;
 
     // TODO: signal to indicate sync has stopped
