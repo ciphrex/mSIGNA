@@ -40,7 +40,7 @@ public:
     void startSync(const std::string& host, const std::string& port);
     void stopSync();
     void suspendBlockUpdates();
-    void resyncVault();
+    void syncBlocks();
     void updateBloomFilter();
 
     status_t getStatus() const { return m_status; }

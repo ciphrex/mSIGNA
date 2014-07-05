@@ -93,16 +93,16 @@ SynchedVault::SynchedVault() :
         // TODO: notify clients
     });
 
-    m_networkSync.subscribeDoneSync([this]()
+    m_networkSync.subscribeHeadersSynched([this]()
     {
-        LOGGER(trace) << "P2P network sync complete." << std::endl;
+        LOGGER(trace) << "P2P headers sync complete." << std::endl;
         m_bBlockTreeSynched = true;
         // TODO: notify clients
 
         try
         {
-            LOGGER(trace) << "Attempting to resync vault." << std::endl;
-            resyncVault();
+            LOGGER(trace) << "Attempting to sync blocks." << std::endl;
+            syncBlocks();
         }
         catch (const std::exception& e)
         {
@@ -110,9 +110,9 @@ SynchedVault::SynchedVault() :
         }
     });
 
-    m_networkSync.subscribeDoneResync([this]()
+    m_networkSync.subscribeBlocksSynched([this]()
     {
-        LOGGER(trace) << "Block tree resync complete." << std::endl;
+        LOGGER(trace) << "Block sync complete." << std::endl;
         LOGGER(info) << "Fetching mempool." << std::endl;
         m_networkSync.getMempool();
         updateStatus(READY);
@@ -209,7 +209,7 @@ void SynchedVault::loadBlockTree(const std::string& blockTreeFile, bool bCheckPr
 
     m_blockTreeFile = blockTreeFile;
     m_bBlockTreeLoaded = false;
-    m_networkSync.initBlockTree(blockTreeFile, bCheckProofOfWork);
+    m_networkSync.loadHeaders(blockTreeFile, bCheckProofOfWork);
     m_bBlockTreeLoaded = true;
 }
 
@@ -229,7 +229,7 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
         m_notifyMerkleBlockInserted(merkleblock);
     });
 
-    if (m_networkSync.isConnected())    { updateStatus(SYNCHING); }
+    if (m_networkSync.connected())      { updateStatus(SYNCHING); }
     else                                { updateStatus(SYNC_STOPPED); }
 }
 
@@ -248,7 +248,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         m_notifyMerkleBlockInserted(merkleblock);
     });
 
-    if (m_networkSync.isConnected())    { updateStatus(SYNCHING); }
+    if (m_networkSync.connected())      { updateStatus(SYNCHING); }
     else                                { updateStatus(SYNC_STOPPED); }
 }
 
@@ -290,7 +290,7 @@ void SynchedVault::suspendBlockUpdates()
     m_bInsertMerkleBlocks = false;
 }
 
-void SynchedVault::resyncVault()
+void SynchedVault::syncBlocks()
 {
     LOGGER(trace) << "SynchedVault::resyncVault()" << std::endl;
     if (!m_bConnected) throw std::runtime_error("Not connected.");
@@ -308,7 +308,7 @@ void SynchedVault::resyncVault()
 
     std::vector<bytes_t> locatorHashes = m_vault->getLocatorHashes();
     m_bInsertMerkleBlocks = true;
-    m_networkSync.resync(locatorHashes, startTime);
+    m_networkSync.syncBlocks(locatorHashes, startTime);
 }
 
 void SynchedVault::updateBloomFilter()
