@@ -92,8 +92,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
 
     m_peer.subscribeInv([&](CoinQ::Peer& peer, const Coin::Inventory& inv)
     {
-        LOGGER(trace) << "Received inventory message:" << std::endl << inv.toIndentedString() << std::endl;
         if (!m_bConnected) return;
+        LOGGER(trace) << "Received inventory message:" << std::endl << inv.toIndentedString() << std::endl;
 
         Coin::GetDataMessage getData(inv);
         getData.toFilteredBlocks();
@@ -103,12 +103,14 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
 
     m_peer.subscribeTx([&](CoinQ::Peer& /*peer*/, const Coin::Transaction& tx)
     {
+        if (!m_bConnected) return;
         LOGGER(trace) << "Received transaction: " << tx.getHashLittleEndian().getHex() << std::endl;
         notifyTx(tx);
     });
 
     m_peer.subscribeHeaders([&](CoinQ::Peer& peer, const Coin::HeadersMessage& headersMessage)
     {
+        if (!m_bConnected) return;
         LOGGER(trace) << "Received headers message..." << std::endl;
 
         try
@@ -171,6 +173,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
 
     m_peer.subscribeBlock([&](CoinQ::Peer& /*peer*/, const Coin::CoinBlock& block)
     {
+        if (!m_bConnected) return;
         uchar_vector hash = block.blockHeader.getHashLittleEndian();
         boost::lock_guard<boost::mutex> lock(m_syncMutex);
         try {
@@ -201,6 +204,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
 
     m_peer.subscribeMerkleBlock([&](CoinQ::Peer& /*peer*/, const Coin::MerkleBlock& merkleBlock)
     {
+        if (!m_bConnected) return;
         LOGGER(trace) << "Received merkle block:" << std::endl << merkleBlock.toIndentedString() << std::endl;
         uchar_vector hash = merkleBlock.blockHeader.getHashLittleEndian();
 
@@ -468,17 +472,20 @@ void NetworkSync::stopSyncBlocks()
 
 void NetworkSync::start(const std::string& host, const std::string& port)
 {
-    if (m_bStarted) throw std::runtime_error("NetworkSync::start() - already started.");
-    boost::lock_guard<boost::mutex> lock(m_startMutex);
-    if (m_bStarted) throw std::runtime_error("NetworkSync::start() - already started.");
+    {
+        if (m_bStarted) throw std::runtime_error("NetworkSync::start() - already started.");
+        boost::lock_guard<boost::mutex> lock(m_startMutex);
+        if (m_bStarted) throw std::runtime_error("NetworkSync::start() - already started.");
 
-    std::string port_ = port.empty() ? m_coinParams.default_port() : port;
-    m_bStarted = true;
-    m_bFetchingHeaders = false;
-    m_bFetchingBlocks = false;
-    m_peer.set(host, port_, m_coinParams.magic_bytes(), m_coinParams.protocol_version(), "Wallet v0.1", 0, false);
-    m_ioServiceThread = boost::thread(boost::bind(&CoinQ::io_service_t::run, &m_ioService));
-    m_peer.start();
+        std::string port_ = port.empty() ? m_coinParams.default_port() : port;
+        m_bStarted = true;
+        m_bFetchingHeaders = false;
+        m_bFetchingBlocks = false;
+        m_peer.set(host, port_, m_coinParams.magic_bytes(), m_coinParams.protocol_version(), "Wallet v0.1", 0, false);
+        m_ioServiceThread = boost::thread(boost::bind(&CoinQ::io_service_t::run, &m_ioService));
+        m_peer.start();
+    }
+
     notifyStarted();
 }
 
@@ -491,17 +498,20 @@ void NetworkSync::start(const std::string& host, int port)
 
 void NetworkSync::stop()
 {
-    if (!m_bStarted) return;
-    boost::lock_guard<boost::mutex> lock(m_startMutex);
-    if (!m_bStarted) return;
+    {
+        if (!m_bStarted) return;
+        boost::lock_guard<boost::mutex> lock(m_startMutex);
+        if (!m_bStarted) return;
 
-    m_bConnected = false;
-    m_bStarted = false;
-    m_bFetchingHeaders = false;
-    m_bFetchingBlocks = false;
+        m_bConnected = false;
+        m_bStarted = false;
+        m_bFetchingHeaders = false;
+        m_bFetchingBlocks = false;
 
-    m_peer.stop();
-    //m_ioServiceThread.join();
+        m_peer.stop();
+        m_ioServiceThread.join();
+    }
+
     notifyStopped();
 }
 
@@ -524,10 +534,6 @@ void NetworkSync::setBloomFilter(const Coin::BloomFilter& bloomFilter)
 {
     m_bloomFilter = bloomFilter;
     if (!m_bloomFilter.isSet()) return;
-
-    if (!m_bConnected) return;
-    boost::lock_guard<boost::mutex> lock(m_connectionMutex);
-    if (!m_bConnected) return;
 
     Coin::FilterLoadMessage filterLoad(m_bloomFilter.getNHashFuncs(), m_bloomFilter.getNTweak(), m_bloomFilter.getNFlags(), m_bloomFilter.getFilter());
     m_peer.send(filterLoad);
