@@ -97,8 +97,8 @@ private:
     mutable boost::mutex m_startMutex;
     bool m_bStarted;
     CoinQ::io_service_t m_ioService;
+    boost::thread* m_ioServiceThread;
     CoinQ::io_service_t::work m_work;
-    boost::thread m_ioServiceThread;
     CoinQ::Peer m_peer;
 
     mutable boost::mutex m_connectionMutex;

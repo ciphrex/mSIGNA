@@ -19,6 +19,7 @@ using namespace CoinQ::Network;
 NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_coinParams(coinParams),
     m_bStarted(false),
+    m_ioServiceThread(nullptr),
     m_work(m_ioService),
     m_peer(m_ioService),
     m_bConnected(false),
@@ -482,7 +483,7 @@ void NetworkSync::start(const std::string& host, const std::string& port)
         m_bFetchingHeaders = false;
         m_bFetchingBlocks = false;
         m_peer.set(host, port_, m_coinParams.magic_bytes(), m_coinParams.protocol_version(), "Wallet v0.1", 0, false);
-        m_ioServiceThread = boost::thread(boost::bind(&CoinQ::io_service_t::run, &m_ioService));
+        m_ioServiceThread = new boost::thread(boost::bind(&CoinQ::io_service_t::run, &m_ioService));
         m_peer.start();
     }
 
@@ -509,7 +510,8 @@ void NetworkSync::stop()
         m_bFetchingBlocks = false;
 
         m_peer.stop();
-        m_ioServiceThread.join();
+        delete m_ioServiceThread;
+        m_ioServiceThread = nullptr;
     }
 
     notifyStopped();

@@ -258,7 +258,7 @@ void SynchedVault::closeVault()
     std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (m_vault)
     {
-        m_vault->clearAllSlots();
+        //m_vault->clearAllSlots();
         delete m_vault;
         m_vault = nullptr;
         updateStatus(NOT_LOADED);
