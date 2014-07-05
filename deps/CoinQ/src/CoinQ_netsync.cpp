@@ -277,13 +277,13 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 if (m_bConnected)
                 {
                     boost::lock_guard<boost::mutex> lock(m_connectionMutex);
-                    if (m_bConnected) { peer.getHeaders(m_blockTree.getLocatorHashes(-1)); }
+                    if (m_bConnected) { m_peer.getHeaders(m_blockTree.getLocatorHashes(-1)); }
                 }
             }
             catch (const std::exception& e) {
                 err.clear();
                 err << "NetworkSync merkle block handler - error fetching block headers: " << e.what();
-                BlockSyncLOGGER(error) << err.str() << std::endl;
+                LOGGER(error) << err.str() << std::endl;
                 notifyError(e.what());
             } 
         }
@@ -297,7 +297,7 @@ NetworkSync::~NetworkSync()
 
 void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork)
 {
-    this->blockTreeFile = blockTreeFile;
+    m_blockTreeFile = blockTreeFile;
 
     try {
         std::stringstream status;
@@ -305,7 +305,7 @@ void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProof
             boost::lock_guard<boost::mutex> syncLock(m_syncMutex);
             m_blockTree.loadFromFile(blockTreeFile, bCheckProofOfWork);
             m_bHeadersSynched = true;
-            status << "Best Height: " << m_blockTree.getBestHeight() << " / " << "Total Work: " << blockTree.getTotalWork().getDec();
+            status << "Best Height: " << m_blockTree.getBestHeight() << " / " << "Total Work: " << m_blockTree.getTotalWork().getDec();
         }
         notifyHeadersSynched();
         notifyStatus(status.str());
@@ -377,7 +377,7 @@ void NetworkSync::initBlockFilter()
 
 int NetworkSync::getBestHeight()
 {
-    return blockTree.getBestHeight();
+    return m_blockTree.getBestHeight();
 }
 
 void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t startTime)
@@ -391,7 +391,7 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
 
     
     stopSyncBlocks();
-    boost::lock_guard<boost::mutex> lock(m_connectionMmutex);
+    boost::lock_guard<boost::mutex> syncLock(m_syncMutex);
     m_bFetchingBlocks = true;
 
  //   initBlockFilter();
@@ -417,15 +417,18 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
     const ChainHeader& bestHeader = m_blockTree.getHeader(-1);
 
     int nextBlockRequestHeight;
-    if (foundHeader) {
+    if (foundHeader)
+    {
         nextBlockRequestHeight = header.height + 1;
     }
-    else {
+    else
+    {
         ChainHeader header = m_blockTree.getHeaderBefore(startTime);
         nextBlockRequestHeight = header.height;
     }
 
-    if (bestHeader.height >= nextBlockRequestHeight) {
+    if (bestHeader.height >= nextBlockRequestHeight)
+    {
         std::stringstream status;
         status << "Resynching blocks " << nextBlockRequestHeight << " - " << bestHeader.height;
         LOGGER(debug) << status.str() << std::endl;
@@ -436,17 +439,24 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
         status << "Asking for block " << hash.getHex();
         LOGGER(debug) << status.str() << std::endl;
         notifyStatus(status.str());
-        m_lastRequestedBlockHeight = (uint32_t)resyncHeight;
-        m_peer.getFilteredBlock(blockHash);
+        if (m_bConnected)
+        {
+            boost::lock_guard<boost::mutex> lock(m_connectionMutex);
+            if (m_bConnected)
+            { 
+                m_lastRequestedBlockHeight = (uint32_t)nextBlockRequestHeight;
+                m_peer.getFilteredBlock(hash);
+            }
+        }
     }
-    else {
+    else
+    {
         m_bFetchingBlocks = false;
         m_bBlocksSynched = true;
         notifyBlocksSynched();
-        //peer.getMempool();
     }
 }
-
+/*
 void NetworkSync::resync(int resyncHeight)
 {
     if (!isConnected_) throw std::runtime_error("Must connect before resynching."); 
@@ -477,6 +487,7 @@ void NetworkSync::resync(int resyncHeight)
 
     //peer.getMempool();
 }
+*/
 
 void NetworkSync::stopSyncBlocks()
 {
@@ -505,17 +516,9 @@ void NetworkSync::start(const std::string& host, const std::string& port)
 
 void NetworkSync::start(const std::string& host, int port)
 {
-    std::string portString;
-    if (port < 0)
-    {
-        start(host);
-    }
-    else
-    {
-        std::stringstream ssport;
-        ssport << port;
-        start(host, ssport.str();
-    }
+    std::stringstream ssport;
+    ssport << port;
+    start(host, ssport.str());
 }
 
 void NetworkSync::stop()
@@ -529,8 +532,7 @@ void NetworkSync::stop()
     m_bFetchingBlocks = false;
 
     m_peer.stop();
-    io_service_thread.stop();
-    io_service_thread.join();
+    m_ioServiceThread.join();
     m_bConnected = false;
     notifyStopped();
 }
@@ -565,7 +567,7 @@ void NetworkSync::getMempool()
 void NetworkSync::setBloomFilter(const Coin::BloomFilter& bloomFilter)
 {
     m_bloomFilter = bloomFilter;
-    if (!m_bloomFlter.isSet()) return;
+    if (!m_bloomFilter.isSet()) return;
 
     if (!m_bConnected) return;
     boost::lock_guard<boost::mutex> lock(m_connectionMutex);

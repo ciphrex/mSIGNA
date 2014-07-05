@@ -41,7 +41,7 @@ public:
     NetworkSync(const CoinQ::CoinParams& coinParams = CoinQ::getBitcoinParams());
     ~NetworkSync();
 
-    void syncHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = true);
+    void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = true);
     bool headersSynched() const { return m_bHeadersSynched; }
     int getBestHeight();
 
@@ -51,14 +51,14 @@ public:
     bool isStarted() const { return m_bStarted; }
 */
     void start(const std::string& host, const std::string& port = "");
-    void start(const std::string& host, int port = -1); 
+    void start(const std::string& host, int port);
     void stop();
     bool connected() const { return m_bConnected; }
 
     void setBloomFilter(const Coin::BloomFilter& bloomFilter);
 
     void syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t startTime);
-    void syncBlocks(int resyncHeight);
+    //void syncBlocks(int resyncHeight);
     void stopSyncBlocks();
     bool blocksSynched() const { return m_bBlocksSynched; }
 
