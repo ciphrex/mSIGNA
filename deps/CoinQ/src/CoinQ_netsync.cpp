@@ -413,6 +413,7 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
         status << "Resynching blocks " << nextBlockRequestHeight << " - " << bestHeader.height;
         LOGGER(debug) << status.str() << std::endl;
         notifyStatus(status.str());
+        notifyFetchingBlocks();
         const ChainHeader& nextBlockRequestHeader = m_blockTree.getHeader(nextBlockRequestHeight);
         uchar_vector hash = nextBlockRequestHeader.getHashLittleEndian();
         status.clear();
