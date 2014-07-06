@@ -54,6 +54,8 @@ public:
     void updateBloomFilter();
 
     status_t getStatus() const { return m_status; }
+    uint32_t getBestHeight() const { return m_bestHeight; }
+    uint32_t getSyncHeight() const { return m_syncHeight; }
 
     std::shared_ptr<Tx> sendTx(const bytes_t& hash);
     std::shared_ptr<Tx> sendTx(unsigned long tx_id);
