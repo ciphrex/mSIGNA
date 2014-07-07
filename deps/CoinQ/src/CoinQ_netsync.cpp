@@ -515,8 +515,6 @@ void NetworkSync::stop()
         m_bFetchingBlocks = false;
 
         m_peer.stop();
-        delete m_ioServiceThread;
-        m_ioServiceThread = nullptr;
     }
 
     notifyStopped();

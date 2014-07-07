@@ -27,7 +27,7 @@ void Peer::do_handshake()
         if (bHandshakeComplete) return;
         boost::lock_guard<boost::mutex> lock(handshakeMutex);
         if (bHandshakeComplete) return;
-        bRunning = false;
+        stop();
         notifyTimeout(*this);
     });
 }
@@ -40,7 +40,7 @@ void Peer::do_read()
         //std::cout << "error code: " << ec.value() << ": " << ec.message() << std::endl;
         //std::cout << "bytes read: " << bytes_read << std::endl;
         if (ec) {
-            bRunning = false;
+            stop();
             notifyClose(*this, ec.value(), ec.message());
             return;
         }
@@ -176,7 +176,7 @@ void Peer::do_connect(tcp::resolver::iterator iter)
     boost::asio::async_connect(socket_, iter, strand_.wrap([&](const boost::system::error_code& ec, tcp::resolver::iterator) {
         if (ec) {
             std::cout << "Peer::start() - Connection error: " << ec.message() << "." << std::endl;
-            bRunning = false;
+            stop();
             notifyClose(*this, ec.value(), ec.message());
         }
         else {
@@ -229,8 +229,8 @@ void Peer::stop()
 {
     {
         if (!bRunning) return;
-//        boost::unique_lock<boost::shared_mutex> lock(mutex);
-//        if (!bRunning) return;
+        boost::unique_lock<boost::shared_mutex> lock(mutex);
+        if (!bRunning) return;
 
         socket_.cancel();
         socket_.close();

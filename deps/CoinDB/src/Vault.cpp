@@ -120,7 +120,7 @@ void Vault::close()
 
     if (!db_) return;
     boost::lock_guard<boost::mutex> lock(mutex);
-    db_ = nullptr; 
+    db_.reset();
 }
 
 uint32_t Vault::getSchemaVersion() const
