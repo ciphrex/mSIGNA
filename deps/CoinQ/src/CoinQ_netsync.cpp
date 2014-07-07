@@ -32,6 +32,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     Coin::CoinBlockHeader::setHashFunc(m_coinParams.block_header_hash_function());
     Coin::CoinBlockHeader::setPOWHashFunc(m_coinParams.block_header_pow_hash_function());
 
+    // Start the service thread
+    m_ioServiceThread = new boost::thread(boost::bind(&CoinQ::io_service_t::run, &m_ioService));
 /*
     // Subscribe block tree handlers 
     m_blockTree.subscribeRemoveBestChain([&](const ChainHeader& header)
@@ -278,6 +280,9 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
 NetworkSync::~NetworkSync()
 {
     stop();
+    m_ioService.stop();
+    m_ioServiceThread->join();
+    delete m_ioServiceThread;
 }
 
 void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork)
@@ -484,7 +489,6 @@ void NetworkSync::start(const std::string& host, const std::string& port)
         m_bFetchingHeaders = false;
         m_bFetchingBlocks = false;
         m_peer.set(host, port_, m_coinParams.magic_bytes(), m_coinParams.protocol_version(), "Wallet v0.1", 0, false);
-        m_ioServiceThread = new boost::thread(boost::bind(&CoinQ::io_service_t::run, &m_ioService));
         m_peer.start();
     }
 
