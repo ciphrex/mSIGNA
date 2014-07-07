@@ -230,9 +230,9 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
             ChainHeader header = m_blockTree.getHeader(hash);
             notifyMerkleBlock(ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork));
 
-            uint32_t bestHeight = m_blockTree.getBestHeight();
             if (m_bFetchingBlocks)
             {
+                uint32_t bestHeight = m_blockTree.getBestHeight();
                 if (bestHeight > (uint32_t)header.height) // We still need to fetch more blocks
                 {
                     const ChainHeader& nextHeader = m_blockTree.getHeader(header.height + 1);
@@ -246,8 +246,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     m_lastRequestedBlockHeight = nextHeader.height;
                     m_peer.getFilteredBlock(hash);
                 }
-
-                if (bestHeight == m_lastRequestedBlockHeight)
+                else
+                //if (bestHeight == m_lastRequestedBlockHeight && bestHeight == header.height)
                 {
                     m_bFetchingBlocks = false;
                     m_bBlocksSynched = true;
