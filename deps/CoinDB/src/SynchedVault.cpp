@@ -216,6 +216,7 @@ SynchedVault::SynchedVault() :
 SynchedVault::~SynchedVault()
 {
     LOGGER(trace) << "SynchedVault::~SynchedVault()" << std::endl;
+    stopSync();
     closeVault();
 }
 
