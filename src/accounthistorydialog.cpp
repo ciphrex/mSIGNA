@@ -74,7 +74,7 @@ void AccountHistoryDialog::updateCurrentTx(const QModelIndex& current, const QMo
             signTxAction->setEnabled(false);
         }
 
-        if (networkSync && networkSync->isConnected() && type == CoinDB::Tx::UNSENT) {
+        if (networkSync && networkSync->connected() && type == CoinDB::Tx::UNSENT) {
             sendTxAction->setEnabled(true);
         }
         else {

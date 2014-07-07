@@ -175,7 +175,7 @@ MainWindow::MainWindow() :
 
 void MainWindow::loadBlockTree()
 {
-    networkSync.initBlockTree(blockTreeFile.toStdString(), false);
+    networkSync.loadHeaders(blockTreeFile.toStdString(), false);
     emit updateBestHeight(networkSync.getBestHeight());
 }
 
@@ -432,7 +432,7 @@ void MainWindow::exportVault(QString fileName, bool exportPrivKeys)
 void MainWindow::closeVault()
 {
     try {
-        networkSync.stopResync();
+        networkSync.stopSyncBlocks();
 
         accountModel->close();
         keychainModel->setVault(NULL);
@@ -1235,7 +1235,7 @@ void MainWindow::resync()
     for (auto& hash: locatorHashes) {
         LOGGER(debug) << "MainWindow::resync() - hash: " << uchar_vector(hash).getHex() << std::endl;
     }
-    networkSync.resync(locatorHashes, startTime);
+    networkSync.syncBlocks(locatorHashes, startTime);
 }
 
 void MainWindow::doneSync()
@@ -1344,7 +1344,8 @@ void MainWindow::resyncBlocks()
         stopResyncAction->setEnabled(true);
         resyncHeight = dlg.getResyncHeight();
         try {
-            networkSync.resync(resyncHeight);
+            //networkSync.resync(resyncHeight);
+            throw std::runtime_error("Disabled.");
         }
         catch (const exception& e) {
             LOGGER(debug) << "MainWindow::resyncBlocks - " << e.what() << std::endl;
@@ -1355,7 +1356,7 @@ void MainWindow::resyncBlocks()
 
 void MainWindow::stopResyncBlocks()
 {
-    networkSync.stopResync();
+    networkSync.stopSyncBlocks();
 }
 
 void MainWindow::networkStatus(const QString& status)
@@ -1739,10 +1740,16 @@ void MainWindow::createActions()
         networkTimeout();
     });
 
-    networkSync.subscribeDoneSync([this]() {
-        LOGGER(debug) << "done sync slot" << std::endl;
+    networkSync.subscribeHeadersSynched([this]() {
+        LOGGER(debug) << "headers synched slot" << std::endl;
         doneSync();
     });
+
+    networkSync.subscribeBlocksSynched([this]() {
+        LOGGER(debug) << "blocks synched slot" << std::endl;
+        networkSync.getMempool();
+    });
+        
 
 /*
     qRegisterMetaType<chain_header_t>("chain_header_t");
