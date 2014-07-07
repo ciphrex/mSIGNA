@@ -31,7 +31,7 @@ public:
         STARTING,
         FETCHING_HEADERS,
         FETCHING_BLOCKS,
-        READY
+        SYNCHED
     };
 
     static const std::string getStatusString(status_t status);

@@ -30,8 +30,8 @@ const std::string SynchedVault::getStatusString(status_t status)
         return "FETCHING_HEADERS";
     case FETCHING_BLOCKS:
         return "FETCHING_BLOCKS";
-    case READY:
-        return "READY";
+    case SYNCHED:
+        return "SYNCHED";
     default:
         return "UNKNOWN";
     } 
@@ -109,6 +109,7 @@ SynchedVault::SynchedVault() :
     {
         LOGGER(trace) << "P2P headers sync complete." << std::endl;
         m_bBlockTreeSynched = true;
+        m_bestHeight = m_networkSync.getBestHeight();
         // TODO: notify clients
 
         try
@@ -133,7 +134,7 @@ SynchedVault::SynchedVault() :
         LOGGER(trace) << "Block sync complete." << std::endl;
         LOGGER(info) << "Fetching mempool." << std::endl;
         m_networkSync.getMempool();
-        updateStatus(READY);
+        updateStatus(SYNCHED);
     });
 
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
@@ -238,6 +239,7 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
     std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (m_vault) delete m_vault;
     m_vault = new Vault(dbname, bCreate);
+    m_syncHeight = m_vault->getBestHeight();
     m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
     m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
     m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
@@ -257,6 +259,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
     std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (m_vault) delete m_vault;
     m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate);
+    m_syncHeight = m_vault->getBestHeight();
     m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
     m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
     m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
@@ -280,6 +283,7 @@ void SynchedVault::closeVault()
         //m_vault->clearAllSlots();
         delete m_vault;
         m_vault = nullptr;
+        m_syncHeight = 0;
         updateStatus(NOT_LOADED);
     }
 }
