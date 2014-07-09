@@ -150,9 +150,9 @@ private slots:
 
     ///////////////////
     // BLOCK OPERATIONS
-    void resync();
-    void doneSync(); // initial headers sync
-    void doneResync(); // full block resync
+    void syncBlocks();
+    void doneHeaderSync(); // initial headers sync
+    void doneBlockSync(); // full block sync
     void addBestChain(const chain_header_t& header);
     void removeBestChain(const chain_header_t& header);
     //void newBlock(const chain_block_t& block);
@@ -162,8 +162,8 @@ private slots:
     // NETWORK OPERATIONS
     void startNetworkSync();
     void stopNetworkSync();
-    void resyncBlocks();
-    void stopResyncBlocks();
+    //void resyncBlocks();
+    //void stopResyncBlocks();
     void promptResync();
     void connectionOpen();
     void connectionClosed();
@@ -281,7 +281,7 @@ private:
     QLabel* syncLabel;
     QLabel* networkStateLabel;
     bool connected;
-    bool doneHeaderSync;
+    bool synched;
     QString blockTreeFile;
     QString host;
     int port;
@@ -289,8 +289,8 @@ private:
     int resyncHeight;
     QAction* connectAction;
     QAction* disconnectAction;
-    QAction* resyncAction;
-    QAction* stopResyncAction;
+    //QAction* resyncAction;
+    //QAction* stopResyncAction;
     QAction* networkSettingsAction;
 
     // network sync state

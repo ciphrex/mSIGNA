@@ -78,8 +78,7 @@ HEADERS = \
     src/requestpaymentdialog.h \
     src/networksettingsdialog.h \
     src/keychainbackupdialog.h \
-    src/passphrasedialog.h \
-    src/resyncdialog.h
+    src/passphrasedialog.h
                 
 SOURCES = \
     src/settings.cpp \
@@ -113,8 +112,7 @@ SOURCES = \
     src/requestpaymentdialog.cpp \
     src/networksettingsdialog.cpp \
     src/keychainbackupdialog.cpp \
-    src/passphrasedialog.cpp \
-    src/resyncdialog.cpp
+    src/passphrasedialog.cpp
 
 RESOURCES = \
     res/coinvault.qrc \

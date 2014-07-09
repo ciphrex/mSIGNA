@@ -53,7 +53,7 @@
 #include "networksettingsdialog.h"
 #include "keychainbackupdialog.h"
 #include "passphrasedialog.h"
-#include "resyncdialog.h"
+//#include "resyncdialog.h"
 
 // Logging
 #include "severitylogger.h"
@@ -75,7 +75,7 @@ MainWindow::MainWindow() :
     syncHeight(0),
     bestHeight(0),
     connected(false),
-    doneHeaderSync(false),
+    synched(false),
     networkState(NETWORK_STATE_NOT_CONNECTED),
     accountModel(nullptr),
     keychainModel(nullptr),
@@ -120,7 +120,7 @@ MainWindow::MainWindow() :
     });
 //    networkSync.subscribeBlock([&](const ChainBlock& block) { accountModel->insertBlock(block); });
     networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleBlock) { accountModel->insertMerkleBlock(merkleBlock); });
-    networkSync.subscribeBlockTreeChanged([&]() { doneHeaderSync = false; emit updateBestHeight(networkSync.getBestHeight()); });
+    networkSync.subscribeBlockTreeChanged([&]() { synched = false; emit updateBestHeight(networkSync.getBestHeight()); });
 
     qRegisterMetaType<bytes_t>("bytes_t");
     connect(accountModel, SIGNAL(newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
@@ -238,11 +238,10 @@ void MainWindow::updateNetworkState(network_state_t newState)
         if (!connected) {
             newState = NETWORK_STATE_NOT_CONNECTED;
         }
-        else if (syncHeight != bestHeight && (!doneHeaderSync || accountModel->getNumAccounts() > 0)) {
+        else if (!synched) { //syncHeight != bestHeight && (!synched || accountModel->getNumAccounts() > 0)) {
             newState = NETWORK_STATE_SYNCHING;
         }
         else {
-            doneHeaderSync = true;
             newState = NETWORK_STATE_SYNCHED;
         }
     }
@@ -364,7 +363,7 @@ void MainWindow::promptResync()
         }
     }
     else {
-        resync();
+        syncBlocks();
     }
 }
 
@@ -399,7 +398,7 @@ void MainWindow::openVault(QString fileName)
     }
 }
 
-void MainWindow::importVault(QString fileName)
+void MainWindow::importVault(QString /* fileName */)
 {
 }
 
@@ -792,7 +791,7 @@ void MainWindow::newAccount()
             accountView->update();
             tabWidget->setCurrentWidget(accountView);
             networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
-            if (connected) resync();
+            if (connected) syncBlocks();
         }
     }
     catch (const exception& e) {
@@ -1227,51 +1226,49 @@ void MainWindow::newBlock(const chain_block_t& block)
 }
 */
 
-void MainWindow::resync()
+void MainWindow::syncBlocks()
 {
     updateStatusMessage(tr("Resynchronizing vault"));
     uint32_t startTime = accountModel->getMaxFirstBlockTimestamp();
     std::vector<bytes_t> locatorHashes = accountModel->getLocatorHashes();
     for (auto& hash: locatorHashes) {
-        LOGGER(debug) << "MainWindow::resync() - hash: " << uchar_vector(hash).getHex() << std::endl;
+        LOGGER(debug) << "MainWindow::syncBlocks() - hash: " << uchar_vector(hash).getHex() << std::endl;
     }
     networkSync.syncBlocks(locatorHashes, startTime);
 }
 
-void MainWindow::doneSync()
+void MainWindow::doneHeaderSync()
 {
-    doneHeaderSync = true;
     emit updateBestHeight(networkSync.getBestHeight());
-//    updateStatusMessage(tr("Finished headers sync"));
     emit status(tr("Finished headers sync"));
     //networkStateLabel->setPixmap(*synchedIcon);
     if (accountModel->isOpen()) {
         try {
-            resync();
+            syncBlocks();
         }
         catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::doneSync - " << e.what() << std::endl;
-//            updateStatusMessage(QString::fromStdString(e.what()));
+            LOGGER(debug) << "MainWindow::doneHeaderSync - " << e.what() << std::endl;
             emit status(QString::fromStdString(e.what()));
         }
     }
 }
 
-void MainWindow::doneResync()
+void MainWindow::doneBlockSync()
 {
-    stopResyncAction->setEnabled(false);
     networkSync.getMempool();
-//    updateStatusMessage(tr("Finished resynch"));
-    emit status(tr("Finished resynch"));
+    synched = true;
+    emit status(tr("Finished block sync"));
 }
 
 void MainWindow::addBestChain(const chain_header_t& header)
 {
+    synched = false;
     emit updateBestHeight(header.height);
 }
 
 void MainWindow::removeBestChain(const chain_header_t& header)
 {
+    synched = false;
     bytes_t hash = header.getHashLittleEndian();
     LOGGER(debug) << "MainWindow::removeBestChain - " << uchar_vector(hash).getHex() << std::endl;
     //accountModel->deleteMerkleBlock(hash);    
@@ -1295,7 +1292,7 @@ void MainWindow::connectionOpen()
 
 void MainWindow::connectionClosed()
 {
-    doneHeaderSync = false;
+    synched = false;
 //    updateStatusMessage(tr("Connection closed"));
     emit status(tr("Connection closed"));
     // networkStateLabel->setPixmap(*notConnectedIcon);    
@@ -1312,7 +1309,6 @@ void MainWindow::startNetworkSync()
         updateStatusMessage(message);
 //        updateStatusMessage(tr("Connecting to ") + host + ":" + QString::number(port) + "...");
         networkSync.start(host.toStdString(), port);
-        updateNetworkState();
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::startNetworkSync - " << e.what() << std::endl;
@@ -1333,6 +1329,7 @@ void MainWindow::stopNetworkSync()
     }
 }
 
+/*
 void MainWindow::resyncBlocks()
 {
     if (!connected) {
@@ -1358,6 +1355,7 @@ void MainWindow::stopResyncBlocks()
 {
     networkSync.stopSyncBlocks();
 }
+*/
 
 void MainWindow::networkStatus(const QString& status)
 {
@@ -1366,27 +1364,27 @@ void MainWindow::networkStatus(const QString& status)
 
 void MainWindow::networkError(const QString& error)
 {
-    QString message = tr("Network Error: ") + error;
-//    updateStatusMessage(tr("Network Error: ") + error);
-    emit status(message);
     connected = false;
+    synched = false;
     disconnectAction->setEnabled(false);
     disconnectAction->setText(tr("Disconnect from ") + host);
     connectAction->setEnabled(true);
     sendRawTxAction->setEnabled(false);
+    updateNetworkState();
 
-    //boost::lock_guard<boost::mutex> lock(repaintMutex);
-    //networkStateLabel->setText(tr("Disconnected"));
+    QString message = tr("Network Error: ") + error;
+    emit status(message);
 }
 
 void MainWindow::networkStarted()
 {
     connected = true;
+    synched = false;
     connectAction->setEnabled(false);
     disconnectAction->setEnabled(true);
-    resyncAction->setEnabled(true);
     sendRawTxAction->setEnabled(true);
-//    updateStatusMessage(tr("Network started"));
+    updateNetworkState();
+
     emit status(tr("Network started"));
 }
 
@@ -1394,24 +1392,28 @@ void MainWindow::networkStarted()
 void MainWindow::networkStopped()
 {
     connected = false;
-    updateNetworkState();
-    resyncAction->setEnabled(false);
+    synched = false;
     disconnectAction->setEnabled(false);
     disconnectAction->setText(tr("Disconnect from ") + host);
     connectAction->setEnabled(true);
     sendRawTxAction->setEnabled(false);
+    updateNetworkState();
+
+    emit status(tr("Network stopped"));
 }
 
 void MainWindow::networkTimeout()
 {
     connected = false;
-//    updateStatusMessage(tr("Network timed out"));
-    emit status(tr("Network timed out"));
+    synched = false;
     disconnectAction->setEnabled(false);
     disconnectAction->setText(tr("Disconnect from ") + host);
     connectAction->setEnabled(true);
     sendRawTxAction->setEnabled(false);
-    //networkStateLabel->setText(tr("Disconnected"));
+    updateNetworkState();
+
+    emit status(tr("Network timed out"));
+
     // TODO: Attempt reconnect
 }
 
@@ -1683,6 +1685,10 @@ void MainWindow::createActions()
     disconnectAction->setStatusTip(tr("Disconnect from p2p node"));
     disconnectAction->setEnabled(false);
 
+    connect(connectAction, SIGNAL(triggered()), this, SLOT(startNetworkSync()));
+    connect(disconnectAction, SIGNAL(triggered()), this, SLOT(stopNetworkSync()));
+
+/*
     resyncAction = new QAction(tr("Resync..."), this);
     resyncAction->setStatusTip(tr("Resync from a specific height"));
     resyncAction->setEnabled(false);
@@ -1691,10 +1697,9 @@ void MainWindow::createActions()
     stopResyncAction->setStatusTip(tr("Stop resync"));
     stopResyncAction->setEnabled(false);
 
-    connect(connectAction, SIGNAL(triggered()), this, SLOT(startNetworkSync()));
-    connect(disconnectAction, SIGNAL(triggered()), this, SLOT(stopNetworkSync()));
     connect(resyncAction, SIGNAL(triggered()), this, SLOT(resyncBlocks()));
     connect(stopResyncAction, SIGNAL(triggered()), this, SLOT(stopResyncBlocks()));
+*/
 
 /*    connect(this, SIGNAL(status(const QString&)), this, SLOT(networkStatus(const QString&)));
     connect(this, SIGNAL(signal_error(const QString&)), this, SLOT(networkError(const QString&)));
@@ -1703,7 +1708,7 @@ void MainWindow::createActions()
     connect(this, SIGNAL(signal_networkStarted()), this, SLOT(networkStarted()));
     connect(this, SIGNAL(signal_networkStopped()), this, SLOT(networkStopped()));
     connect(this, SIGNAL(signal_networkTimeout()), this, SLOT(networkTimeout()));
-    connect(this, SIGNAL(signal_networkDoneSync()), this, SLOT(doneSync()));
+    connect(this, SIGNAL(signal_networkDoneSync()), this, SLOT(doneHeaderSync()));
 */
     networkSync.subscribeStatus([this](const std::string& message) {
         LOGGER(debug) << "status slot" << std::endl;
@@ -1742,12 +1747,12 @@ void MainWindow::createActions()
 
     networkSync.subscribeHeadersSynched([this]() {
         LOGGER(debug) << "headers synched slot" << std::endl;
-        doneSync();
+        doneHeaderSync();
     });
 
     networkSync.subscribeBlocksSynched([this]() {
         LOGGER(debug) << "blocks synched slot" << std::endl;
-        networkSync.getMempool();
+        doneBlockSync();
     });
         
 
@@ -1840,9 +1845,9 @@ void MainWindow::createMenus()
     networkMenu = menuBar()->addMenu(tr("&Network"));
     networkMenu->addAction(connectAction);
     networkMenu->addAction(disconnectAction);
-    networkMenu->addSeparator();
-    networkMenu->addAction(resyncAction);
-    networkMenu->addAction(stopResyncAction);
+    //networkMenu->addSeparator();
+    //networkMenu->addAction(resyncAction);
+    //networkMenu->addAction(stopResyncAction);
     networkMenu->addSeparator();
     networkMenu->addAction(networkSettingsAction);
 
