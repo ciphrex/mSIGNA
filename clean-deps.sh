@@ -4,6 +4,9 @@ set -x
 cd deps/logger
 make clean
 
+cd ../sysutils
+make clean
+
 cd ../CoinCore
 make clean
 
