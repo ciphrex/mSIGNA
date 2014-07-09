@@ -82,7 +82,6 @@ private:
     bool m_bConnected;
     bool m_bSynching;
     bool m_bBlockTreeSynched;
-    bool m_bVaultSynched;
     uint32_t m_bestHeight;
     uint32_t m_syncHeight;
 

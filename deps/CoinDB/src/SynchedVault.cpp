@@ -45,7 +45,6 @@ SynchedVault::SynchedVault() :
     m_bConnected(false),
     m_bSynching(false),
     m_bBlockTreeSynched(false),
-    m_bVaultSynched(false),
     m_bestHeight(0),
     m_syncHeight(0)
 {
