@@ -56,11 +56,11 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
 
         if (type == CoinDB::Tx::UNSENT) {
             sendTxAction->setText(tr("Send Transaction"));
-            sendTxAction->setEnabled(networkSync && networkSync->isConnected());
+            sendTxAction->setEnabled(networkSync && networkSync->connected());
         }
         else {
             sendTxAction->setText(tr("Resend Transaction"));
-            sendTxAction->setEnabled(networkSync && networkSync->isConnected() && typeItem->text() == "0");
+            sendTxAction->setEnabled(networkSync && networkSync->connected() && typeItem->text() == "0");
         }
 
         if (type == CoinDB::Tx::PROPAGATED || type == CoinDB::Tx::CONFIRMED) {

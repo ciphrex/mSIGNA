@@ -248,7 +248,7 @@ void TxModel::sendTx(int row, CoinQ::Network::NetworkSync* networkSync)
         throw std::runtime_error(tr("Invalid row.").toStdString());
     }
 
-    if (!networkSync || !networkSync->isConnected()) {
+    if (!networkSync || !networkSync->connected()) {
         throw std::runtime_error(tr("Must be connected to network to send.").toStdString());
     }
 

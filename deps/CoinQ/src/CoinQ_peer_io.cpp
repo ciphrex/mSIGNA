@@ -36,6 +36,7 @@ void Peer::do_read()
 {
     boost::asio::async_read(socket_, boost::asio::buffer(read_buffer, READ_BUFFER_SIZE), boost::asio::transfer_at_least(MIN_MESSAGE_HEADER_SIZE),
     strand_.wrap([this](const boost::system::error_code& ec, std::size_t bytes_read) {
+        if (!bRunning) return;
         //std::cout << "error code: " << ec.value() << ": " << ec.message() << std::endl;
         //std::cout << "bytes read: " << bytes_read << std::endl;
         if (ec) {
@@ -144,6 +145,7 @@ void Peer::do_read()
 
 void Peer::do_write(boost::shared_ptr<uchar_vector> data)
 {
+    if (!bRunning) return;
     //std::cout << "Data to write: " << data.getHex() << std::endl;
     boost::asio::async_write(socket_, boost::asio::buffer(*data), boost::asio::transfer_all(),
     strand_.wrap([this](const boost::system::error_code& ec, std::size_t bytes_written) {
@@ -225,15 +227,18 @@ void Peer::start()
 
 void Peer::stop()
 {
-    if (!bRunning) return;
-    boost::unique_lock<boost::shared_mutex> lock(mutex);
-    if (!bRunning) return;
+    {
+        if (!bRunning) return;
+        boost::unique_lock<boost::shared_mutex> lock(mutex);
+        if (!bRunning) return;
 
-    socket_.cancel();
-    socket_.close();
-    bRunning = false;
-    bHandshakeComplete = false;
-    bWriteReady = false;
+        socket_.cancel();
+        socket_.close();
+        bRunning = false;
+        bHandshakeComplete = false;
+        bWriteReady = false;
+    }
+
     notifyStop(*this);
 }
 

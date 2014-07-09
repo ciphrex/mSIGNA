@@ -120,7 +120,7 @@ void Vault::close()
 
     if (!db_) return;
     boost::lock_guard<boost::mutex> lock(mutex);
-    db_ = nullptr; 
+    db_.reset();
 }
 
 uint32_t Vault::getSchemaVersion() const
@@ -973,8 +973,14 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(boost::archive::text_iar
     // Persist account
     db_->update(account);
 
-    uint32_t maxFirstBlockTimestamp = getMaxFirstBlockTimestamp_unwrapped();
-    odb::result<BlockHeader> header_r(db_->query<BlockHeader>((odb::query<BlockHeader>::timestamp > maxFirstBlockTimestamp) + "ORDER BY" + odb::query<BlockHeader>::height + "ASC LIMIT 1"));
+
+    uint32_t replaceBlockTimestamp = account->time_created();
+    if (replaceBlockTimestamp > MAX_HORIZON_TIMESTAMP_OFFSET)
+        replaceBlockTimestamp -= MAX_HORIZON_TIMESTAMP_OFFSET;
+    else
+        replaceBlockTimestamp = 0;
+
+    odb::result<BlockHeader> header_r(db_->query<BlockHeader>((odb::query<BlockHeader>::timestamp >= replaceBlockTimestamp) + "ORDER BY" + odb::query<BlockHeader>::height + "ASC LIMIT 1"));
     if (!header_r.empty())
     {
         uint32_t height = header_r.begin()->height();
