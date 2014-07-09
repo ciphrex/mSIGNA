@@ -125,8 +125,6 @@ private slots:
     void importAccount(QString fileName = QString());
     void exportAccount();
     void exportSharedAccount();
-//    void importAccount();
-//    void exportAccount();
     void deleteAccount();
 //    void renameAccount();
     void viewAccountHistory();
@@ -162,9 +160,7 @@ private slots:
     // NETWORK OPERATIONS
     void startNetworkSync();
     void stopNetworkSync();
-    //void resyncBlocks();
-    //void stopResyncBlocks();
-    void promptResync();
+    void promptSync();
     void connectionOpen();
     void connectionClosed();
     void networkStatus(const QString& status);
@@ -289,8 +285,6 @@ private:
     int resyncHeight;
     QAction* connectAction;
     QAction* disconnectAction;
-    //QAction* resyncAction;
-    //QAction* stopResyncAction;
     QAction* networkSettingsAction;
 
     // network sync state

@@ -350,7 +350,7 @@ void MainWindow::newVault(QString fileName)
     }
 }
 
-void MainWindow::promptResync()
+void MainWindow::promptSync()
 {
     if (!connected) {
         QMessageBox msgBox;
@@ -390,7 +390,7 @@ void MainWindow::openVault(QString fileName)
         selectAccount(0);
         updateStatusMessage(tr("Opened ") + fileName);
 
-        promptResync();
+        promptSync();
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::openVault - " << e.what() << std::endl;
@@ -842,7 +842,7 @@ void MainWindow::importAccount(QString fileName)
         tabWidget->setCurrentWidget(accountView);
         networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         updateStatusMessage(tr("Imported account ") + name);
-        promptResync();
+        promptSync();
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::importAccount - " << e.what() << std::endl;
@@ -1228,7 +1228,7 @@ void MainWindow::newBlock(const chain_block_t& block)
 
 void MainWindow::syncBlocks()
 {
-    updateStatusMessage(tr("Resynchronizing vault"));
+    updateStatusMessage(tr("Synchronizing vault"));
     uint32_t startTime = accountModel->getMaxFirstBlockTimestamp();
     std::vector<bytes_t> locatorHashes = accountModel->getLocatorHashes();
     for (auto& hash: locatorHashes) {
@@ -1240,7 +1240,7 @@ void MainWindow::syncBlocks()
 void MainWindow::doneHeaderSync()
 {
     emit updateBestHeight(networkSync.getBestHeight());
-    emit status(tr("Finished headers sync"));
+    emit status(tr("Finished header sync"));
     //networkStateLabel->setPixmap(*synchedIcon);
     if (accountModel->isOpen()) {
         try {
@@ -1257,20 +1257,26 @@ void MainWindow::doneBlockSync()
 {
     networkSync.getMempool();
     synched = true;
+    updateNetworkState();
+
     emit status(tr("Finished block sync"));
 }
 
 void MainWindow::addBestChain(const chain_header_t& header)
 {
     synched = false;
+    updateNetworkState();
     emit updateBestHeight(header.height);
 }
 
 void MainWindow::removeBestChain(const chain_header_t& header)
 {
-    synched = false;
     bytes_t hash = header.getHashLittleEndian();
     LOGGER(debug) << "MainWindow::removeBestChain - " << uchar_vector(hash).getHex() << std::endl;
+    
+    synched = false;
+    updateNetworkState();
+
     //accountModel->deleteMerkleBlock(hash);    
     int diff = bestHeight - networkSync.getBestHeight();
     if (diff >= 0) {
@@ -1283,31 +1289,29 @@ void MainWindow::removeBestChain(const chain_header_t& header)
 
 void MainWindow::connectionOpen()
 {
-//    updateStatusMessage(tr("Connection opened"));
+    connected = true;
+    synched = false;
+    updateNetworkState();
+
     QString message = tr("Connected to ") + host + ":" + QString::number(port);
-//    updateStatusMessage(tr("Connected to ") + host + ":" + QString::number(port));
     emit status(message);
-//    networkStateLabel->setText(tr("Connected to ") + host + ":" + QString::number(port));
 }
 
 void MainWindow::connectionClosed()
 {
+    connected = false;
     synched = false;
-//    updateStatusMessage(tr("Connection closed"));
+    updateNetworkState();
+
     emit status(tr("Connection closed"));
-    // networkStateLabel->setPixmap(*notConnectedIcon);    
-//    updateStatusMessage(tr("Disconneted"));
-//    networkStateLabel->setText(tr("Disconnected"));
 }
 
 void MainWindow::startNetworkSync()
 {
     connectAction->setEnabled(false);
-    //networkStateLabel->setMovie(synchingMovie);
     try {
         QString message(tr("Connecting to ") + host + ":" + QString::number(port) + "...");
         updateStatusMessage(message);
-//        updateStatusMessage(tr("Connecting to ") + host + ":" + QString::number(port) + "...");
         networkSync.start(host.toStdString(), port);
     }
     catch (const exception& e) {
@@ -1446,7 +1450,6 @@ void MainWindow::errorStatus(const QString& message)
 {
     LOGGER(debug) << "MainWindow::errorStatus - " << message.toStdString() << std::endl;
     QString error = tr("Error - ") + message;
-//    updateStatusMessage(tr("Error - ") + message);
     emit status(error);
 }
 
@@ -1688,28 +1691,6 @@ void MainWindow::createActions()
     connect(connectAction, SIGNAL(triggered()), this, SLOT(startNetworkSync()));
     connect(disconnectAction, SIGNAL(triggered()), this, SLOT(stopNetworkSync()));
 
-/*
-    resyncAction = new QAction(tr("Resync..."), this);
-    resyncAction->setStatusTip(tr("Resync from a specific height"));
-    resyncAction->setEnabled(false);
-
-    stopResyncAction = new QAction(tr("Stop Resync"), this);
-    stopResyncAction->setStatusTip(tr("Stop resync"));
-    stopResyncAction->setEnabled(false);
-
-    connect(resyncAction, SIGNAL(triggered()), this, SLOT(resyncBlocks()));
-    connect(stopResyncAction, SIGNAL(triggered()), this, SLOT(stopResyncBlocks()));
-*/
-
-/*    connect(this, SIGNAL(status(const QString&)), this, SLOT(networkStatus(const QString&)));
-    connect(this, SIGNAL(signal_error(const QString&)), this, SLOT(networkError(const QString&)));
-    connect(this, SIGNAL(signal_connectionOpen()), this, SLOT(connectionOpen()));
-    connect(this, SIGNAL(signal_connectionClosed()), this, SLOT(connectionClosed()));
-    connect(this, SIGNAL(signal_networkStarted()), this, SLOT(networkStarted()));
-    connect(this, SIGNAL(signal_networkStopped()), this, SLOT(networkStopped()));
-    connect(this, SIGNAL(signal_networkTimeout()), this, SLOT(networkTimeout()));
-    connect(this, SIGNAL(signal_networkDoneSync()), this, SLOT(doneHeaderSync()));
-*/
     networkSync.subscribeStatus([this](const std::string& message) {
         LOGGER(debug) << "status slot" << std::endl;
         networkStatus(QString::fromStdString(message)); 
@@ -1754,13 +1735,6 @@ void MainWindow::createActions()
         LOGGER(debug) << "blocks synched slot" << std::endl;
         doneBlockSync();
     });
-        
-
-/*
-    qRegisterMetaType<chain_header_t>("chain_header_t");
-    connect(this, SIGNAL(signal_addBestChain(const chain_header_t&)), this, SLOT(addBestChain(const chain_header_t&)));
-    connect(this, SIGNAL(signal_removeBestChain(const chain_header_t&)), this, SLOT(removeBestChain(const chain_header_t&)));
-*/
 
     networkSync.subscribeAddBestChain([this](const chain_header_t& header) {
         LOGGER(debug) << "add best chain slot" << std::endl;
@@ -1845,9 +1819,6 @@ void MainWindow::createMenus()
     networkMenu = menuBar()->addMenu(tr("&Network"));
     networkMenu->addAction(connectAction);
     networkMenu->addAction(disconnectAction);
-    //networkMenu->addSeparator();
-    //networkMenu->addAction(resyncAction);
-    //networkMenu->addAction(stopResyncAction);
     networkMenu->addSeparator();
     networkMenu->addAction(networkSettingsAction);
 
@@ -1878,18 +1849,6 @@ void MainWindow::createToolBars()
     networkToolBar = addToolBar(tr("Network"));
     networkToolBar->addAction(connectAction);
     networkToolBar->addAction(disconnectAction);
-
-/*
-    editToolBar = addToolBar(tr("Edit"));
-    editToolBar->addAction(newKeychainAction);
-    editToolBar->addAction(newAccountAction);
-    editToolBar->addAction(deleteAccountAction);
-
-    txToolBar = addToolBar(tr("Transactions"));
-    txToolBar->addAction(insertRawTxAction);
-    txToolBar->addAction(createRawTxAction);
-    txToolBar->addAction(signRawTxAction);
-*/
 }
 
 void MainWindow::createStatusBar()
