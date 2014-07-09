@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     app.processEvents();
     splash.showMessage("\n  Loading settings...");
     MainWindow mainWin; // constructor loads settings
-    QObject::connect(&mainWin, &MainWindow::status, [&](const QString& message) { splash.showMessage(message); });
+    QObject::connect(&mainWin, &MainWindow::status, [&](const QString& message) { splash.showMessage(QString("\n ") + message); });
 
     splash.showMessage("\n  Starting command server...");
     if (!commandServer.start()) {
