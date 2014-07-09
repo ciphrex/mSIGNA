@@ -74,9 +74,7 @@ MainWindow::MainWindow() :
     networkSync(getCoinParams()),
     syncHeight(0),
     bestHeight(0),
-    connected(false),
-    synched(false),
-    networkState(NETWORK_STATE_NOT_CONNECTED),
+    networkState(NETWORK_STATE_STOPPED),
     accountModel(nullptr),
     keychainModel(nullptr),
     txActions(nullptr)
@@ -120,7 +118,7 @@ MainWindow::MainWindow() :
     });
 //    networkSync.subscribeBlock([&](const ChainBlock& block) { accountModel->insertBlock(block); });
     networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleBlock) { accountModel->insertMerkleBlock(merkleBlock); });
-    networkSync.subscribeBlockTreeChanged([&]() { synched = false; emit updateBestHeight(networkSync.getBestHeight()); });
+    networkSync.subscribeBlockTreeChanged([&]() { emit updateBestHeight(networkSync.getBestHeight()); });
 
     qRegisterMetaType<bytes_t>("bytes_t");
     connect(accountModel, SIGNAL(newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
@@ -161,13 +159,11 @@ MainWindow::MainWindow() :
         LOGGER(debug) << "MainWindow::updateBestHeight emitted. New best height: " << height << std::endl;
         syncHeight = height;
         updateSyncLabel();
-        updateNetworkState();
     });
     connect(this, &MainWindow::updateBestHeight, [this](int height) {
         LOGGER(debug) << "MainWindow::updateBestHeight emitted. New best height: " << height << std::endl;
         bestHeight = height;
         updateSyncLabel();
-        updateNetworkState();
     });
 
     setAcceptDrops(true);
@@ -234,24 +230,15 @@ void MainWindow::updateSyncLabel()
 
 void MainWindow::updateNetworkState(network_state_t newState)
 {
-    if (newState == NETWORK_STATE_UNKNOWN) {
-        if (!connected) {
-            newState = NETWORK_STATE_NOT_CONNECTED;
-        }
-        else if (!synched) { //syncHeight != bestHeight && (!synched || accountModel->getNumAccounts() > 0)) {
-            newState = NETWORK_STATE_SYNCHING;
-        }
-        else {
-            newState = NETWORK_STATE_SYNCHED;
-        }
-    }
-
-    if (newState != networkState) {
+    if (newState != networkState)
+    {
         networkState = newState;
-        switch (networkState) {
-        case NETWORK_STATE_NOT_CONNECTED:
-            networkStateLabel->setPixmap(*notConnectedIcon);
+        switch (networkState)
+        {
+        case NETWORK_STATE_STOPPED:
+            networkStateLabel->setPixmap(*stoppedIcon);
             break;
+        case NETWORK_STATE_STARTED:
         case NETWORK_STATE_SYNCHING:
             networkStateLabel->setMovie(synchingMovie);
             break;
@@ -262,6 +249,10 @@ void MainWindow::updateNetworkState(network_state_t newState)
             // We should never get here
             ;
         }
+
+        connectAction->setEnabled(!isConnected());
+        disconnectAction->setEnabled(isConnected());
+        sendRawTxAction->setEnabled(isConnected());
     }
 }
 
@@ -352,7 +343,7 @@ void MainWindow::newVault(QString fileName)
 
 void MainWindow::promptSync()
 {
-    if (!connected) {
+    if (!isConnected()) {
         QMessageBox msgBox;
         msgBox.setText(tr("You are not connected to network."));
         msgBox.setInformativeText(tr("Would you like to connect to network to synchronize your accounts?"));
@@ -791,7 +782,7 @@ void MainWindow::newAccount()
             accountView->update();
             tabWidget->setCurrentWidget(accountView);
             networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
-            if (connected) syncBlocks();
+            if (isConnected()) syncBlocks();
         }
     }
     catch (const exception& e) {
@@ -1109,7 +1100,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 if (tx->status() == CoinDB::Tx::UNSIGNED) {
                     throw std::runtime_error(tr("Could not send - transaction still missing signatures.").toStdString());
                 }
-                if (!connected) {
+                if (!isConnected()) {
                     throw std::runtime_error(tr("Must be connected to network to send.").toStdString());
                 }
                 Coin::Transaction coin_tx = tx->toCoinCore();
@@ -1150,7 +1141,7 @@ void MainWindow::signRawTx()
 
 void MainWindow::sendRawTx()
 {
-    if (!connected) {
+    if (!isConnected()) {
         showError(tr("Must be connected to send raw transaction"));
         return;
     }
@@ -1237,11 +1228,16 @@ void MainWindow::syncBlocks()
     networkSync.syncBlocks(locatorHashes, startTime);
 }
 
-void MainWindow::doneHeaderSync()
+void MainWindow::fetchingHeaders()
+{
+    updateNetworkState(NETWORK_STATE_SYNCHING);
+    emit status(tr("Fetching headers"));
+}
+
+void MainWindow::headersSynched()
 {
     emit updateBestHeight(networkSync.getBestHeight());
     emit status(tr("Finished header sync"));
-    //networkStateLabel->setPixmap(*synchedIcon);
     if (accountModel->isOpen()) {
         try {
             syncBlocks();
@@ -1253,19 +1249,22 @@ void MainWindow::doneHeaderSync()
     }
 }
 
-void MainWindow::doneBlockSync()
+void MainWindow::fetchingBlocks()
+{
+    updateNetworkState(NETWORK_STATE_SYNCHING);
+    emit status(tr("Fetching blocks"));
+}
+
+void MainWindow::blocksSynched()
 {
     networkSync.getMempool();
-    synched = true;
-    updateNetworkState();
+    updateNetworkState(NETWORK_STATE_SYNCHED);
 
     emit status(tr("Finished block sync"));
 }
 
 void MainWindow::addBestChain(const chain_header_t& header)
 {
-    synched = false;
-    updateNetworkState();
     emit updateBestHeight(header.height);
 }
 
@@ -1274,14 +1273,9 @@ void MainWindow::removeBestChain(const chain_header_t& header)
     bytes_t hash = header.getHashLittleEndian();
     LOGGER(debug) << "MainWindow::removeBestChain - " << uchar_vector(hash).getHex() << std::endl;
     
-    synched = false;
-    updateNetworkState();
-
-    //accountModel->deleteMerkleBlock(hash);    
     int diff = bestHeight - networkSync.getBestHeight();
     if (diff >= 0) {
         QString message = tr("Reorganization of ") + QString::number(diff + 1) + tr(" blocks");
-//        updateStatusMessage(tr("Reorganization of ") + QString::number(diff + 1) + tr(" blocks"));
         emit status(message);
         emit updateBestHeight(networkSync.getBestHeight());
     }
@@ -1289,20 +1283,12 @@ void MainWindow::removeBestChain(const chain_header_t& header)
 
 void MainWindow::connectionOpen()
 {
-    connected = true;
-    synched = false;
-    updateNetworkState();
-
     QString message = tr("Connected to ") + host + ":" + QString::number(port);
     emit status(message);
 }
 
 void MainWindow::connectionClosed()
 {
-    connected = false;
-    synched = false;
-    updateNetworkState();
-
     emit status(tr("Connection closed"));
 }
 
@@ -1333,34 +1319,6 @@ void MainWindow::stopNetworkSync()
     }
 }
 
-/*
-void MainWindow::resyncBlocks()
-{
-    if (!connected) {
-        showError(tr("Must be connected to resync."));
-    }
-
-    ResyncDialog dlg(resyncHeight, networkSync.getBestHeight());
-    if (dlg.exec()) {
-        stopResyncAction->setEnabled(true);
-        resyncHeight = dlg.getResyncHeight();
-        try {
-            //networkSync.resync(resyncHeight);
-            throw std::runtime_error("Disabled.");
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::resyncBlocks - " << e.what() << std::endl;
-            showError(e.what());
-        }
-    }
-}
-
-void MainWindow::stopResyncBlocks()
-{
-    networkSync.stopSyncBlocks();
-}
-*/
-
 void MainWindow::networkStatus(const QString& status)
 {
     updateStatusMessage(status);
@@ -1368,57 +1326,27 @@ void MainWindow::networkStatus(const QString& status)
 
 void MainWindow::networkError(const QString& error)
 {
-    connected = false;
-    synched = false;
-    disconnectAction->setEnabled(false);
-    disconnectAction->setText(tr("Disconnect from ") + host);
-    connectAction->setEnabled(true);
-    sendRawTxAction->setEnabled(false);
-    updateNetworkState();
-
     QString message = tr("Network Error: ") + error;
     emit status(message);
 }
 
 void MainWindow::networkStarted()
 {
-    connected = true;
-    synched = false;
-    connectAction->setEnabled(false);
-    disconnectAction->setEnabled(true);
-    sendRawTxAction->setEnabled(true);
-    updateNetworkState();
-
+    updateNetworkState(NETWORK_STATE_STARTED);
     emit status(tr("Network started"));
 }
 
 // TODO: put common state change operations into common functions
 void MainWindow::networkStopped()
 {
-    connected = false;
-    synched = false;
-    disconnectAction->setEnabled(false);
     disconnectAction->setText(tr("Disconnect from ") + host);
-    connectAction->setEnabled(true);
-    sendRawTxAction->setEnabled(false);
-    updateNetworkState();
-
+    updateNetworkState(NETWORK_STATE_STOPPED);
     emit status(tr("Network stopped"));
 }
 
 void MainWindow::networkTimeout()
 {
-    connected = false;
-    synched = false;
-    disconnectAction->setEnabled(false);
-    disconnectAction->setText(tr("Disconnect from ") + host);
-    connectAction->setEnabled(true);
-    sendRawTxAction->setEnabled(false);
-    updateNetworkState();
-
     emit status(tr("Network timed out"));
-
-    // TODO: Attempt reconnect
 }
 
 void MainWindow::networkSettings()
@@ -1430,8 +1358,9 @@ void MainWindow::networkSettings()
         port = dlg.getPort();
         autoConnect = dlg.getAutoConnect();
         connectAction->setText(tr("Connect to ") + host);
-        if (!connected)
+        if (!isConnected()) {
             disconnectAction->setText(tr("Disconnect from ") + host);
+        }
 
         QSettings settings("Ciphrex", getDefaultSettings().getAppName());
         settings.setValue("host", host);
@@ -1726,14 +1655,24 @@ void MainWindow::createActions()
         networkTimeout();
     });
 
+    networkSync.subscribeFetchingHeaders([this]() {
+        LOGGER(debug) << "fetching headersvslot" << std::endl;
+        fetchingHeaders();
+    });
+
     networkSync.subscribeHeadersSynched([this]() {
         LOGGER(debug) << "headers synched slot" << std::endl;
-        doneHeaderSync();
+        headersSynched();
+    });
+
+    networkSync.subscribeFetchingBlocks([this]() {
+        LOGGER(debug) << "fetching blocks slot" << std::endl;
+        fetchingBlocks();
     });
 
     networkSync.subscribeBlocksSynched([this]() {
         LOGGER(debug) << "blocks synched slot" << std::endl;
-        doneBlockSync();
+        blocksSynched();
     });
 
     networkSync.subscribeAddBestChain([this](const chain_header_t& header) {
@@ -1857,11 +1796,11 @@ void MainWindow::createStatusBar()
     updateSyncLabel();
 
     networkStateLabel = new QLabel();
-    notConnectedIcon = new QPixmap(":/icons/vault_status_icons/36x22/nc-icon-36x22.gif");
+    stoppedIcon = new QPixmap(":/icons/vault_status_icons/36x22/nc-icon-36x22.gif");
     synchingMovie = new QMovie(":/icons/vault_status_icons/36x22/synching-icon-animated-36x22.gif");
     synchingMovie->start();
     synchedIcon = new QPixmap(":/icons/vault_status_icons/36x22/synched-icon-36x22.gif");
-    networkStateLabel->setPixmap(*notConnectedIcon);
+    networkStateLabel->setPixmap(*stoppedIcon);
 
     statusBar()->addPermanentWidget(syncLabel);
     statusBar()->addPermanentWidget(networkStateLabel);
@@ -1883,7 +1822,6 @@ void MainWindow::loadSettings()
     host = settings.value("host", "localhost").toString();
     port = settings.value("port", getCoinParams().default_port()).toInt();
     autoConnect = settings.value("autoconnect", false).toBool();
-    resyncHeight = settings.value("resyncheight", 0).toInt();
 
     setDocDir(settings.value("lastvaultdir", getDefaultSettings().getDocumentDir()).toString());
 }
@@ -1898,7 +1836,6 @@ void MainWindow::saveSettings()
     settings.setValue("host", host);
     settings.setValue("port", port);
     settings.setValue("autoconnect", autoConnect);
-    settings.setValue("resyncheight", resyncHeight);
     settings.setValue("lastvaultdir", getDocDir());
 }
 

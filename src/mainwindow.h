@@ -52,8 +52,17 @@ public:
     void saveSettings();
     void clearSettings();
 
+    enum network_state_t {
+        NETWORK_STATE_STOPPED,
+        NETWORK_STATE_STARTED,
+        NETWORK_STATE_SYNCHING,
+        NETWORK_STATE_SYNCHED
+    };
+
     void loadBlockTree();
     void tryConnect();
+    bool isConnected() const { return networkState >= NETWORK_STATE_SYNCHING; }
+    bool isSynched() const { return networkState == NETWORK_STATE_SYNCHED; }
 
     void updateStatusMessage(const QString& message);
 
@@ -81,16 +90,9 @@ protected:
     void dragEnterEvent(QDragEnterEvent* event);
     void dropEvent(QDropEvent* event);
 
-    enum network_state_t {
-        NETWORK_STATE_UNKNOWN,
-        NETWORK_STATE_NOT_CONNECTED,
-        NETWORK_STATE_SYNCHING,
-        NETWORK_STATE_SYNCHED
-    };
-
 protected slots:
     void updateSyncLabel();
-    void updateNetworkState(network_state_t newState = NETWORK_STATE_UNKNOWN);
+    void updateNetworkState(network_state_t newState);
     void updateVaultStatus(const QString& name = QString());
     void showError(const QString& errorMsg);
     void showUpdate(const QString& updateMsg);
@@ -146,11 +148,13 @@ private slots:
     void newTx(const bytes_t& hash);
     void sendRawTx();
 
-    ///////////////////
-    // BLOCK OPERATIONS
+    //////////////////////////////
+    // BLOCK OPERATIONS AND EVENTS
     void syncBlocks();
-    void doneHeaderSync(); // initial headers sync
-    void doneBlockSync(); // full block sync
+    void fetchingHeaders();
+    void headersSynched();
+    void fetchingBlocks();
+    void blocksSynched();
     void addBestChain(const chain_header_t& header);
     void removeBestChain(const chain_header_t& header);
     //void newBlock(const chain_block_t& block);
@@ -276,13 +280,10 @@ private:
     int bestHeight;
     QLabel* syncLabel;
     QLabel* networkStateLabel;
-    bool connected;
-    bool synched;
     QString blockTreeFile;
     QString host;
     int port;
     bool autoConnect;
-    int resyncHeight;
     QAction* connectAction;
     QAction* disconnectAction;
     QAction* networkSettingsAction;
@@ -290,8 +291,8 @@ private:
     // network sync state
     network_state_t networkState;
 
-    // network sync icons
-    QPixmap* notConnectedIcon;
+    // network state icons
+    QPixmap* stoppedIcon;
     QMovie* synchingMovie;
     QPixmap* synchedIcon;
 
