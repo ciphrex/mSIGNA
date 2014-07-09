@@ -53,6 +53,8 @@ Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const
 
 Keychain& Keychain::operator=(const Keychain& source)
 {
+    base::operator=(source);
+
     depth_ = source.depth_;
     parent_fp_ = source.parent_fp_;
     child_num_ = source.child_num_;
