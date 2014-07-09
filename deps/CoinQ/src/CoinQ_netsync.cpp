@@ -430,7 +430,6 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
     }
     else
     {
-        m_bFetchingBlocks = false;
         m_bBlocksSynched = true;
         notifyBlocksSynched();
     }
