@@ -613,7 +613,7 @@ std::vector<KeychainView> Vault::getRootKeychainViews_unwrapped(const std::strin
         query = query && (query_t::Account::name == account_name);
     if (getSchemaVersion_unwrapped() >= 4 && !get_hidden)
         query = query && (!query_t::Keychain::hidden);
-    odb::result<KeychainView> r(db_->query<KeychainView>(query));
+    odb::result<KeychainView> r(db_->query<KeychainView>(query + "ORDER BY" + query_t::Keychain::name));
     std::vector<KeychainView> views;
     // TODO: figure out why query sometimes returns duplicates.
     std::set<unsigned long> view_ids;
