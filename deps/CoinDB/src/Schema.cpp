@@ -1114,7 +1114,7 @@ std::set<bytes_t> Tx::missingSigPubkeys() const
     return pubkeys;
 }
 
-std::string Tx::toJson(bool includeRawTx) const
+std::string Tx::toJson(bool includeRawHex) const
 {
     std::stringstream ss;
     ss << "{"
@@ -1146,9 +1146,9 @@ std::string Tx::toJson(bool includeRawTx) const
     }
     ss << "]";
 
-    if (includeRawTx)
+    if (includeRawHex)
     {
-        ss << ",\"rawtx\":\"" << uchar_vector(raw()).getHex() << "\"";
+        ss << ",\"rawhex\":\"" << uchar_vector(raw()).getHex() << "\"";
     }
 
     ss << "}";

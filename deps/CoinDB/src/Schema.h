@@ -1090,7 +1090,7 @@ public:
     unsigned int missingSigCount() const;
     std::set<bytes_t> missingSigPubkeys() const;
 
-    std::string toJson(bool includeRawTx = false) const;
+    std::string toJson(bool includeRawHex = false) const;
 
 private:
     friend class odb::access;
