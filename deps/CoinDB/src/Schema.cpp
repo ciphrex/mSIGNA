@@ -1114,7 +1114,7 @@ std::set<bytes_t> Tx::missingSigPubkeys() const
     return pubkeys;
 }
 
-std::string Tx::toJson() const
+std::string Tx::toJson(bool includeRawTx) const
 {
     std::stringstream ss;
     ss << "{"
@@ -1144,7 +1144,13 @@ std::string Tx::toJson() const
         else            { addComma = true; }
         ss << txout->toJson();
     }
-    ss << "]"
-       << "}";
+    ss << "]";
+
+    if (includeRawTx)
+    {
+        ss << ",\"rawtx\":\"" << uchar_vector(raw()).getHex() << "\"";
+    }
+
+    ss << "}";
     return ss.str();
 }
