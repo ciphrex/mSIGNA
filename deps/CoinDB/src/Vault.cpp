@@ -1684,8 +1684,9 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                     unsigned int sigsadded = stored_script.mergesigs(new_script);
                     if (sigsadded > 0)
                     {
-                        LOGGER(debug) << "Vault::insertTx_unwrapped - ADDED " << sigsadded << " NEW SIGNATURE(S) TO INPUT " << i << std::endl;
-                        txin->script(stored_script.txinscript(Script::EDIT));
+                        int sigsneeded = stored_script.sigsneeded();
+                        LOGGER(debug) << "Vault::insertTx_unwrapped - ADDED " << sigsadded << " NEW SIGNATURE(S) TO INPUT " << i << ", " << sigsneeded << " STILL NEEDED." << std::endl;
+                        txin->script(stored_script.txinscript(sigsneeded ? Script::EDIT : Script::BROADCAST));
                         db_->update(txin);
                         updated = true;
                     }
