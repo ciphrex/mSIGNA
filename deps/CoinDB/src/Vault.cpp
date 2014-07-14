@@ -1691,8 +1691,14 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                     }
                     i++;
                 }
-                if (updated) notifyTxStatusChanged(stored_tx);
-                return updated ? stored_tx : nullptr;
+                if (updated)
+                {
+                    stored_tx->updateStatus();
+                    db_->update(stored_tx);
+                    notifyTxStatusChanged(stored_tx);
+                    return stored_tx;
+                }
+                return nullptr;
             }
         }
         else
