@@ -43,6 +43,25 @@ void RequestPaymentDialog::setAccounts(const QStringList& accountNames)
     ui->accountComboBox->addItems(accountNames);
 }
 
+void RequestPaymentDialog::setQRCode(const QString& address)
+{
+    QRcode* qrcode = QRcode_encodeString(address.toUtf8().data(), 0, QR_ECLEVEL_H, QR_MODE_8, 1);
+    QImage qrImage(qrcode->width + 4, qrcode->width + 4, QImage::Format_RGB32);
+    qrImage.fill(0xffffff);
+    unsigned char* p = qrcode->data;
+    for (int y = 0; y < qrcode->width; y++)
+    {
+        for (int x = 0; x < qrcode->width; x++)
+        {
+            qrImage.setPixel(x + 2, y + 2, ((*p & 1) ? 0x000000 : 0xffffff));
+            p++;
+        }
+    }
+    QRcode_free(qrcode);
+
+    ui->qrLabel->setPixmap(QPixmap::fromImage(qrImage).scaled(ui->qrLabel->width(), ui->qrLabel->height()));
+}
+
 void RequestPaymentDialog::setCurrentAccount(const QString &accountName)
 {
     ui->accountComboBox->setCurrentText(accountName);
@@ -55,6 +74,7 @@ void RequestPaymentDialog::clearInvoice()
         ui->invoiceDetailsAddressLineEdit->clear();
         ui->invoiceDetailsScriptLineEdit->clear();
         ui->invoiceDetailsUrlLineEdit->clear();
+        ui->qrLabel->clear();
 }
 
 void RequestPaymentDialog::on_newInvoiceButton_clicked()
@@ -83,23 +103,7 @@ void RequestPaymentDialog::on_newInvoiceButton_clicked()
             nParams++;
         }
         ui->invoiceDetailsUrlLineEdit->setText(url);
-
-        QRcode* qrcode = QRcode_encodeString("blah", 0, QR_ECLEVEL_L, QR_MODE_8, 1);
-        QImage qrImage(qrcode->width + 8, qrcode->width + 8, QImage::Format_RGB32);
-        qrImage.fill(0xffffff);
-        unsigned char* p = qrcode->data;
-        for (int y = 0; y < qrcode->width; y++)
-        {
-            for (int x = 0; x < qrcode->width; x++)
-            {
-                qrImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x000000 : 0xffffff));
-                p++;
-            }
-        }
-
-        QRcode_free(qrcode);
-
-        ui->qrLabel->setPixmap(QPixmap::fromImage(qrImage).scaled(300, 300));
+        setQRCode(pair.first);
     }
     catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Error"), QString::fromStdString(e.what()));
