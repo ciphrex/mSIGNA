@@ -307,20 +307,17 @@
     <string>Close</string>
    </property>
   </widget>
-  <widget class="QFrame" name="qrCodeFrame">
+  <widget class="QLabel" name="qtLabel">
    <property name="geometry">
     <rect>
-     <x>400</x>
-     <y>20</y>
-     <width>251</width>
-     <height>241</height>
+     <x>420</x>
+     <y>30</y>
+     <width>241</width>
+     <height>231</height>
     </rect>
    </property>
-   <property name="frameShape">
-    <enum>QFrame::StyledPanel</enum>
-   </property>
-   <property name="frameShadow">
-    <enum>QFrame::Raised</enum>
+   <property name="text">
+    <string>TextLabel</string>
    </property>
   </widget>
  </widget>
