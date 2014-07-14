@@ -307,7 +307,7 @@
     <string>Close</string>
    </property>
   </widget>
-  <widget class="QLabel" name="qtLabel">
+  <widget class="QLabel" name="qrLabel">
    <property name="geometry">
     <rect>
      <x>420</x>

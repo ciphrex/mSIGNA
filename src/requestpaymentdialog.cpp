@@ -19,6 +19,8 @@
 #include <QClipboard>
 #include <QRegExpValidator>
 
+#include <qrencode.h>
+
 RequestPaymentDialog::RequestPaymentDialog(AccountModel* accountModel, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::RequestPaymentDialog),
@@ -81,6 +83,23 @@ void RequestPaymentDialog::on_newInvoiceButton_clicked()
             nParams++;
         }
         ui->invoiceDetailsUrlLineEdit->setText(url);
+
+        QRcode* qrcode = QRcode_encodeString("blah", 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+        QImage qrImage(qrcode->width + 8, qrcode->width + 8, QImage::Format_RGB32);
+        qrImage.fill(0xffffff);
+        unsigned char* p = qrcode->data;
+        for (int y = 0; y < qrcode->width; y++)
+        {
+            for (int x = 0; x < qrcode->width; x++)
+            {
+                qrImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x000000 : 0xffffff));
+                p++;
+            }
+        }
+
+        QRcode_free(qrcode);
+
+        ui->qrLabel->setPixmap(QPixmap::fromImage(qrImage).scaled(300, 300));
     }
     catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Error"), QString::fromStdString(e.what()));
