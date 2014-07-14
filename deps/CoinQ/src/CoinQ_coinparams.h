@@ -24,6 +24,8 @@ public:
         uint8_t pay_to_script_hash_version,
         const char* network_name,
         const char* url_prefix,
+        uint64_t currency_divisor,
+        const char* currency_symbol,
         Coin::hashfunc_t block_header_hash_function,
         Coin::hashfunc_t block_header_pow_hash_function,
         const Coin::CoinBlockHeader& genesis_block) :
@@ -34,6 +36,8 @@ public:
     pay_to_script_hash_version_(pay_to_script_hash_version),
     network_name_(network_name),
     url_prefix_(url_prefix),
+    currency_divisor_(currency_divisor),
+    currency_symbol_(currency_symbol),
     block_header_hash_function_(block_header_hash_function),
     block_header_pow_hash_function_(block_header_pow_hash_function),
     genesis_block_(genesis_block) { }
@@ -45,6 +49,8 @@ public:
     uint8_t                         pay_to_script_hash_version() const { return pay_to_script_hash_version_; }
     const char*                     network_name() const { return network_name_; }
     const char*                     url_prefix() const { return url_prefix_; }
+    uint64_t                        currency_divisor() const { return currency_divisor_; }
+    const char*                     currency_symbol() const { return currency_symbol_; }
     Coin::hashfunc_t                block_header_hash_function() const { return block_header_hash_function_; }
     Coin::hashfunc_t                block_header_pow_hash_function() const { return block_header_pow_hash_function_; }
     const Coin::CoinBlockHeader&    genesis_block() const { return genesis_block_; }
@@ -57,6 +63,8 @@ private:
     uint8_t                 pay_to_script_hash_version_;
     const char*             network_name_;
     const char*             url_prefix_;
+    uint64_t                currency_divisor_;
+    const char*             currency_symbol_;
     Coin::hashfunc_t        block_header_hash_function_;
     Coin::hashfunc_t        block_header_pow_hash_function_;
     Coin::CoinBlockHeader   genesis_block_;
@@ -64,25 +72,25 @@ private:
 
 inline CoinParams getBitcoinParams()
 {
-    return CoinParams(0xd9b4bef9ul, 70001, "8333", 0x00, 0x05, "Bitcoin", "bitcoin", &sha256_2, &sha256_2,
+    return CoinParams(0xd9b4bef9ul, 70001, "8333", 0x00, 0x05, "Bitcoin", "bitcoin", 100000000, "BTC", &sha256_2, &sha256_2,
         Coin::CoinBlockHeader(1, 1231006505, 486604799, 2083236893, uchar_vector(32, 0), uchar_vector("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")));
 }
 
 inline CoinParams getBitcoinTestnet3Params()
 {
-    return CoinParams(0x0709110bul, 70001, "18333", 0x6f, 0xc4, "Testnet3", "testnet3", &sha256_2, &sha256_2,
+    return CoinParams(0x0709110bul, 70001, "18333", 0x6f, 0xc4, "Testnet3", "testnet3", 100000000, "tBTC", &sha256_2, &sha256_2,
         Coin::CoinBlockHeader(1, 1296688602, 486604799, 414098458, uchar_vector(32, 0), uchar_vector("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")));
 }
 
 inline CoinParams getLitecoinParams()
 {
-    return CoinParams(0xdbb6c0fbul, 70002, "9333", 0x30, 0x05, "Litecoin", "litecoin", &sha256_2, &scrypt_1024_1_1_256,
+    return CoinParams(0xdbb6c0fbul, 70002, "9333", 0x30, 0x05, "Litecoin", "litecoin", 100000000, "LTC", &sha256_2, &scrypt_1024_1_1_256,
         Coin::CoinBlockHeader(1, 1317972665, 0x1e0ffff0, 2084524493, uchar_vector(32, 0), uchar_vector("97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9")));
 }
 
 inline CoinParams getQuarkcoinParams()
 {
-    return CoinParams(0xdd03a5feul, 70001, "11973", 0x3a, 0x09, "Quarkcoin", "quarkcoin", &hash9, &hash9,
+    return CoinParams(0xdd03a5feul, 70001, "11973", 0x3a, 0x09, "Quarkcoin", "quarkcoin", 100000, "QRK", &hash9, &hash9,
         Coin::CoinBlockHeader(112, 1374408079, 0x1e0fffff, 12058113, uchar_vector(32, 0), uchar_vector("868b2fb28cb1a0b881480cc85eb207e29e6ae75cdd6d26688ed34c2d2d23c776")));
 }
 
