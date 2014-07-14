@@ -313,11 +313,11 @@
      <x>420</x>
      <y>30</y>
      <width>241</width>
-     <height>231</height>
+     <height>241</height>
     </rect>
    </property>
    <property name="text">
-    <string>TextLabel</string>
+    <string/>
    </property>
   </widget>
  </widget>
