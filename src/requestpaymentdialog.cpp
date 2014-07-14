@@ -46,14 +46,14 @@ void RequestPaymentDialog::setAccounts(const QStringList& accountNames)
 void RequestPaymentDialog::setQRCode(const QString& address)
 {
     QRcode* qrcode = QRcode_encodeString(address.toUtf8().data(), 0, QR_ECLEVEL_H, QR_MODE_8, 1);
-    QImage qrImage(qrcode->width + 4, qrcode->width + 4, QImage::Format_RGB32);
+    QImage qrImage(qrcode->width + 6, qrcode->width + 6, QImage::Format_RGB32);
     qrImage.fill(0xffffff);
     unsigned char* p = qrcode->data;
     for (int y = 0; y < qrcode->width; y++)
     {
         for (int x = 0; x < qrcode->width; x++)
         {
-            qrImage.setPixel(x + 2, y + 2, ((*p & 1) ? 0x000000 : 0xffffff));
+            qrImage.setPixel(x + 3, y + 3, ((*p & 1) ? 0x000000 : 0xffffff));
             p++;
         }
     }
