@@ -19,7 +19,7 @@
 // TODO: allow setting via coinparams
 const QRegExp AMOUNT_REGEXP("(([1-9]\\d{0,6}|1\\d{7}|20\\d{6}|0|)(\\.\\d{0,8})?|21000000(\\.0{0,8})?)");
 
-// disallow more than 8 decimals and amounts > 21 million
-uint64_t btcStringToSatoshis(const std::string& btcString);
+// Constrain input to valid value
+uint64_t valueStringToInteger(const std::string& valueString, uint64_t maxValue, uint64_t divisor, unsigned int maxDecimals);
 
 #endif // COINVAULT_NUMBERFORMATS_H

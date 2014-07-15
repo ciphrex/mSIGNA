@@ -14,46 +14,45 @@
 #include <stdint.h>
 #include <stdexcept>
 
-// disallow more than 8 decimals and amounts > 21 million
-uint64_t btcStringToSatoshis(const std::string& btcString)
+// Constrain input to valid values
+uint64_t valueStringToInteger(const std::string& valueString, uint64_t maxValue, uint64_t divisor, unsigned int maxDecimals)
 {
-    uint32_t whole = 0;
-    uint32_t frac = 0;
+    uint64_t maxWhole = maxValue / divisor;
 
-    unsigned int i = 0;
+    uint64_t whole = 0;
+    uint64_t frac = 0;
+    unsigned int decimals = 0;
     bool stateWhole = true;
-    for (auto& c: btcString) {
-        i++;
+
+    for (auto& c: valueString) {
         if (stateWhole) {
             if (c == '.') {
                 stateWhole = false;
-                i = 0;
                 continue;
             }
-            else if (i > 8 || c < '0' || c > '9') {
+            else if (whole > maxWhole || c < '0' || c > '9') {
                 throw std::runtime_error("Invalid amount.");
             }
             whole *= 10;
-            whole += (uint32_t)(c - '0');
+            whole += (uint64_t)(c - '0');
         }
         else {
-            if (i > 8 || c < '0' || c > '9') {
+            decimals++;
+            if (decimals > maxDecimals || c < '0' || c > '9') {
                 throw std::runtime_error("Invalid amount.");
             }
             frac *= 10;
-            frac += (uint32_t)(c - '0');
+            frac += (uint64_t)(c - '0');
         }
     }
     if (frac > 0) {
-        while (i < 8) {
-            i++;
+        while (decimals < 8) {
+            decimals++;
             frac *= 10;
         }
     }
-    uint64_t value = (uint64_t)whole * 100000000ull + frac;
-    if (value > 2100000000000000ull) {
-        throw std::runtime_error("Invalid amount.");
-    }
+    uint64_t value = (uint64_t)whole * divisor + frac;
+    if (value > maxValue) throw std::runtime_error("Invalid amount.");
 
     return value;
 }

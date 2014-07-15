@@ -39,8 +39,8 @@ public:
 
     bytes_t getScript() const;
 
-    void setValue(uint64_t value);
-    uint64_t getValue() const;
+    void setValue(uint64_t value, uint64_t divisor);
+    uint64_t getValue(uint64_t maxValue = 0xffffffffffffffffull, uint64_t divisor = 1, unsigned int maxDecimals = 0) const;
 
     void setRecipient(const QString& recipient);
     QString getRecipient() const;
@@ -94,6 +94,11 @@ private:
     QPushButton* cancelButton;
 
     status_t status;
+
+    uint64_t currency_divisor;
+    QString currency_symbol;
+    uint64_t max_currency_value;
+    unsigned int max_currency_decimals;
 };
 
 #endif // COINVAULT_CREATETXDIALOG_H
