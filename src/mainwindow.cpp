@@ -1251,7 +1251,11 @@ void MainWindow::headersSynched()
 
 void MainWindow::fetchingBlocks()
 {
-    updateNetworkState(NETWORK_STATE_SYNCHING);
+    if (accountModel->isOpen())
+    {
+        updateNetworkState(NETWORK_STATE_SYNCHING);
+        updateSyncHeight(accountModel->getBestHeight());
+    }
     emit status(tr("Fetching blocks"));
 }
 

@@ -325,6 +325,15 @@ bytes_t AccountModel::signRawTx(const bytes_t& rawTx)
     return bytes_t();
 }
 
+uint32_t AccountModel::getBestHeight() const
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    return vault->getBestHeight();
+}
+
 std::vector<bytes_t> AccountModel::getLocatorHashes() const
 {
     if (!vault) {

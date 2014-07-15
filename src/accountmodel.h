@@ -78,6 +78,7 @@ public:
     bytes_t signRawTx(const bytes_t& rawTx);
 
     // Block operations
+    uint32_t getBestHeight() const;
     std::vector<bytes_t> getLocatorHashes() const;
     bool insertBlock(const ChainBlock& block);
     bool insertMerkleBlock(const ChainMerkleBlock& merkleBlock);
