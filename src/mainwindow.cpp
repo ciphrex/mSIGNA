@@ -798,7 +798,7 @@ void MainWindow::importAccount(QString fileName)
             this,
             tr("Import Account"),
             getDocDir(),
-            tr("Account") + "(*.acct; *.sharedacct)");
+            tr("Account") + "(*.acct *.sharedacct)");
     }
 
     if (fileName.isEmpty()) return;
