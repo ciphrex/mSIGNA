@@ -60,6 +60,7 @@ HEADERS = \
     src/commandserver.h \
     src/paymentrequest.h \
     src/numberformats.h \
+    src/currencyvalidator.h \
     src/accountmodel.h \
     src/accountview.h \
     src/keychainmodel.h \
@@ -94,6 +95,7 @@ SOURCES = \
     src/commandserver.cpp \
     src/paymentrequest.cpp \
     src/numberformats.cpp \
+    src/currencyvalidator.cpp \
     src/accountmodel.cpp \
     src/accountview.cpp \
     src/keychainmodel.cpp \

@@ -14,6 +14,7 @@
 #include "accountmodel.h"
 #include "coinparams.h"
 #include "numberformats.h"
+#include "currencyvalidator.h"
 
 #include <QMessageBox>
 #include <QClipboard>
@@ -29,7 +30,7 @@ RequestPaymentDialog::RequestPaymentDialog(AccountModel* accountModel, QWidget *
     ui->setupUi(this);
     connect(accountModel_, SIGNAL(updated(const QStringList&)), this, SLOT(setAccounts(const QStringList&)));
 
-    ui->invoiceAmountLineEdit->setValidator(new QRegExpValidator(AMOUNT_REGEXP));
+    ui->invoiceAmountLineEdit->setValidator(new CurrencyValidator(getCoinParams().currency_max(), getCoinParams().currency_decimals()));
 }
 
 RequestPaymentDialog::~RequestPaymentDialog()

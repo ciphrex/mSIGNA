@@ -10,6 +10,7 @@
 
 #include "createtxdialog.h"
 #include "numberformats.h"
+#include "currencyvalidator.h"
 
 #include "settings.h"
 #include "coinparams.h"
@@ -23,7 +24,6 @@
 #include <QVBoxLayout>
 #include <QComboBox>
 #include <QLineEdit>
-//#include <QDoubleValidator>
 #include <QLabel>
 
 #include <QMessageBox>
@@ -50,7 +50,7 @@ TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol
     QLabel* amountLabel = new QLabel(tr("Amount") + " (" + currencySymbol + "):");
     amountEdit = new QLineEdit();
     amountEdit->setFixedWidth(100);
-    amountEdit->setValidator(new QRegExpValidator(QRegExp(AMOUNT_REGEXP), this));
+    amountEdit->setValidator(new CurrencyValidator(currencyMax, currencyDecimals, this));
 
     QLabel* recipientLabel = new QLabel(tr("For:"));
     recipientEdit = new QLineEdit();
@@ -159,7 +159,7 @@ CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest&
     // Fee
     QLabel* feeLabel = new QLabel(tr("Fee") + " (" + currencySymbol + "):");
     feeEdit = new QLineEdit();
-    feeEdit->setValidator(new QRegExpValidator(QRegExp(AMOUNT_REGEXP), this));
+    feeEdit->setValidator(new CurrencyValidator(currencyMax, currencyDecimals, this));
     feeEdit->setText("0.0005"); // TODO: suggest more intelligently
 
     QHBoxLayout* feeLayout = new QHBoxLayout();

@@ -16,6 +16,13 @@
 
 using namespace std;
 
+string getDecimalRegExpString(uint64_t maxAmount, unsigned int maxDecimals, char decimalSymbol)
+{
+    stringstream ss;
+    ss << "(([1-9]\\d{0,6}|1\\d{7}|20\\d{6}|0|)(\\" << decimalSymbol << "\\d{0,8})?|21000000(\\" << decimalSymbol << "0{0,8})?)";
+    return ss.str();
+}
+ 
 // Example for maxValue = 21000000 and maxDecimals = 8
 // const QRegExp AMOUNT_REGEXP("((|0|[1-9]\\d{0,6}|1\\d{7}|20\\d{6})(\\.\\d{0,8})?|21000000(\\.0{0,8})?)");
 /*
