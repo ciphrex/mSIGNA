@@ -33,6 +33,7 @@ public slots:
 
 private slots:
     void setAccounts(const QStringList& accountNames);
+    void setQRCode(const QString& address);
 
     void on_newInvoiceButton_clicked();
     void on_addressClipboardButton_clicked();

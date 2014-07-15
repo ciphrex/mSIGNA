@@ -30,55 +30,6 @@
 
 #include <stdexcept>
 
-/*
-// TODO: move all display/formatting stuff to its own module
-
-static const QRegExp AMOUNT_REGEXP("(([1-9]\\d{0,6}|1\\d{7}|20\\d{6}|0|)(\\.\\d{0,8})?|21000000(\\.0{0,8})?)");
-
-// disallow more than 8 decimals and amounts > 21 million
-static uint64_t btcStringToSatoshis(const std::string& btcString)
-{
-    uint32_t whole = 0;
-    uint32_t frac = 0;
-
-    unsigned int i = 0;
-    bool stateWhole = true;
-    for (auto& c: btcString) {
-        i++;
-        if (stateWhole) {
-            if (c == '.') {
-                stateWhole = false;
-                i = 0;
-                continue;
-            }
-            else if (i > 8 || c < '0' || c > '9') {
-                throw std::runtime_error("Invalid amount.");
-            }
-            whole *= 10;
-            whole += (uint32_t)(c - '0');
-        }
-        else {
-            if (i > 8 || c < '0' || c > '9') {
-                throw std::runtime_error("Invalid amount.");
-            }
-            frac *= 10;
-            frac += (uint32_t)(c - '0');
-        }
-    }
-    if (frac > 0) {
-        while (i < 8) {
-            i++;
-            frac *= 10;
-        }
-    }
-    uint64_t value = (uint64_t)whole * 100000000ull + frac;
-    if (value > 2100000000000000ull) {
-        throw std::runtime_error("Invalid amount.");
-    }
-
-    return value;
-}
-*/
 TxOutLayout::TxOutLayout(QWidget* parent)
     : QHBoxLayout(parent)
 {
@@ -125,14 +76,14 @@ bytes_t TxOutLayout::getScript() const
     return script;
 }
 
-void TxOutLayout::setValue(uint64_t value)
+void TxOutLayout::setValue(uint64_t value, uint64_t divisor)
 {
-    amountEdit->setText(QString::number(value/100000000.0, 'g', 8));
+    amountEdit->setText(QString::number(value/(1.0 * divisor), 'g', 8));
 }
 
-uint64_t TxOutLayout::getValue() const
+uint64_t TxOutLayout::getValue(uint64_t maxValue, uint64_t divisor, unsigned int maxDecimals) const
 {
-    return btcStringToSatoshis(amountEdit->text().toStdString());
+    return valueStringToInteger(amountEdit->text().toStdString(), maxValue, divisor, maxDecimals);
 }
 
 // TODO: call this field the label rather than the recipient
@@ -156,6 +107,13 @@ void TxOutLayout::removeWidgets()
 CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest& paymentRequest, QWidget* parent)
     : QDialog(parent), status(SAVE_ONLY)
 {
+    // Coin Parameters
+    currency_divisor = getCoinParams().currency_divisor();
+    currency_symbol = getCoinParams().currency_symbol();
+    // TODO: compute from coin parameters
+    max_currency_value = 2100000000000000ull;
+    max_currency_decimals = 8;
+
     // Buttons
     signAndSendButton = new QPushButton(tr("Sign and Send"));
     signAndSaveButton = new QPushButton(tr("Sign and Save"));
@@ -228,7 +186,7 @@ QString CreateTxDialog::getAccountName() const
 
 uint64_t CreateTxDialog::getFeeValue() const
 {
-    return btcStringToSatoshis(feeEdit->text().toStdString());
+    return valueStringToInteger(feeEdit->text().toStdString(), max_currency_value, currency_divisor, max_currency_decimals);
 }
 
 std::vector<std::shared_ptr<CoinDB::TxOut>> CreateTxDialog::getTxOuts()
@@ -240,7 +198,7 @@ std::vector<std::shared_ptr<CoinDB::TxOut>> CreateTxDialog::getTxOuts()
             removeTxOut(txOutLayout);
             continue;
         }
-        std::shared_ptr<CoinDB::TxOut> txout(new CoinDB::TxOut(txOutLayout->getValue(), txOutLayout->getScript()));
+        std::shared_ptr<CoinDB::TxOut> txout(new CoinDB::TxOut(txOutLayout->getValue(max_currency_value, currency_divisor, max_currency_decimals), txOutLayout->getScript()));
         txout->sending_label(txOutLayout->getRecipient().toStdString());
         txouts.push_back(txout);
     }
@@ -261,7 +219,7 @@ std::vector<TaggedOutput> CreateTxDialog::getOutputs()
             removeTxOut(txOutLayout);
             continue;
         }
-        TaggedOutput output(txOutLayout->getScript(), txOutLayout->getValue(), txOutLayout->getRecipient().toStdString());
+        TaggedOutput output(txOutLayout->getScript(), txOutLayout->getValue(max_currency_value, currency_divisor, max_currency_decimals), txOutLayout->getRecipient().toStdString());
         outputs.push_back(output);
     }
  
@@ -285,7 +243,7 @@ void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
     }
 
     if (paymentRequest.hasValue()) {
-        txOutLayout->setValue(paymentRequest.value());
+        txOutLayout->setValue(paymentRequest.value(), currency_divisor);
     }
 
     if (paymentRequest.hasLabel()) {

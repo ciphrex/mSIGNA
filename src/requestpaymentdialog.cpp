@@ -19,6 +19,8 @@
 #include <QClipboard>
 #include <QRegExpValidator>
 
+#include <qrencode.h>
+
 RequestPaymentDialog::RequestPaymentDialog(AccountModel* accountModel, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::RequestPaymentDialog),
@@ -41,6 +43,25 @@ void RequestPaymentDialog::setAccounts(const QStringList& accountNames)
     ui->accountComboBox->addItems(accountNames);
 }
 
+void RequestPaymentDialog::setQRCode(const QString& address)
+{
+    QRcode* qrcode = QRcode_encodeString(address.toUtf8().data(), 0, QR_ECLEVEL_H, QR_MODE_8, 1);
+    QImage qrImage(qrcode->width + 6, qrcode->width + 6, QImage::Format_RGB32);
+    qrImage.fill(0xffffff);
+    unsigned char* p = qrcode->data;
+    for (int y = 0; y < qrcode->width; y++)
+    {
+        for (int x = 0; x < qrcode->width; x++)
+        {
+            qrImage.setPixel(x + 3, y + 3, ((*p & 1) ? 0x000000 : 0xffffff));
+            p++;
+        }
+    }
+    QRcode_free(qrcode);
+
+    ui->qrLabel->setPixmap(QPixmap::fromImage(qrImage).scaled(ui->qrLabel->width(), ui->qrLabel->height()));
+}
+
 void RequestPaymentDialog::setCurrentAccount(const QString &accountName)
 {
     ui->accountComboBox->setCurrentText(accountName);
@@ -53,6 +74,7 @@ void RequestPaymentDialog::clearInvoice()
         ui->invoiceDetailsAddressLineEdit->clear();
         ui->invoiceDetailsScriptLineEdit->clear();
         ui->invoiceDetailsUrlLineEdit->clear();
+        ui->qrLabel->clear();
 }
 
 void RequestPaymentDialog::on_newInvoiceButton_clicked()
@@ -81,6 +103,7 @@ void RequestPaymentDialog::on_newInvoiceButton_clicked()
             nParams++;
         }
         ui->invoiceDetailsUrlLineEdit->setText(url);
+        setQRCode(pair.first);
     }
     catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Error"), QString::fromStdString(e.what()));

@@ -34,6 +34,9 @@ TxModel::TxModel(QObject* parent)
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
+    currency_divisor = getCoinParams().currency_divisor();
+    currency_symbol = getCoinParams().currency_symbol();
+
     initColumns();
 }
 
@@ -118,7 +121,7 @@ void TxModel::update()
             if (item.tx_has_all_outpoints && item.tx_fee() > 0) {
                 if (this_txhash != last_txhash) {
                     fee = "-";
-                    fee += QString::number(item.tx_fee()/100000000.0, 'g', 8);
+                    fee += QString::number(item.tx_fee()/(1.0 * currency_divisor), 'g', 8);
                     value -= item.tx_fee();
                     last_txhash = this_txhash;
                 }
@@ -138,7 +141,7 @@ void TxModel::update()
             type = tr("Unknown");
         }
 
-        amount += QString::number(item.value/100000000.0, 'g', 8);
+        amount += QString::number(item.value/(1.0 * currency_divisor), 'g', 8);
 
         uint32_t nConfirmations = 0;
         QString confirmations;
@@ -198,7 +201,7 @@ void TxModel::update()
     int64_t balance = 0;
     for (int i = rows.size() - 1; i >= 0; i--) {
         balance += rows[i].second.second;
-        (rows[i].second.first)[5]->setText(QString::number(balance/100000000.0, 'g', 8));
+        (rows[i].second.first)[5]->setText(QString::number(balance/(1.0 * currency_divisor), 'g', 8));
     }
 
     // iterate in forward order to display

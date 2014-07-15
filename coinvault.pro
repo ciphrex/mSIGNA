@@ -28,7 +28,8 @@ LIBS += \
     -lCoinDB \
     -lCoinQ \
     -lCoinCore \
-    -llogger
+    -llogger \
+    -lqrencode
 
 CONFIG(debug, debug|release) {
     DESTDIR = build/debug

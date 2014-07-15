@@ -35,6 +35,9 @@ AccountModel::AccountModel()
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
+    currency_divisor = getCoinParams().currency_divisor();
+    currency_symbol = getCoinParams().currency_symbol();
+
     QStringList columns;
     columns << tr("Account") << tr("Policy") << tr("Balance") << "";
     setHorizontalHeaderLabels(columns);
@@ -55,7 +58,7 @@ void AccountModel::update()
     for (auto& account: accounts) {
         QString accountName = QString::fromStdString(account.name());
         QString policy = QString::number(account.minsigs()) + tr(" of ") + QString::fromStdString(stdutils::delimited_list(account.keychain_names(), ", "));
-        QString balance = QString::number(vault->getAccountBalance(account.name(), 0)/100000000.0, 'g', 8);
+        QString balance = QString::number(vault->getAccountBalance(account.name(), 0)/(1.0 * currency_divisor), 'g', 8);
         accountNames << accountName;
 
         QList<QStandardItem*> row;
