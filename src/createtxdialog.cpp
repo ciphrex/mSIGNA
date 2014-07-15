@@ -111,8 +111,8 @@ CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest&
     currency_divisor = getCoinParams().currency_divisor();
     currency_symbol = getCoinParams().currency_symbol();
     // TODO: compute from coin parameters
-    max_currency_value = 2100000000000000ull;
-    max_currency_decimals = 8;
+    max_currency_value = getCoinParams().currency_max() * currency_divisor;
+    max_currency_decimals = getCoinParams().currency_decimals();
 
     // Buttons
     signAndSendButton = new QPushButton(tr("Sign and Send"));
