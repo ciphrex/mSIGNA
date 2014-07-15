@@ -30,8 +30,8 @@
 
 #include <stdexcept>
 
-TxOutLayout::TxOutLayout(QWidget* parent)
-    : QHBoxLayout(parent)
+TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol, uint64_t maxCurrencyValue, unsigned int maxCurrencyDecimals, QWidget* parent)
+    : QHBoxLayout(parent), m_currencyDivisor(currencyDivisor), m_currencySymbol(currencySymbol), m_maxCurrencyValue(maxCurrencyValue), m_maxCurrencyDecimals(maxCurrencyDecimals)
 {
     // Base58 version bytes
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
@@ -41,7 +41,7 @@ TxOutLayout::TxOutLayout(QWidget* parent)
     addressEdit = new QLineEdit();
     addressEdit->setFixedWidth(300);
 
-    QLabel* amountLabel = new QLabel(tr("Amount:"));
+    QLabel* amountLabel = new QLabel(tr("Amount") + " (" + m_currencySymbol + "):");
     amountEdit = new QLineEdit();
     amountEdit->setValidator(new QRegExpValidator(AMOUNT_REGEXP, this));
 
@@ -76,14 +76,14 @@ bytes_t TxOutLayout::getScript() const
     return script;
 }
 
-void TxOutLayout::setValue(uint64_t value, uint64_t divisor)
+void TxOutLayout::setValue(uint64_t value)
 {
-    amountEdit->setText(QString::number(value/(1.0 * divisor), 'g', 8));
+    amountEdit->setText(QString::number(value/(1.0 * m_currencyDivisor), 'g', 8));
 }
 
-uint64_t TxOutLayout::getValue(uint64_t maxValue, uint64_t divisor, unsigned int maxDecimals) const
+uint64_t TxOutLayout::getValue() const
 {
-    return valueStringToInteger(amountEdit->text().toStdString(), maxValue, divisor, maxDecimals);
+    return valueStringToInteger(amountEdit->text().toStdString(), m_maxCurrencyValue, m_currencyDivisor, m_maxCurrencyDecimals);
 }
 
 // TODO: call this field the label rather than the recipient
@@ -198,7 +198,7 @@ std::vector<std::shared_ptr<CoinDB::TxOut>> CreateTxDialog::getTxOuts()
             removeTxOut(txOutLayout);
             continue;
         }
-        std::shared_ptr<CoinDB::TxOut> txout(new CoinDB::TxOut(txOutLayout->getValue(max_currency_value, currency_divisor, max_currency_decimals), txOutLayout->getScript()));
+        std::shared_ptr<CoinDB::TxOut> txout(new CoinDB::TxOut(txOutLayout->getValue(), txOutLayout->getScript()));
         txout->sending_label(txOutLayout->getRecipient().toStdString());
         txouts.push_back(txout);
     }
@@ -219,7 +219,7 @@ std::vector<TaggedOutput> CreateTxDialog::getOutputs()
             removeTxOut(txOutLayout);
             continue;
         }
-        TaggedOutput output(txOutLayout->getScript(), txOutLayout->getValue(max_currency_value, currency_divisor, max_currency_decimals), txOutLayout->getRecipient().toStdString());
+        TaggedOutput output(txOutLayout->getScript(), txOutLayout->getValue(), txOutLayout->getRecipient().toStdString());
         outputs.push_back(output);
     }
  
@@ -232,7 +232,7 @@ std::vector<TaggedOutput> CreateTxDialog::getOutputs()
 
 void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
 {
-    TxOutLayout* txOutLayout = new TxOutLayout();
+    TxOutLayout* txOutLayout = new TxOutLayout(currency_divisor, currency_symbol, max_currency_value, max_currency_decimals);
     txOutLayouts.insert(txOutLayout);
     QPushButton* removeButton = txOutLayout->getRemoveButton();
     connect(removeButton, &QPushButton::clicked, [=]() { this->removeTxOut(txOutLayout); });
@@ -243,7 +243,7 @@ void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
     }
 
     if (paymentRequest.hasValue()) {
-        txOutLayout->setValue(paymentRequest.value(), currency_divisor);
+        txOutLayout->setValue(paymentRequest.value());
     }
 
     if (paymentRequest.hasLabel()) {

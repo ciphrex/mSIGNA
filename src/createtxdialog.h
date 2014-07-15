@@ -32,15 +32,15 @@ class TxOutLayout : public QHBoxLayout
     Q_OBJECT
 
 public:
-    TxOutLayout(QWidget* parent = NULL);
+    TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol, uint64_t maxCurrencyValue, unsigned int maxCurrencyDecimals, QWidget* parent = nullptr);
 
     void setAddress(const QString& address);
     QString getAddress() const;
 
     bytes_t getScript() const;
 
-    void setValue(uint64_t value, uint64_t divisor);
-    uint64_t getValue(uint64_t maxValue = 0xffffffffffffffffull, uint64_t divisor = 1, unsigned int maxDecimals = 0) const;
+    void setValue(uint64_t value);
+    uint64_t getValue() const;
 
     void setRecipient(const QString& recipient);
     QString getRecipient() const;
@@ -56,6 +56,11 @@ private:
     QLineEdit* amountEdit;
     QLineEdit* recipientEdit;
     QPushButton* removeButton;
+
+    uint64_t m_currencyDivisor;
+    QString m_currencySymbol;
+    uint64_t m_maxCurrencyValue;
+    unsigned int m_maxCurrencyDecimals;
 };
 
 
