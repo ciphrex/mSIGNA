@@ -38,7 +38,7 @@ QValidator::State CurrencyValidator::validate(QString& input, int& /*pos*/) cons
             {
                 bWhole = false;
             }
-            else if ((c >= '1' && c <= '9') || (c == '0' && !bFirst))
+            else if (c >= '0' && c <= '9' && (whole > 0 || bFirst))
             {
                 whole *= 10;
                 whole += (uint64_t)(c - '0');
