@@ -30,20 +30,26 @@
 
 #include <stdexcept>
 
-TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol, uint64_t maxCurrencyValue, unsigned int maxCurrencyDecimals, QWidget* parent)
-    : QHBoxLayout(parent), m_currencyDivisor(currencyDivisor), m_currencySymbol(currencySymbol), m_maxCurrencyValue(maxCurrencyValue), m_maxCurrencyDecimals(maxCurrencyDecimals)
+TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol, uint64_t currencyMax, unsigned int currencyDecimals, QWidget* parent)
+    : QHBoxLayout(parent)
 {
     // Base58 version bytes
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
+    // Coin parameters
+    this->currencyDivisor = currencyDivisor;
+    this->currencySymbol = currencySymbol;
+    this->currencyMax = currencyMax;
+    this->currencyDecimals = currencyDecimals;
+
     QLabel* addressLabel = new QLabel(tr("Address:"));
     addressEdit = new QLineEdit();
     addressEdit->setFixedWidth(300);
 
-    QLabel* amountLabel = new QLabel(tr("Amount") + " (" + m_currencySymbol + "):");
+    QLabel* amountLabel = new QLabel(tr("Amount") + " (" + currencySymbol + "):");
     amountEdit = new QLineEdit();
-    amountEdit->setValidator(new QRegExpValidator(AMOUNT_REGEXP, this));
+    amountEdit->setValidator(new QRegExpValidator(QRegExp(currencyMax, currencyDecimals), this));
 
     QLabel* recipientLabel = new QLabel(tr("For:"));
     recipientEdit = new QLineEdit();
@@ -78,12 +84,12 @@ bytes_t TxOutLayout::getScript() const
 
 void TxOutLayout::setValue(uint64_t value)
 {
-    amountEdit->setText(QString::number(value/(1.0 * m_currencyDivisor), 'g', 8));
+    amountEdit->setText(QString::number(value/(1.0 * currencyDivisor), 'g', 8));
 }
 
 uint64_t TxOutLayout::getValue() const
 {
-    return valueStringToInteger(amountEdit->text().toStdString(), m_maxCurrencyValue, m_currencyDivisor, m_maxCurrencyDecimals);
+    return valueStringToInteger(amountEdit->text().toStdString(), currencyMax, currencyDivisor, currencyDecimals);
 }
 
 // TODO: call this field the label rather than the recipient
@@ -107,12 +113,11 @@ void TxOutLayout::removeWidgets()
 CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest& paymentRequest, QWidget* parent)
     : QDialog(parent), status(SAVE_ONLY)
 {
-    // Coin Parameters
-    currency_divisor = getCoinParams().currency_divisor();
-    currency_symbol = getCoinParams().currency_symbol();
-    // TODO: compute from coin parameters
-    max_currency_value = getCoinParams().currency_max() * currency_divisor;
-    max_currency_decimals = getCoinParams().currency_decimals();
+    // Coin parameters
+    currencyDivisor = getCoinParams().currency_divisor();
+    currencySymbol = getCoinParams().currency_symbol();
+    currencyMax = getCoinParams().currency_max();
+    currencyDecimals = getCoinParams().currency_decimals();
 
     // Buttons
     signAndSendButton = new QPushButton(tr("Sign and Send"));
@@ -150,9 +155,9 @@ CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest&
     accountLayout->addWidget(accountComboBox);
 
     // Fee
-    QLabel* feeLabel = new QLabel(tr("Fee:"));
+    QLabel* feeLabel = new QLabel(tr("Fee") + " (" + currencySymbol + "):");
     feeEdit = new QLineEdit();
-    feeEdit->setValidator(new QRegExpValidator(AMOUNT_REGEXP));
+    feeEdit->setValidator(new QRegExpValidator(QRegExp(currencyMax, currencyDecimals)));
     feeEdit->setText("0.0005"); // TODO: suggest more intelligently
 
     QHBoxLayout* feeLayout = new QHBoxLayout();
@@ -186,7 +191,7 @@ QString CreateTxDialog::getAccountName() const
 
 uint64_t CreateTxDialog::getFeeValue() const
 {
-    return valueStringToInteger(feeEdit->text().toStdString(), max_currency_value, currency_divisor, max_currency_decimals);
+    return valueStringToInteger(feeEdit->text().toStdString(), currencyMax, currencyDivisor, currencyDecimals);
 }
 
 std::vector<std::shared_ptr<CoinDB::TxOut>> CreateTxDialog::getTxOuts()
@@ -232,7 +237,7 @@ std::vector<TaggedOutput> CreateTxDialog::getOutputs()
 
 void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
 {
-    TxOutLayout* txOutLayout = new TxOutLayout(currency_divisor, currency_symbol, max_currency_value, max_currency_decimals);
+    TxOutLayout* txOutLayout = new TxOutLayout(currencyDivisor, currencySymbol, currencyMax, currencyDecimals);
     txOutLayouts.insert(txOutLayout);
     QPushButton* removeButton = txOutLayout->getRemoveButton();
     connect(removeButton, &QPushButton::clicked, [=]() { this->removeTxOut(txOutLayout); });

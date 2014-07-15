@@ -57,10 +57,10 @@ private:
     QLineEdit* recipientEdit;
     QPushButton* removeButton;
 
-    uint64_t m_currencyDivisor;
-    QString m_currencySymbol;
-    uint64_t m_maxCurrencyValue;
-    unsigned int m_maxCurrencyDecimals;
+    uint64_t currencyDivisor;
+    QString currencySymbol;
+    uint64_t currencyMax;
+    unsigned int currencyDecimals;
 };
 
 
@@ -100,10 +100,10 @@ private:
 
     status_t status;
 
-    uint64_t currency_divisor;
-    QString currency_symbol;
-    uint64_t max_currency_value;
-    unsigned int max_currency_decimals;
+    uint64_t currencyDivisor;
+    QString currencySymbol;
+    uint64_t currencyMax;
+    unsigned int currencyDecimals;
 };
 
 #endif // COINVAULT_CREATETXDIALOG_H
