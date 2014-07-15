@@ -242,8 +242,10 @@ void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
     TxOutLayout* txOutLayout = new TxOutLayout(currencyDivisor, currencySymbol, currencyMax, currencyDecimals);
     txOutLayouts.insert(txOutLayout);
     QPushButton* removeButton = txOutLayout->getRemoveButton();
+    removeButton->setEnabled(txOutLayouts.size() > 1);
     connect(removeButton, &QPushButton::clicked, [=]() { this->removeTxOut(txOutLayout); });
     txOutVBoxLayout->addLayout(txOutLayout);
+    nOutputs++;
 
     if (paymentRequest.hasAddress()) {
         txOutLayout->setAddress(paymentRequest.address());
@@ -261,6 +263,10 @@ void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
 void CreateTxDialog::removeTxOut(TxOutLayout* txOutLayout)
 {
     txOutLayouts.erase(txOutLayout);
+    if (txOutLayouts.size() == 1)
+    {
+        txOutLayouts.begin()->getRemoveButton()->setEnabled(false);
+    }
     txOutLayout->removeWidgets();
     delete txOutLayout;
 }
