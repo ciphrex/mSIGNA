@@ -14,59 +14,63 @@
 #include <stdint.h>
 #include <stdexcept>
 
+using namespace std;
+
 // Example for maxValue = 21000000 and maxDecimals = 8
 // const QRegExp AMOUNT_REGEXP("((|0|[1-9]\\d{0,6}|1\\d{7}|20\\d{6})(\\.\\d{0,8})?|21000000(\\.0{0,8})?)");
-
-std::string getDecimalRegExpString(uint64_t maxAmount, unsigned int maxDecimals)
+/*
+string nDigitsRegExpString(unsigned int n)
 {
-    std::stringstream ss;
+    if (n == 0) return "";
+    if (n == 1) return "\\d";
 
-    if (maxAmount == 0)
-    {
-        ss << "(|0)(\\.";
-        if (maxDecimals > 0) { ss << "0{0," << maxDecimals << "}"; }
-        ss << ")?";
-    }
-    else
-    {
-        ss << "((|0";
+    stringstream ss;
+    ss << "\\d{" << n << "};
+    return ss.str(); 
+}
 
-        uint64_t i = maxAmount;
-        unsigned int trailingZeros = 0;
-        while (i % 10 == 0)
-        {
-            trailingZeros++;
-            i /= 10;
-        }
+string zeroToNDigitsRegExp(unsigned n)
+{
+    if (n == 0) return "";
 
-        if (trailingZeros > 0 && i > 9) { ss << "|[1-9]\\d{0," << trailingZeros << "}"; }
-
-        while (i > 1)
-        {
-            if (i % 10 != 0)
-            {
-                ss << "|" << (i - 1);
-                if (trailingZeros > 0) { ss << "\\d{" << trailingZeros << "}"; }
-            }
-            trailingZeros++;
-            i /= 10;
-        }
-
-        if (i == 1 && trailingZeros > 0) { ss << "|\\d{" << trailingZeros << "}"; }
-        ss << ")(\\.";
-
-        if (maxDecimals > 0) { ss << "\\d{0," << maxDecimals << "}"; }
-        ss << ")?|" << maxAmount << "(\\.";
-
-        if (maxDecimals > 0) { ss << "0{0," << maxDecimals << "}"; }
-        ss << ")?)";
-    }
-
+    stringstream ss;
+    ss << "\\d{0," << n << "}";
     return ss.str();
 }
+
+string getDecimalRegExpString(uint64_t maxAmount, unsigned int maxDecimals)
+{
+    stringstream ssRegExp;
+    if (maxAmount > 0 && maxDecimals > 0) { ssRegExp << "("; }
+    ssRegExp << "(";
+
+    uint64_t i = maxAmount;
+    if (i > 1 && i % 10 != 0)
+    {
+        if (maxDecimals > 0) { i--; }
+        ssRegExp << i << "|";
+    }
+
+    i = maxAmount / 10;
+    unsigned int trailingDigits = 1;
+    while (i > 10)
+    {
+        if (i % 10 != 0)
+        {
+            ssRegExp << (maxAmount - 1) << nDigitsRegExpString(trailingDigits) << "|";
+        }
+        i /= 10;
+        trailingDigits++;
+    }
+
+    if (
+
+    return ssRegExp.str();
+}
+*/
  
 // Constrain input to valid values
-uint64_t decimalStringToInteger(const std::string& decimalString, uint64_t maxAmount, uint64_t divisor, unsigned int maxDecimals)
+uint64_t decimalStringToInteger(const string& decimalString, uint64_t maxAmount, uint64_t divisor, unsigned int maxDecimals)
 {
     uint64_t whole = 0;
     uint64_t frac = 0;

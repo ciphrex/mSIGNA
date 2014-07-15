@@ -23,7 +23,7 @@
 #include <QVBoxLayout>
 #include <QComboBox>
 #include <QLineEdit>
-#include <QRegExpValidator>
+//#include <QDoubleValidator>
 #include <QLabel>
 
 #include <QMessageBox>
@@ -49,10 +49,12 @@ TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol
 
     QLabel* amountLabel = new QLabel(tr("Amount") + " (" + currencySymbol + "):");
     amountEdit = new QLineEdit();
-    amountEdit->setValidator(new QRegExpValidator(QRegExp(currencyMax, currencyDecimals), this));
+    amountEdit->setFixedWidth(100);
+    amountEdit->setValidator(new QRegExpValidator(QRegExp(AMOUNT_REGEXP), this));
 
     QLabel* recipientLabel = new QLabel(tr("For:"));
     recipientEdit = new QLineEdit();
+    recipientEdit->setFixedWidth(100);
 
     removeButton = new QPushButton(tr("Remove"));
 
@@ -89,7 +91,7 @@ void TxOutLayout::setValue(uint64_t value)
 
 uint64_t TxOutLayout::getValue() const
 {
-    return valueStringToInteger(amountEdit->text().toStdString(), currencyMax, currencyDivisor, currencyDecimals);
+    return decimalStringToInteger(amountEdit->text().toStdString(), currencyMax, currencyDivisor, currencyDecimals);
 }
 
 // TODO: call this field the label rather than the recipient
@@ -157,7 +159,7 @@ CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest&
     // Fee
     QLabel* feeLabel = new QLabel(tr("Fee") + " (" + currencySymbol + "):");
     feeEdit = new QLineEdit();
-    feeEdit->setValidator(new QRegExpValidator(QRegExp(currencyMax, currencyDecimals)));
+    feeEdit->setValidator(new QRegExpValidator(QRegExp(AMOUNT_REGEXP), this));
     feeEdit->setText("0.0005"); // TODO: suggest more intelligently
 
     QHBoxLayout* feeLayout = new QHBoxLayout();
@@ -191,7 +193,7 @@ QString CreateTxDialog::getAccountName() const
 
 uint64_t CreateTxDialog::getFeeValue() const
 {
-    return valueStringToInteger(feeEdit->text().toStdString(), currencyMax, currencyDivisor, currencyDecimals);
+    return decimalStringToInteger(feeEdit->text().toStdString(), currencyMax, currencyDivisor, currencyDecimals);
 }
 
 std::vector<std::shared_ptr<CoinDB::TxOut>> CreateTxDialog::getTxOuts()

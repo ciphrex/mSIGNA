@@ -26,9 +26,9 @@ const unsigned char VALID_ADDRESS_VERSIONS[] = { 0x00, 0x05 };
 const int VALID_VERSION_COUNT = sizeof(VALID_ADDRESS_VERSIONS)/sizeof(unsigned char);
 const char* BASE58_CHARS = BITCOIN_BASE58_CHARS;
 const unsigned int ADDRESS_DATA_SIZE = 20;
-const uint64_t MAX_CURRENCY_VALUE = 0xffffffffffffffffull;
+const uint64_t CURRENCY_MAX = 0xffffffffffffffffull;
 const uint64_t CURRENCY_DIVISOR = 100000000ull;
-const unsigned int MAX_CURRENCY_DECIMALS = 8;
+const unsigned int CURRENCY_DECIMALS = 8;
 
 PaymentRequest::PaymentRequest(const QUrl& url)
 {
@@ -90,12 +90,12 @@ uint64_t PaymentRequest::parseAmount(const QString& amountString)
     }
     else {
         mantissa = amountString;
-        exponent = MAX_CURRENCY_DECIMALS;
+        exponent = CURRENCY_DECIMALS;
     }
 
     uint64_t divisor = CURRENCY_DIVISOR;
-    for (unsigned int i = MAX_CURRENCY_DECIMALS; i > exponent; i--) { divisor *= 10; }
-    return valueStringToInteger(mantissa.toStdString(), MAX_CURRENCY_VALUE, divisor, MAX_CURRENCY_DECIMALS);
+    for (unsigned int i = CURRENCY_DECIMALS; i > exponent; i--) { divisor *= 10; }
+    return decimalStringToInteger(mantissa.toStdString(), CURRENCY_MAX, divisor, CURRENCY_DECIMALS);
 }
 
 QString PaymentRequest::toJson() const
