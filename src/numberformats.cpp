@@ -41,14 +41,18 @@ std::string getDecimalRegExpString(uint64_t maxAmount, unsigned int maxDecimals)
 
         if (trailingZeros > 0 && i > 9) { ss << "|[1-9]\\d{0," << trailingZeros << "}"; }
 
-        do
+        while (i > 1)
         {
-            if (i % 10 != 0) { ss << "|" << (i - 1) << "\\d{" << trailingZeros << "}"; }
+            if (i % 10 != 0)
+            {
+                ss << "|" << (i - 1);
+                if (trailingZeros > 0) { ss << "\\d{" << trailingZeros << "}"; }
+            }
             trailingZeros++;
             i /= 10;
-        } while (i > 1);
+        }
 
-        if (i == 1) { ss << "|\\d{" << trailingZeros << "}"; }
+        if (i == 1 && trailingZeros > 0) { ss << "|\\d{" << trailingZeros << "}"; }
         ss << ")(\\.";
 
         if (maxDecimals > 0) { ss << "\\d{0," << maxDecimals << "}"; }
