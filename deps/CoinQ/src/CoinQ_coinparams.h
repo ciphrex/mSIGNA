@@ -87,13 +87,8 @@ private:
     Coin::CoinBlockHeader   genesis_block_;
 };
 
-const CoinParams getBitcoinParams();
-const CoinParams getBitcoinTestnet3Params();
-const CoinParams getLitecoinParams();
-const CoinParams getQuarkcoinParams();
-
-typedef std::pair<std::string, const CoinParams> NetworkPair;
-typedef std::map<std::string, const CoinParams> NetworkMap;
+typedef std::pair<std::string, const CoinParams&> NetworkPair;
+typedef std::map<std::string, const CoinParams&> NetworkMap;
 
 class NetworkSelector
 {
@@ -106,5 +101,12 @@ public:
 private:
     NetworkMap network_map_;
 };
+
+
+// Individual accessors
+const CoinParams& getBitcoinParams();
+const CoinParams& getTestnet3Params();
+const CoinParams& getLitecoinParams();
+const CoinParams& getQuarkcoinParams();
 
 }
