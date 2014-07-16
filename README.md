@@ -1,6 +1,6 @@
                                C O I N V A U L T (TM)
 ===============================================================================
-Copyright (c) 2013-2014 Ciphrex LLC, All Rights Reserved.
+Copyright (c) 2013-2014 Ciphrex Corporation, All Rights Reserved.
 
 
 CoinVault is an interactive desktop application for transacting on the bitcoin network
