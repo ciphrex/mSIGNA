@@ -285,6 +285,15 @@ NetworkSync::~NetworkSync()
     delete m_ioServiceThread;
 }
 
+void NetworkSync::setCoinParams(const CoinQ::CoinParams& coinParams)
+{
+    if (m_bStarted) throw std::runtime_error("NetworkSync::setCoinParams() - must be stopped to set coin parameters.");
+    boost::lock_guard<boost::mutex> lock(m_startMutex);
+    if (m_bStarted) throw std::runtime_error("NetworkSync::setCoinParams() - must be stopped to set coin parameters.");
+
+    m_coinParams = coinParams;    
+}
+
 void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork)
 {
     m_blockTreeFile = blockTreeFile;

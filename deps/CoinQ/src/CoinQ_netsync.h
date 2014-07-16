@@ -41,6 +41,9 @@ public:
     NetworkSync(const CoinQ::CoinParams& coinParams = CoinQ::getBitcoinParams());
     ~NetworkSync();
 
+    void setCoinParams(const CoinQ::CoinParams& coinParams);
+    const CoinQ::CoinParams& getCoinParams() const { return m_coinParams; }
+
     void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = true);
     bool headersSynched() const { return m_bHeadersSynched; }
     int getBestHeight();
