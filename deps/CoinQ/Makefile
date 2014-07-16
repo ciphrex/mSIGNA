@@ -61,6 +61,7 @@ else ifneq ($(MAKECMDGOALS), clean)
 endif
 
 OBJS = \
+    obj/CoinQ_coinparams.o \
     obj/CoinQ_script.o \
     obj/CoinQ_peer_io.o \
     obj/CoinQ_netsync.o \
