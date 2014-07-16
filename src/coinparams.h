@@ -4,15 +4,14 @@
 //
 // coinparams.h 
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_COINPARAMS_H
-#define COINVAULT_COINPARAMS_H
+#pragma once
 
 #include <CoinQ/CoinQ_coinparams.h>
 
-extern const CoinQ::CoinParams& getCoinParams();
+extern const CoinQ::NetworkSelector& getNetworkSelector();
 
-#endif // COINVAULT_COINPARAMS_H
+extern const CoinQ::CoinParams& getCoinParams(const std::string& network_name = "");
