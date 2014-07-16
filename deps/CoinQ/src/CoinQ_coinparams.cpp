@@ -41,7 +41,7 @@ const CoinParams& NetworkSelector::getCoinParams(const std::string& network_name
     if (it == network_map_.end())
     {
         stringstream err;
-        err << "NetworkSelector::getCoinParams() - network \"" << lower_network_name << "\" not recognized.";
+        err << "NetworkSelector::getCoinParams() - network \"" << network_name << " / " << lower_network_name << "\" not recognized.";
         throw runtime_error(err.str());
     }
 
