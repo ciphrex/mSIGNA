@@ -10,6 +10,7 @@
 
 #include <CoinCore/CoinNodeData.h>
 
+#include <vector>
 #include <map>
 
 namespace CoinQ {
@@ -100,6 +101,7 @@ class NetworkSelector
 public:
     NetworkSelector();
 
+    std::vector<std::string> getNetworkNames() const;
     const CoinParams& getCoinParams(const std::string& network_name) const;
 
 private:

@@ -41,6 +41,16 @@ const CoinParams getQuarkcoinParams()
 NetworkSelector::NetworkSelector()
 {
     network_map_.insert(NetworkPair("bitcoin", getBitcoinParams()));
+    network_map_.insert(NetworkPair("testnet3", getBitcoinTestnet3Params()));
+    network_map_.insert(NetworkPair("litecoin", getLitecoinParams()));
+    network_map_.insert(NetworkPair("quarkcoin", getQuarkcoinParams()));
+}
+
+vector<string> NetworkSelector::getNetworkNames() const
+{
+    vector<string> names;
+    for (const auto& item: network_map_) { names.push_back(item.first); }
+    return names;
 }
 
 const CoinParams& NetworkSelector::getCoinParams(const std::string& network_name) const
