@@ -75,7 +75,7 @@ all: lib/libCoinQ.a
 lib/libCoinQ.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
 
-obj/%.o: src/%.cpp
+obj/%.o: src/%.cpp src/%.h
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
 
 install:

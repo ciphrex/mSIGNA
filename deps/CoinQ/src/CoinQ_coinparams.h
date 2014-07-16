@@ -92,7 +92,6 @@ const CoinParams getBitcoinTestnet3Params();
 const CoinParams getLitecoinParams();
 const CoinParams getQuarkcoinParams();
 
-
 typedef std::pair<std::string, const CoinParams> NetworkPair;
 typedef std::map<std::string, const CoinParams> NetworkMap;
 
