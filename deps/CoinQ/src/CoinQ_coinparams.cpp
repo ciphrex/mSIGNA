@@ -8,6 +8,8 @@
 
 #include "CoinQ_coinparams.h"
 
+#include <algorithm>
+
 using namespace CoinQ;
 using namespace std;
 
@@ -43,7 +45,10 @@ NetworkSelector::NetworkSelector()
 
 const CoinParams& NetworkSelector::getCoinParams(const std::string& network_name) const
 {
-    const auto& it = network_map_.find(network_name);
+    string lower_network_name;
+    transform(network_name.begin(), network_name.end(), lower_network_name.begin(), ::tolower);
+
+    const auto& it = network_map_.find(lower_network_name);
     if (it == network_map_.end()) throw runtime_error("NetworkSelector::getCoinParams() - network not recognized.");
 
     return it->second;
