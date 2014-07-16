@@ -84,6 +84,7 @@ public slots:
 
 private slots:
     void removeTxOut(TxOutLayout* txOutLayout);
+    void setRemoveEnabled(bool enabled = true);
 
 private:
     QComboBox* accountComboBox;
