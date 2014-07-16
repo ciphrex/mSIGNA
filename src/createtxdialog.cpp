@@ -50,6 +50,7 @@ TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol
     QLabel* amountLabel = new QLabel(tr("Amount") + " (" + currencySymbol + "):");
     amountEdit = new QLineEdit();
     amountEdit->setFixedWidth(100);
+    amountEdit->setAlignment(Qt::AlignRight);
     amountEdit->setValidator(new CurrencyValidator(currencyMax, currencyDecimals, this));
 
     QLabel* recipientLabel = new QLabel(tr("For:"));
