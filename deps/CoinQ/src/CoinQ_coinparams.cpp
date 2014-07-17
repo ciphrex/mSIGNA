@@ -168,4 +168,30 @@ const CoinParams quarkcoinParams(
 );
 const CoinParams& getQuarkcoinParams() { return quarkcoinParams; }
 
+/*
+const CoinParams bluecoinParams(
+    0xaaabf5fe, // main.cpp     pchmessageStart
+    71001,      // protocol.h   PROTOCOL_VERSION
+    "27104",    // 
+    0x1a,
+    0x1c,       // base58.h     CBitcoinAddress
+    "Bluecoin",
+    "bluecoin",
+    1000000,    // util.h       COIN
+    "BLU",
+    0xffffffffffffffffull / 100000, // TODO: fix this
+    &hash9,     // main.h       CBlock::GetHash() - there's a time cutoff before which scrypt_1024_1_1_256 is used
+    &hash9,     //              The time cutoff is X11_CUTOFF_TIME = 1403395200 defined in main.h
+    Coin::CoinBlockHeader(
+        1,
+        1398205046,
+        0x1e0fffff, // main.cpp     bnProofOfWorkLimit
+        380217,
+        uchar(32, 0),
+        uchar_vector("9867907dca9d8dd34cb5424091f5ef374e36407ad196fb28f6cd628fdf4e6220") // main.cpp  LoadBlockIndex
+    )
+); 
+const CoinParams& getBluecoinParams() { return bluecoinParams; }
+*/
+    
 }
