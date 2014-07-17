@@ -87,6 +87,7 @@ SOURCES = \
     src/settings.cpp \
     src/filesystem.cpp \
     src/versioninfo.cpp \
+    src/copyrightinfo.cpp \
     src/coinparams.cpp \
     src/docdir.cpp \
     src/main.cpp \

@@ -4,21 +4,19 @@
 //
 // versioninfo.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef VAULT_VERSIONINFO_H
-#define VAULT_VERSIONINFO_H
+#pragma once
 
 #include <QString>
 
-const int VERSIONPADDINGRIGHT = 20;
-const int VERSIONPADDINGBOTTOM = 30;
+int getVersionPaddingRight();
+int getVersionPaddingBottom();
 
-const QString VERSIONTEXT("Version 0.4.6 beta");
+const QString& getVersionText();
 
 const QString& getCommitHash();
 const QString& getShortCommitHash();
 
-#endif //  VAULT_VERSIONINFO_H

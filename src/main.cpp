@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
     }
 
     app.setApplicationName(getDefaultSettings().getAppName());
-    app.setApplicationVersion(VERSIONTEXT);
+    app.setApplicationVersion(getVersionText());
 
     QDir datadir(getDefaultSettings().getDataDir());
     if (!datadir.exists() && !datadir.mkpath(getDefaultSettings().getDataDir())) {

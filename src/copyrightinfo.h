@@ -4,18 +4,16 @@
 //
 // copyrightinfo.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef VAULT_COPYRIGHTINFO_H
-#define VAULT_COPYRIGHTINFO_H
+#pragma once
 
 #include <QString>
 
-const int COPYRIGHTPADDINGRIGHT = 20;
-const int COPYRIGHTPADDINGBOTTOM = 10;
+int getCopyrightPaddingRight();
+int getCopyrightPaddingBottom();
 
-const QString COPYRIGHTTEXT("Copyright (c) 2013-2014 Ciphrex Corporation, All Rights Reserved");
+const QString& getCopyrightText();
 
-#endif //  VAULT_COPYRIGHTINFO_H

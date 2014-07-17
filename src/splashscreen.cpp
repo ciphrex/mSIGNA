@@ -25,18 +25,18 @@ SplashScreen::SplashScreen()
     QFontMetrics metrics = painter.fontMetrics();
 
     QString fullVersionText = "(" + getShortCommitHash() + ") ";
-    fullVersionText += VERSIONTEXT;
+    fullVersionText += getVersionText();
 
     painter.drawText(
-        pixmap.width() - metrics.width(fullVersionText) - VERSIONPADDINGRIGHT,
-        pixmap.height() - metrics.height() - VERSIONPADDINGBOTTOM,
+        pixmap.width() - metrics.width(fullVersionText) - getVersionPaddingRight(),
+        pixmap.height() - metrics.height() - getVersionPaddingBottom(),
         fullVersionText 
     );
 
     painter.drawText(
-        pixmap.width() - metrics.width(COPYRIGHTTEXT) - COPYRIGHTPADDINGRIGHT,
-        pixmap.height() - metrics.height() - COPYRIGHTPADDINGBOTTOM,
-        COPYRIGHTTEXT
+        pixmap.width() - metrics.width(getCopyrightText()) - getCopyrightPaddingRight(),
+        pixmap.height() - metrics.height() - getCopyrightPaddingBottom(),
+        getCopyrightText()
     );
 
     painter.end();
