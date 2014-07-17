@@ -9,6 +9,8 @@
 // All Rights Reserved.
 
 #include "settings.h"
+#include "coinparams.h"
+#include "networkselectiondialog.h"
 
 #include <QApplication>
 #include <QDateTime>
@@ -28,6 +30,14 @@
 
 const int MINIMUM_SPLASH_SECS = 5;
 
+void selectNetwork()
+{
+    CoinQ::NetworkSelector& selector = getNetworkSelector();
+    NetworkSelectionDialog dlg(selector);
+    if (!dlg.exec()) exit(0);
+    selector.select(dlg.getNetworkName().toStdString());
+}
+
 int main(int argc, char* argv[])
 {
     Q_INIT_RESOURCE(coinvault);
@@ -36,6 +46,7 @@ int main(int argc, char* argv[])
     app.setOrganizationName("Ciphrex");
 
     try {
+        selectNetwork();
         getDefaultSettings();
     }
     catch (const std::exception& e) {
