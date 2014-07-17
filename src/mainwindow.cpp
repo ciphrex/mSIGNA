@@ -171,7 +171,12 @@ MainWindow::MainWindow() :
 
 void MainWindow::loadBlockTree()
 {
-    networkSync.loadHeaders(blockTreeFile.toStdString(), false);
+    networkSync.loadHeaders(blockTreeFile.toStdString(), false,
+        [this](const CoinQBlockTreeMem& blockTree) {
+            std::stringstream progress;
+            progress << "Height: " << blockTree.getBestHeight() << " / " << "Total Work: " << blockTree.getTotalWork().getDec();
+            emit headersLoadProgress(QString::fromStdString(progress.str()));
+        });
     emit updateBestHeight(networkSync.getBestHeight());
 }
 

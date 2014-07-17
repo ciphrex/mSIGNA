@@ -100,6 +100,7 @@ int main(int argc, char* argv[])
     splash.showMessage("\n  Loading settings...");
     MainWindow mainWin; // constructor loads settings
     QObject::connect(&mainWin, &MainWindow::status, [&](const QString& message) { splash.showMessage(QString("\n ") + message); });
+    QObject::connect(&mainWin, &MainWindow::headersLoadProgress, [&](const QString& message) { splash.showMessage(QString("\n Loading block headers... ") + message); });
 
     splash.showMessage("\n  Starting command server...");
     if (!commandServer.start()) {

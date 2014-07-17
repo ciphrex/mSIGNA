@@ -68,6 +68,7 @@ public:
 
 signals:
     void status(const QString& message);
+    void headersLoadProgress(const QString& message);
     void updateSyncHeight(int height);
     void updateBestHeight(int height);
 
