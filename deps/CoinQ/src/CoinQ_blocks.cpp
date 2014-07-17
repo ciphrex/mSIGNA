@@ -301,12 +301,12 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
 
             try {
                 if (mBestHeight >= 0) {
+                    insertHeader(header, bCheckProofOfWork);
+                    count++;
                     if (count % 10000 == 0) {
                         if (callback) callback(*this);
                         LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - header hash: " << header.getHashLittleEndian().getHex() << " height: " << count << std::endl;
                     }
-                    insertHeader(header, bCheckProofOfWork);
-                    count++;
                 }
                 else { 
                     LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - genesis hash: " << header.getHashLittleEndian().getHex() << std::endl;
