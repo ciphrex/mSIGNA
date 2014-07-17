@@ -99,6 +99,7 @@ public:
     const CoinParams& getCoinParams(const std::string& network_name = "") const;
 
     void select(const std::string& network_name);
+    const std::string& getSelected() const { return selected_; }
 
 private:
     NetworkMap network_map_;
