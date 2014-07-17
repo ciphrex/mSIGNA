@@ -17,13 +17,14 @@ using namespace std;
 namespace CoinQ
 {
 
-NetworkSelector::NetworkSelector(const std::string& network_name) :
-    selected_(network_name)
+NetworkSelector::NetworkSelector(const std::string& network_name)
 {
     network_map_.insert(NetworkPair("bitcoin", getBitcoinParams()));
     network_map_.insert(NetworkPair("testnet3", getTestnet3Params()));
     network_map_.insert(NetworkPair("litecoin", getLitecoinParams()));
     network_map_.insert(NetworkPair("quarkcoin", getQuarkcoinParams()));
+
+    if (!network_name.empty()) { select(network_name); }
 }
 
 vector<string> NetworkSelector::getNetworkNames() const
@@ -35,7 +36,7 @@ vector<string> NetworkSelector::getNetworkNames() const
 
 const CoinParams& NetworkSelector::getCoinParams(const std::string& network_name) const
 {
-    string lower_network_name(network_name);
+    string lower_network_name;
 
     if (network_name.empty())   { lower_network_name = selected_;    }
     else                        { lower_network_name = network_name; }
@@ -54,6 +55,21 @@ const CoinParams& NetworkSelector::getCoinParams(const std::string& network_name
 
     return it->second;
 }
+
+void NetworkSelector::select(const std::string& network_name)
+{
+    string lower_network_name(network_name);
+    transform(lower_network_name.begin(), lower_network_name.end(), lower_network_name.begin(), ::tolower);
+    if (!network_map_.count(lower_network_name))
+    {
+        stringstream err;
+        err << "NetworkSelector::select() - network \"" << lower_network_name << "\" not recognized.";
+        throw runtime_error(err.str());
+    }
+
+    selected_ = lower_network_name;
+}
+
 
 // Coins can be added here
 const CoinParams bitcoinParams(
