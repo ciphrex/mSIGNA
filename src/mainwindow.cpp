@@ -1242,7 +1242,7 @@ void MainWindow::fetchingHeaders()
 void MainWindow::headersSynched()
 {
     emit updateBestHeight(networkSync.getBestHeight());
-    emit status(tr("Finished header sync"));
+    emit status(tr("Finished loading headers."));
     if (accountModel->isOpen()) {
         try {
             syncBlocks();
