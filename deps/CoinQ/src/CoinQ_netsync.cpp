@@ -85,7 +85,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
 
     m_peer.subscribeClose([&](CoinQ::Peer& /*peer*/, int code, const std::string& message)
     {
-        m_bConnected = false;
+        stop();
         notifyClose();
         notifyStopped();
         std::stringstream ss;
