@@ -61,7 +61,7 @@ public:
 
     void loadBlockTree();
     void tryConnect();
-    bool isConnected() const { return networkState >= NETWORK_STATE_SYNCHING; }
+    bool isConnected() const { return networkState >= NETWORK_STATE_STARTED; }
     bool isSynched() const { return networkState == NETWORK_STATE_SYNCHED; }
 
     void updateStatusMessage(const QString& message);
