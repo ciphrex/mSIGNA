@@ -453,7 +453,10 @@ void MainWindow::newKeychain()
             //updateStatusMessage(tr("Generating ") + QString::number(numKeys) + tr(" keys..."));
 
             // TODO: Randomize using user input for entropy
-            accountModel->newKeychain(name, random_bytes(32));
+            LOGGER(debug) << "MainWindow::newKeychain - getting entropy for master key..." << std::endl;
+            secure_bytes_t entropy = random_bytes(32);
+            LOGGER(debug) << "MainWindow::newKeychain - done getting entropy." << std::endl;
+            accountModel->newKeychain(name, entropy);
             accountModel->update();
             keychainModel->update();
             keychainView->update();
