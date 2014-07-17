@@ -12,6 +12,6 @@
 
 #include <CoinQ/CoinQ_coinparams.h>
 
-extern const CoinQ::NetworkSelector& getNetworkSelector();
+CoinQ::NetworkSelector& getNetworkSelector();
 
-extern const CoinQ::CoinParams& getCoinParams(const std::string& network_name = "");
+const CoinQ::CoinParams& getCoinParams(const std::string& network_name = "");
