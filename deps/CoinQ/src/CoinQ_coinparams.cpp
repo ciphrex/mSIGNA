@@ -17,7 +17,8 @@ using namespace std;
 namespace CoinQ
 {
 
-NetworkSelector::NetworkSelector()
+NetworkSelector::NetworkSelector(const std::string& network_name) :
+    selected_(network_name)
 {
     network_map_.insert(NetworkPair("bitcoin", getBitcoinParams()));
     network_map_.insert(NetworkPair("testnet3", getTestnet3Params()));
@@ -35,6 +36,12 @@ vector<string> NetworkSelector::getNetworkNames() const
 const CoinParams& NetworkSelector::getCoinParams(const std::string& network_name) const
 {
     string lower_network_name(network_name);
+
+    if (network_name.empty())   { lower_network_name = selected_;    }
+    else                        { lower_network_name = network_name; }
+
+    if (lower_network_name.empty()) throw runtime_error("NetworkSelector::getCoinParams() - no network selected.");
+
     transform(lower_network_name.begin(), lower_network_name.end(), lower_network_name.begin(), ::tolower);
 
     const auto& it = network_map_.find(lower_network_name);

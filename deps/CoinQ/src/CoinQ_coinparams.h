@@ -93,13 +93,16 @@ typedef std::map<std::string, const CoinParams&> NetworkMap;
 class NetworkSelector
 {
 public:
-    NetworkSelector();
+    NetworkSelector(const std::string& network_name = "");
 
     std::vector<std::string> getNetworkNames() const;
-    const CoinParams& getCoinParams(const std::string& network_name) const;
+    const CoinParams& getCoinParams(const std::string& network_name = "") const;
+
+    void select(const std::string& network_name) { selected_ = network_name; }
 
 private:
     NetworkMap network_map_;
+    std::string selected_;
 };
 
 
