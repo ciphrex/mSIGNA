@@ -1366,7 +1366,7 @@ void MainWindow::networkSettings()
             disconnectAction->setText(tr("Disconnect from ") + host);
         }
 
-        QSettings settings("Ciphrex", getDefaultSettings().getAppName());
+        QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
         settings.setValue("host", host);
         settings.setValue("port", port);
     }
@@ -1814,38 +1814,49 @@ void MainWindow::createStatusBar()
 
 void MainWindow::loadSettings()
 {
-    QSettings settings("Ciphrex", getDefaultSettings().getAppName());
-    QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
-    QSize size = settings.value("size", QSize(800, 400)).toSize();
-    resize(size);
-    move(pos);
+    {
+        QSettings settings("Ciphrex", getDefaultSettings().getSettingsRoot());
+        QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
+        QSize size = settings.value("size", QSize(800, 400)).toSize();
+        resize(size);
+        move(pos);
 
-    licenseAccepted = settings.value("licenseaccepted", false).toBool();
+        licenseAccepted = settings.value("licenseaccepted", false).toBool();
+    }
 
-    blockTreeFile = settings.value("blocktreefile", getDefaultSettings().getDataDir() + "/blocktree.dat").toString();
-    host = settings.value("host", "localhost").toString();
-    port = settings.value("port", getCoinParams().default_port()).toInt();
-    autoConnect = settings.value("autoconnect", false).toBool();
+    {
+        QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
+        blockTreeFile = settings.value("blocktreefile", getDefaultSettings().getDataDir() + "/blocktree.dat").toString();
+        host = settings.value("host", "localhost").toString();
+        port = settings.value("port", getCoinParams().default_port()).toInt();
+        autoConnect = settings.value("autoconnect", false).toBool();
 
-    setDocDir(settings.value("lastvaultdir", getDefaultSettings().getDocumentDir()).toString());
+        setDocDir(settings.value("lastvaultdir", getDefaultSettings().getDocumentDir()).toString());
+    }
 }
 
 void MainWindow::saveSettings()
 {
-    QSettings settings("Ciphrex", getDefaultSettings().getAppName());
-    settings.setValue("pos", pos());
-    settings.setValue("size", size());
-    settings.setValue("licenseaccepted", licenseAccepted);
-    settings.setValue("blocktreefile", blockTreeFile);
-    settings.setValue("host", host);
-    settings.setValue("port", port);
-    settings.setValue("autoconnect", autoConnect);
-    settings.setValue("lastvaultdir", getDocDir());
+    {
+        QSettings settings("Ciphrex", getDefaultSettings().getSettingsRoot());
+        settings.setValue("pos", pos());
+        settings.setValue("size", size());
+        settings.setValue("licenseaccepted", licenseAccepted);
+    }
+
+    {
+        QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
+        settings.setValue("blocktreefile", blockTreeFile);
+        settings.setValue("host", host);
+        settings.setValue("port", port);
+        settings.setValue("autoconnect", autoConnect);
+        settings.setValue("lastvaultdir", getDocDir());
+    }
 }
 
 void MainWindow::clearSettings()
 {
-    QSettings settings("Ciphrex", getDefaultSettings().getAppName());
+    QSettings settings("Ciphrex", getDefaultSettings().getSettingsRoot());
     settings.clear();
     loadSettings();
 }

@@ -18,6 +18,8 @@ void DefaultSettings::load()
 {
     m_appName = getCoinParams().network_name();
     m_appName += "Vault";
+    m_settingsRoot = "CoinVault";
+    m_networkSettingsPath = m_settingsRoot + "/" + getCoinParams().network_name();
     m_dataDir = QString::fromStdString(getDefaultDataDir(m_appName.toStdString()));
     m_documentDir = QDir::homePath();
     m_base58Versions[0] = getCoinParams().pay_to_pubkey_hash_version();
