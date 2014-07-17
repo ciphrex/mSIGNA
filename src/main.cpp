@@ -65,8 +65,8 @@ int main(int argc, char* argv[])
         // Allow selecting a different network than bitcoin at startup.
         if (argc > 1)
         {
-            if (std::string(argv[1]) == "selectnetwork")    { selectNetwork("");      }
-            else                                            { selectNetwork(argv[1]); }
+            if (std::string(argv[1]) == "select")   { selectNetwork("");      }
+            else                                    { selectNetwork(argv[1]); }
         }
         getDefaultSettings();
     }
