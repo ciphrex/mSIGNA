@@ -179,7 +179,8 @@ public:
     int getConfirmations(const uchar_vector& hash) const;
     void clear() { mHeaderHashMap.clear(); mHeaderHeightMap.clear(); mBestHeight = -1; mTotalWork = 0; pHead = NULL; }
 
-    void loadFromFile(const std::string& filename, bool bCheckProofOfWork = true);
+    void loadFromFile(const std::string& filename, bool bCheckProofOfWork = true, std::function<void(const CoinQBlockTreeMem&)> callback = nullptr); 
+
     void flushToFile(const std::string& filename);
 };
 

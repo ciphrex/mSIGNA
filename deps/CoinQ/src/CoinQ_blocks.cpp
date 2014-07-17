@@ -250,7 +250,7 @@ int CoinQBlockTreeMem::getConfirmations(const uchar_vector& hash) const
     return mBestHeight - it->second.height + 1;
 }
 
-void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckProofOfWork)
+void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckProofOfWork, std::function<void(const CoinQBlockTreeMem&)> callback)
 {
     boost::filesystem::path p(filename);
     if (!boost::filesystem::exists(p)) {
@@ -302,6 +302,7 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
             try {
                 if (mBestHeight >= 0) {
                     if (count % 10000 == 0) {
+                        if (callback) callback(*this);
                         LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - header hash: " << header.getHashLittleEndian().getHex() << " height: " << count << std::endl;
                     }
                     insertHeader(header, bCheckProofOfWork);
