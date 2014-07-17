@@ -452,9 +452,13 @@ void MainWindow::newKeychain()
             //unsigned long numKeys = dlg.getNumKeys();
             //updateStatusMessage(tr("Generating ") + QString::number(numKeys) + tr(" keys..."));
 
+            if (keychainModel->exists(name)) throw std::runtime_error("A keychain with that name already exists.");
+
             // TODO: Randomize using user input for entropy
+            statusBar()->showMessage("Obtaining entropy...please wait...");
             LOGGER(debug) << "MainWindow::newKeychain - getting entropy for master key..." << std::endl;
             secure_bytes_t entropy = random_bytes(32);
+            statusBar()->showMessage("");
             LOGGER(debug) << "MainWindow::newKeychain - done getting entropy." << std::endl;
             accountModel->newKeychain(name, entropy);
             accountModel->update();
