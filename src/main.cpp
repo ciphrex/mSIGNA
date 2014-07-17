@@ -9,6 +9,7 @@
 // All Rights Reserved.
 
 #include "settings.h"
+#include "versioninfo.h"
 #include "coinparams.h"
 #include "networkselectiondialog.h"
 
@@ -44,6 +45,7 @@ int main(int argc, char* argv[])
 
     QApplication app(argc, argv);
     app.setOrganizationName("Ciphrex");
+    app.setOrganizationDomain("ciphrex.com");
 
     try {
         selectNetwork();
@@ -57,6 +59,7 @@ int main(int argc, char* argv[])
     }
 
     app.setApplicationName(getDefaultSettings().getAppName());
+    app.setApplicationVersion(VERSIONTEXT);
 
     QDir datadir(getDefaultSettings().getDataDir());
     if (!datadir.exists() && !datadir.mkpath(getDefaultSettings().getDataDir())) {
