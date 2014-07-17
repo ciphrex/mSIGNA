@@ -47,6 +47,10 @@ int main(int argc, char* argv[])
     app.setOrganizationName("Ciphrex");
     app.setOrganizationDomain("ciphrex.com");
 
+    // Check whether another instance is already running. If so, send it commands and exit.    
+    CommandServer commandServer(&app);
+    if (commandServer.processArgs(argc, argv)) exit(0);
+
     try {
         selectNetwork();
         getDefaultSettings();
@@ -67,10 +71,6 @@ int main(int argc, char* argv[])
         msgBox.setText(QMessageBox::tr("Warning: Failed to create app data directory."));
         msgBox.exec();
     }
-
-    // Check whether another instance is already running. If so, send it commands and exit.    
-    CommandServer commandServer(&app);
-    if (commandServer.processArgs(argc, argv)) exit(0);
 
     INIT_LOGGER((getDefaultSettings().getDataDir() + "/debug.log").toStdString().c_str());
     LOGGER(debug) << std::endl << std::endl << std::endl << std::endl << QDateTime::currentDateTime().toString().toStdString() << std::endl;
