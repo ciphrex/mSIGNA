@@ -31,12 +31,22 @@
 
 const int MINIMUM_SPLASH_SECS = 5;
 
-void selectNetwork()
+void selectNetwork(const std::string& networkName)
 {
+    std::string selected;
     CoinQ::NetworkSelector& selector = getNetworkSelector();
-    NetworkSelectionDialog dlg(selector);
-    if (!dlg.exec()) exit(0);
-    selector.select(dlg.getNetworkName().toStdString());
+    if (networkName.empty())
+    {
+        NetworkSelectionDialog dlg(selector);
+        if (!dlg.exec()) exit(0);
+        selected = dlg.getNetworkName().toStdString();
+    }
+    else
+    {
+        selected = networkName;
+    }
+
+    selector.select(selected);
 }
 
 int main(int argc, char* argv[])
@@ -52,7 +62,12 @@ int main(int argc, char* argv[])
     if (commandServer.processArgs(argc, argv)) exit(0);
 
     try {
-        selectNetwork();
+        // Allow selecting a different network than bitcoin at startup.
+        if (argc > 1)
+        {
+            if (std::string(argv[1]) == "selectnetwork")    { selectNetwork("");      }
+            else                                            { selectNetwork(argv[1]); }
+        }
         getDefaultSettings();
     }
     catch (const std::exception& e) {
