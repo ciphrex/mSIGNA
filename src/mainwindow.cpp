@@ -386,7 +386,7 @@ void MainWindow::openVault(QString fileName)
         selectAccount(0);
         updateStatusMessage(tr("Opened ") + fileName);
 
-        promptSync();
+        //promptSync();
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::openVault - " << e.what() << std::endl;
@@ -845,7 +845,7 @@ void MainWindow::importAccount(QString fileName)
         tabWidget->setCurrentWidget(accountView);
         networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         updateStatusMessage(tr("Imported account ") + name);
-        promptSync();
+        //promptSync();
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::importAccount - " << e.what() << std::endl;
