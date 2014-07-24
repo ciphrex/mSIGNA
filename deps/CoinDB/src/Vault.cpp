@@ -1107,6 +1107,7 @@ std::vector<TxOutView> Vault::getUnspentTxOutViews(const std::string& account_na
 #if defined(LOCK_ALL_CALLS)
     boost::lock_guard<boost::mutex> lock(mutex);
 #endif
+    odb::core::session s;
     odb::core::transaction t(db_->begin());
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
     return getUnspentTxOutViews_unwrapped(account, min_confirmations);
