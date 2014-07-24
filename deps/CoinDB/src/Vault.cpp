@@ -1100,24 +1100,31 @@ std::shared_ptr<Account> Vault::getAccount_unwrapped(const std::string& account_
     return account;
 }
 
-std::vector<TxOutView> Vault::getUnspentTxOutViews(const std::string& account_name, uint32_t minconfirmations) const
+std::vector<TxOutView> Vault::getUnspentTxOutViews(const std::string& account_name, uint32_t min_confirmations) const
 {
-    LOGGER(trace) << "Vault::getUnspentTxOutViews(" << account_name << ", " << minconfirmations << ")" << std::endl;
+    LOGGER(trace) << "Vault::getUnspentTxOutViews(" << account_name << ", " << min_confirmations << ")" << std::endl;
 
 #if defined(LOCK_ALL_CALLS)
     boost::lock_guard<boost::mutex> lock(mutex);
 #endif
     odb::core::transaction t(db_->begin());
-    return getUnspentTxOutViews_unwrapped(account_name, minconfirmations);
+    std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
+    return getUnspentTxOutViews_unwrapped(account, min_confirmations);
 }
 
-std::vector<TxOutView> Vault::getUnspentTxOutViews_unwrapped(const std::string& account_name, uint32_t minconfirmations) const
+std::vector<TxOutView> Vault::getUnspentTxOutViews_unwrapped(std::shared_ptr<Account> account, uint32_t min_confirmations) const
 {
-    std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
-
     typedef odb::query<TxOutView> query_t;
-    odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id()));
+    query_t query(query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id());
+
     std::vector<TxOutView> utxoviews;
+    if (min_confirmations > 0)
+    {
+        uint32_t best_height = getBestHeight_unwrapped();
+        if (min_confirmations > best_height) return utxoviews;
+        query = (query && query_t::BlockHeader::height <= best_height + 1 - min_confirmations);
+    }
+    odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(query));
     for (auto& utxoview: utxoview_r) { utxoviews.push_back(utxoview); }
 
     return utxoviews;
