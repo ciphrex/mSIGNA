@@ -475,9 +475,9 @@ cli::result_t cmd_unspent(const cli::params_t& params)
     uint32_t best_height = vault.getBestHeight();
     vector<TxOutView> txOutViews = vault.getUnspentTxOutViews(account_name, min_confirmations);
     stringstream ss;
-    ss << formattedTxOutViewHeader();
+    ss << formattedUnspentTxOutViewHeader();
     for (auto& txOutView: txOutViews)
-        ss << endl << formattedTxOutView(txOutView, best_height);
+        ss << endl << formattedUnspentTxOutView(txOutView, best_height);
     return ss.str();
 }
 

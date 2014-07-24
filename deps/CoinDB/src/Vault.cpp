@@ -2014,14 +2014,14 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
     return tx;
 }
 
-std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, bool insert)
+std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations, bool insert)
 {
-    LOGGER(trace) << "Vault::createTx(" << account_name << ", " << tx_version << ", " << tx_locktime << ", " << coin_ids.size() << " txin(s), " << txouts.size() << " txout(s), " << (insert ? "insert" : "no insert") << ")" << std::endl;
+    LOGGER(trace) << "Vault::createTx(" << account_name << ", " << tx_version << ", " << tx_locktime << ", " << coin_ids.size() << " txin(s), " << txouts.size() << " txout(s), " << fee << ", " << min_confirmations << ", " << (insert ? "insert" : "no insert") << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
-    std::shared_ptr<Tx> tx = createTx_unwrapped(account_name, tx_version, tx_locktime, coin_ids, txouts);
+    std::shared_ptr<Tx> tx = createTx_unwrapped(account_name, tx_version, tx_locktime, coin_ids, txouts, fee, min_confirmations);
     if (insert)
     {
         tx = insertTx_unwrapped(tx);
@@ -2030,34 +2030,63 @@ std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx
     return tx;
 }
 
-std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts)
+std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations)
 {
-    if (coin_ids.empty()) throw TxInvalidInputsException();
-
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
 
-    typedef odb::query<TxOutView> query_t;
-    odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(query_t::TxOut::id.in_range(coin_ids.begin(), coin_ids.end()) && query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id()));
-    std::vector<TxOutView> utxoviews;
-    for (auto& utxoview: utxoview_r) { utxoviews.push_back(utxoview); }
-    if (utxoviews.size() < coin_ids.size()) throw TxInvalidInputsException();
-    
-    txins_t txins;
+    // TODO: Better fee calculation heuristics
     uint64_t input_total = 0;
-    for (auto& utxoview: utxoviews)
+    uint64_t desired_total = fee;
+    for (auto& txout: txouts) { desired_total += txout->value(); }
+
+    typedef odb::query<TxOutView> query_t;
+    query_t base_query(query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id());
+
+    if (min_confirmations > 0)
     {
-        input_total += utxoview.value;
-        std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
-        txins.push_back(txin);
+        uint32_t best_height = getBestHeight_unwrapped();
+        if (min_confirmations > best_height) throw AccountInsufficientFundsException(account_name);
+        base_query = (base_query && query_t::BlockHeader::height <= best_height + 1 - min_confirmations);
     }
 
-    uint64_t output_total = 0;
+    txins_t txins;
+    if (!coin_ids.empty())
+    {
+        odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(base_query && query_t::TxOut::id.in_range(coin_ids.begin(), coin_ids.end())));
+        for (auto& utxoview: utxoview_r)
+        {
+            std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+            txins.push_back(txin);
+            input_total += utxoview.value;
+        }
+        if (txins.size() < coin_ids.size()) throw TxInvalidInputsException();
+    }
+
+    // If the supplied inputs are insufficient, automatically add more
+    // TODO; Better coin selection heuristics
+    if (input_total < desired_total)
+    {
+        query_t query(base_query);
+        if (!coin_ids.empty()) { query = (query && !query_t::TxOut::id.in_range(coin_ids.begin(), coin_ids.end())); }
+        odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(query));
+        std::vector<TxOutView> utxoviews;
+        for (auto& utxoview: utxoview_r) { utxoviews.push_back(utxoview); }
+        std::random_shuffle(utxoviews.begin(), utxoviews.end(), [](int i) { return std::rand() % i; });
+
+        for (auto& utxoview: utxoviews)
+        {
+            std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+            txins.push_back(txin);
+            input_total += utxoview.value;
+            if (input_total >= desired_total) break;
+        }
+        if (input_total < desired_total) throw AccountInsufficientFundsException(account_name);
+    }
+ 
+    // Use supplied outputs first
     std::shared_ptr<AccountBin> change_bin;
     for (auto& txout: txouts)
     {
-        output_total += txout->value();
-        if (output_total > input_total) throw TxOutputsExceedInputsException();
-        
         if (txout->script().empty())
         {
             if (!change_bin) { change_bin = getAccountBin_unwrapped(account_name, CHANGE_BIN_NAME); }
@@ -2066,6 +2095,16 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
         }
     }
 
+    // If supplied change amounts are insufficient, add another change output
+    uint64_t change = input_total - desired_total;
+    if (change > 0)
+    {
+        if (!change_bin) { change_bin = getAccountBin_unwrapped(account_name, CHANGE_BIN_NAME); }
+        std::shared_ptr<SigningScript> changescript = issueAccountBinSigningScript_unwrapped(change_bin);
+
+        std::shared_ptr<TxOut> txout(new TxOut(change, changescript));
+        txouts.push_back(txout);
+    }
     // TODO: Better rng seeding
     std::srand(std::time(0));
     std::random_shuffle(txins.begin(), txins.end(), [](int i) { return std::rand() % i; });

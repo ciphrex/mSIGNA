@@ -1501,6 +1501,9 @@ struct TxOutView
     #pragma db column(SigningScript::txinscript_)
     bytes_t signingscript_txinscript;
 
+    #pragma db column(TxOut::id_)
+    unsigned long id;
+
     #pragma db column(TxOut::script_)
     bytes_t script;
 

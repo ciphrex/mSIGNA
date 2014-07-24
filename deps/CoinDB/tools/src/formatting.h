@@ -219,6 +219,42 @@ inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned in
     return ss.str();
 }
 
+inline std::string formattedUnspentTxOutViewHeader()
+{
+    using namespace std;
+
+    stringstream ss;
+    ss << " ";
+    ss << right << setw(8)  << "id" << " | "
+       << right << setw(15) << "value" << " | "
+       << left  << setw(36) << "address" << " | "
+       << right << setw(8)  << "confs";
+    ss << " ";
+
+    size_t header_length = ss.str().size();
+    ss << endl;
+    for (size_t i = 0; i < header_length; i++) { ss << "="; }
+    return ss.str();
+}
+
+inline std::string formattedUnspentTxOutView(const CoinDB::TxOutView& view, unsigned int best_height)
+{
+    using namespace std;
+    using namespace CoinDB;
+
+    unsigned int confirmations = view.height == 0
+        ? 0 : best_height - view.height + 1;
+
+    stringstream ss;
+    ss << " ";
+    ss << right << setw(8)  << view.id << " | "
+       << right << setw(15) << fixed << setprecision(8) << 1.0*view.value/COIN_EXP << " | "
+       << left  << setw(36) << getAddressFromScript(view.script) << " | "
+       << right << setw(6)  << confirmations;
+    ss << " ";
+    return ss.str();
+}
+
 // Transactions
 inline std::string formattedTxViewHeader()
 {
