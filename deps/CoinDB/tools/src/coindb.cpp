@@ -465,6 +465,22 @@ cli::result_t cmd_history(const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_unspent(const cli::params_t& params)
+{
+    std::string account_name = params[1];
+
+    uint32_t min_confirmations = params.size() > 2 ? strtoul(params[2].c_str(), NULL, 0) : 0;
+
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    uint32_t best_height = vault.getBestHeight();
+    vector<TxOutView> txOutViews = vault.getUnspentTxOutViews(account_name, min_confirmations);
+    stringstream ss;
+    ss << formattedTxOutViewHeader();
+    for (auto& txOutView: txOutViews)
+        ss << endl << formattedTxOutView(txOutView, best_height);
+    return ss.str();
+}
+
 cli::result_t cmd_unsigned(const cli::params_t& params)
 {
     std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
@@ -1084,6 +1100,12 @@ int main(int argc, char* argv[])
         "display transaction history",
         command::params(1, "db file"),
         command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
+    shell.add(command(
+        &cmd_unspent,
+        "unspent",
+        "display unspent outputs",
+        command::params(2, "db file", "account name"),
+        command::params(1, "minimum confirmations = 0")));
     shell.add(command(
         &cmd_unsigned,
         "unsigned",
