@@ -113,6 +113,7 @@ public:
     // empty account_name or bin_name means do not filter on those fields
     std::vector<SigningScriptView>          getSigningScriptViews(const std::string& account_name = "", const std::string& bin_name = "", int flags = SigningScript::ALL) const;
     std::vector<TxOutView>                  getTxOutViews(const std::string& account_name = "", const std::string& bin_name = "", int role_flags = TxOut::ROLE_BOTH, int txout_status_flags = TxOut::BOTH, int tx_status_flags = Tx::ALL, bool hide_change = true) const;
+    std::vector<TxOutView>                  getUnspentTxOutViews(const std::string& account_name, uint32_t minconfirmations = 0) const;
 
     ////////////////////////////
     // ACCOUNT BIN OPERATIONS //
@@ -225,6 +226,8 @@ protected:
 
     bool                                    accountExists_unwrapped(const std::string& account_name) const;
     std::shared_ptr<Account>                getAccount_unwrapped(const std::string& account_name) const; // throws AccountNotFoundException
+
+    std::vector<TxOutView>                  getUnspentTxOutViews_unwrapped(const std::string& account_name, uint32_t minconfirmations = 0) const;
 
     ////////////////////////////
     // ACCOUNT BIN OPERATIONS //
