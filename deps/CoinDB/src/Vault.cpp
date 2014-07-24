@@ -2014,6 +2014,68 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
     return tx;
 }
 
+std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, bool insert)
+{
+    LOGGER(trace) << "Vault::createTx(" << account_name << ", " << tx_version << ", " << tx_locktime << ", " << coin_ids.size() << " txin(s), " << txouts.size() << " txout(s), " << (insert ? "insert" : "no insert") << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Tx> tx = createTx_unwrapped(account_name, tx_version, tx_locktime, coin_ids, txouts);
+    if (insert)
+    {
+        tx = insertTx_unwrapped(tx);
+        if (tx) t.commit();
+    } 
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts)
+{
+    if (coin_ids.empty()) throw TxInvalidInputsException();
+
+    std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
+
+    typedef odb::query<TxOutView> query_t;
+    odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(query_t::TxOut::id.in_range(coin_ids.begin(), coin_ids.end()) && query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id()));
+    std::vector<TxOutView> utxoviews;
+    for (auto& utxoview: utxoview_r) { utxoviews.push_back(utxoview); }
+    if (utxoviews.size() < coin_ids.size()) throw TxInvalidInputsException();
+    
+    txins_t txins;
+    uint64_t input_total = 0;
+    for (auto& utxoview: utxoviews)
+    {
+        input_total += utxoview.value;
+        std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+        txins.push_back(txin);
+    }
+
+    uint64_t output_total = 0;
+    std::shared_ptr<AccountBin> change_bin;
+    for (auto& txout: txouts)
+    {
+        output_total += txout->value();
+        if (output_total > input_total) throw TxOutputsExceedInputsException();
+        
+        if (txout->script().empty())
+        {
+            if (!change_bin) { change_bin = getAccountBin_unwrapped(account_name, CHANGE_BIN_NAME); }
+            std::shared_ptr<SigningScript> changescript = issueAccountBinSigningScript_unwrapped(change_bin);
+            txout->signingscript(changescript);
+        }
+    }
+
+    // TODO: Better rng seeding
+    std::srand(std::time(0));
+    std::random_shuffle(txins.begin(), txins.end(), [](int i) { return std::rand() % i; });
+    std::random_shuffle(txouts.begin(), txouts.end(), [](int i) { return std::rand() % i; });
+
+    std::shared_ptr<Tx> tx(new Tx());
+    tx->set(tx_version, txins, txouts, tx_locktime, time(NULL), Tx::UNSIGNED);
+    return tx;
+}
+
 void Vault::updateTx_unwrapped(std::shared_ptr<Tx> tx)
 {
     for (auto& txin: tx->txins()) { db_->update(txin); }

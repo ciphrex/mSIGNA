@@ -39,6 +39,8 @@ enum ErrorCodes
 
     // Tx errors
     TX_NOT_FOUND = 401,
+    TX_INVALID_INPUTS,
+    TX_OUTPUTS_EXCEED_INPUTS,
 
     // Block header errors
     BLOCKHEADER_NOT_FOUND = 501,
@@ -202,6 +204,18 @@ class TxNotFoundException : public TxException
 {
 public:
     explicit TxNotFoundException(const bytes_t& hash = bytes_t()) : TxException("Transaction not found.", TX_NOT_FOUND, hash) { }
+};
+
+class TxInvalidInputsException : public TxException
+{
+public:
+    explicit TxInvalidInputsException(const bytes_t& hash = bytes_t()) : TxException("Transaction inputs are invalid.", TX_INVALID_INPUTS, hash) { }
+};
+
+class TxOutputsExceedInputsException : public TxException
+{
+public:
+    explicit TxOutputsExceedInputsException(const bytes_t& hash = bytes_t()) : TxException("Transaction outputs exceed inputs.", TX_OUTPUTS_EXCEED_INPUTS, hash) { }
 };
 
 // BLOCK HEADER EXCEPTIONS

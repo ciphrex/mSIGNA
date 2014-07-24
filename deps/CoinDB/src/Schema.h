@@ -60,6 +60,8 @@ typedef odb::nullable<unsigned long> null_id_t;
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
 #endif
 
+typedef std::vector<unsigned long> ids_t;
+
 #pragma db object pointer(std::shared_ptr)
 class Version
 {
