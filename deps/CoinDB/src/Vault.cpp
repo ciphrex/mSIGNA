@@ -1125,7 +1125,7 @@ std::vector<TxOutView> Vault::getUnspentTxOutViews_unwrapped(std::shared_ptr<Acc
         if (min_confirmations > best_height) return utxoviews;
         query = (query && query_t::BlockHeader::height <= best_height + 1 - min_confirmations);
     }
-    odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(query));
+    odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(query + "ORDER BY" + query_t::TxOut::value + "DESC"));
     for (auto& utxoview: utxoview_r) { utxoviews.push_back(utxoview); }
 
     return utxoviews;
