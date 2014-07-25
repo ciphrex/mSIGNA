@@ -50,3 +50,10 @@
     $ make
     $ sudo make install
     $ cd
+
+6) Build qrencode QR Code C library (libqrencode) for linux
+    $ cd CoinVault/deps/qrencode-3.4.3
+    $ ./configure
+    $ make
+    $ sudo make install
+    $ cd

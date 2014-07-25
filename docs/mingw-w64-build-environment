@@ -139,3 +139,10 @@
     $ sudo ln -s ../../include/sqlite3.h sqlite3.h
     $ sudo ln -s ../../include/sqlite3ext.h sqlite3ext.h
     $ cd
+
+12) Build qrencode QR Code C library (libqrencode) for windows
+    $ cd CoinVault/deps/qrencode-3.4.3
+    $ ./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32
+    $ make
+    $ sudo make install
+    $ cd

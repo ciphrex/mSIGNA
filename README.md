@@ -43,6 +43,9 @@ In addition, CoinVault depends on the following:
     - SQLite transactional database engine      http://www.sqlite.org/
         * sqlite3
 
+    - qrencode QR Code C library                http://fukuchi.org/works/qrencode/
+        * qrencode (distribution provided in deps directory)
+
 CoinVault has been built in Linux using gcc 4.6.3 and greater for both 64-bit Linux
 and 64-bit Windows (cross-build, mingw64). It has also been built using
 clang (Xcode 4.1 and greater) in OS X (10.7 and greater).
