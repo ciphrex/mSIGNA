@@ -28,7 +28,7 @@
 #include <ctime>
 #include <functional>
 
-const std::string COINDB_VERSION = "v0.4.0";
+const std::string COINDB_VERSION = "v0.4.1";
 
 using namespace std;
 using namespace odb::core;
