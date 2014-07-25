@@ -1057,6 +1057,12 @@ void MainWindow::insertRawTx()
 
 void MainWindow::createRawTx()
 {
+    if (!accountModel->isOpen())
+    {
+        showError(tr("No vault is open."));
+        return;
+    }
+
     QItemSelectionModel* selectionModel = accountView->selectionModel();
     QModelIndexList indexes = selectionModel->selectedRows(0);
     if (indexes.isEmpty()) {
@@ -1066,7 +1072,7 @@ void MainWindow::createRawTx()
  
     QString accountName = accountModel->data(indexes.at(0)).toString();
 
-    CreateTxDialog dlg(accountName);
+    CreateTxDialog dlg(accountModel->getVault(), accountName);
     while (dlg.exec()) {
         try {
             std::vector<TaggedOutput> outputs = dlg.getOutputs();
@@ -1086,6 +1092,12 @@ void MainWindow::createRawTx()
 
 void MainWindow::createTx(const PaymentRequest& paymentRequest)
 {
+    if (!accountModel->isOpen())
+    {
+        showError(tr("No vault is open."));
+        return;
+    }
+
     QItemSelectionModel* selectionModel = accountView->selectionModel();
     QModelIndexList indexes = selectionModel->selectedRows(0);
     if (indexes.isEmpty()) {
@@ -1095,7 +1107,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
  
     QString accountName = accountModel->data(indexes.at(0)).toString();
 
-    CreateTxDialog dlg(accountName, paymentRequest);
+    CreateTxDialog dlg(accountModel->getVault(), accountName, paymentRequest);
     bool saved = false;
     while (!saved && dlg.exec()) {
         try {

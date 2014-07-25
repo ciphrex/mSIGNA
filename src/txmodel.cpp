@@ -46,6 +46,9 @@ TxModel::TxModel(CoinDB::Vault* vault, const QString& accountName, QObject* pare
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
+    currency_divisor = getCoinParams().currency_divisor();
+    currency_symbol = getCoinParams().currency_symbol();
+
     initColumns();
     setVault(vault);
     setAccount(accountName);

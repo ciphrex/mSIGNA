@@ -10,6 +10,9 @@
 
 #pragma once
 
+class UnspentTxOutModel;
+class UnspentTxOutView;
+
 class QTextEdit;
 
 #include <QDialog>
@@ -68,9 +71,13 @@ class CoinControlWidget : public QWidget
     Q_OBJECT
 
 public:
-    CoinControlWidget(QWidget* parent = nullptr);
+    CoinControlWidget(CoinDB::Vault* vault, const QString& accountName, QWidget* parent = nullptr);
+
+    void update();
 
 private:
+    UnspentTxOutModel* model;
+    UnspentTxOutView* view;
 };
 
 class CreateTxDialog : public QDialog
@@ -79,6 +86,7 @@ class CreateTxDialog : public QDialog
 
 public:
     CreateTxDialog(const QString& accountName, const PaymentRequest& paymentRequest = PaymentRequest(), QWidget* parent = nullptr);
+    CreateTxDialog(CoinDB::Vault* vault, const QString& accountName, const PaymentRequest& paymentRequest = PaymentRequest(), QWidget* parent = nullptr);
 
     QString getAccountName() const;
     uint64_t getFeeValue() const;

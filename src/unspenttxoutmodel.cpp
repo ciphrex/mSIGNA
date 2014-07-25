@@ -42,6 +42,9 @@ UnspentTxOutModel::UnspentTxOutModel(CoinDB::Vault* vault, const QString& accoun
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
+    currency_divisor = getCoinParams().currency_divisor();
+    currency_symbol = getCoinParams().currency_symbol();
+
     initColumns();
     setVault(vault);
     setAccount(accountName);
@@ -50,7 +53,7 @@ UnspentTxOutModel::UnspentTxOutModel(CoinDB::Vault* vault, const QString& accoun
 void UnspentTxOutModel::initColumns()
 {
     QStringList columns;
-    columns << tr("Amount") << tr("Confirmations");
+    columns << tr("ID") << tr("Amount") << tr("Confirmations");
     setHorizontalHeaderLabels(columns);
 }
 

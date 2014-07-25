@@ -9,6 +9,8 @@
 // All Rights Reserved.
 
 #include "createtxdialog.h"
+#include "unspenttxoutmodel.h"
+#include "unspenttxoutview.h"
 #include "numberformats.h"
 #include "currencyvalidator.h"
 
@@ -114,12 +116,25 @@ void TxOutLayout::removeWidgets()
     }
 }
 
-CoinControlWidget::CoinControlWidget(QWidget* parent)
+CoinControlWidget::CoinControlWidget(CoinDB::Vault* vault, const QString& accountName, QWidget* parent)
     : QWidget(parent)
 {
+    model = new UnspentTxOutModel(vault, accountName);
+    view = new UnspentTxOutView();
+    view->setModel(model);
+
+    QHBoxLayout* layout = new QHBoxLayout();
+    layout->addWidget(view);
+    setLayout(layout);
 }
 
-CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest& paymentRequest, QWidget* parent)
+void CoinControlWidget::update()
+{
+    if (model)  { model->update(); }
+    if (view)   { view->update(); }
+}
+
+CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName, const PaymentRequest& paymentRequest, QWidget* parent)
     : QDialog(parent), status(SAVE_ONLY)
 {
     // Coin parameters
@@ -174,7 +189,7 @@ CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest&
     // Coin control
     coinControlCheckBox = new QCheckBox(tr("Enable Coin Control"));
     coinControlCheckBox->setChecked(false);
-    coinControlWidget = new CoinControlWidget();
+    coinControlWidget = new CoinControlWidget(vault, accountName);
     coinControlWidget->hide();
     connect(coinControlCheckBox, SIGNAL(stateChanged(int)), this, SLOT(switchCoinControl(int)));
 
@@ -279,8 +294,15 @@ void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
 
 void CreateTxDialog::switchCoinControl(int state)
 {
-    if (state == Qt::Checked)   { coinControlWidget->show(); }
-    else                        { coinControlWidget->hide(); }
+    if (state == Qt::Checked)
+    {
+        coinControlWidget->update();
+        coinControlWidget->show();
+    }
+    else
+    {
+        coinControlWidget->hide();
+    }
 }
 
 void CreateTxDialog::removeTxOut(TxOutLayout* txOutLayout)
