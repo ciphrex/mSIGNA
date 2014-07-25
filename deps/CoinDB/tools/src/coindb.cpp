@@ -28,7 +28,9 @@
 #include <ctime>
 #include <functional>
 
-const std::string COINDB_VERSION = "v0.4.1";
+#include <boost/algorithm/string.hpp>
+
+const std::string COINDB_VERSION = "v0.4.2";
 
 using namespace std;
 using namespace odb::core;
@@ -694,6 +696,53 @@ cli::result_t cmd_newrawtx(const cli::params_t& params)
     return uchar_vector(tx->raw()).getHex();
 }
 
+cli::result_t cmd_createtx(const cli::params_t& params)
+{
+    using namespace CoinQ::Script;
+    const size_t MAX_VERSION_LEN = 2;
+
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    // Get txout ids (inputs)
+    ids_t coin_ids;
+    string coin_ids_param(params[2]);
+    boost::trim(coin_ids_param);
+    if (!coin_ids_param.empty())
+    {
+        vector<string> str_coin_ids;
+        boost::split(str_coin_ids, coin_ids_param, boost::is_any_of(","));
+        for (auto& str_coin_id: str_coin_ids)
+        {
+            boost::trim(str_coin_id);
+            if (str_coin_id.empty() || !all_of(str_coin_id.begin(), str_coin_id.end(), ::isdigit))
+                throw runtime_error("Invalid txout ids.");
+            coin_ids.push_back(strtoul(str_coin_id.c_str(), NULL, 10));
+        }
+    }
+
+    // Get outputs
+    size_t i = 3;
+    txouts_t txouts;
+    do
+    {
+        string address(params[i++]);
+        bytes_t txoutscript;
+        if (address != "change") { txoutscript = getTxOutScriptForAddress(address, BASE58_VERSIONS); }
+        uint64_t value = strtoull(params[i++].c_str(), NULL, 0);
+        std::shared_ptr<TxOut> txout(new TxOut(value, txoutscript));
+        txouts.push_back(txout);
+         
+    } while (i < (params.size() - 1) && params[i].size() > MAX_VERSION_LEN);
+
+    uint64_t fee = i < params.size() ? strtoull(params[i++].c_str(), NULL, 0) : 0;
+    uint64_t min_confirmations = i < params.size() ? strtoull(params[i++].c_str(), NULL, 0) : 1;
+    uint32_t version = i < params.size() ? strtoul(params[i++].c_str(), NULL, 0) : 1;
+    uint32_t locktime = i < params.size() ? strtoul(params[i++].c_str(), NULL, 0) : 0;
+
+    std::shared_ptr<Tx> tx = vault.createTx(params[1], version, locktime, coin_ids, txouts, fee, min_confirmations, true);
+    return tx->toJson();
+}
+
 cli::result_t cmd_deletetx(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
@@ -1166,6 +1215,12 @@ int main(int argc, char* argv[])
         "create a new raw transaction",
         command::params(4, "db file", "account name", "address 1", "value 1"),
         command::params(6, "address 2", "value 2", "...", "fee = 0", "version = 1", "locktime = 0")));
+    shell.add(command(
+        &cmd_createtx,
+        "createtx",
+        "create a new transaction",
+        command::params(5, "db file", "account name", "txout index list", "address 1", "value 1"),
+        command::params(7, "address 2", "value 2", "...", "fee = 0", "min confirmations = 1", "version = 1", "locktime = 0")));
     shell.add(command(
         &cmd_deletetx,
         "deletetx",
