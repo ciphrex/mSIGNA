@@ -74,6 +74,7 @@ public:
     CoinControlWidget(CoinDB::Vault* vault, const QString& accountName, QWidget* parent = nullptr);
 
     void update();
+    void updateView();
 
 private:
     UnspentTxOutModel* model;

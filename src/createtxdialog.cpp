@@ -134,6 +134,11 @@ void CoinControlWidget::update()
     if (view)   { view->update(); }
 }
 
+void CoinControlWidget::updateView()
+{
+    if (view)   { view->update(); }
+}
+
 CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName, const PaymentRequest& paymentRequest, QWidget* parent)
     : QDialog(parent), status(SAVE_ONLY)
 {
@@ -270,6 +275,19 @@ std::vector<TaggedOutput> CreateTxDialog::getOutputs()
     return outputs;
 }
 
+void CreateTxDialog::switchCoinControl(int state)
+{
+    if (state == Qt::Checked)
+    {
+        coinControlWidget->update();
+        coinControlWidget->show();
+    }
+    else
+    {
+        coinControlWidget->hide();
+    }
+}
+
 void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
 {
     TxOutLayout* txOutLayout = new TxOutLayout(currencyDivisor, currencySymbol, currencyMax, currencyDecimals);
@@ -278,6 +296,7 @@ void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
     QPushButton* removeButton = txOutLayout->getRemoveButton();
     connect(removeButton, &QPushButton::clicked, [=]() { this->removeTxOut(txOutLayout); });
     txOutVBoxLayout->addLayout(txOutLayout);
+    if (coinControlCheckBox->isChecked()) { coinControlWidget->updateView(); }
 
     if (paymentRequest.hasAddress()) {
         txOutLayout->setAddress(paymentRequest.address());
@@ -292,19 +311,6 @@ void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
     }
 }
 
-void CreateTxDialog::switchCoinControl(int state)
-{
-    if (state == Qt::Checked)
-    {
-        coinControlWidget->update();
-        coinControlWidget->show();
-    }
-    else
-    {
-        coinControlWidget->hide();
-    }
-}
-
 void CreateTxDialog::removeTxOut(TxOutLayout* txOutLayout)
 {
     txOutLayouts.erase(txOutLayout);
@@ -312,6 +318,7 @@ void CreateTxDialog::removeTxOut(TxOutLayout* txOutLayout)
     txOutLayout->removeWidgets();
     txOutVBoxLayout->removeItem(txOutLayout);    
     delete txOutLayout;
+    if (coinControlCheckBox->isChecked()) { coinControlWidget->updateView(); }
 }
 
 
