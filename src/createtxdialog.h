@@ -8,8 +8,7 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_CREATETXDIALOG_H
-#define COINVAULT_CREATETXDIALOG_H
+#pragma once
 
 class QTextEdit;
 
@@ -24,6 +23,7 @@ class QTextEdit;
 
 class QComboBox;
 class QLineEdit;
+class QCheckBox;
 class QPushButton;
 class QVBoxLayout;
 
@@ -63,13 +63,22 @@ private:
     unsigned int currencyDecimals;
 };
 
+class CoinControlWidget : public QWidget
+{
+    Q_OBJECT
+
+public:
+    CoinControlWidget(QWidget* parent = nullptr);
+
+private:
+};
 
 class CreateTxDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    CreateTxDialog(const QString& accountName, const PaymentRequest& paymentRequest = PaymentRequest(), QWidget* parent = NULL);
+    CreateTxDialog(const QString& accountName, const PaymentRequest& paymentRequest = PaymentRequest(), QWidget* parent = nullptr);
 
     QString getAccountName() const;
     uint64_t getFeeValue() const;
@@ -83,12 +92,15 @@ public slots:
     void addTxOut(const PaymentRequest& paymentRequest = PaymentRequest());
 
 private slots:
+    void switchCoinControl(int state);
     void removeTxOut(TxOutLayout* txOutLayout);
     void setRemoveEnabled(bool enabled = true);
 
 private:
     QComboBox* accountComboBox;
     QLineEdit* feeEdit;
+    QCheckBox* coinControlCheckBox;
+    CoinControlWidget* coinControlWidget;
     QVBoxLayout* txOutVBoxLayout;
     QVBoxLayout* mainLayout;
 
@@ -107,4 +119,3 @@ private:
     unsigned int currencyDecimals;
 };
 
-#endif // COINVAULT_CREATETXDIALOG_H

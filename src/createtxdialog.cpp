@@ -24,6 +24,7 @@
 #include <QVBoxLayout>
 #include <QComboBox>
 #include <QLineEdit>
+#include <QCheckBox>
 #include <QLabel>
 
 #include <QMessageBox>
@@ -113,6 +114,11 @@ void TxOutLayout::removeWidgets()
     }
 }
 
+CoinControlWidget::CoinControlWidget(QWidget* parent)
+    : QWidget(parent)
+{
+}
+
 CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest& paymentRequest, QWidget* parent)
     : QDialog(parent), status(SAVE_ONLY)
 {
@@ -134,6 +140,7 @@ CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest&
                                         QDialogButtonBox::Cancel);
 
 */
+
     QDialogButtonBox* buttonBox = new QDialogButtonBox;
     buttonBox->addButton(signAndSendButton, QDialogButtonBox::ActionRole);
     buttonBox->addButton(signAndSaveButton, QDialogButtonBox::ActionRole);
@@ -144,9 +151,6 @@ CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest&
     connect(signAndSaveButton, &QPushButton::clicked, [this]() { status = SIGN_AND_SAVE; accept(); });
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
-
-    // Prompt
-    QLabel* promptLabel = new QLabel(tr("Add Outputs:"));
 
     // Account
     QLabel* accountLabel = new QLabel(tr("Account:"));
@@ -167,6 +171,16 @@ CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest&
     feeLayout->addWidget(feeLabel);
     feeLayout->addWidget(feeEdit);
 
+    // Coin control
+    coinControlCheckBox = new QCheckBox(tr("Enable Coin Control"));
+    coinControlCheckBox->setChecked(false);
+    coinControlWidget = new CoinControlWidget();
+    coinControlWidget->hide();
+    connect(coinControlCheckBox, SIGNAL(stateChanged(int)), this, SLOT(switchCoinControl(int)));
+
+    // Prompt
+    QLabel* addOutputsLabel = new QLabel(tr("Add Outputs:"));
+
     // TxOuts
     txOutVBoxLayout = new QVBoxLayout();
     txOutVBoxLayout->setSizeConstraint(QLayout::SetMinimumSize);
@@ -177,9 +191,11 @@ CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest&
     connect(addTxOutButton, SIGNAL(clicked()), this, SLOT(addTxOut()));
 
     mainLayout = new QVBoxLayout(this);
-    mainLayout->addWidget(promptLabel);
     mainLayout->addLayout(accountLayout);
     mainLayout->addLayout(feeLayout);
+    mainLayout->addWidget(coinControlCheckBox);
+    mainLayout->addWidget(coinControlWidget);
+    mainLayout->addWidget(addOutputsLabel);
     mainLayout->addLayout(txOutVBoxLayout);
     mainLayout->addWidget(addTxOutButton);
     mainLayout->addWidget(buttonBox);
@@ -259,6 +275,12 @@ void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
     if (paymentRequest.hasLabel()) {
         txOutLayout->setRecipient(paymentRequest.label());
     }
+}
+
+void CreateTxDialog::switchCoinControl(int state)
+{
+    if (state == Qt::Checked)   { coinControlWidget->show(); }
+    else                        { coinControlWidget->hide(); }
 }
 
 void CreateTxDialog::removeTxOut(TxOutLayout* txOutLayout)
