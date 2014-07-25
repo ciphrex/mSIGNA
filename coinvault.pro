@@ -71,6 +71,8 @@ HEADERS = \
     src/newkeychaindialog.h \
     src/rawtxdialog.h \
     src/createtxdialog.h \
+    src/unspenttxoutmodel.h \
+    src/unspenttxoutview.h \
     src/txmodel.h \
     src/txview.h \
     src/accounthistorydialog.h \
@@ -108,6 +110,8 @@ SOURCES = \
     src/newkeychaindialog.cpp \
     src/rawtxdialog.cpp \
     src/createtxdialog.cpp \
+    src/unspenttxoutmodel.cpp \
+    src/unspenttxoutview.cpp \
     src/txmodel.cpp \
     src/txview.cpp \
     src/accounthistorydialog.cpp \
