@@ -17,6 +17,7 @@
 UnspentTxOutView::UnspentTxOutView(QWidget* parent)
     : QTreeView(parent), model(nullptr), menu(nullptr)
 {
+    setSelectionMode(UnspentTxOutView::MultiSelection);
 }
 
 void UnspentTxOutView::setModel(UnspentTxOutModel* model)
