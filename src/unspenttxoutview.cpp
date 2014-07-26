@@ -28,6 +28,7 @@ void UnspentTxOutView::setModel(UnspentTxOutModel* model)
 
 void UnspentTxOutView::update()
 {
+    QTreeView::update();
     for (int i = 0; i < model->columnCount(); i++) { resizeColumnToContents(i); }
 }
 

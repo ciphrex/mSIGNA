@@ -119,16 +119,19 @@ void TxOutLayout::removeWidgets()
 CoinControlWidget::CoinControlWidget(CoinDB::Vault* vault, const QString& accountName, QWidget* parent)
     : QWidget(parent)
 {
-    model = new UnspentTxOutModel(vault, accountName);
-    view = new UnspentTxOutView();
+    model = new UnspentTxOutModel(vault, accountName, this);
+    view = new UnspentTxOutView(this);
     view->setModel(model);
 
-    QHBoxLayout* layout = new QHBoxLayout();
+    QLabel* inputsLabel = new QLabel(tr("Select Inputs:"), this);
+
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->addWidget(inputsLabel);
     layout->addWidget(view);
     setLayout(layout);
 }
 
-void CoinControlWidget::update()
+void CoinControlWidget::updateAll()
 {
     if (model)  { model->update(); }
     if (view)   { view->update(); }
@@ -194,7 +197,7 @@ CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName,
     // Coin control
     coinControlCheckBox = new QCheckBox(tr("Enable Coin Control"));
     coinControlCheckBox->setChecked(false);
-    coinControlWidget = new CoinControlWidget(vault, accountName);
+    coinControlWidget = new CoinControlWidget(vault, accountName, this);
     coinControlWidget->hide();
     connect(coinControlCheckBox, SIGNAL(stateChanged(int)), this, SLOT(switchCoinControl(int)));
 
@@ -279,7 +282,7 @@ void CreateTxDialog::switchCoinControl(int state)
 {
     if (state == Qt::Checked)
     {
-        coinControlWidget->update();
+        coinControlWidget->updateAll();
         coinControlWidget->show();
     }
     else
@@ -296,7 +299,6 @@ void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
     QPushButton* removeButton = txOutLayout->getRemoveButton();
     connect(removeButton, &QPushButton::clicked, [=]() { this->removeTxOut(txOutLayout); });
     txOutVBoxLayout->addLayout(txOutLayout);
-    if (coinControlCheckBox->isChecked()) { coinControlWidget->updateView(); }
 
     if (paymentRequest.hasAddress()) {
         txOutLayout->setAddress(paymentRequest.address());
@@ -318,7 +320,8 @@ void CreateTxDialog::removeTxOut(TxOutLayout* txOutLayout)
     txOutLayout->removeWidgets();
     txOutVBoxLayout->removeItem(txOutLayout);    
     delete txOutLayout;
-    if (coinControlCheckBox->isChecked()) { coinControlWidget->updateView(); }
+    //if (coinControlCheckBox->isChecked()) { coinControlWidget->updateView(); }
+    coinControlWidget->update();
 }
 
 

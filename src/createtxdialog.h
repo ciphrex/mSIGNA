@@ -73,7 +73,7 @@ class CoinControlWidget : public QWidget
 public:
     CoinControlWidget(CoinDB::Vault* vault, const QString& accountName, QWidget* parent = nullptr);
 
-    void update();
+    void updateAll();
     void updateView();
 
 private:

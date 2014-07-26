@@ -27,6 +27,8 @@ public:
     #pragma clang diagnostic pop
 
     void setMenu(QMenu* menu) { this->menu = menu; }
+
+public slots:
     void update();
 
 protected:

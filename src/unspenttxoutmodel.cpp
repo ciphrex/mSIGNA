@@ -21,7 +21,7 @@
 #include "severitylogger.h"
 
 using namespace CoinDB;
-//using namespace CoinQ::Script;
+using namespace CoinQ::Script;
 using namespace std;
 
 UnspentTxOutModel::UnspentTxOutModel(QObject* parent)
@@ -53,7 +53,7 @@ UnspentTxOutModel::UnspentTxOutModel(CoinDB::Vault* vault, const QString& accoun
 void UnspentTxOutModel::initColumns()
 {
     QStringList columns;
-    columns << tr("ID") << tr("Amount") << tr("Confirmations");
+    columns << tr("ID") << tr("Address") << (tr("Amount") + " (" + currency_symbol + ")")  << tr("Confirmations");
     setHorizontalHeaderLabels(columns);
 }
 
@@ -85,15 +85,16 @@ void UnspentTxOutModel::update()
     for (auto& item: txoutviews) {
         QList<QStandardItem*> row;
         QString id(QString::number(item.id));
+        QString address(QString::fromStdString(getAddressForTxOutScript(item.script, base58_versions)));
         QString amount(QString::number(item.value/(1.0 * currency_divisor), 'g', 8));
 
         uint32_t nConfirmations = 0;
         if (bestHeight && item.height) { nConfirmations = bestHeight + 1 - item.height; }
         QString confirmations(QString::number(nConfirmations));
 
-        //QString address = QString::fromStdString(getAddressForTxOutScript(item.script, base58_versions));
 
         row.append(new QStandardItem(id));
+        row.append(new QStandardItem(address));
         row.append(new QStandardItem(amount));
         row.append(new QStandardItem(confirmations));
         //row.append(new QStandardItem(address));
