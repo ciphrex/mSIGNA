@@ -71,6 +71,7 @@ public:
     bool insertRawTx(const bytes_t& rawTx);
     std::shared_ptr<CoinDB::Tx> insertTx(std::shared_ptr<CoinDB::Tx> tx, bool sign = false);
     std::shared_ptr<CoinDB::Tx> createTx(const QString& accountName, std::vector<std::shared_ptr<CoinDB::TxOut>> txouts, uint64_t fee);
+    std::shared_ptr<CoinDB::Tx> createTx(const QString& accountName, const std::vector<unsigned long>& coinids, std::vector<std::shared_ptr<CoinDB::TxOut>> txouts, uint64_t fee);
     bytes_t createRawTx(const QString& accountName, const std::vector<TaggedOutput>& outputs, uint64_t fee);
     // TODO: not sure I'm too happy about exposing Coin:Vault::Tx
     std::shared_ptr<CoinDB::Tx> insertTx(const Coin::Transaction& coinTx, CoinDB::Tx::status_t status = CoinDB::Tx::PROPAGATED, bool sign = false);

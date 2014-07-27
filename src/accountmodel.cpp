@@ -281,6 +281,14 @@ std::shared_ptr<CoinDB::Tx> AccountModel::createTx(const QString& accountName, s
     return tx;
 }
 
+std::shared_ptr<CoinDB::Tx> AccountModel::createTx(const QString& accountName, const std::vector<unsigned long>& coinids, std::vector<std::shared_ptr<CoinDB::TxOut>> txouts, uint64_t fee)
+{
+    if (!vault) throw std::runtime_error("No vault is loaded.");
+ 
+    std::shared_ptr<Tx> tx = vault->createTx(accountName.toStdString(), 1, 0, coinids, txouts, fee,  1);
+    return tx;
+}
+
 bytes_t AccountModel::createRawTx(const QString& accountName, const std::vector<TaggedOutput>& outputs, uint64_t fee)
 {
     Coin::Transaction tx = createTx(accountName, outputs, fee);

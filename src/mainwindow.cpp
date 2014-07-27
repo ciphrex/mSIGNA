@@ -1113,7 +1113,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
         try {
             CreateTxDialog::status_t status = dlg.getStatus();
             bool sign = status == CreateTxDialog::SIGN_AND_SEND || status == CreateTxDialog::SIGN_AND_SAVE;
-            std::shared_ptr<CoinDB::Tx> tx = accountModel->createTx(dlg.getAccountName(), dlg.getTxOuts(), dlg.getFeeValue());
+            std::shared_ptr<CoinDB::Tx> tx = accountModel->createTx(dlg.getAccountName(), dlg.getInputTxOutIds(), dlg.getTxOuts(), dlg.getFeeValue());
             tx = accountModel->insertTx(tx, sign);
             saved = true;
             txModel->update();
