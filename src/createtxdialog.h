@@ -74,6 +74,8 @@ class CoinControlWidget : public QWidget
 public:
     CoinControlWidget(CoinDB::Vault* vault, const QString& accountName, QWidget* parent = nullptr);
 
+    std::vector<unsigned long> getInputTxOutIds() const;
+
     void updateAll();
     void updateView();
 
@@ -96,6 +98,7 @@ public:
 
     QString getAccountName() const;
     uint64_t getFeeValue() const;
+    std::vector<unsigned long> getInputTxOutIds() const;
     std::vector<std::shared_ptr<CoinDB::TxOut>> getTxOuts();
     std::vector<TaggedOutput> getOutputs();
 

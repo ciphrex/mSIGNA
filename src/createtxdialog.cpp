@@ -149,6 +149,22 @@ CoinControlWidget::CoinControlWidget(CoinDB::Vault* vault, const QString& accoun
     setLayout(layout);
 }
 
+std::vector<unsigned long> CoinControlWidget::getInputTxOutIds() const
+{
+    std::vector<unsigned long> ids;
+
+    QItemSelectionModel* selectionModel = view->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+
+    for (auto& index: indexes)
+    {
+        QStandardItem* item = model->item(index.row(), 1);
+        ids.push_back((unsigned long)item->data(Qt::UserRole).toInt());
+    }
+
+    return ids; 
+}
+
 void CoinControlWidget::updateAll()
 {
     if (model)  { model->update(); }
@@ -261,7 +277,6 @@ CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName,
     setLayout(mainLayout);
 }
 
-
 QString CreateTxDialog::getAccountName() const
 {
     return accountComboBox->currentText();
@@ -270,6 +285,12 @@ QString CreateTxDialog::getAccountName() const
 uint64_t CreateTxDialog::getFeeValue() const
 {
     return decimalStringToInteger(feeEdit->text().toStdString(), currencyMax, currencyDivisor, currencyDecimals);
+}
+
+std::vector<unsigned long> CreateTxDialog::getInputTxOutIds() const
+{
+    if (!coinControlCheckBox->isChecked()) return std::vector<unsigned long>();
+    return coinControlWidget->getInputTxOutIds();
 }
 
 std::vector<std::shared_ptr<CoinDB::TxOut>> CreateTxDialog::getTxOuts()
