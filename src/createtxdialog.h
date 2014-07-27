@@ -29,6 +29,7 @@ class QLineEdit;
 class QCheckBox;
 class QPushButton;
 class QVBoxLayout;
+class QItemSelection;
 
 class TxOutLayout : public QHBoxLayout
 {
@@ -76,9 +77,13 @@ public:
     void updateAll();
     void updateView();
 
+public slots:
+    void updateTotal(const QItemSelection& selected, const QItemSelection& deselected);
+
 private:
     UnspentTxOutModel* model;
     UnspentTxOutView* view;
+    QLineEdit* totalEdit;
 };
 
 class CreateTxDialog : public QDialog

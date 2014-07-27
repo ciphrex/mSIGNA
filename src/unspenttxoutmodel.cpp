@@ -53,7 +53,7 @@ UnspentTxOutModel::UnspentTxOutModel(CoinDB::Vault* vault, const QString& accoun
 void UnspentTxOutModel::initColumns()
 {
     QStringList columns;
-    columns << tr("ID") << tr("Address") << (tr("Amount") + " (" + currency_symbol + ")")  << tr("Confirmations");
+    columns << (tr("Amount") + " (" + currency_symbol + ")") << tr("Address") << tr("Confirmations");
     setHorizontalHeaderLabels(columns);
 }
 
@@ -84,26 +84,20 @@ void UnspentTxOutModel::update()
     std::vector<TxOutView> txoutviews = vault->getUnspentTxOutViews(accountName.toStdString());
     for (auto& item: txoutviews) {
         QList<QStandardItem*> row;
-        QString id(QString::number(item.id));
-        QString address(QString::fromStdString(getAddressForTxOutScript(item.script, base58_versions)));
         QString amount(QString::number(item.value/(1.0 * currency_divisor), 'g', 8));
+        QString address(QString::fromStdString(getAddressForTxOutScript(item.script, base58_versions)));
 
         uint32_t nConfirmations = 0;
         if (bestHeight && item.height) { nConfirmations = bestHeight + 1 - item.height; }
         QString confirmations(QString::number(nConfirmations));
 
-
-        row.append(new QStandardItem(id));
+        QStandardItem* amountItem = new QStandardItem(amount);
+        amountItem->setData((int)item.id);
+        row.append(amountItem);
         row.append(new QStandardItem(address));
-        row.append(new QStandardItem(amount));
         row.append(new QStandardItem(confirmations));
-        //row.append(new QStandardItem(address));
-        //rows.append(std::make_pair(std::make_pair(item.id, nConfirmations), std::make_pair(row, item.value)));
         appendRow(row);
     }
-
-    // iterate in forward order to display
-    //for (auto& row: rows) appendRow(row.second.first);
 }
 
 QVariant UnspentTxOutModel::data(const QModelIndex& index, int role) const

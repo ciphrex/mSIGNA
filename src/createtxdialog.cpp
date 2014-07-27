@@ -122,12 +122,22 @@ CoinControlWidget::CoinControlWidget(CoinDB::Vault* vault, const QString& accoun
     model = new UnspentTxOutModel(vault, accountName, this);
     view = new UnspentTxOutView(this);
     view->setModel(model);
+    //view->setMinimumHeight(200);
 
-    QLabel* inputsLabel = new QLabel(tr("Select Inputs:"), this);
+    QLabel* inputsLabel = new QLabel(tr("Select Inputs:"));
+
+/*
+    QLabel* totalLabel = new QLabel(tr("Input total:"));
+    totalEdit = new QLineEdit();
+    QHBoxLayout* totalLayout = new QHBoxLayout(this);
+    totalLayout->addWidget(totalLabel);
+    totalLayout->addWidget(totalEdit);
+*/
 
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->addWidget(inputsLabel);
     layout->addWidget(view);
+    //layout->addLayout(totalLayout);
     setLayout(layout);
 }
 
@@ -140,6 +150,10 @@ void CoinControlWidget::updateAll()
 void CoinControlWidget::updateView()
 {
     if (view)   { view->update(); }
+}
+
+void CoinControlWidget::updateTotal(const QItemSelection& selected, const QItemSelection& deselected)
+{
 }
 
 CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName, const PaymentRequest& paymentRequest, QWidget* parent)
