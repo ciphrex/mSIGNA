@@ -123,7 +123,7 @@ CoinControlWidget::CoinControlWidget(CoinDB::Vault* vault, const QString& accoun
     view = new UnspentTxOutView(this);
     view->setModel(model);
     view->setMinimumWidth(700);
-    view->setMinimumHeight(300);
+    view->setMinimumHeight(200);
 
     QItemSelectionModel* selectionModel = view->selectionModel();
     connect(selectionModel, &QItemSelectionModel::selectionChanged,
@@ -131,11 +131,11 @@ CoinControlWidget::CoinControlWidget(CoinDB::Vault* vault, const QString& accoun
 
     QLabel* inputsLabel = new QLabel(tr("Select Inputs:"));
 
-    QLabel* totalLabel = new QLabel(tr("Input total:"));
+    QLabel* totalLabel = new QLabel(tr("Input total") + " (" + model->getCurrencySymbol() + "):");
     totalEdit = new QLineEdit();
     totalEdit->setAlignment(Qt::AlignRight);
     totalEdit->setReadOnly(true);
-    totalEdit->setText(0);
+    totalEdit->setText("0");
 
     QHBoxLayout* totalLayout = new QHBoxLayout();
     totalLayout->addWidget(totalLabel);
