@@ -33,6 +33,9 @@
 
 #include <stdexcept>
 
+const int COIN_CONTROL_VIEW_MIN_WIDTH = 700;
+const int COIN_CONTROL_VIEW_MIN_HEIGHT = 200;
+
 TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol, uint64_t currencyMax, unsigned int currencyDecimals, QWidget* parent)
     : QHBoxLayout(parent)
 {
@@ -122,8 +125,8 @@ CoinControlWidget::CoinControlWidget(CoinDB::Vault* vault, const QString& accoun
     model = new UnspentTxOutModel(vault, accountName, this);
     view = new UnspentTxOutView(this);
     view->setModel(model);
-    view->setMinimumWidth(700);
-    view->setMinimumHeight(200);
+    view->setMinimumWidth(COIN_CONTROL_VIEW_MIN_WIDTH);
+    view->setMinimumHeight(COIN_CONTROL_VIEW_MIN_HEIGHT);
 
     QItemSelectionModel* selectionModel = view->selectionModel();
     connect(selectionModel, &QItemSelectionModel::selectionChanged,
@@ -171,9 +174,13 @@ void CoinControlWidget::updateAll()
     if (view)   { view->update(); }
 }
 
-void CoinControlWidget::updateView()
+void CoinControlWidget::refreshView()
 {
-    if (view)   { view->update(); }
+    if (!isHidden())
+    {
+        hide();
+        show();
+    }
 }
 
 void CoinControlWidget::updateTotal(const QItemSelection& /*selected*/, const QItemSelection& /*deselected*/)
@@ -355,7 +362,9 @@ void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
     QPushButton* removeButton = txOutLayout->getRemoveButton();
     connect(removeButton, &QPushButton::clicked, [=]() { this->removeTxOut(txOutLayout); });
     txOutVBoxLayout->addLayout(txOutLayout);
-    coinControlWidget->resize(700, 300);
+
+    // Windows repaint workaround
+    coinControlWidget->refreshView();
 
     if (paymentRequest.hasAddress()) {
         txOutLayout->setAddress(paymentRequest.address());
@@ -377,8 +386,9 @@ void CreateTxDialog::removeTxOut(TxOutLayout* txOutLayout)
     txOutLayout->removeWidgets();
     txOutVBoxLayout->removeItem(txOutLayout);    
     delete txOutLayout;
-    //if (coinControlCheckBox->isChecked()) { coinControlWidget->updateView(); }
-    coinControlWidget->update();
+
+    // Windows repaint workaround
+    coinControlWidget->refreshView();
 }
 
 

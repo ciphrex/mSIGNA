@@ -77,7 +77,9 @@ public:
     std::vector<unsigned long> getInputTxOutIds() const;
 
     void updateAll();
-    void updateView();
+
+    // Windows repaint workaround
+    void refreshView();
 
 public slots:
     void updateTotal(const QItemSelection& selected, const QItemSelection& deselected);
