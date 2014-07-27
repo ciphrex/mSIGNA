@@ -84,17 +84,23 @@ void UnspentTxOutModel::update()
     std::vector<TxOutView> txoutviews = vault->getUnspentTxOutViews(accountName.toStdString());
     for (auto& item: txoutviews) {
         QList<QStandardItem*> row;
+
         QString amount(QString::number(item.value/(1.0 * currency_divisor), 'g', 8));
+        QStandardItem* amountItem = new QStandardItem(amount);
+        std::stringstream strAmount;
+        strAmount << item.value;
+        amountItem->setData(QString::fromStdString(strAmount.str()), Qt::UserRole);
+
         QString address(QString::fromStdString(getAddressForTxOutScript(item.script, base58_versions)));
+        QStandardItem* addressItem = new QStandardItem(address);
+        addressItem->setData((int)item.id, Qt::UserRole);
 
         uint32_t nConfirmations = 0;
         if (bestHeight && item.height) { nConfirmations = bestHeight + 1 - item.height; }
         QString confirmations(QString::number(nConfirmations));
 
-        QStandardItem* amountItem = new QStandardItem(amount);
-        amountItem->setData((int)item.id);
         row.append(amountItem);
-        row.append(new QStandardItem(address));
+        row.append(addressItem);
         row.append(new QStandardItem(confirmations));
         appendRow(row);
     }

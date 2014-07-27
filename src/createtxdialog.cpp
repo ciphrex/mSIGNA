@@ -122,22 +122,30 @@ CoinControlWidget::CoinControlWidget(CoinDB::Vault* vault, const QString& accoun
     model = new UnspentTxOutModel(vault, accountName, this);
     view = new UnspentTxOutView(this);
     view->setModel(model);
-    //view->setMinimumHeight(200);
+    view->setMinimumWidth(700);
+    view->setMinimumHeight(300);
+
+    QItemSelectionModel* selectionModel = view->selectionModel();
+    connect(selectionModel, &QItemSelectionModel::selectionChanged,
+            this, &CoinControlWidget::updateTotal);
 
     QLabel* inputsLabel = new QLabel(tr("Select Inputs:"));
 
-/*
     QLabel* totalLabel = new QLabel(tr("Input total:"));
     totalEdit = new QLineEdit();
-    QHBoxLayout* totalLayout = new QHBoxLayout(this);
+    totalEdit->setAlignment(Qt::AlignRight);
+    totalEdit->setReadOnly(true);
+    totalEdit->setText(0);
+
+    QHBoxLayout* totalLayout = new QHBoxLayout();
     totalLayout->addWidget(totalLabel);
     totalLayout->addWidget(totalEdit);
-*/
 
     QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setSizeConstraint(QLayout::SetFixedSize);
     layout->addWidget(inputsLabel);
     layout->addWidget(view);
-    //layout->addLayout(totalLayout);
+    layout->addLayout(totalLayout);
     setLayout(layout);
 }
 
@@ -152,8 +160,21 @@ void CoinControlWidget::updateView()
     if (view)   { view->update(); }
 }
 
-void CoinControlWidget::updateTotal(const QItemSelection& selected, const QItemSelection& deselected)
+void CoinControlWidget::updateTotal(const QItemSelection& /*selected*/, const QItemSelection& /*deselected*/)
 {
+    QItemSelectionModel* selectionModel = view->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+
+    uint64_t total = 0;
+    for (auto& index: indexes)
+    {
+        QStandardItem* amountItem = model->item(index.row(), 0);
+        QString strAmount = amountItem->data(Qt::UserRole).toString();
+        total += strtoull(strAmount.toStdString().c_str(), NULL, 10);
+    }
+
+    QString amount(QString::number(total/(1.0 * model->getCurrencyDivisor()), 'g', 8));
+    totalEdit->setText(amount);
 }
 
 CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName, const PaymentRequest& paymentRequest, QWidget* parent)
@@ -313,6 +334,7 @@ void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
     QPushButton* removeButton = txOutLayout->getRemoveButton();
     connect(removeButton, &QPushButton::clicked, [=]() { this->removeTxOut(txOutLayout); });
     txOutVBoxLayout->addLayout(txOutLayout);
+    coinControlWidget->resize(700, 300);
 
     if (paymentRequest.hasAddress()) {
         txOutLayout->setAddress(paymentRequest.address());
