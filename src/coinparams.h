@@ -12,6 +12,13 @@
 
 #include <CoinQ/CoinQ_coinparams.h>
 
+#include <QStringList>
+
 CoinQ::NetworkSelector& getNetworkSelector();
 
 const CoinQ::CoinParams& getCoinParams(const std::string& network_name = "");
+
+QStringList getValidCurrencyPrefixes();
+void setCurrencyUnitPrefix(const QString& unitPrefix);
+QString getFormattedCurrencyAmount(uint64_t value);
+const QString& getCurrencySymbol();

@@ -14,6 +14,7 @@
 #include "networkselectiondialog.h"
 
 #include <QApplication>
+#include <QSettings>
 #include <QDateTime>
 #include <QDir>
 #include <QMessageBox>
@@ -49,6 +50,13 @@ void selectNetwork(const std::string& networkName)
     selector.select(selected);
 }
 
+void setCurrencyUnit()
+{
+    QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
+    QString unitPrefix = settings.value("unitprefix", "").toString();
+    setCurrencyUnitPrefix(unitPrefix);
+}
+
 int main(int argc, char* argv[])
 {
     Q_INIT_RESOURCE(coinvault);
@@ -69,6 +77,7 @@ int main(int argc, char* argv[])
             else                                    { selectNetwork(argv[1]); }
         }
         getDefaultSettings();
+        setCurrencyUnit();
     }
     catch (const std::exception& e) {
         QMessageBox msgBox;
