@@ -76,7 +76,7 @@ QString getFormattedCurrencyAmount(uint64_t value)
 {
     if (currencyDivisor == 0) throw std::runtime_error("Invalid currency unit.");
 
-    return QString::number(value/(1.0 * currencyDivisor), 'g', currencyDecimals);
+    return QString::number(value/(1.0 * currencyDivisor), 'f', currencyDecimals);
 }
 
 const QString& getCurrencySymbol()
