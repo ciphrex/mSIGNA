@@ -124,7 +124,8 @@ void TxModel::update()
             if (item.tx_has_all_outpoints && item.tx_fee() > 0) {
                 if (this_txhash != last_txhash) {
                     fee = "-";
-                    fee += QString::number(item.tx_fee()/(1.0 * currency_divisor), 'g', 8);
+                    //fee += QString::number(item.tx_fee()/(1.0 * currency_divisor), 'g', 8);
+                    fee += getFormattedCurrencyAmount(item.tx_fee());
                     value -= item.tx_fee();
                     last_txhash = this_txhash;
                 }
@@ -144,7 +145,8 @@ void TxModel::update()
             type = tr("Unknown");
         }
 
-        amount += QString::number(item.value/(1.0 * currency_divisor), 'g', 8);
+        //amount += QString::number(item.value/(1.0 * currency_divisor), 'g', 8);
+        amount += getFormattedCurrencyAmount(item.value);
 
         uint32_t nConfirmations = 0;
         QString confirmations;
@@ -204,7 +206,8 @@ void TxModel::update()
     int64_t balance = 0;
     for (int i = rows.size() - 1; i >= 0; i--) {
         balance += rows[i].second.second;
-        (rows[i].second.first)[5]->setText(QString::number(balance/(1.0 * currency_divisor), 'g', 8));
+        //(rows[i].second.first)[5]->setText(QString::number(balance/(1.0 * currency_divisor), 'g', 8));
+        (rows[i].second.first)[5]->setText(getFormattedCurrencyAmount(balance));
     }
 
     // iterate in forward order to display

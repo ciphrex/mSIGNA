@@ -58,7 +58,8 @@ void AccountModel::update()
     for (auto& account: accounts) {
         QString accountName = QString::fromStdString(account.name());
         QString policy = QString::number(account.minsigs()) + tr(" of ") + QString::fromStdString(stdutils::delimited_list(account.keychain_names(), ", "));
-        QString balance = QString::number(vault->getAccountBalance(account.name(), 0)/(1.0 * currency_divisor), 'g', 8);
+        //QString balance = QString::number(vault->getAccountBalance(account.name(), 0)/(1.0 * currency_divisor), 'g', 8);
+        QString balance = getFormattedCurrencyAmount(vault->getAccountBalance(account.name(), 0));
         accountNames << accountName;
 
         QList<QStandardItem*> row;

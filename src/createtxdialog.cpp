@@ -134,7 +134,7 @@ CoinControlWidget::CoinControlWidget(CoinDB::Vault* vault, const QString& accoun
 
     QLabel* inputsLabel = new QLabel(tr("Select Inputs:"));
 
-    QLabel* totalLabel = new QLabel(tr("Input total") + " (" + model->getCurrencySymbol() + "):");
+    QLabel* totalLabel = new QLabel(tr("Input total") + " (" + getCurrencySymbol() + "):");
     totalEdit = new QLineEdit();
     totalEdit->setAlignment(Qt::AlignRight);
     totalEdit->setReadOnly(true);
@@ -196,7 +196,8 @@ void CoinControlWidget::updateTotal(const QItemSelection& /*selected*/, const QI
         total += strtoull(strAmount.toStdString().c_str(), NULL, 10);
     }
 
-    QString amount(QString::number(total/(1.0 * model->getCurrencyDivisor()), 'g', 8));
+    //QString amount(QString::number(total/(1.0 * model->getCurrencyDivisor()), 'g', 8));
+    QString amount(getFormattedCurrencyAmount(total));
     totalEdit->setText(amount);
 }
 
@@ -243,9 +244,9 @@ CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName,
     accountLayout->addWidget(accountComboBox);
 
     // Fee
-    QLabel* feeLabel = new QLabel(tr("Fee") + " (" + currencySymbol + "):");
+    QLabel* feeLabel = new QLabel(tr("Fee") + " (" + getCurrencySymbol() + "):");
     feeEdit = new QLineEdit();
-    feeEdit->setValidator(new CurrencyValidator(currencyMax, currencyDecimals, this));
+    feeEdit->setValidator(new CurrencyValidator(getCurrencyMax(), getCurrencyDecimals(), this));
     feeEdit->setText("0.0005"); // TODO: suggest more intelligently
 
     QHBoxLayout* feeLayout = new QHBoxLayout();
@@ -356,7 +357,7 @@ void CreateTxDialog::switchCoinControl(int state)
 
 void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
 {
-    TxOutLayout* txOutLayout = new TxOutLayout(currencyDivisor, currencySymbol, currencyMax, currencyDecimals);
+    TxOutLayout* txOutLayout = new TxOutLayout(getCurrencyDivisor(), getCurrencySymbol(), getCurrencyMax(), getCurrencyDecimals());
     txOutLayouts.insert(txOutLayout);
     setRemoveEnabled(txOutLayouts.size() > 1);
     QPushButton* removeButton = txOutLayout->getRemoveButton();

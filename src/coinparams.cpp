@@ -25,6 +25,7 @@ const CoinQ::CoinParams& getCoinParams(const std::string& network_name)
 QString currencySymbol;
 uint64_t currencyDivisor;
 int currencyDecimals;
+uint64_t currencyMax;
 
 QStringList getValidCurrencyPrefixes()
 {
@@ -42,14 +43,19 @@ void setCurrencyUnitPrefix(const QString& unitPrefix)
     if (unitPrefix == "")
     {
         currencyDivisor = getCoinParams().currency_divisor();
+        currencyMax = getCoinParams().currency_max();
     }
     else if (unitPrefix == "m")
     {
         currencyDivisor = getCoinParams().currency_divisor() / 1000;
+        currencyMax = getCoinParams().currency_max() * 1000;
+        if (currencyMax < getCoinParams().currency_max()) { currencyMax = 0xffffffffffffffffull; }
     }
     else if (unitPrefix == "u")
     {
         currencyDivisor = getCoinParams().currency_divisor() / 1000000;
+        currencyMax = getCoinParams().currency_max() * 1000000;
+        if (currencyMax < getCoinParams().currency_max()) { currencyMax = 0xffffffffffffffffull; }
     }
     else throw std::runtime_error("Invalid currency unit prefix.");
 
@@ -76,5 +82,20 @@ QString getFormattedCurrencyAmount(uint64_t value)
 const QString& getCurrencySymbol()
 {
     return currencySymbol;
+}
+
+uint64_t getCurrencyDivisor()
+{
+    return currencyDivisor;
+}
+
+int getCurrencyDecimals()
+{
+    return currencyDecimals;
+}
+
+uint64_t getCurrencyMax()
+{
+    return currencyMax;
 }
 

@@ -30,15 +30,15 @@ public:
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
     Qt::ItemFlags flags(const QModelIndex& index) const;
 
-    uint64_t getCurrencyDivisor() const { return currency_divisor; }
-    const char* getCurrencySymbol() const { return currency_symbol; }
+    //uint64_t getCurrencyDivisor() const { return currency_divisor; }
+    //const char* getCurrencySymbol() const { return currency_symbol; }
 
 signals:
 
 private:
     unsigned char base58_versions[2];
-    uint64_t currency_divisor;
-    const char* currency_symbol;
+    //uint64_t currency_divisor;
+    //const char* currency_symbol;
 
     void initColumns();
 

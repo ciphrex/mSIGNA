@@ -30,7 +30,7 @@ RequestPaymentDialog::RequestPaymentDialog(AccountModel* accountModel, QWidget *
     ui->setupUi(this);
     connect(accountModel_, SIGNAL(updated(const QStringList&)), this, SLOT(setAccounts(const QStringList&)));
 
-    ui->invoiceAmountLabel->setText(tr("Amount") + " (" + getCoinParams().currency_symbol() + "):");
+    ui->invoiceAmountLabel->setText(tr("Amount") + " (" + getCurrencySymbol() + "):");
     ui->invoiceAmountLineEdit->setValidator(new CurrencyValidator(getCoinParams().currency_max(), getCoinParams().currency_decimals()));
 }
 

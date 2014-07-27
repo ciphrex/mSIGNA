@@ -30,8 +30,8 @@ UnspentTxOutModel::UnspentTxOutModel(QObject* parent)
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
-    currency_divisor = getCoinParams().currency_divisor();
-    currency_symbol = getCoinParams().currency_symbol();
+    //currency_divisor = getCoinParams().currency_divisor();
+    //currency_symbol = getCoinParams().currency_symbol();
 
     initColumns();
 }
@@ -42,8 +42,8 @@ UnspentTxOutModel::UnspentTxOutModel(CoinDB::Vault* vault, const QString& accoun
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
-    currency_divisor = getCoinParams().currency_divisor();
-    currency_symbol = getCoinParams().currency_symbol();
+    //currency_divisor = getCurrencyDivisor();
+    //currency_symbol = getCurrencySymbol();
 
     initColumns();
     setVault(vault);
@@ -53,7 +53,7 @@ UnspentTxOutModel::UnspentTxOutModel(CoinDB::Vault* vault, const QString& accoun
 void UnspentTxOutModel::initColumns()
 {
     QStringList columns;
-    columns << (tr("Amount") + " (" + currency_symbol + ")") << tr("Address") << tr("Confirmations");
+    columns << (tr("Amount") + " (" + getCurrencySymbol() + ")") << tr("Address") << tr("Confirmations");
     setHorizontalHeaderLabels(columns);
 }
 
@@ -85,7 +85,8 @@ void UnspentTxOutModel::update()
     for (auto& item: txoutviews) {
         QList<QStandardItem*> row;
 
-        QString amount(QString::number(item.value/(1.0 * currency_divisor), 'g', 8));
+        //QString amount(QString::number(item.value/(1.0 * currency_divisor), 'g', 8));
+        QString amount(getFormattedCurrencyAmount(item.value));
         QStandardItem* amountItem = new QStandardItem(amount);
         std::stringstream strAmount;
         strAmount << item.value;
