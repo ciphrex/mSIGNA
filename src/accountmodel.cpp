@@ -35,17 +35,26 @@ AccountModel::AccountModel()
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
-    currency_divisor = getCoinParams().currency_divisor();
-    currency_symbol = getCoinParams().currency_symbol();
+    currencySymbol = getCurrencySymbol();
+    setColumns();
+}
 
+void AccountModel::setColumns()
+{
     QStringList columns;
-    columns << tr("Account") << tr("Policy") << (tr("Balance") + " (" + getCurrencySymbol() + ")") << "";
+    columns << tr("Account") << tr("Policy") << (tr("Balance") + " (" + currencySymbol + ")") << "";
     setHorizontalHeaderLabels(columns);
 }
 
-
 void AccountModel::update()
 {
+    QString newCurrencySymbol = getCurrencySymbol();
+    if (newCurrencySymbol != currencySymbol)
+    {
+        currencySymbol = newCurrencySymbol;
+        setColumns();
+    }
+
     removeRows(0, rowCount());
 
     if (!vault) {

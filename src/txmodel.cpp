@@ -34,10 +34,9 @@ TxModel::TxModel(QObject* parent)
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
-    currency_divisor = getCoinParams().currency_divisor();
-    currency_symbol = getCoinParams().currency_symbol();
+    currencySymbol = getCurrencySymbol();
 
-    initColumns();
+    setColumns();
 }
 
 TxModel::TxModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent)
@@ -46,15 +45,14 @@ TxModel::TxModel(CoinDB::Vault* vault, const QString& accountName, QObject* pare
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
-    currency_divisor = getCoinParams().currency_divisor();
-    currency_symbol = getCoinParams().currency_symbol();
+    currencySymbol = getCurrencySymbol();
 
-    initColumns();
+    setColumns();
     setVault(vault);
     setAccount(accountName);
 }
 
-void TxModel::initColumns()
+void TxModel::setColumns()
 {
     QStringList columns;
     columns
@@ -93,6 +91,13 @@ void TxModel::setAccount(const QString& accountName)
 
 void TxModel::update()
 {
+    QString newCurrencySymbol = getCurrencySymbol();
+    if (newCurrencySymbol != currencySymbol)
+    {
+        currencySymbol = newCurrencySymbol;
+        setColumns();
+    }
+
     removeRows(0, rowCount());
 
     if (!vault || accountName.isEmpty()) return;

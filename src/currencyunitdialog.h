@@ -22,7 +22,7 @@ public:
     CurrencyUnitDialog(QWidget* parent = nullptr);
 
     QString getCurrencyUnit() const;
-    QString getCurrencyPrefix() const;
+    QString getCurrencyUnitPrefix() const;
 
 private:
     QComboBox* currencyUnitBox;

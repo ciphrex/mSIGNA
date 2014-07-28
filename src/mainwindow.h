@@ -84,6 +84,8 @@ signals:
     void signal_addBestChain(const chain_header_t& header);
     void signal_removeBestChain(const chain_header_t& header);
 
+    void signal_currencyUnitChanged();
+
     void unsignedTx();
 
 protected:
@@ -99,7 +101,11 @@ protected slots:
     void showUpdate(const QString& updateMsg);
 
 private slots:
-    ///?/////?/////////
+    ////////////////////
+    // GLOBAL OPERATIONS
+    void selectCurrencyUnit();
+
+    ///////////////////
     // VAULT OPERATIONS
     void newVault(QString fileName = QString());
     void openVault(QString fileName = QString());
@@ -232,6 +238,7 @@ private:
     QToolBar* txToolBar;
 
     // application actions
+    QAction* selectCurrencyUnitAction;
     QAction* quitAction;
 
     // vault actions

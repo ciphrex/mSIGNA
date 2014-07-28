@@ -57,7 +57,7 @@ QString CurrencyUnitDialog::getCurrencyUnit() const
     return unit;
 }
 
-QString CurrencyUnitDialog::getCurrencyPrefix() const
+QString CurrencyUnitDialog::getCurrencyUnitPrefix() const
 {
     QString unit = currencyUnitBox->currentText();
     return unit.left(unit.size() - strlen(getCoinParams().currency_symbol()));

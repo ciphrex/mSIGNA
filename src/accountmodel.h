@@ -102,9 +102,10 @@ signals:
     void error(const QString& message);
 
 private:
+    void setColumns();
+
     unsigned char base58_versions[2];
-    uint64_t currency_divisor;
-    const char* currency_symbol;
+    QString currencySymbol;
 
     CoinDB::Vault* vault;
     int numAccounts;

@@ -53,6 +53,7 @@
 #include "networksettingsdialog.h"
 #include "keychainbackupdialog.h"
 #include "passphrasedialog.h"
+#include "currencyunitdialog.h"
 //#include "resyncdialog.h"
 
 // Logging
@@ -164,6 +165,13 @@ MainWindow::MainWindow() :
         LOGGER(debug) << "MainWindow::updateBestHeight emitted. New best height: " << height << std::endl;
         bestHeight = height;
         updateSyncLabel();
+    });
+
+    connect(this, &MainWindow::signal_currencyUnitChanged, [this]() {
+        accountModel->update();
+        accountView->update();
+        txModel->update();
+        txView->update();
     });
 
     setAcceptDrops(true);
@@ -306,6 +314,23 @@ void MainWindow::showError(const QString& errorMsg)
 void MainWindow::showUpdate(const QString& updateMsg)
 {
     QMessageBox::information(this, tr("Update"), updateMsg);
+}
+
+void MainWindow::selectCurrencyUnit()
+{
+    try
+    {
+        CurrencyUnitDialog dlg(this);
+        if (dlg.exec())
+        {
+            setCurrencyUnitPrefix(dlg.getCurrencyUnitPrefix());
+            emit signal_currencyUnitChanged();
+        }
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::createTx - " << e.what() << std::endl;
+        showError(e.what());
+    }
 }
 
 void MainWindow::newVault(QString fileName)
@@ -1461,6 +1486,10 @@ void MainWindow::processCommand(const QString& command)
 void MainWindow::createActions()
 {
     // application actions
+    selectCurrencyUnitAction = new QAction(tr("Select Currency Units..."), this);
+    selectCurrencyUnitAction->setStatusTip(tr("Select the curr3ncy unit"));
+    connect(selectCurrencyUnitAction, SIGNAL(triggered()), this, SLOT(selectCurrencyUnit()));
+
     quitAction = new QAction(tr("&Quit ") + getDefaultSettings().getAppName(), this);
     quitAction->setShortcuts(QKeySequence::Quit);
     quitAction->setStatusTip(tr("Quit the application"));
@@ -1736,6 +1765,8 @@ void MainWindow::createMenus()
     fileMenu->addAction(importVaultAction);
     fileMenu->addAction(exportVaultAction);
     fileMenu->addAction(exportPublicVaultAction);
+    fileMenu->addSeparator();
+    fileMenu->addAction(selectCurrencyUnitAction);
     fileMenu->addSeparator();
     fileMenu->addAction(quitAction);    
 

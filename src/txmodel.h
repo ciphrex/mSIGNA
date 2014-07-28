@@ -48,10 +48,9 @@ signals:
 
 private:
     unsigned char base58_versions[2];
-    uint64_t currency_divisor;
-    const char* currency_symbol;
+    QString currencySymbol;
 
-    void initColumns();
+    void setColumns();
 
     CoinDB::Vault* vault;
     QString accountName; // empty when not loaded
