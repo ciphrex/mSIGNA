@@ -4,12 +4,11 @@
 //
 // accountpendingtxmodel.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_ACCOUNTPENDINGTXMODEL_H
-#define COINVAULT_ACCOUNTPENDINGTXMODEL_H
+#pragma once
 
 #include <QStandardItemModel>
 
@@ -36,4 +35,3 @@ private:
     uint64_t pendingBalance;
 };
 
-#endif // COINVAULT_ACCOUNTPENDINGTXMODEL_H

@@ -4,12 +4,11 @@
 //
 // txview.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_ACCOUNTHISTORYVIEW_H
-#define COINVAULT_ACCOUNTHISTORYVIEW_H
+#pragma once
 
 class TxModel;
 
@@ -32,4 +31,3 @@ private:
     TxModel* accountHistoryModel;
 };
 
-#endif // COINVAULT_ACCOUNTHISTORYVIEW_H

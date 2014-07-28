@@ -8,8 +8,7 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_ACCOUNTVIEW_H
-#define COINVAULT_ACCOUNTVIEW_H
+#pragma once
 
 class QMenu;
 
@@ -32,4 +31,3 @@ private:
     QMenu* menu;
 };
 
-#endif // COINVAULT_ACCOUNTVIEW_H

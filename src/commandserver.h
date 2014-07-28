@@ -8,8 +8,7 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_COMMANDSERVER_H
-#define COINVAULT_COMMANDSERVER_H
+#pragma once
 
 #include <QObject>
 #include <vector>
@@ -46,4 +45,3 @@ private:
     std::vector<QString> args;
 };
 
-#endif // COINVAULT_COMMANDSERVER_H

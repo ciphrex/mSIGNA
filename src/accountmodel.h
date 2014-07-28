@@ -8,8 +8,7 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_ACCOUNTMODEL_H
-#define COINVAULT_ACCOUNTMODEL_H
+#pragma once
 
 #include <QStandardItemModel>
 
@@ -111,4 +110,3 @@ private:
     int numAccounts;
 };
 
-#endif // COINVAULT_ACCOUNTMODEL_H

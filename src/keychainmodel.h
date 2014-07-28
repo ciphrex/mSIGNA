@@ -8,8 +8,7 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_KEYCHAINMODEL_H
-#define COINVAULT_KEYCHAINMODEL_H
+#pragma once
 
 #include <QStandardItemModel>
 
@@ -50,4 +49,3 @@ private:
     CoinDB::Vault* vault;
 };
 
-#endif // COINVAULT_ACCOUNTMODEL_H

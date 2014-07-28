@@ -4,12 +4,11 @@
 //
 // newaccountdialog.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_NEWACCOUNTDIALOG_H
-#define COINVAULT_NEWACCOUNTDIALOG_H
+#pragma once
 
 class QLineEdit;
 class QComboBox;
@@ -34,4 +33,3 @@ private:
     QList<QString> keychainNames;
 };
 
-#endif // COINVAULT_NEWACCOUNTDIALOG_H

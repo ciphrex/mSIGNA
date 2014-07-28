@@ -4,12 +4,11 @@
 //
 // scriptmodel.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_SCRIPTMODEL_H
-#define COINVAULT_SCRIPTMODEL_H
+#pragma once
 
 #include <QStandardItemModel>
 
@@ -34,4 +33,3 @@ private:
     QString accountName; // empty when not loaded
 };
 
-#endif // COINVAULT_SCRIPTMODEL_H

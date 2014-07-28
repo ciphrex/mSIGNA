@@ -4,12 +4,11 @@
 //
 // scriptview.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_SCRIPTVIEW_H
-#define COINVAULT_SCRIPTVIEW_H
+#pragma once
 
 class ScriptModel;
 
@@ -36,4 +35,3 @@ private:
     ScriptModel* scriptModel;
 };
 
-#endif // COINVAULT_SCRIPTVIEW_H

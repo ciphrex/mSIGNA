@@ -4,14 +4,12 @@
 //
 // severitylogger.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_SEVERITYLOGGER_H
-#define COINVAULT_SEVERITYLOGGER_H
+#pragma once
 
 #define LOGGER_TRACE
 #include <logger/logger.h>
 
-#endif // COINVAULT_SEVERITYLOGGER_H

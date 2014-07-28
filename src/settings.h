@@ -8,8 +8,7 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_SETTINGS_H
-#define COINVAULT_SETTINGS_H
+#pragma once
 
 #include <QDir>
 #include <QString>
@@ -43,4 +42,3 @@ private:
 // Singleton
 extern const DefaultSettings& getDefaultSettings();
 
-#endif //  COINVAULT_SETTINGS_H

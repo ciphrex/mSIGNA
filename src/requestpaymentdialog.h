@@ -8,8 +8,7 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_REQUESTPAYMENTDIALOG_H
-#define COINVAULT_REQUESTPAYMENTDIALOG_H
+#pragma once
 
 class AccountModel;
 
@@ -47,4 +46,3 @@ private:
     AccountModel* accountModel_;
 };
 
-#endif // COINVAULT_REQUESTPAYMENTDIALOG_H

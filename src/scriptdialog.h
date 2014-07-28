@@ -4,12 +4,11 @@
 //
 // scriptdialog.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_SCRIPTDIALOG_H
-#define COINVAULT_SCRIPTDIALOG_H
+#pragma once
 
 #include <CoinDB/Vault.h>
 
@@ -30,4 +29,3 @@ private:
     ScriptView* scriptView;
 };
 
-#endif // COINVAULT_SCRIPTDIALOG_H

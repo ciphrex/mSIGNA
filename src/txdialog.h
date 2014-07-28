@@ -4,12 +4,11 @@
 //
 // txdialog.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_TXDIALOG_H
-#define COINVAULT_TXDIALOG_H
+#pragma once
 
 #include <CoinDB/Vault.h>
 
@@ -36,4 +35,3 @@ private:
     TxOutView* txOutView;
 };
 
-#endif // COINVAULT_TXDIALOG_H

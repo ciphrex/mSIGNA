@@ -8,8 +8,7 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_PAYMENTREQUEST_H
-#define COINVAULT_PAYMENTREQUEST_H
+#pragma once
 
 #include <QString>
 
@@ -57,4 +56,3 @@ private:
     bool hasSend_;
 };
 
-#endif // COINVAULT_PAYMENTREQUEST_H

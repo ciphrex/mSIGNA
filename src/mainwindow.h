@@ -8,8 +8,7 @@
 //
 // All Rights Reserved.
 
-#ifndef VAULT_MAINWINDOW_H
-#define VAULT_MAINWINDOW_H
+#pragma once
 
 class QAction;
 class QActionGroup;
@@ -331,4 +330,3 @@ private:
     RequestPaymentDialog* requestPaymentDialog;
 };
 
-#endif // VAULT_MAINWINDOW_H

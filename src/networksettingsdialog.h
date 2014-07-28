@@ -8,8 +8,7 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_NETWORKSETTINGSDIALOG_H
-#define COINVAULT_NETWORKSETTINGSDIALOG_H
+#pragma once
 
 class QLineEdit;
 class QCheckBox;
@@ -33,4 +32,3 @@ private:
     QCheckBox* autoConnectCheckBox;
 };
 
-#endif // COINVAULT_NETWORKSETTINGSDIALOG_H

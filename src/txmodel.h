@@ -8,8 +8,7 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_TXMODEL_H
-#define COINVAULT_TXMODEL_H
+#pragma once
 
 #include <QStandardItemModel>
 
@@ -58,4 +57,3 @@ private:
     uint64_t pendingBalance;
 };
 
-#endif // COINVAULT_TXMODEL_H
