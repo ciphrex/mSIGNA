@@ -323,34 +323,38 @@ void Vault::importVault(const std::string& filepath, bool importprivkeys, const 
 {
     LOGGER(trace) << "Vault::importVault(" << filepath << ", " << (importprivkeys ? "true" : "false") << ", ...)" << std::endl;
 
-    boost::lock_guard<boost::mutex> lock(mutex);
-    std::ifstream ifs(filepath);
-    boost::archive::text_iarchive ia(ifs);
-
-    odb::core::transaction t(db_->begin());
-
-    uint32_t n;
-    ia >> n;
-    if (n > 0)
     {
-        // Import all accounts
-        for (uint32_t i = 0; i < n; i++)
-        {
-            unsigned int privkeysimported = importprivkeys;
-            odb::core::session s;
-            importAccount_unwrapped(ia, privkeysimported, importChainCodeUnlockKey);
-        }
+        boost::lock_guard<boost::mutex> lock(mutex);
+        std::ifstream ifs(filepath);
+        boost::archive::text_iarchive ia(ifs);
 
-        // Import merkle blocks
-        {
-            odb::core::session s;
-            importMerkleBlocks_unwrapped(ia);
-        }
+        odb::core::transaction t(db_->begin());
 
-        // Import transactions
-        importTxs_unwrapped(ia); 
+        uint32_t n;
+        ia >> n;
+        if (n > 0)
+        {
+            // Import all accounts
+            for (uint32_t i = 0; i < n; i++)
+            {
+                unsigned int privkeysimported = importprivkeys;
+                odb::core::session s;
+                importAccount_unwrapped(ia, privkeysimported, importChainCodeUnlockKey);
+            }
+
+            // Import merkle blocks
+            {
+                odb::core::session s;
+                importMerkleBlocks_unwrapped(ia);
+            }
+
+            // Import transactions
+            importTxs_unwrapped(ia); 
+        }
+        t.commit();
     }
-    t.commit();
+
+    signalQueue.flush();
 }
 
 ///////////////////////////
@@ -874,11 +878,16 @@ std::shared_ptr<Account> Vault::importAccount(const std::string& filepath, unsig
     std::ifstream ifs(filepath);
     boost::archive::text_iarchive ia(ifs);
 
-    boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::session s;
-    odb::core::transaction t(db_->begin());
-    std::shared_ptr<Account> account = importAccount_unwrapped(ia, privkeysimported, importChainCodeUnlockKey);
-    t.commit();
+    std::shared_ptr<Account> account;
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        account = importAccount_unwrapped(ia, privkeysimported, importChainCodeUnlockKey);
+        t.commit();
+    }
+
+    signalQueue.flush();
     return account; 
 }
 
@@ -1659,11 +1668,15 @@ std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx)
 {
     LOGGER(trace) << "Vault::insertTx(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
 
-    boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::session s;
-    odb::core::transaction t(db_->begin());
-    tx = insertTx_unwrapped(tx);
-    if (tx) t.commit();
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = insertTx_unwrapped(tx);
+        if (tx) t.commit();
+    }
+
+    signalQueue.flush();
     return tx;
 }
 
@@ -1698,7 +1711,8 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                 }
                 stored_tx->updateStatus(tx->status());
                 db_->update(stored_tx);
-                notifyTxStatusChanged(stored_tx);
+                signalQueue.push(notifyTxStatusChanged.bind(stored_tx));
+                //notifyTxStatusChanged(stored_tx);
                 return stored_tx;
             }
             else
@@ -1727,7 +1741,8 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                 {
                     stored_tx->updateStatus();
                     db_->update(stored_tx);
-                    notifyTxStatusChanged(stored_tx);
+                    signalQueue.push(notifyTxStatusChanged.bind(stored_tx));
+                    //notifyTxStatusChanged(stored_tx);
                     return stored_tx;
                 }
                 return nullptr;
@@ -1743,7 +1758,8 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                     LOGGER(debug) << "Vault::insertTx_unwrapped - UPDATING TRANSACTION STATUS FROM " << stored_tx->status() << " TO " << tx->status() << ". hash: " << uchar_vector(stored_tx->hash()).getHex() << std::endl;
                     stored_tx->updateStatus(tx->status());
                     db_->update(stored_tx);
-                    notifyTxStatusChanged(stored_tx);
+                    signalQueue.push(notifyTxStatusChanged.bind(stored_tx));
+                    //notifyTxStatusChanged(stored_tx);
                     return stored_tx;
                 }
                 else
@@ -1918,7 +1934,8 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
             {
                 conflicting_tx->conflicting(true);
                 db_->update(conflicting_tx);
-                notifyTxStatusChanged(conflicting_tx);
+                signalQueue.push(notifyTxStatusChanged.bind(conflicting_tx));
+                //notifyTxStatusChanged(conflicting_tx);
             }
         }
     }
@@ -1939,7 +1956,8 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
         for (auto& tx:          updated_txs)    { db_->update(tx);          }
 
         if (tx->status() >= Tx::SENT) updateConfirmations_unwrapped(tx);
-        notifyTxInserted(tx);
+        signalQueue.push(notifyTxInserted.bind(tx));
+        //notifyTxInserted(tx);
         return tx;
     }
 
@@ -1951,15 +1969,20 @@ std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx
 {
     LOGGER(trace) << "Vault::createTx(" << account_name << ", " << tx_version << ", " << tx_locktime << ", " << txouts.size() << " txout(s), " << fee << ", " << maxchangeouts << ", " << (insert ? "insert" : "no insert") << ")" << std::endl;
 
-    boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::session s;
-    odb::core::transaction t(db_->begin());
-    std::shared_ptr<Tx> tx = createTx_unwrapped(account_name, tx_version, tx_locktime, txouts, fee, maxchangeouts);
-    if (insert)
+    std::shared_ptr<Tx> tx;
     {
-        tx = insertTx_unwrapped(tx);
-        if (tx) t.commit();
-    } 
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = createTx_unwrapped(account_name, tx_version, tx_locktime, txouts, fee, maxchangeouts);
+        if (insert)
+        {
+            tx = insertTx_unwrapped(tx);
+            if (tx) t.commit();
+        }
+    }
+
+    signalQueue.flush();
     return tx;
 }
 
@@ -2018,15 +2041,20 @@ std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx
 {
     LOGGER(trace) << "Vault::createTx(" << account_name << ", " << tx_version << ", " << tx_locktime << ", " << coin_ids.size() << " txin(s), " << txouts.size() << " txout(s), " << fee << ", " << min_confirmations << ", " << (insert ? "insert" : "no insert") << ")" << std::endl;
 
-    boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::session s;
-    odb::core::transaction t(db_->begin());
-    std::shared_ptr<Tx> tx = createTx_unwrapped(account_name, tx_version, tx_locktime, coin_ids, txouts, fee, min_confirmations);
-    if (insert)
+    std::shared_ptr<Tx> tx;
     {
-        tx = insertTx_unwrapped(tx);
-        if (tx) t.commit();
-    } 
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        std::shared_ptr<Tx> tx = createTx_unwrapped(account_name, tx_version, tx_locktime, coin_ids, txouts, fee, min_confirmations);
+        if (insert)
+        {
+            tx = insertTx_unwrapped(tx);
+            if (tx) t.commit();
+        }
+    }
+
+    signalQueue.flush();
     return tx;
 }
 
@@ -2407,10 +2435,14 @@ void Vault::importTxs(const std::string& filepath)
     std::ifstream ifs(filepath);
     boost::archive::text_iarchive ia(ifs);
 
-    boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::transaction t(db_->begin());
-    importTxs_unwrapped(ia);
-    t.commit();
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::transaction t(db_->begin());
+        importTxs_unwrapped(ia);
+        t.commit();
+    }
+
+    signalQueue.flush();
 }
 
 void Vault::importTxs_unwrapped(boost::archive::text_iarchive& ia)
@@ -2506,11 +2538,15 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock(std::shared_ptr<MerkleBloc
 {
     LOGGER(trace) << "Vault::insertMerkleBlock(" << uchar_vector(merkleblock->blockheader()->hash()).getHex() << ")" << std::endl;
 
-    boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::session s;
-    odb::core::transaction t(db_->begin());
-    merkleblock = insertMerkleBlock_unwrapped(merkleblock);
-    t.commit();
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        merkleblock = insertMerkleBlock_unwrapped(merkleblock);
+        t.commit();
+    }
+
+    signalQueue.flush();
     return merkleblock;
 }
 
@@ -2545,7 +2581,8 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
         LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - inserting horizon merkle block. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
         db_->persist(new_blockheader);
         db_->persist(merkleblock);
-        notifyMerkleBlockInserted(merkleblock);
+        signalQueue.push(notifyMerkleBlockInserted.bind(merkleblock));
+        //notifyMerkleBlockInserted(merkleblock);
         return merkleblock;
     }
 
@@ -2583,7 +2620,8 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
     LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - inserting merkle block. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
     db_->persist(new_blockheader);
     db_->persist(merkleblock);
-    notifyMerkleBlockInserted(merkleblock);
+    signalQueue.push(notifyMerkleBlockInserted.bind(merkleblock));
+    //notifyMerkleBlockInserted(merkleblock);
 
     // Confirm transactions
     const auto& hashes = merkleblock->hashes();
@@ -2598,7 +2636,8 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
         LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - confirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
         tx.blockheader(new_blockheader);
         db_->update(tx);
-        notifyTxStatusChanged(std::make_shared<Tx>(tx));
+        signalQueue.push(notifyTxStatusChanged.bind(std::make_shared<Tx>(tx)));
+        //notifyTxStatusChanged(std::make_shared<Tx>(tx));
     }
 
     return merkleblock;     
@@ -2613,11 +2652,16 @@ unsigned int Vault::deleteMerkleBlock(uint32_t height)
 {
     LOGGER(trace) << "Vault::deleteMerkleBlock(" << height << ")" << std::endl;
 
-    boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::session s;
-    odb::core::transaction t(db_->begin());
-    unsigned int count = deleteMerkleBlock_unwrapped(height);
-    t.commit();
+    unsigned int count;
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        count = deleteMerkleBlock_unwrapped(height);
+        t.commit();
+    }
+
+    signalQueue.flush();
     return count;
 }
 
@@ -2637,7 +2681,8 @@ unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
             LOGGER(debug) << "Vault::deleteMerkleBlock_unwrapped - unconfirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
             tx.blockheader(nullptr);
             db_->update(tx);
-            notifyTxStatusChanged(std::make_shared<Tx>(tx));
+            signalQueue.push(notifyTxStatusChanged.bind(std::make_shared<Tx>(tx)));
+            //notifyTxStatusChanged(std::make_shared<Tx>(tx));
         }
 
         // Delete merkle block
@@ -2668,7 +2713,8 @@ unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)
         std::shared_ptr<BlockHeader> blockheader(db_->load<BlockHeader>(view.blockheader_id));
         tx->blockheader(blockheader);
         db_->update(tx);
-        notifyTxStatusChanged(tx);
+        signalQueue.push(notifyTxStatusChanged.bind(tx));
+        //notifyTxStatusChanged(tx);
         count++;
         LOGGER(debug) << "Vault::updateConfirmations_unwrapped - transaction " << uchar_vector(tx->hash()).getHex() << " confirmed in block " << uchar_vector(tx->blockheader()->hash()).getHex() << " height: " << tx->blockheader()->height() << std::endl;
     }
@@ -2710,11 +2756,15 @@ void Vault::importMerkleBlocks(const std::string& filepath)
     std::ifstream ifs(filepath);
     boost::archive::text_iarchive ia(ifs);
 
-    boost::lock_guard<boost::mutex> lock(mutex);
-    odb::core::session s;
-    odb::core::transaction t(db_->begin());
-    importMerkleBlocks_unwrapped(ia);
-    t.commit();
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        importMerkleBlocks_unwrapped(ia);
+        t.commit();
+    }
+
+    signalQueue.flush();
 }
 
 void Vault::importMerkleBlocks_unwrapped(boost::archive::text_iarchive& ia)

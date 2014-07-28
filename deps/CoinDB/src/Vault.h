@@ -14,6 +14,7 @@
 #include "SigningRequest.h"
 
 #include <Signals/Signals.h>
+#include <Signals/SignalQueue.h>
 
 #include <CoinQ/CoinQ_blocks.h>
 
@@ -274,6 +275,8 @@ protected:
     /////////////
     // SIGNALS //
     /////////////
+    Signals::SignalQueue                    signalQueue;
+
     TxSignal                                notifyTxInserted;
     TxSignal                                notifyTxStatusChanged;
     MerkleBlockSignal                       notifyMerkleBlockInserted;
