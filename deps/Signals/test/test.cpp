@@ -2,11 +2,22 @@
 #include <sstream>
 #define SIGNALS_TEST
 #include <Signals.h>
+#include <SignalQueue.h>
 
 #include <iostream>
 
 using namespace Signals;
 using namespace std;
+
+void coutInt(int i)
+{
+    cout << i << endl;
+}
+
+void coutString(const string& str)
+{
+    cout << str << endl;
+}
 
 int main()
 {
@@ -50,6 +61,15 @@ int main()
     notifyVoid.disconnect(9);
     cout << endl << "notifyInt state:" << endl << notifyInt.getTextualState();
     cout << endl << "notifyVoid state:" << endl << notifyVoid.getTextualState();
-    
+
+    cout << endl << "SignalQueue test:" << endl;
+    SignalQueue signalQueue;
+    signalQueue.push(std::bind(&coutInt, 13));
+    signalQueue.push(std::bind(&coutString, "foo"));
+    signalQueue.push(std::bind(&coutInt, 26));
+    signalQueue.push(std::bind(&coutString, "bar"));
+    signalQueue.flush();
+    signalQueue.flush();
+
     return 0;
 }
