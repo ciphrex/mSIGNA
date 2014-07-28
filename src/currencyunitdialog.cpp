@@ -69,5 +69,7 @@ void CurrencyUnitDialog::populateSelectorBox()
     {
         currencyUnitBox->addItem(prefix + getCoinParams().currency_symbol());        
     }
+
+    currencyUnitBox->setCurrentText(getCurrencySymbol());
 }
 
