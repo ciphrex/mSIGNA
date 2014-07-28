@@ -1308,17 +1308,20 @@ void MainWindow::fetchingBlocks()
 {
     if (accountModel->isOpen())
     {
-        updateNetworkState(NETWORK_STATE_SYNCHING);
         updateSyncHeight(accountModel->getBestHeight());
     }
+    updateNetworkState(NETWORK_STATE_SYNCHING);
     emit status(tr("Fetching blocks"));
 }
 
 void MainWindow::blocksSynched()
 {
-    networkSync.getMempool();
+    if (accountModel->isOpen())
+    {
+        updateSyncHeight(accountModel->getBestHeight());
+        networkSync.getMempool();
+    }
     updateNetworkState(NETWORK_STATE_SYNCHED);
-
     emit status(tr("Finished block sync"));
 }
 
