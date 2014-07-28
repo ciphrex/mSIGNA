@@ -246,8 +246,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     m_lastRequestedBlockHeight = nextHeader.height;
                     m_peer.getFilteredBlock(hash);
                 }
-                else
-                //if (bestHeight == m_lastRequestedBlockHeight && bestHeight == header.height)
+                else if (bestHeight == m_lastRequestedBlockHeight && bestHeight == (uint32_t)header.height)
                 {
                     m_bFetchingBlocks = false;
                     m_bBlocksSynched = true;
