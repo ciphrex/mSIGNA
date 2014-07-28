@@ -31,7 +31,8 @@ public:
     Connection connect(Slot slot);
     bool disconnect(Connection connection);
     void clear();
-    void operator()(Values... values) const;
+    std::function<void()> bind(Values... values) const;
+    void operator()(Values... values) const { exec(values...); }
 
 #ifdef SIGNALS_TEST
     std::string getTextualState()
@@ -48,6 +49,8 @@ public:
 #endif
 
 private:
+    void exec(Values... values) const;
+
     mutable std::mutex mutex_;
     Connection next_;
     std::set<Connection> available_;
@@ -111,10 +114,16 @@ inline void Signal<Values...>::clear()
 }
 
 template<typename... Values>
-inline void Signal<Values...>::operator()(Values... values) const
+inline void Signal<Values...>::exec(Values... values) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
     for (auto slot: slots_) slot.second(values...); 
+}
+
+template<typename... Values>
+inline std::function<void()> Signal<Values...>::bind(Values... values) const
+{
+    return std::bind([this](Values... values) { exec(values...); }, values...);
 }
 
 template<>
@@ -129,7 +138,8 @@ public:
     Connection connect(Slot slot);
     bool disconnect(Connection connection);
     void clear();
-    void operator()() const;
+    std::function<void()> bind() const;
+    void operator()() const { exec(); }
 
 #ifdef SIGNALS_TEST
     std::string getTextualState()
@@ -146,6 +156,8 @@ public:
 #endif
 
 private:
+    void exec() const;
+
     mutable std::mutex mutex_;
     Connection next_;
     std::set<Connection> available_;
@@ -209,10 +221,16 @@ inline void Signal<>::clear()
 }
 
 template<>
-inline void Signal<>::operator()() const
+inline void Signal<>::exec() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
     for (auto slot: slots_) slot.second(); 
+}
+
+template<>
+inline std::function<void()> Signal<>::bind() const
+{
+    return [this]() { exec(); };
 }
 
 }

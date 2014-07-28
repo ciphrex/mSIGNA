@@ -27,13 +27,13 @@ private:
     std::queue<std::function<void()>> queue_;
 };
 
-void SignalQueue::push(std::function<void()> f)
+inline void SignalQueue::push(std::function<void()> f)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     queue_.push(f);
 }
 
-void SignalQueue::flush()
+inline void SignalQueue::flush()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     while (!queue_.empty())
