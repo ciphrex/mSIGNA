@@ -53,8 +53,8 @@ void selectNetwork(const std::string& networkName)
 void setCurrencyUnit()
 {
     QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
-    QString unitPrefix = settings.value("unitprefix", "").toString();
-    setCurrencyUnitPrefix(unitPrefix);
+    QString prefix = settings.value("currencyunitprefix", "").toString();
+    setCurrencyUnitPrefix(prefix);
 }
 
 int main(int argc, char* argv[])

@@ -323,8 +323,14 @@ void MainWindow::selectCurrencyUnit()
         CurrencyUnitDialog dlg(this);
         if (dlg.exec())
         {
-            setCurrencyUnitPrefix(dlg.getCurrencyUnitPrefix());
-            emit signal_currencyUnitChanged();
+            QString newCurrencyUnitPrefix = dlg.getCurrencyUnitPrefix();
+            if (newCurrencyUnitPrefix != currencyUnitPrefix)
+            {
+                currencyUnitPrefix = newCurrencyUnitPrefix;
+                saveSettings();
+                setCurrencyUnitPrefix(currencyUnitPrefix);
+                emit signal_currencyUnitChanged();
+            }
         }
     }
     catch (const exception& e) {
@@ -1881,6 +1887,7 @@ void MainWindow::loadSettings()
 
     {
         QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
+        currencyUnitPrefix = settings.value("currencyunitprefix", "").toString();
         blockTreeFile = settings.value("blocktreefile", getDefaultSettings().getDataDir() + "/blocktree.dat").toString();
         host = settings.value("host", "localhost").toString();
         port = settings.value("port", getCoinParams().default_port()).toInt();
@@ -1901,6 +1908,7 @@ void MainWindow::saveSettings()
 
     {
         QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
+        settings.setValue("currencyunitprefix", currencyUnitPrefix);
         settings.setValue("blocktreefile", blockTreeFile);
         settings.setValue("host", host);
         settings.setValue("port", port);

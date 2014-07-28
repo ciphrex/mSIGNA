@@ -212,6 +212,7 @@ private:
     QString strippedName(const QString &fullFileName);
 
     QString curFile;
+    QString currencyUnitPrefix;
 
     //void updateBestHeight(int newHeight);
 
