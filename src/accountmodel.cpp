@@ -39,7 +39,7 @@ AccountModel::AccountModel()
     currency_symbol = getCoinParams().currency_symbol();
 
     QStringList columns;
-    columns << tr("Account") << tr("Policy") << tr("Balance") << "";
+    columns << tr("Account") << tr("Policy") << (tr("Balance") + " (" + getCurrencySymbol() + ")") << "";
     setHorizontalHeaderLabels(columns);
 }
 
