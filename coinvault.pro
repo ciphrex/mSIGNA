@@ -54,6 +54,7 @@ HEADERS = \
     src/coinparams.h \
     src/docdir.h \
     src/severitylogger.h \
+    src/currencyunitdialog.h \
     src/networkselectiondialog.h \
     src/splashscreen.h \
     src/acceptlicensedialog.h \
@@ -93,6 +94,7 @@ SOURCES = \
     src/coinparams.cpp \
     src/docdir.cpp \
     src/main.cpp \
+    src/currencyunitdialog.cpp \
     src/networkselectiondialog.cpp \
     src/splashscreen.cpp \
     src/acceptlicensedialog.cpp \
