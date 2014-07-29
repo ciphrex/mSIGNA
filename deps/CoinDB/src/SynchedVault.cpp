@@ -240,12 +240,14 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
     if (m_vault) delete m_vault;
     m_vault = new Vault(dbname, bCreate);
     m_syncHeight = m_vault->getBestHeight();
+    m_notifySyncHeightChanged(m_syncHeight);
     m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
     m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
     m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
     m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
     {
         m_syncHeight = merkleblock->blockheader()->height();
+        m_notifySyncHeightChanged(m_syncHeight);
         m_notifyMerkleBlockInserted(merkleblock);
     });
 
@@ -260,12 +262,14 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
     if (m_vault) delete m_vault;
     m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate);
     m_syncHeight = m_vault->getBestHeight();
+    m_notifySyncHeightChanged(m_syncHeight);
     m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
     m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
     m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
     m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
     {
         m_syncHeight = merkleblock->blockheader()->height();
+        m_notifySyncHeightChanged(m_syncHeight);
         m_notifyMerkleBlockInserted(merkleblock);
     });
 
@@ -284,6 +288,7 @@ void SynchedVault::closeVault()
         delete m_vault;
         m_vault = nullptr;
         m_syncHeight = 0;
+        m_notifySyncHeightChanged(m_syncHeight);
         updateStatus(NOT_LOADED);
     }
 }
@@ -394,6 +399,8 @@ void SynchedVault::clearAllSlots()
 {
     LOGGER(trace) << "SynchedVault::clearAllSlots()" << std::endl;
     m_notifyStatusChanged.clear();
+    m_notifyBestHeightChanged.clear();
+    m_notifySyncHeightChanged.clear();
     m_notifyTxInserted.clear();
     m_notifyTxStatusChanged.clear();
     m_notifyMerkleBlockInserted.clear();
