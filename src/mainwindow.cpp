@@ -114,9 +114,8 @@ MainWindow::MainWindow() :
     synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { emit signal_newTx(); });
     synchedVault.subscribeMerkleBlockInserted([this](std::shared_ptr<CoinDB::MerkleBlock> /*merkleblock*/) { emit signal_newBlock(); });
 
-    qRegisterMetaType<bytes_t>("bytes_t");
-    connect(this, SIGNAL(signal_newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
-    connect(this, SIGNAL(signal_newBlock(const bytes_t&, int)), SLOT(newBlock(const bytes_t&, int)));
+    connect(this, SIGNAL(signal_newTx()), this, SLOT(newTx()));
+    connect(this, SIGNAL(signal_newBlock()), this, SLOT(newBlock()));
 
 /*
     networkSync.subscribeTx([&](const Coin::Transaction& tx) {
@@ -1272,8 +1271,6 @@ void MainWindow::newTx()
 
 void MainWindow::newBlock()
 {
-    return;
-
     accountModel->update();
     accountView->update();
 
