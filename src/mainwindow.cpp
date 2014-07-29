@@ -110,8 +110,8 @@ MainWindow::MainWindow() :
     synchedVault.subscribeBestHeightChanged([this](uint32_t height) { emit updateBestHeight((int)height); });
     synchedVault.subscribeSyncHeightChanged([this](uint32_t height) { emit updateSyncHeight((int)height); });
 
-    synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { emit signal_newTx(); });
-    synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { emit signal_newTx(); });
+    synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
+    synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
     synchedVault.subscribeMerkleBlockInserted([this](std::shared_ptr<CoinDB::MerkleBlock> /*merkleblock*/) { emit signal_newBlock(); });
 
     connect(this, SIGNAL(signal_newTx()), this, SLOT(newTx()));
@@ -306,6 +306,8 @@ void MainWindow::updateNetworkState(network_state_t newState)
         connectAction->setEnabled(!isConnected());
         disconnectAction->setEnabled(isConnected());
         sendRawTxAction->setEnabled(isConnected());
+
+        refreshAccounts();
     }
 }
 
@@ -797,6 +799,15 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
     viewUnsignedTxsAction->setEnabled(isSelected);
 }
 
+void MainWindow::refreshAccounts()
+{
+    accountModel->update();
+    accountView->update();
+
+    txModel->update();
+    txModel->update();
+}
+
 void MainWindow::quickNewAccount()
 {
     QuickNewAccountDialog dlg(this);
@@ -1260,22 +1271,12 @@ void MainWindow::sendRawTx()
 
 void MainWindow::newTx()
 {
-    if (!isSynched()) return;
-
-    accountModel->update();
-    accountView->update();
-
-    txModel->update();
-    txView->update();
+    refreshAccounts();
 }
 
 void MainWindow::newBlock()
 {
-    accountModel->update();
-    accountView->update();
-
-    txModel->update();
-    txView->update();
+    if (isSynched() || syncHeight % 10 == 0)  { refreshAccounts(); }
 }
 
 void MainWindow::syncBlocks()

@@ -148,6 +148,7 @@ private slots:
     void viewUnsignedTxs();
     void updateCurrentAccount(const QModelIndex& current, const QModelIndex& previous);
     void updateSelectedAccounts(const QItemSelection& selected, const QItemSelection& deselected);
+    void refreshAccounts();
 
     /////////////////////////
     // TRANSACTION OPERATIONS
