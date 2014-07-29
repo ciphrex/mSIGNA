@@ -26,7 +26,6 @@ KeychainModel::KeychainModel()
 void KeychainModel::setVault(CoinDB::Vault* vault)
 {
     this->vault = vault;
-    update();
 }
 
 void KeychainModel::update()

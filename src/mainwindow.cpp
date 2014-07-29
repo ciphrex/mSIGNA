@@ -163,6 +163,42 @@ MainWindow::MainWindow() :
 
     requestPaymentDialog = new RequestPaymentDialog(accountModel, this);
 
+    // Vault open and close
+    synchedVault.subscribeVaultOpened([this](CoinDB::Vault* vault) { emit vaultOpened(vault); });
+    synchedVault.subscribeVaultClosed([this]() { emit vaultClosed(); });
+
+    connect(this, &MainWindow::vaultOpened, [this](CoinDB::Vault* vault) {
+        keychainModel->setVault(vault);
+        keychainModel->update();
+        keychainView->update();
+
+        accountModel->setVault(vault);
+        accountModel->update();
+        accountView->update();
+
+        txModel->setVault(vault);
+        txModel->update();
+        txView->update();
+
+        selectAccount(0);
+
+        // TODO: prompt user to unlock chain codes.
+        synchedVault.getVault()->unlockChainCodes(uchar_vector("1234"));
+    });
+    connect(this, &MainWindow::vaultClosed, [this]() {
+        keychainModel->setVault(nullptr);
+        keychainModel->update();
+
+        accountModel->setVault(nullptr);
+        accountModel->update();
+
+        txModel->setVault(nullptr);
+        txModel->update();
+        txView->update();
+
+        updateStatusMessage(tr("Closed vault"));
+    });
+
     // status updates
     connect(this, &MainWindow::status, [this](const QString& message) { updateStatusMessage(message); });
     connect(this, &MainWindow::updateSyncHeight, [this](int height) {
@@ -355,24 +391,13 @@ void MainWindow::newVault(QString fileName)
     setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
-    try {
-        accountModel->create(fileName);
-        accountView->update();
-
-        keychainModel->setVault(accountModel->getVault());
-        keychainModel->update();
-        keychainView->update();
-
-        txModel->setVault(accountModel->getVault());
-        txModel->update();
-        txView->update();
-
+    try
+    {
+        synchedVault.openVault(fileName.toStdString(), true);
         updateVaultStatus(fileName);
-
-        // TODO: prompt user to unlock chain codes.
-        accountModel->getVault()->unlockChainCodes(uchar_vector("1234"));
     }
-    catch (const exception& e) {
+    catch (const exception& e)
+    {
         LOGGER(debug) << "MainWindow::newVault - " << e.what() << std::endl;
         showError(e.what());
     }
@@ -412,12 +437,11 @@ void MainWindow::openVault(QString fileName)
     setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
-    try {
-        loadVault(fileName);
+    try
+    {
+        synchedVault.openVault(fileName.toStdString(), false);    
         updateVaultStatus(fileName);
-        selectAccount(0);
         updateStatusMessage(tr("Opened ") + fileName);
-
         //promptSync();
     }
     catch (const exception& e) {
@@ -447,7 +471,11 @@ void MainWindow::exportVault(QString fileName, bool exportPrivKeys)
 
     try
     {
-        accountModel->exportVault(fileName, exportPrivKeys);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        synchedVault.getVault()->exportVault(fileName.toStdString(), exportPrivKeys);
     }
     catch (const exception& e)
     {
@@ -458,18 +486,13 @@ void MainWindow::exportVault(QString fileName, bool exportPrivKeys)
 
 void MainWindow::closeVault()
 {
-    try {
-        networkSync.stopSyncBlocks();
-
-        accountModel->close();
-        keychainModel->setVault(NULL);
-        txModel->setVault(NULL);
-        txView->update();
-
+    try
+    {
+        synchedVault.closeVault();
         updateVaultStatus();
-        updateStatusMessage(tr("Closed vault"));
     }
-    catch (const exception& e) {
+    catch (const exception& e)
+    {
         LOGGER(debug) << "MainWindow::closeVault - " << e.what() << std::endl;
         showError(e.what());
     }

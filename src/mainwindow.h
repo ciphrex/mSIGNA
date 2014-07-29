@@ -74,6 +74,9 @@ signals:
 
     void signal_error(const QString& message);
 
+    void vaultOpened(CoinDB::Vault* vault);
+    void vaultClosed();
+
     void signal_connectionOpen();
     void signal_connectionClosed();
     void signal_networkStarted();
