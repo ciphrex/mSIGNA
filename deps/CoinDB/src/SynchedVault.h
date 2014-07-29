@@ -39,8 +39,8 @@ public:
     SynchedVault();
     ~SynchedVault();
 
-    void loadBlockTree(const std::string& blockTreeFile, bool bCheckProofOfWork = false);
-    bool isBlockTreeLoaded() const { return m_bBlockTreeLoaded; }
+    void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = false, std::function<void(const CoinQBlockTreeMem&)> callback = nullptr);
+    bool areHeadersLoaded() const { return m_bBlockTreeLoaded; }
 
     void openVault(const std::string& dbname, bool bCreate = false);
     void openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate = false);

@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
         LOGGER(debug) << "Opening vault " << filename << endl;
         synchedVault.openVault(filename);
         LOGGER(debug) << "Loading block tree " << BLOCKTREE_FILENAME << endl;
-        synchedVault.loadBlockTree(BLOCKTREE_FILENAME);
+        synchedVault.loadHeaders(BLOCKTREE_FILENAME);
         LOGGER(debug) << "Attempting to sync with " << host << ":" << port << endl;
         synchedVault.startSync(host, port);
     }

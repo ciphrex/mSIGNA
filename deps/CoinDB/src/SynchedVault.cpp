@@ -221,13 +221,13 @@ SynchedVault::~SynchedVault()
 }
 
 // Block tree operations
-void SynchedVault::loadBlockTree(const std::string& blockTreeFile, bool bCheckProofOfWork)
+void SynchedVault::loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork, std::function<void(const CoinQBlockTreeMem&)> callback)
 {
-    LOGGER(trace) << "SynchedVault::loadBlockTree(" << blockTreeFile << ", " << (bCheckProofOfWork ? "true" : "false") << ")" << std::endl;
+    LOGGER(trace) << "SynchedVault::loadHeaders(" << blockTreeFile << ", " << (bCheckProofOfWork ? "true" : "false") << ")" << std::endl;
 
     m_blockTreeFile = blockTreeFile;
     m_bBlockTreeLoaded = false;
-    m_networkSync.loadHeaders(blockTreeFile, bCheckProofOfWork);
+    m_networkSync.loadHeaders(blockTreeFile, bCheckProofOfWork, callback);
     m_bBlockTreeLoaded = true;
 }
 
