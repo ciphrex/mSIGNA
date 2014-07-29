@@ -359,7 +359,6 @@ void SynchedVault::syncBlocks()
 void SynchedVault::updateBloomFilter()
 {
     LOGGER(trace) << "SynchedVault::updateBloomFilter()" << std::endl;
-    if (!m_bConnected) throw std::runtime_error("Not connected.");
 
     if (!m_vault) throw std::runtime_error("No vault is open.");
     std::lock_guard<std::mutex> lock(m_vaultMutex);
