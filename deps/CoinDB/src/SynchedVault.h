@@ -51,6 +51,7 @@ public:
     void startSync(const std::string& host, const std::string& port);
     void startSync(const std::string& host, int port);
     void stopSync();
+    bool isConnected() const { return m_networkSync.connected(); }
     void suspendBlockUpdates();
     void syncBlocks();
     void updateBloomFilter();
