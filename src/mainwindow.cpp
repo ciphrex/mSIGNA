@@ -110,11 +110,9 @@ MainWindow::MainWindow() :
     synchedVault.subscribeBestHeightChanged([this](uint32_t height) { emit updateBestHeight((int)height); });
     synchedVault.subscribeSyncHeightChanged([this](uint32_t height) { emit updateSyncHeight((int)height); });
 
-    synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> tx) { emit signal_newTx(tx->hash()); });
-    synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> tx) { emit signal_newTx(tx->hash()); });
-    synchedVault.subscribeMerkleBlockInserted([this](std::shared_ptr<CoinDB::MerkleBlock> merkleblock) {
-        emit signal_newBlock(merkleblock->blockheader()->hash(), (int)merkleblock->blockheader()->height());
-    });
+    synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { emit signal_newTx(); });
+    synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { emit signal_newTx(); });
+    synchedVault.subscribeMerkleBlockInserted([this](std::shared_ptr<CoinDB::MerkleBlock> /*merkleblock*/) { emit signal_newBlock(); });
 
     qRegisterMetaType<bytes_t>("bytes_t");
     connect(this, SIGNAL(signal_newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
@@ -411,7 +409,8 @@ void MainWindow::newVault(QString fileName)
 
 void MainWindow::promptSync()
 {
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         QMessageBox msgBox;
         msgBox.setText(tr("You are not connected to network."));
         msgBox.setInformativeText(tr("Would you like to connect to network to synchronize your accounts?"));
@@ -421,895 +420,900 @@ void MainWindow::promptSync()
             startNetworkSync();
         }
     }
-    else {
-            syncBlocks();
-        }
-    }
-
-    void MainWindow::openVault(QString fileName)
+    else
     {
-        if (fileName.isEmpty()) {
-            fileName = QFileDialog::getOpenFileName(
-                this,
-                tr("Open Vault"),
-                getDocDir(),
-                tr("Vaults (*.vault)"));
-        }
-        if (fileName.isEmpty()) return;
-
-        fileName = QFileInfo(fileName).absoluteFilePath();
-
-        QFileInfo fileInfo(fileName);
-        setDocDir(fileInfo.dir().absolutePath());
-        saveSettings();
-
-        try
-        {
-            synchedVault.openVault(fileName.toStdString(), false);    
-            updateVaultStatus(fileName);
-            updateStatusMessage(tr("Opened ") + fileName);
-            //promptSync();
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::openVault - " << e.what() << std::endl;
-            showError(e.what());
-        }
+        syncBlocks();
     }
+}
 
-    void MainWindow::importVault(QString /* fileName */)
-    {
+void MainWindow::openVault(QString fileName)
+{
+    if (fileName.isEmpty()) {
+        fileName = QFileDialog::getOpenFileName(
+            this,
+            tr("Open Vault"),
+            getDocDir(),
+            tr("Vaults (*.vault)"));
     }
+    if (fileName.isEmpty()) return;
 
-    void MainWindow::exportVault(QString fileName, bool exportPrivKeys)
+    fileName = QFileInfo(fileName).absoluteFilePath();
+
+    QFileInfo fileInfo(fileName);
+    setDocDir(fileInfo.dir().absolutePath());
+    saveSettings();
+
+    try
     {
-        if (fileName.isEmpty()) {
-            fileName = QFileDialog::getSaveFileName(
-                this,
-                tr("Export Vault"),
-                getDocDir(),
-                tr("Portable Vault (*.vault.all)"));
-        }
-        if (fileName.isEmpty()) return;
+        synchedVault.openVault(fileName.toStdString(), false);    
+        updateVaultStatus(fileName);
+        updateStatusMessage(tr("Opened ") + fileName);
+        //promptSync();
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::openVault - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
 
-        QFileInfo fileInfo(fileName);
-        setDocDir(fileInfo.dir().absolutePath());
-        saveSettings();
+void MainWindow::importVault(QString /* fileName */)
+{
+}
 
-        try
-        {
-            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+void MainWindow::exportVault(QString fileName, bool exportPrivKeys)
+{
+    if (fileName.isEmpty()) {
+        fileName = QFileDialog::getSaveFileName(
+            this,
+            tr("Export Vault"),
+            getDocDir(),
+            tr("Portable Vault (*.vault.all)"));
+    }
+    if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    setDocDir(fileInfo.dir().absolutePath());
+    saveSettings();
+
+    try
+    {
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        synchedVault.getVault()->exportVault(fileName.toStdString(), exportPrivKeys);
+    }
+    catch (const exception& e)
+    {
+        LOGGER(debug) << "MainWindow::exportVault - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::closeVault()
+{
+    try
+    {
+        synchedVault.closeVault();
+        updateVaultStatus();
+    }
+    catch (const exception& e)
+    {
+        LOGGER(debug) << "MainWindow::closeVault - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::newKeychain()
+{
+    try {
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        NewKeychainDialog dlg(this);
+        if (dlg.exec()) {
+            QString name = dlg.getName();
+            //unsigned long numKeys = dlg.getNumKeys();
+            //updateStatusMessage(tr("Generating ") + QString::number(numKeys) + tr(" keys..."));
+
+            if (keychainModel->exists(name)) throw std::runtime_error("A keychain with that name already exists.");
+
+            // TODO: Randomize using user input for entropy
+            statusBar()->showMessage("Obtaining entropy...please wait...");
+            LOGGER(debug) << "MainWindow::newKeychain - getting entropy for master key..." << std::endl;
+            secure_bytes_t entropy = random_bytes(32);
+            statusBar()->showMessage("");
+            LOGGER(debug) << "MainWindow::newKeychain - done getting entropy." << std::endl;
             CoinDB::VaultLock lock(synchedVault);
             if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
-
-            synchedVault.getVault()->exportVault(fileName.toStdString(), exportPrivKeys);
-        }
-        catch (const exception& e)
-        {
-            LOGGER(debug) << "MainWindow::exportVault - " << e.what() << std::endl;
-            showError(e.what());
-        }
-    }
-
-    void MainWindow::closeVault()
-    {
-        try
-        {
-            synchedVault.closeVault();
-            updateVaultStatus();
-        }
-        catch (const exception& e)
-        {
-            LOGGER(debug) << "MainWindow::closeVault - " << e.what() << std::endl;
-            showError(e.what());
-        }
-    }
-
-    void MainWindow::newKeychain()
-    {
-        try {
-            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
-
-            NewKeychainDialog dlg(this);
-            if (dlg.exec()) {
-                QString name = dlg.getName();
-                //unsigned long numKeys = dlg.getNumKeys();
-                //updateStatusMessage(tr("Generating ") + QString::number(numKeys) + tr(" keys..."));
-
-                if (keychainModel->exists(name)) throw std::runtime_error("A keychain with that name already exists.");
-
-                // TODO: Randomize using user input for entropy
-                statusBar()->showMessage("Obtaining entropy...please wait...");
-                LOGGER(debug) << "MainWindow::newKeychain - getting entropy for master key..." << std::endl;
-                secure_bytes_t entropy = random_bytes(32);
-                statusBar()->showMessage("");
-                LOGGER(debug) << "MainWindow::newKeychain - done getting entropy." << std::endl;
-                CoinDB::VaultLock lock(synchedVault);
-                if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
-                synchedVault.getVault()->newKeychain(name.toStdString(), entropy);
-                //accountModel->newKeychain(name, entropy);
-                //accountModel->update();
-                keychainModel->update();
-                keychainView->update();
-                tabWidget->setCurrentWidget(keychainView);
-                updateStatusMessage(tr("Created keychain ") + name);
-            }
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::newKeyChain - " << e.what() << std::endl;
-            showError(e.what());
-        }    
-    }
-
-    void MainWindow::unlockKeychain()
-    {
-        QModelIndex index = keychainSelectionModel->currentIndex();
-        int row = index.row();
-        if (row < 0)
-        {
-            showError(tr("No keychain is selected."));
-            return;
-        }
-
-        QStandardItem* nameItem = keychainModel->item(row, 0);
-        QString name = nameItem->data(Qt::DisplayRole).toString();
-        secure_bytes_t hash;
-        if (keychainModel->isEncrypted(name))
-        {
-            PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
-            if (!dlg.exec()) return;
-
-            // TODO: proper hash
-            hash = sha256_2(dlg.getPassphrase().toStdString());
-        }
-
-        try
-        {
-            keychainModel->unlockKeychain(name, hash);
-        }
-        catch (const CoinDB::KeychainPrivateKeyUnlockFailedException& e)
-        {
-            throw std::runtime_error(tr("Invalid passphrase.").toStdString());
-        }
-    }
-
-    void MainWindow::lockKeychain()
-    {
-        QModelIndex index = keychainSelectionModel->currentIndex();
-        int row = index.row();
-        if (row < 0)
-        {
-            showError(tr("No keychain is selected."));
-            return;
-        }
-
-        QStandardItem* nameItem = keychainModel->item(row, 0);
-        QString name = nameItem->data(Qt::DisplayRole).toString();
-
-        keychainModel->lockKeychain(name);
-    }
-
-    void MainWindow::lockAllKeychains()
-    {
-        keychainModel->lockAllKeychains();
-    }
-
-    void MainWindow::importKeychain(QString fileName)
-    {
-        if (fileName.isEmpty()) {
-            fileName = QFileDialog::getOpenFileName(
-                this,
-                tr("Import Keychain"),
-                getDocDir(),
-                tr("Keychains") + "(*.priv *.pub)");
-        }
-        if (fileName.isEmpty()) return;
-
-        QFileInfo fileInfo(fileName);
-        setDocDir(fileInfo.dir().absolutePath());
-        saveSettings();
-
-        bool ok;
-        QString name = QFileInfo(fileName).baseName();
-        while (true) {
-            name = QInputDialog::getText(this, tr("Keychain Import"), tr("Keychain Name:"), QLineEdit::Normal, name, &ok);
-
-            if (!ok) return;
-            if (name.isEmpty()) {
-                showError(tr("Name cannot be empty."));
-                continue;
-            }
-            if (keychainModel->exists(name)) {
-                showError(tr("There is already a keychain with that name."));
-                continue;
-            }
-            break;
-        }
-
-        try {
-            updateStatusMessage(tr("Importing keychain..."));
-            bool isPrivate = importPrivate; // importPrivate is a user setting. isPrivate is whether or not this particular keychain is private.
-            keychainModel->importKeychain(name, fileName, isPrivate);
+            synchedVault.getVault()->newKeychain(name.toStdString(), entropy);
+            //accountModel->newKeychain(name, entropy);
+            //accountModel->update();
+            keychainModel->update();
             keychainView->update();
             tabWidget->setCurrentWidget(keychainView);
-            updateStatusMessage(tr("Imported ") + (isPrivate ? tr("private") : tr("public")) + tr(" keychain ") + name);
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::importKeychain - " << e.what() << std::endl;
-            showError(e.what());
+            updateStatusMessage(tr("Created keychain ") + name);
         }
     }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::newKeyChain - " << e.what() << std::endl;
+        showError(e.what());
+    }    
+}
 
-    void MainWindow::exportKeychain(bool exportPrivate)
+void MainWindow::unlockKeychain()
+{
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0)
     {
-        QModelIndex index = keychainSelectionModel->currentIndex();
-        int row = index.row();
-        if (row < 0) {
-            showError(tr("No keychain is selected."));
-            return;
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+    secure_bytes_t hash;
+    if (keychainModel->isEncrypted(name))
+    {
+        PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
+        if (!dlg.exec()) return;
+
+        // TODO: proper hash
+        hash = sha256_2(dlg.getPassphrase().toStdString());
+    }
+
+    try
+    {
+        keychainModel->unlockKeychain(name, hash);
+    }
+    catch (const CoinDB::KeychainPrivateKeyUnlockFailedException& e)
+    {
+        throw std::runtime_error(tr("Invalid passphrase.").toStdString());
+    }
+}
+
+void MainWindow::lockKeychain()
+{
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0)
+    {
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+
+    keychainModel->lockKeychain(name);
+}
+
+void MainWindow::lockAllKeychains()
+{
+    keychainModel->lockAllKeychains();
+}
+
+void MainWindow::importKeychain(QString fileName)
+{
+    if (fileName.isEmpty()) {
+        fileName = QFileDialog::getOpenFileName(
+            this,
+            tr("Import Keychain"),
+            getDocDir(),
+            tr("Keychains") + "(*.priv *.pub)");
+    }
+    if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    setDocDir(fileInfo.dir().absolutePath());
+    saveSettings();
+
+    bool ok;
+    QString name = QFileInfo(fileName).baseName();
+    while (true) {
+        name = QInputDialog::getText(this, tr("Keychain Import"), tr("Keychain Name:"), QLineEdit::Normal, name, &ok);
+
+        if (!ok) return;
+        if (name.isEmpty()) {
+            showError(tr("Name cannot be empty."));
+            continue;
+        }
+        if (keychainModel->exists(name)) {
+            showError(tr("There is already a keychain with that name."));
+            continue;
+        }
+        break;
+    }
+
+    try {
+        updateStatusMessage(tr("Importing keychain..."));
+        bool isPrivate = importPrivate; // importPrivate is a user setting. isPrivate is whether or not this particular keychain is private.
+        keychainModel->importKeychain(name, fileName, isPrivate);
+        keychainView->update();
+        tabWidget->setCurrentWidget(keychainView);
+        updateStatusMessage(tr("Imported ") + (isPrivate ? tr("private") : tr("public")) + tr(" keychain ") + name);
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::importKeychain - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::exportKeychain(bool exportPrivate)
+{
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0) {
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    QStandardItem* typeItem = keychainModel->item(row, 1);
+    int lockFlags = typeItem->data(Qt::UserRole).toInt();
+    bool isPrivate = lockFlags & (1 << 1);
+    bool isLocked = lockFlags & 1;
+
+    if (exportPrivate && !isPrivate) {
+        showError(tr("Cannot export private keys for public keychain."));
+        return;
+    }
+
+    if (exportPrivate && isLocked) {
+        showError(tr("Cannot export private keys for locked keychain."));
+        return;
+    }
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+
+    QString fileName = name + (exportPrivate ? ".priv" : ".pub");
+
+    fileName = QFileDialog::getSaveFileName(
+        this,
+        tr("Exporting ") + (exportPrivate ? tr("Private") : tr("Public")) + tr(" Keychain - ") + name,
+        getDocDir() + "/" + fileName,
+        tr("Keychains (*.priv *.pub)"));
+
+    if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    setDocDir(fileInfo.dir().absolutePath());
+    saveSettings();
+
+    try {
+        updateStatusMessage(tr("Exporting ") + (exportPrivate ? tr("private") : tr("public")) + tr("  keychain...") + name);
+        keychainModel->exportKeychain(name, fileName, exportPrivate);
+        updateStatusMessage(tr("Saved ") + fileName);
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::exportKeychain - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::backupKeychain()
+{
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0) {
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+
+    try {
+        bytes_t extendedKey;
+
+        if (keychainModel->isPrivate(name)) {
+            // TODO: prompt user for decryption key
+            extendedKey = keychainModel->getExtendedKeyBytes(name, true);
+        }
+        else {
+            extendedKey = keychainModel->getExtendedKeyBytes(name);
         }
 
+        KeychainBackupDialog dlg(tr("Keychain information"));
+        dlg.setExtendedKey(extendedKey);
+        dlg.exec();
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::backupKeychain - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelIndex& /*previous*/)
+{
+    int row = current.row();
+    if (row == -1) {
+        exportPrivateKeychainAction->setEnabled(false);
+        exportPublicKeychainAction->setEnabled(false);
+        backupKeychainAction->setEnabled(false);
+    }
+    else {
         QStandardItem* typeItem = keychainModel->item(row, 1);
         int lockFlags = typeItem->data(Qt::UserRole).toInt();
         bool isPrivate = lockFlags & (1 << 1);
         bool isLocked = lockFlags & 1;
 
-        if (exportPrivate && !isPrivate) {
-            showError(tr("Cannot export private keys for public keychain."));
-            return;
-        }
+        unlockKeychainAction->setEnabled(isPrivate && isLocked);
+        lockKeychainAction->setEnabled(isPrivate && !isLocked);
+        exportPrivateKeychainAction->setEnabled(isPrivate);
+        exportPublicKeychainAction->setEnabled(true);
+        backupKeychainAction->setEnabled(true);
+    }
+}
 
-        if (exportPrivate && isLocked) {
-            showError(tr("Cannot export private keys for locked keychain."));
-            return;
-        }
+void MainWindow::updateSelectedKeychains(const QItemSelection& /*selected*/, const QItemSelection& /*deselected*/)
+{
+    int selectionCount = keychainView->selectionModel()->selectedRows(0).size();
+    bool isSelected = selectionCount > 0;
+    newAccountAction->setEnabled(isSelected);
+}
 
-        QStandardItem* nameItem = keychainModel->item(row, 0);
-        QString name = nameItem->data(Qt::DisplayRole).toString();
+bool MainWindow::selectAccount(int i)
+{
+    if (accountModel->rowCount() <= i) return false;
+    QItemSelection selection(accountModel->index(i, 0), accountModel->index(i, accountModel->columnCount() - 1));
+    accountView->selectionModel()->select(selection, QItemSelectionModel::SelectCurrent);
+    return true;
+}
 
-        QString fileName = name + (exportPrivate ? ".priv" : ".pub");
+void MainWindow::updateCurrentAccount(const QModelIndex& /*current*/, const QModelIndex& /*previous*/)
+{
+/*
+    int row = current.row();
+    bool isCurrent = (row != -1);
 
-        fileName = QFileDialog::getSaveFileName(
-            this,
-            tr("Exporting ") + (exportPrivate ? tr("Private") : tr("Public")) + tr(" Keychain - ") + name,
-            getDocDir() + "/" + fileName,
-            tr("Keychains (*.priv *.pub)"));
+    deleteAccountAction->setEnabled(isCurrent);
+    viewAccountHistoryAction->setEnabled(isCurrent);
+*/
+}
 
-        if (fileName.isEmpty()) return;
+void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, const QItemSelection& /*deselected*/)
+{
+    QItemSelectionModel* selectionModel = accountView->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+    bool isSelected = indexes.size() > 0;
+    if (isSelected) {
+        QString accountName = accountModel->data(indexes.at(0)).toString();
+        txModel->setAccount(accountName);
+        txModel->update();
+        txView->update();
+        tabWidget->setTabText(2, tr("Transactions - ") + accountName);
+        requestPaymentDialog->setCurrentAccount(accountName);
+    }
+    else {
+        tabWidget->setTabText(2, tr("Transactions"));
+    }
+    deleteAccountAction->setEnabled(isSelected);
+    exportAccountAction->setEnabled(isSelected);
+    exportSharedAccountAction->setEnabled(isSelected);
+    viewAccountHistoryAction->setEnabled(isSelected);
+    viewScriptsAction->setEnabled(isSelected);
+    requestPaymentAction->setEnabled(isSelected);
+    sendPaymentAction->setEnabled(isSelected);
+    viewUnsignedTxsAction->setEnabled(isSelected);
+}
 
-        QFileInfo fileInfo(fileName);
-        setDocDir(fileInfo.dir().absolutePath());
-        saveSettings();
-
+void MainWindow::quickNewAccount()
+{
+    QuickNewAccountDialog dlg(this);
+    while (dlg.exec()) {
         try {
-            updateStatusMessage(tr("Exporting ") + (exportPrivate ? tr("private") : tr("public")) + tr("  keychain...") + name);
-            keychainModel->exportKeychain(name, fileName, exportPrivate);
-            updateStatusMessage(tr("Saved ") + fileName);
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::exportKeychain - " << e.what() << std::endl;
-            showError(e.what());
-        }
-    }
+            QString accountName = dlg.getName();
+            if (accountName.isEmpty())
+                throw std::runtime_error(tr("Account name is empty.").toStdString());
 
-    void MainWindow::backupKeychain()
-    {
-        QModelIndex index = keychainSelectionModel->currentIndex();
-        int row = index.row();
-        if (row < 0) {
-            showError(tr("No keychain is selected."));
-            return;
-        }
+            if (dlg.getMinSigs() > dlg.getMaxSigs())
+                throw std::runtime_error(tr("The minimum signature count cannot exceed the number of keychains.").toStdString());
 
-        QStandardItem* nameItem = keychainModel->item(row, 0);
-        QString name = nameItem->data(Qt::DisplayRole).toString();
+            if (accountModel->accountExists(accountName))
+                throw std::runtime_error(tr("An account with that name already exists.").toStdString());
 
-        try {
-            bytes_t extendedKey;
-
-            if (keychainModel->isPrivate(name)) {
-                // TODO: prompt user for decryption key
-                extendedKey = keychainModel->getExtendedKeyBytes(name, true);
+            const int MAX_KEYCHAIN_INDEX = 1000;
+            int i = 0;
+            QList<QString> keychainNames;
+            while (keychainNames.size() < dlg.getMaxSigs() && ++i <= MAX_KEYCHAIN_INDEX) {
+                QString keychainName = accountName + "_" + QString::number(i);
+                if (!keychainModel->exists(keychainName))
+                    keychainNames << keychainName;
             }
-            else {
-                extendedKey = keychainModel->getExtendedKeyBytes(name);
+            if (i > MAX_KEYCHAIN_INDEX)
+                throw std::runtime_error(tr("Ran out of keychain indices.").toStdString());
+
+            for (auto& keychainName: keychainNames) {
+                // TODO: Randomize using user input for entropy
+                accountModel->newKeychain(keychainName, random_bytes(32));
             }
 
-            KeychainBackupDialog dlg(tr("Keychain information"));
-            dlg.setExtendedKey(extendedKey);
-            dlg.exec();
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::backupKeychain - " << e.what() << std::endl;
-            showError(e.what());
-        }
-    }
-
-    void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelIndex& /*previous*/)
-    {
-        int row = current.row();
-        if (row == -1) {
-            exportPrivateKeychainAction->setEnabled(false);
-            exportPublicKeychainAction->setEnabled(false);
-            backupKeychainAction->setEnabled(false);
-        }
-        else {
-            QStandardItem* typeItem = keychainModel->item(row, 1);
-            int lockFlags = typeItem->data(Qt::UserRole).toInt();
-            bool isPrivate = lockFlags & (1 << 1);
-            bool isLocked = lockFlags & 1;
-
-            unlockKeychainAction->setEnabled(isPrivate && isLocked);
-            lockKeychainAction->setEnabled(isPrivate && !isLocked);
-            exportPrivateKeychainAction->setEnabled(isPrivate);
-            exportPublicKeychainAction->setEnabled(true);
-            backupKeychainAction->setEnabled(true);
-        }
-    }
-
-    void MainWindow::updateSelectedKeychains(const QItemSelection& /*selected*/, const QItemSelection& /*deselected*/)
-    {
-        int selectionCount = keychainView->selectionModel()->selectedRows(0).size();
-        bool isSelected = selectionCount > 0;
-        newAccountAction->setEnabled(isSelected);
-    }
-
-    bool MainWindow::selectAccount(int i)
-    {
-        if (accountModel->rowCount() <= i) return false;
-        QItemSelection selection(accountModel->index(i, 0), accountModel->index(i, accountModel->columnCount() - 1));
-        accountView->selectionModel()->select(selection, QItemSelectionModel::SelectCurrent);
-        return true;
-    }
-
-    void MainWindow::updateCurrentAccount(const QModelIndex& /*current*/, const QModelIndex& /*previous*/)
-    {
-    /*
-        int row = current.row();
-        bool isCurrent = (row != -1);
-
-        deleteAccountAction->setEnabled(isCurrent);
-        viewAccountHistoryAction->setEnabled(isCurrent);
-    */
-    }
-
-    void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, const QItemSelection& /*deselected*/)
-    {
-        QItemSelectionModel* selectionModel = accountView->selectionModel();
-        QModelIndexList indexes = selectionModel->selectedRows(0);
-        bool isSelected = indexes.size() > 0;
-        if (isSelected) {
-            QString accountName = accountModel->data(indexes.at(0)).toString();
-            txModel->setAccount(accountName);
-            txModel->update();
-            txView->update();
-            tabWidget->setTabText(2, tr("Transactions - ") + accountName);
-            requestPaymentDialog->setCurrentAccount(accountName);
-        }
-        else {
-            tabWidget->setTabText(2, tr("Transactions"));
-        }
-        deleteAccountAction->setEnabled(isSelected);
-        exportAccountAction->setEnabled(isSelected);
-        exportSharedAccountAction->setEnabled(isSelected);
-        viewAccountHistoryAction->setEnabled(isSelected);
-        viewScriptsAction->setEnabled(isSelected);
-        requestPaymentAction->setEnabled(isSelected);
-        sendPaymentAction->setEnabled(isSelected);
-        viewUnsignedTxsAction->setEnabled(isSelected);
-    }
-
-    void MainWindow::quickNewAccount()
-    {
-        QuickNewAccountDialog dlg(this);
-        while (dlg.exec()) {
-            try {
-                QString accountName = dlg.getName();
-                if (accountName.isEmpty())
-                    throw std::runtime_error(tr("Account name is empty.").toStdString());
-
-                if (dlg.getMinSigs() > dlg.getMaxSigs())
-                    throw std::runtime_error(tr("The minimum signature count cannot exceed the number of keychains.").toStdString());
-
-                if (accountModel->accountExists(accountName))
-                    throw std::runtime_error(tr("An account with that name already exists.").toStdString());
-
-                const int MAX_KEYCHAIN_INDEX = 1000;
-                int i = 0;
-                QList<QString> keychainNames;
-                while (keychainNames.size() < dlg.getMaxSigs() && ++i <= MAX_KEYCHAIN_INDEX) {
-                    QString keychainName = accountName + "_" + QString::number(i);
-                    if (!keychainModel->exists(keychainName))
-                        keychainNames << keychainName;
-                }
-                if (i > MAX_KEYCHAIN_INDEX)
-                    throw std::runtime_error(tr("Ran out of keychain indices.").toStdString());
-
-                for (auto& keychainName: keychainNames) {
-                    // TODO: Randomize using user input for entropy
-                    accountModel->newKeychain(keychainName, random_bytes(32));
-                }
-
-                accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames);
-                accountModel->update();
-                keychainModel->update();
-                keychainView->update();
-                tabWidget->setCurrentWidget(accountView);
-                updateStatusMessage(tr("Created account ") + accountName);
-                break;
-            }
-            catch (const exception& e) {
-                showError(e.what());
-            }
-        }
-    }
-
-    void MainWindow::newAccount()
-    {
-        QItemSelectionModel* selectionModel = keychainView->selectionModel();
-        QModelIndexList indexes = selectionModel->selectedRows(0);
-
-        QList<QString> keychainNames;
-        for (auto& index: indexes) {
-            keychainNames << keychainModel->data(index).toString();
-        }
-
-        try {
-            NewAccountDialog dlg(keychainNames, this);
-            if (dlg.exec()) {
-                accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames());
-                accountView->update();
-                tabWidget->setCurrentWidget(accountView);
-                synchedVault.updateBloomFilter();
-                //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
-                if (isConnected()) syncBlocks();
-            }
-        }
-        catch (const exception& e) {
-            // TODO: Handle other possible errors.
-            showError(tr("No keychains selected."));
-        }
-    }
-
-    void MainWindow::importAccount(QString fileName)
-    {
-        if (fileName.isEmpty()) {
-            fileName = QFileDialog::getOpenFileName(
-                this,
-                tr("Import Account"),
-                getDocDir(),
-                tr("Account") + "(*.acct *.sharedacct)");
-        }
-
-        if (fileName.isEmpty()) return;
-
-        QFileInfo fileInfo(fileName);
-        setDocDir(fileInfo.dir().absolutePath());
-        saveSettings();
-
-        bool ok;
-        QString name = QFileInfo(fileName).baseName();
-        while (true) {
-            name = QInputDialog::getText(this, tr("Account Import"), tr("Account Name:"), QLineEdit::Normal, name, &ok);
-            if (!ok) return;
-            if (name.isEmpty()) {
-                showError(tr("Name cannot be empty."));
-                continue;
-            }
-            if (accountModel->accountExists(name)) {
-                showError(tr("There is already an account with that name."));
-                continue;
-            }
-            break;
-        }
-
-        try {
-            updateStatusMessage(tr("Importing account..."));
-            accountModel->importAccount(name, fileName);
+            accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames);
             accountModel->update();
-            accountView->update();
             keychainModel->update();
             keychainView->update();
             tabWidget->setCurrentWidget(accountView);
+            updateStatusMessage(tr("Created account ") + accountName);
+            break;
+        }
+        catch (const exception& e) {
+            showError(e.what());
+        }
+    }
+}
+
+void MainWindow::newAccount()
+{
+    QItemSelectionModel* selectionModel = keychainView->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+
+    QList<QString> keychainNames;
+    for (auto& index: indexes) {
+        keychainNames << keychainModel->data(index).toString();
+    }
+
+    try {
+        NewAccountDialog dlg(keychainNames, this);
+        if (dlg.exec()) {
+            accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames());
+            accountView->update();
+            tabWidget->setCurrentWidget(accountView);
             synchedVault.updateBloomFilter();
             //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
-            updateStatusMessage(tr("Imported account ") + name);
-            //if (isConnected()) syncBlocks();
-            //promptSync();
+            if (isConnected()) syncBlocks();
         }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::importAccount - " << e.what() << std::endl;
-            showError(e.what());
-        }
-
     }
+    catch (const exception& e) {
+        // TODO: Handle other possible errors.
+        showError(tr("No keychains selected."));
+    }
+}
 
-    void MainWindow::exportAccount()
-    {
-        QItemSelectionModel* selectionModel = accountView->selectionModel();
-        QModelIndexList indexes = selectionModel->selectedRows(0);
-        if (indexes.isEmpty()) {
-            showError(tr("No account selected."));
-            return;
-        }
-
-        QString name = accountModel->data(indexes.at(0)).toString();
-
-        QString fileName = name + ".acct";
-
-        fileName = QFileDialog::getSaveFileName(
+void MainWindow::importAccount(QString fileName)
+{
+    if (fileName.isEmpty()) {
+        fileName = QFileDialog::getOpenFileName(
             this,
-            tr("Exporting Account - ") + name,
-            getDocDir() + "/" + fileName,
-            tr("Accounts (*.acct)"));
+            tr("Import Account"),
+            getDocDir(),
+            tr("Account") + "(*.acct *.sharedacct)");
+    }
 
-        if (fileName.isEmpty()) return;
+    if (fileName.isEmpty()) return;
 
-        QFileInfo fileInfo(fileName);
-        setDocDir(fileInfo.dir().absolutePath());
-        saveSettings();
+    QFileInfo fileInfo(fileName);
+    setDocDir(fileInfo.dir().absolutePath());
+    saveSettings();
 
+    bool ok;
+    QString name = QFileInfo(fileName).baseName();
+    while (true) {
+        name = QInputDialog::getText(this, tr("Account Import"), tr("Account Name:"), QLineEdit::Normal, name, &ok);
+        if (!ok) return;
+        if (name.isEmpty()) {
+            showError(tr("Name cannot be empty."));
+            continue;
+        }
+        if (accountModel->accountExists(name)) {
+            showError(tr("There is already an account with that name."));
+            continue;
+        }
+        break;
+    }
+
+    try {
+        updateStatusMessage(tr("Importing account..."));
+        accountModel->importAccount(name, fileName);
+        accountModel->update();
+        accountView->update();
+        keychainModel->update();
+        keychainView->update();
+        tabWidget->setCurrentWidget(accountView);
+        synchedVault.updateBloomFilter();
+        //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
+        updateStatusMessage(tr("Imported account ") + name);
+        //if (isConnected()) syncBlocks();
+        //promptSync();
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::importAccount - " << e.what() << std::endl;
+        showError(e.what());
+    }
+
+}
+
+void MainWindow::exportAccount()
+{
+    QItemSelectionModel* selectionModel = accountView->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+    if (indexes.isEmpty()) {
+        showError(tr("No account selected."));
+        return;
+    }
+
+    QString name = accountModel->data(indexes.at(0)).toString();
+
+    QString fileName = name + ".acct";
+
+    fileName = QFileDialog::getSaveFileName(
+        this,
+        tr("Exporting Account - ") + name,
+        getDocDir() + "/" + fileName,
+        tr("Accounts (*.acct)"));
+
+    if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    setDocDir(fileInfo.dir().absolutePath());
+    saveSettings();
+
+    try {
+        updateStatusMessage(tr("Exporting account ") + name + "...");
+        accountModel->exportAccount(name, fileName, false);
+        updateStatusMessage(tr("Saved ") + fileName);
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::exportAccount - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::exportSharedAccount()
+{
+    QItemSelectionModel* selectionModel = accountView->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+    if (indexes.isEmpty()) {
+        showError(tr("No account selected."));
+        return;
+    }
+
+    QString name = accountModel->data(indexes.at(0)).toString();
+
+    QString fileName = name + ".sharedacct";
+
+    fileName = QFileDialog::getSaveFileName(
+        this,
+        tr("Exporting Shared Account - ") + name,
+        getDocDir() + "/" + fileName,
+        tr("Accounts (*.sharedacct)"));
+
+    if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    setDocDir(fileInfo.dir().absolutePath());
+    saveSettings();
+
+    try {
+        updateStatusMessage(tr("Exporting shared account ") + name + "...");
+        accountModel->exportAccount(name, fileName, true);
+        updateStatusMessage(tr("Saved ") + fileName);
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::exportSharedAccount - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::deleteAccount()
+{
+    QItemSelectionModel* selectionModel = accountView->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+    if (indexes.isEmpty()) {
+        showError(tr("No account selected."));
+        return;
+    }
+
+    QString accountName = accountModel->data(indexes.at(0)).toString();
+
+    if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"), tr("Are you sure you want to delete account ") + accountName + "?")) {
         try {
-            updateStatusMessage(tr("Exporting account ") + name + "...");
-            accountModel->exportAccount(name, fileName, false);
-            updateStatusMessage(tr("Saved ") + fileName);
+            accountModel->deleteAccount(accountName);
+            accountView->update();
+            synchedVault.updateBloomFilter();
+            //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         }
         catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::exportAccount - " << e.what() << std::endl;
+            LOGGER(debug) << "MainWindow::deleteAccount - " << e.what() << std::endl;
             showError(e.what());
         }
     }
+}
 
-    void MainWindow::exportSharedAccount()
-    {
-        QItemSelectionModel* selectionModel = accountView->selectionModel();
-        QModelIndexList indexes = selectionModel->selectedRows(0);
-        if (indexes.isEmpty()) {
-            showError(tr("No account selected."));
-            return;
-        }
-
-        QString name = accountModel->data(indexes.at(0)).toString();
-
-        QString fileName = name + ".sharedacct";
-
-        fileName = QFileDialog::getSaveFileName(
-            this,
-            tr("Exporting Shared Account - ") + name,
-            getDocDir() + "/" + fileName,
-            tr("Accounts (*.sharedacct)"));
-
-        if (fileName.isEmpty()) return;
-
-        QFileInfo fileInfo(fileName);
-        setDocDir(fileInfo.dir().absolutePath());
-        saveSettings();
-
-        try {
-            updateStatusMessage(tr("Exporting shared account ") + name + "...");
-            accountModel->exportAccount(name, fileName, true);
-            updateStatusMessage(tr("Saved ") + fileName);
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::exportSharedAccount - " << e.what() << std::endl;
-            showError(e.what());
-        }
-    }
-
-    void MainWindow::deleteAccount()
-    {
-        QItemSelectionModel* selectionModel = accountView->selectionModel();
-        QModelIndexList indexes = selectionModel->selectedRows(0);
-        if (indexes.isEmpty()) {
-            showError(tr("No account selected."));
-            return;
-        }
-
-        QString accountName = accountModel->data(indexes.at(0)).toString();
-
-        if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"), tr("Are you sure you want to delete account ") + accountName + "?")) {
-            try {
-                accountModel->deleteAccount(accountName);
-                accountView->update();
-                synchedVault.updateBloomFilter();
-                //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
-            }
-            catch (const exception& e) {
-                LOGGER(debug) << "MainWindow::deleteAccount - " << e.what() << std::endl;
-                showError(e.what());
-            }
-        }
-    }
-
-    void MainWindow::viewAccountHistory()
-    {
+void MainWindow::viewAccountHistory()
+{
 /*
-        QItemSelectionModel* selectionModel = accountView->selectionModel();
-        QModelIndexList indexes = selectionModel->selectedRows(0);
-        if (indexes.isEmpty()) {
-            showError(tr("No account selected."));
-            return;
-        }
+    QItemSelectionModel* selectionModel = accountView->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+    if (indexes.isEmpty()) {
+        showError(tr("No account selected."));
+        return;
+    }
 
-        // Only open one - show modal for now.
-        QString accountName = accountModel->data(indexes.at(0)).toString();
+    // Only open one - show modal for now.
+    QString accountName = accountModel->data(indexes.at(0)).toString();
 
-        try {
-            // TODO: Make this dialog not modal and allow viewing several account histories simultaneously.
-            AccountHistoryDialog dlg(accountModel->getVault(), accountName, &networkSync, this);
-            connect(&dlg, &AccountHistoryDialog::txDeleted, [this]() { accountModel->update(); });
-            dlg.exec();
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::viewAccountHistory - " << e.what() << std::endl;
-            showError(e.what());
+    try {
+        // TODO: Make this dialog not modal and allow viewing several account histories simultaneously.
+        AccountHistoryDialog dlg(accountModel->getVault(), accountName, &networkSync, this);
+        connect(&dlg, &AccountHistoryDialog::txDeleted, [this]() { accountModel->update(); });
+        dlg.exec();
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::viewAccountHistory - " << e.what() << std::endl;
+        showError(e.what());
+    }
+*/
+}
+
+void MainWindow::viewScripts()
+{
+    QItemSelectionModel* selectionModel = accountView->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+    if (indexes.isEmpty()) {
+        showError(tr("No account selected."));
+        return;
+    }
+
+    // Only open one - show modal for now.
+    QString accountName = accountModel->data(indexes.at(0)).toString();
+
+    try {
+        // TODO: Make this dialog not modal and allow viewing several account histories simultaneously.
+        ScriptDialog dlg(accountModel->getVault(), accountName, this);
+        dlg.exec();
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::viewScripts - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::requestPayment()
+{
+    QItemSelectionModel* selectionModel = accountView->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+    if (indexes.isEmpty()) {
+        showError(tr("No account selected."));
+        return;
+    }
+
+    // Only open one
+    QString accountName = accountModel->data(indexes.at(0)).toString();
+
+    try {
+        //RequestPaymentDialog dlg(accountModel, accountName);
+        requestPaymentDialog->show();
+        requestPaymentDialog->raise();
+        requestPaymentDialog->activateWindow();
+        //dlg.exec();
+/*
+        if (dlg.exec()) {
+            accountName = dlg.getAccountName(); // in case it was changed by user
+            QString label = dlg.getSender();
+            auto pair = accountModel->issueNewScript(accountName, label);
+
+            // TODO: create a prettier dialog to display this information
+            QMessageBox::information(this, tr("New Script - ") + accountName,
+                tr("Label: ") + label + tr(" Address: ") + pair.first + tr(" Script: ") + QString::fromStdString(uchar_vector(pair.second).getHex()));
         }
 */
     }
-
-    void MainWindow::viewScripts()
-    {
-        QItemSelectionModel* selectionModel = accountView->selectionModel();
-        QModelIndexList indexes = selectionModel->selectedRows(0);
-        if (indexes.isEmpty()) {
-            showError(tr("No account selected."));
-            return;
-        }
-
-        // Only open one - show modal for now.
-        QString accountName = accountModel->data(indexes.at(0)).toString();
-
-        try {
-            // TODO: Make this dialog not modal and allow viewing several account histories simultaneously.
-            ScriptDialog dlg(accountModel->getVault(), accountName, this);
-            dlg.exec();
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::viewScripts - " << e.what() << std::endl;
-            showError(e.what());
-        }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::requestPayment - " << e.what() << std::endl;
+        showError(e.what());
     }
+}
 
-    void MainWindow::requestPayment()
-    {
-        QItemSelectionModel* selectionModel = accountView->selectionModel();
-        QModelIndexList indexes = selectionModel->selectedRows(0);
-        if (indexes.isEmpty()) {
-            showError(tr("No account selected."));
-            return;
-        }
+void MainWindow::viewUnsignedTxs()
+{
+    showError(tr("Not implemented yet"));
+}
 
-        // Only open one
-        QString accountName = accountModel->data(indexes.at(0)).toString();
-
-        try {
-            //RequestPaymentDialog dlg(accountModel, accountName);
-            requestPaymentDialog->show();
-            requestPaymentDialog->raise();
-            requestPaymentDialog->activateWindow();
-            //dlg.exec();
-    /*
-            if (dlg.exec()) {
-                accountName = dlg.getAccountName(); // in case it was changed by user
-                QString label = dlg.getSender();
-                auto pair = accountModel->issueNewScript(accountName, label);
-
-                // TODO: create a prettier dialog to display this information
-                QMessageBox::information(this, tr("New Script - ") + accountName,
-                    tr("Label: ") + label + tr(" Address: ") + pair.first + tr(" Script: ") + QString::fromStdString(uchar_vector(pair.second).getHex()));
-            }
-    */
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::requestPayment - " << e.what() << std::endl;
-            showError(e.what());
-        }
-    }
-
-    void MainWindow::viewUnsignedTxs()
-    {
-        showError(tr("Not implemented yet"));
-    }
-
-    void MainWindow::insertRawTx()
-    {
-        try {
-            RawTxDialog dlg(tr("Add Raw Transaction:"));
-            if (dlg.exec() && accountModel->insertRawTx(dlg.getRawTx())) {
-                accountView->update();
-                txModel->update();
-                txView->update();
-                tabWidget->setCurrentWidget(txView);
-            } 
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::insertRawTx - " << e.what() << std::endl;
-            showError(e.what());
+void MainWindow::insertRawTx()
+{
+    try {
+        RawTxDialog dlg(tr("Add Raw Transaction:"));
+        if (dlg.exec() && accountModel->insertRawTx(dlg.getRawTx())) {
+            accountView->update();
+            txModel->update();
+            txView->update();
+            tabWidget->setCurrentWidget(txView);
         } 
     }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::insertRawTx - " << e.what() << std::endl;
+        showError(e.what());
+    } 
+}
 
-    void MainWindow::createRawTx()
+void MainWindow::createRawTx()
+{
+    if (!accountModel->isOpen())
     {
-        if (!accountModel->isOpen())
-        {
-            showError(tr("No vault is open."));
-            return;
-        }
-
-        QItemSelectionModel* selectionModel = accountView->selectionModel();
-        QModelIndexList indexes = selectionModel->selectedRows(0);
-        if (indexes.isEmpty()) {
-            showError(tr("No account selected."));
-            return;
-        }
-     
-        QString accountName = accountModel->data(indexes.at(0)).toString();
-
-        CreateTxDialog dlg(accountModel->getVault(), accountName);
-        while (dlg.exec()) {
-            try {
-                std::vector<TaggedOutput> outputs = dlg.getOutputs();
-                uint64_t fee = dlg.getFeeValue();
-                bytes_t rawTx = accountModel->createRawTx(dlg.getAccountName(), outputs, fee);
-                RawTxDialog rawTxDlg(tr("Unsigned Transaction"));
-                rawTxDlg.setRawTx(rawTx);
-                rawTxDlg.exec();
-                return;
-            }
-            catch (const exception& e) {
-                LOGGER(debug) << "MainWindow::createRawTx - " << e.what() << std::endl;
-                showError(e.what());
-            }
-        }
+        showError(tr("No vault is open."));
+        return;
     }
 
-    void MainWindow::createTx(const PaymentRequest& paymentRequest)
+    QItemSelectionModel* selectionModel = accountView->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+    if (indexes.isEmpty()) {
+        showError(tr("No account selected."));
+        return;
+    }
+ 
+    QString accountName = accountModel->data(indexes.at(0)).toString();
+
+    CreateTxDialog dlg(accountModel->getVault(), accountName);
+    while (dlg.exec()) {
+        try {
+            std::vector<TaggedOutput> outputs = dlg.getOutputs();
+            uint64_t fee = dlg.getFeeValue();
+            bytes_t rawTx = accountModel->createRawTx(dlg.getAccountName(), outputs, fee);
+            RawTxDialog rawTxDlg(tr("Unsigned Transaction"));
+            rawTxDlg.setRawTx(rawTx);
+            rawTxDlg.exec();
+            return;
+        }
+        catch (const exception& e) {
+            LOGGER(debug) << "MainWindow::createRawTx - " << e.what() << std::endl;
+            showError(e.what());
+        }
+    }
+}
+
+void MainWindow::createTx(const PaymentRequest& paymentRequest)
+{
+    if (!accountModel->isOpen())
     {
-        if (!accountModel->isOpen())
-        {
-            showError(tr("No vault is open."));
-            return;
-        }
+        showError(tr("No vault is open."));
+        return;
+    }
 
-        QItemSelectionModel* selectionModel = accountView->selectionModel();
-        QModelIndexList indexes = selectionModel->selectedRows(0);
-        if (indexes.isEmpty()) {
-            showError(tr("No account selected."));
-            return;
-        }
-     
-        QString accountName = accountModel->data(indexes.at(0)).toString();
+    QItemSelectionModel* selectionModel = accountView->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+    if (indexes.isEmpty()) {
+        showError(tr("No account selected."));
+        return;
+    }
+ 
+    QString accountName = accountModel->data(indexes.at(0)).toString();
 
-        CreateTxDialog dlg(accountModel->getVault(), accountName, paymentRequest);
-        bool saved = false;
-        while (!saved && dlg.exec()) {
-            try {
-                CreateTxDialog::status_t status = dlg.getStatus();
-                bool sign = status == CreateTxDialog::SIGN_AND_SEND || status == CreateTxDialog::SIGN_AND_SAVE;
-                std::shared_ptr<CoinDB::Tx> tx = accountModel->createTx(dlg.getAccountName(), dlg.getInputTxOutIds(), dlg.getTxOuts(), dlg.getFeeValue());
-                tx = accountModel->insertTx(tx, sign);
-                saved = true;
-                txModel->update();
-                txView->update();
-                tabWidget->setCurrentWidget(txView);
-                if (status == CreateTxDialog::SIGN_AND_SEND) {
-                    // TODO: Clean up signing and sending code
-                    if (tx->status() == CoinDB::Tx::UNSIGNED) {
-                        throw std::runtime_error(tr("Could not send - transaction still missing signatures.").toStdString());
-                    }
-                    if (!isConnected()) {
-                        throw std::runtime_error(tr("Must be connected to network to send.").toStdString());
-                    }
-                    Coin::Transaction coin_tx = tx->toCoinCore();
-                    synchedVault.sendTx(coin_tx);
-                    //networkSync.sendTx(coin_tx);
-
-                    // TODO: Check transaction has propagated before changing status
-                    tx->updateStatus(CoinDB::Tx::PROPAGATED);
-                    accountModel->getVault()->insertTx(tx);
+    CreateTxDialog dlg(accountModel->getVault(), accountName, paymentRequest);
+    bool saved = false;
+    while (!saved && dlg.exec()) {
+        try {
+            CreateTxDialog::status_t status = dlg.getStatus();
+            bool sign = status == CreateTxDialog::SIGN_AND_SEND || status == CreateTxDialog::SIGN_AND_SAVE;
+            std::shared_ptr<CoinDB::Tx> tx = accountModel->createTx(dlg.getAccountName(), dlg.getInputTxOutIds(), dlg.getTxOuts(), dlg.getFeeValue());
+            tx = accountModel->insertTx(tx, sign);
+            saved = true;
+            txModel->update();
+            txView->update();
+            tabWidget->setCurrentWidget(txView);
+            if (status == CreateTxDialog::SIGN_AND_SEND) {
+                // TODO: Clean up signing and sending code
+                if (tx->status() == CoinDB::Tx::UNSIGNED) {
+                    throw std::runtime_error(tr("Could not send - transaction still missing signatures.").toStdString());
                 }
-                txModel->update();
-                txView->update();
-                return;
-            }
-            catch (const exception& e) {
-                LOGGER(debug) << "MainWindow::createTx - " << e.what() << std::endl;
-                showError(e.what());
-            }
-        }
-    }
+                if (!isConnected()) {
+                    throw std::runtime_error(tr("Must be connected to network to send.").toStdString());
+                }
+                Coin::Transaction coin_tx = tx->toCoinCore();
+                synchedVault.sendTx(coin_tx);
+                //networkSync.sendTx(coin_tx);
 
-    void MainWindow::signRawTx()
-    {
-        try {
-            RawTxDialog dlg(tr("Sign Raw Transaction:"));
-            if (dlg.exec()) {
-                bytes_t rawTx = accountModel->signRawTx(dlg.getRawTx());
-                RawTxDialog rawTxDlg(tr("Signed Transaction"));
-                rawTxDlg.setRawTx(rawTx);
-                rawTxDlg.exec();
+                // TODO: Check transaction has propagated before changing status
+                tx->updateStatus(CoinDB::Tx::PROPAGATED);
+                accountModel->getVault()->insertTx(tx);
             }
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::signRawTx - " << e.what() << std::endl;
-            showError(e.what());
-        }
-
-    }
-
-    void MainWindow::sendRawTx()
-    {
-        if (!isConnected()) {
-            showError(tr("Must be connected to send raw transaction"));
+            txModel->update();
+            txView->update();
             return;
         }
-     
-        try {
-            RawTxDialog dlg(tr("Send Raw Transaction:"));
-            if (dlg.exec()) {
-                bytes_t rawTx = dlg.getRawTx();
-                Coin::Transaction tx(rawTx);
-                synchedVault.sendTx(tx);
-                //networkSync.sendTx(tx);
-                updateStatusMessage(tr("Sent tx " ) + QString::fromStdString(tx.getHashLittleEndian().getHex()) + tr(" to peer"));
-            }
-        }
         catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::sendRawTx - " << e.what() << std::endl;
+            LOGGER(debug) << "MainWindow::createTx - " << e.what() << std::endl;
             showError(e.what());
         }
     }
+}
 
-    void MainWindow::newTx(const bytes_t& hash)
-    {
-        accountModel->update();
-        accountView->update();
-
-        txModel->update();
-        txView->update();
-    }
-
-    void MainWindow::newBlock(const bytes_t& hash, int height)
-    {
-        accountModel->update();
-        accountView->update();
-
-        txModel->update();
-        txView->update();
-    }
-
-    void MainWindow::syncBlocks()
-    {
-        updateStatusMessage(tr("Synchronizing vault"));
-    /*
-        uint32_t startTime = accountModel->getMaxFirstBlockTimestamp();
-        std::vector<bytes_t> locatorHashes = accountModel->getLocatorHashes();
-        for (auto& hash: locatorHashes) {
-            LOGGER(debug) << "MainWindow::syncBlocks() - hash: " << uchar_vector(hash).getHex() << std::endl;
-        }
-        networkSync.syncBlocks(locatorHashes, startTime);
-    */
-        synchedVault.syncBlocks();
-    }
-
-    void MainWindow::fetchingHeaders()
-    {
-        updateNetworkState(NETWORK_STATE_SYNCHING);
-        emit status(tr("Fetching headers"));
-    }
-
-    void MainWindow::headersSynched()
-    {
-        emit updateBestHeight(synchedVault.getBestHeight());
-        emit status(tr("Finished loading headers."));
-        if (accountModel->isOpen()) {
-            try {
-                syncBlocks();
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::doneHeaderSync - " << e.what() << std::endl;
-            emit status(QString::fromStdString(e.what()));
+void MainWindow::signRawTx()
+{
+    try {
+        RawTxDialog dlg(tr("Sign Raw Transaction:"));
+        if (dlg.exec()) {
+            bytes_t rawTx = accountModel->signRawTx(dlg.getRawTx());
+            RawTxDialog rawTxDlg(tr("Signed Transaction"));
+            rawTxDlg.setRawTx(rawTx);
+            rawTxDlg.exec();
         }
     }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::signRawTx - " << e.what() << std::endl;
+        showError(e.what());
+    }
+
+}
+
+void MainWindow::sendRawTx()
+{
+    if (!isConnected()) {
+        showError(tr("Must be connected to send raw transaction"));
+        return;
+    }
+ 
+    try {
+        RawTxDialog dlg(tr("Send Raw Transaction:"));
+        if (dlg.exec()) {
+            bytes_t rawTx = dlg.getRawTx();
+            Coin::Transaction tx(rawTx);
+            synchedVault.sendTx(tx);
+            //networkSync.sendTx(tx);
+            updateStatusMessage(tr("Sent tx " ) + QString::fromStdString(tx.getHashLittleEndian().getHex()) + tr(" to peer"));
+        }
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::sendRawTx - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::newTx()
+{
+    if (!isSynched()) return;
+
+    accountModel->update();
+    accountView->update();
+
+    txModel->update();
+    txView->update();
+}
+
+void MainWindow::newBlock()
+{
+    return;
+
+    accountModel->update();
+    accountView->update();
+
+    txModel->update();
+    txView->update();
+}
+
+void MainWindow::syncBlocks()
+{
+    updateStatusMessage(tr("Synchronizing vault"));
+/*
+    uint32_t startTime = accountModel->getMaxFirstBlockTimestamp();
+    std::vector<bytes_t> locatorHashes = accountModel->getLocatorHashes();
+    for (auto& hash: locatorHashes) {
+        LOGGER(debug) << "MainWindow::syncBlocks() - hash: " << uchar_vector(hash).getHex() << std::endl;
+    }
+    networkSync.syncBlocks(locatorHashes, startTime);
+*/
+    synchedVault.syncBlocks();
+}
+
+void MainWindow::fetchingHeaders()
+{
+    updateNetworkState(NETWORK_STATE_SYNCHING);
+    emit status(tr("Fetching headers"));
+}
+
+void MainWindow::headersSynched()
+{
+    emit updateBestHeight(synchedVault.getBestHeight());
+    emit status(tr("Finished loading headers."));
+    if (accountModel->isOpen()) {
+        try {
+            syncBlocks();
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::doneHeaderSync - " << e.what() << std::endl;
+        emit status(QString::fromStdString(e.what()));
+    }
+}
 }
 
 void MainWindow::fetchingBlocks()

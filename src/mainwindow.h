@@ -84,8 +84,8 @@ signals:
     void signal_networkTimeout();
     void signal_networkDoneSync();
 
-    void signal_newTx(const bytes_t& hash);
-    void signal_newBlock(const bytes_t& hash, int height);
+    void signal_newTx();
+    void signal_newBlock();
 
     void signal_addBestChain(const chain_header_t& header);
     void signal_removeBestChain(const chain_header_t& header);
@@ -157,8 +157,7 @@ private slots:
     void createRawTx();
     void createTx(const PaymentRequest& paymentRequest = PaymentRequest());
     void signRawTx();
-    //void newTx(const coin_tx_t& tx);
-    void newTx(const bytes_t& hash);
+    void newTx();
     void sendRawTx();
 
     //////////////////////////////
@@ -170,8 +169,7 @@ private slots:
     void blocksSynched();
     void addBestChain(const chain_header_t& header);
     void removeBestChain(const chain_header_t& header);
-    //void newBlock(const chain_block_t& block);
-    void newBlock(const bytes_t& hash, int height);
+    void newBlock();
 
     /////////////////////
     // NETWORK OPERATIONS
