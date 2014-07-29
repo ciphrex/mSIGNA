@@ -410,6 +410,19 @@ std::shared_ptr<Tx> SynchedVault::sendTx(unsigned long tx_id)
     return tx;
 }
 
+void SynchedVault::sendTx(Coin::Transaction& coin_tx)
+{
+    uchar_vector hash = coin_tx.getHashLittleEndian();
+    LOGGER(trace) << "SynchedVault::sendTx(" << hash.getHex() << ")" << std::endl;
+    if (!m_bConnected) throw std::runtime_error("Not connected.");
+
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+    std::lock_guard<std::mutex> lock(m_vaultMutex);
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+    m_networkSync.sendTx(coin_tx);
+    m_networkSync.getTx(hash);
+}
+
 
 // Event subscriptions
 void SynchedVault::clearAllSlots()
