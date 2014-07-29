@@ -1721,7 +1721,29 @@ void MainWindow::createActions()
     connect(connectAction, SIGNAL(triggered()), this, SLOT(startNetworkSync()));
     connect(disconnectAction, SIGNAL(triggered()), this, SLOT(stopNetworkSync()));
 
-    //synchedVault.subscribeStatusChanged
+    synchedVault.subscribeStatusChanged([this](CoinDB::SynchedVault::status_t status) {
+        switch (status)
+        {
+        //case CoinDB::SynchedVault::NOT_LOADED:
+        //case CoinDB::SynchedVault::LOADED:
+        case CoinDB::SynchedVault::STOPPED:
+            updateNetworkState(NETWORK_STATE_STOPPED);
+            break;
+        case CoinDB::SynchedVault::STARTING:
+            updateNetworkState(NETWORK_STATE_STARTED);
+            break;
+        case CoinDB::SynchedVault::FETCHING_HEADERS:
+        case CoinDB::SynchedVault::FETCHING_BLOCKS:
+            updateNetworkState(NETWORK_STATE_SYNCHING);
+            break;
+        case CoinDB::SynchedVault::SYNCHED:
+            updateNetworkState(NETWORK_STATE_SYNCHED);
+            break;
+        default:
+            break;
+        }
+    });
+
     networkSync.subscribeStatus([this](const std::string& message) {
         LOGGER(debug) << "status slot" << std::endl;
         networkStatus(QString::fromStdString(message)); 
