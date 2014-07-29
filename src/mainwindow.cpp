@@ -110,12 +110,10 @@ MainWindow::MainWindow() :
     synchedVault.subscribeBestHeightChanged([this](uint32_t height) { emit updateBestHeight((int)height); });
     synchedVault.subscribeSyncHeightChanged([this](uint32_t height) { emit updateSyncHeight((int)height); });
 
-    synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> tx) { if (bUpdateTxs) emit signal_newTx(tx->hash()); });
-    synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> tx) { if (bUpdateTxs) emit signal_newTx(tx->hash()); });
+    synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> tx) { emit signal_newTx(tx->hash()); });
+    synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> tx) { emit signal_newTx(tx->hash()); });
     synchedVault.subscribeMerkleBlockInserted([this](std::shared_ptr<CoinDB::MerkleBlock> merkleblock) {
-        bUpdateTxs = false; 
         emit signal_newBlock(merkleblock->blockheader()->hash(), (int)merkleblock->blockheader()->height());
-        bUpdateTxs = true;
     });
 
     qRegisterMetaType<bytes_t>("bytes_t");
@@ -1400,7 +1398,6 @@ void MainWindow::startNetworkSync()
     try {
         QString message(tr("Connecting to ") + host + ":" + QString::number(port) + "...");
         updateStatusMessage(message);
-        bUpdateTxs = true;
         synchedVault.startSync(host.toStdString(), port);
         //networkSync.start(host.toStdString(), port);
     }
