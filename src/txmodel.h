@@ -4,7 +4,7 @@
 //
 // txmodel.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
@@ -14,10 +14,9 @@
 
 #include <CoinDB/Vault.h>
 
-namespace CoinQ {
-    namespace Network {
-        class NetworkSync;
-    }
+namespace CoinDB
+{
+    class SynchedVault;
 }
 
 class TxModel : public QStandardItemModel
@@ -25,15 +24,15 @@ class TxModel : public QStandardItemModel
     Q_OBJECT
 
 public:
-    TxModel(QObject* parent = NULL);
-    TxModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent = NULL);
+    TxModel(QObject* parent = nullptr);
+    TxModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent = nullptr);
 
     void setVault(CoinDB::Vault* vault);
     void setAccount(const QString& accountName);
     void update();
 
     void signTx(int row);
-    void sendTx(int row, CoinQ::Network::NetworkSync* networkSync);
+    void sendTx(int row, CoinDB::SynchedVault* synchedVault);
     std::shared_ptr<CoinDB::Tx> getTx(int row);
     void deleteTx(int row);
 

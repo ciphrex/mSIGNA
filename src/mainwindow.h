@@ -228,7 +228,7 @@ private:
     CoinDB::SynchedVault synchedVault;
 
     // network
-    CoinQ::Network::NetworkSync networkSync;
+    //CoinQ::Network::NetworkSync networkSync;
 
     // menus
     QMenu* fileMenu;

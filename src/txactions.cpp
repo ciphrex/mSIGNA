@@ -4,7 +4,7 @@
 //
 // txactions.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
@@ -18,7 +18,7 @@
 
 #include "docdir.h"
 
-#include <CoinQ/CoinQ_netsync.h>
+#include <CoinDB/SynchedVault.h>
 
 #include <QAction>
 #include <QMenu>
@@ -33,19 +33,19 @@
 
 #include <fstream>
 
-TxActions::TxActions(TxModel* model, TxView* view, AccountModel* acctModel, CoinQ::Network::NetworkSync* sync)
-    : txModel(model), txView(view), accountModel(acctModel), networkSync(sync), currentRow(-1)
+TxActions::TxActions(TxModel* txModel, TxView* txView, AccountModel* accountModel, CoinDB::SynchedVault* synchedVault)
+    : m_txModel(txModel), m_txView(txView), m_accountModel(accountModel), m_synchedVault(synchedVault), currentRow(-1)
 {
     createActions();
     createMenus();
-    connect(txView->selectionModel(), &QItemSelectionModel::currentChanged, this, &TxActions::updateCurrentTx);
+    connect(m_txView->selectionModel(), &QItemSelectionModel::currentChanged, this, &TxActions::updateCurrentTx);
 }
 
 void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /*previous*/)
 {
     currentRow = current.row();
-    if (txModel && currentRow != -1) {
-        QStandardItem* typeItem = txModel->item(currentRow, 6);
+    if (m_txModel && currentRow != -1) {
+        QStandardItem* typeItem = m_txModel->item(currentRow, 6);
         int type = typeItem->data(Qt::UserRole).toInt();
         if (type == CoinDB::Tx::UNSIGNED) {
             signTxAction->setEnabled(true);
@@ -56,11 +56,11 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
 
         if (type == CoinDB::Tx::UNSENT) {
             sendTxAction->setText(tr("Send Transaction"));
-            sendTxAction->setEnabled(networkSync && networkSync->connected());
+            sendTxAction->setEnabled(m_synchedVault && m_synchedVault->isConnected());
         }
         else {
             sendTxAction->setText(tr("Resend Transaction"));
-            sendTxAction->setEnabled(networkSync && networkSync->connected() && typeItem->text() == "0");
+            sendTxAction->setEnabled(m_synchedVault && m_synchedVault->isConnected() && typeItem->text() == "0");
         }
 
         if (type == CoinDB::Tx::PROPAGATED || type == CoinDB::Tx::CONFIRMED) {
@@ -91,15 +91,15 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
 
 void TxActions::updateVaultStatus()
 {
-    insertRawTxFromFileAction->setEnabled(accountModel && accountModel->isOpen());
+    insertRawTxFromFileAction->setEnabled(m_accountModel && m_accountModel->isOpen());
 }
 
 void TxActions::signTx()
 {
     try
     {
-        txModel->signTx(currentRow);
-        txView->update();
+        m_txModel->signTx(currentRow);
+        m_txView->update();
     }
     catch (const std::exception& e)
     {
@@ -110,8 +110,8 @@ void TxActions::signTx()
 void TxActions::sendTx()
 {
     try {
-        txModel->sendTx(currentRow, networkSync);
-        txView->update();
+        m_txModel->sendTx(currentRow, m_synchedVault);
+        m_txView->update();
     }
     catch (const std::exception& e) {
         emit error(e.what());
@@ -121,7 +121,7 @@ void TxActions::sendTx()
 void TxActions::viewRawTx()
 {
     try {
-        std::shared_ptr<CoinDB::Tx> tx = txModel->getTx(currentRow);
+        std::shared_ptr<CoinDB::Tx> tx = m_txModel->getTx(currentRow);
         RawTxDialog rawTxDlg(tr("Raw Transaction"));
         rawTxDlg.setRawTx(tx->raw());
         rawTxDlg.exec();
@@ -134,7 +134,7 @@ void TxActions::viewRawTx()
 void TxActions::copyTxHashToClipboard()
 {
     try {
-        std::shared_ptr<CoinDB::Tx> tx = txModel->getTx(currentRow);
+        std::shared_ptr<CoinDB::Tx> tx = m_txModel->getTx(currentRow);
         QClipboard* clipboard = QApplication::clipboard();
         clipboard->setText(QString::fromStdString(uchar_vector(tx->hash()).getHex()));
     }
@@ -146,7 +146,7 @@ void TxActions::copyTxHashToClipboard()
 void TxActions::copyRawTxToClipboard()
 {
     try {
-        std::shared_ptr<CoinDB::Tx> tx = txModel->getTx(currentRow);
+        std::shared_ptr<CoinDB::Tx> tx = m_txModel->getTx(currentRow);
         QClipboard* clipboard = QApplication::clipboard();
         clipboard->setText(QString::fromStdString(uchar_vector(tx->raw()).getHex()));
     }
@@ -158,7 +158,7 @@ void TxActions::copyRawTxToClipboard()
 void TxActions::saveRawTxToFile()
 {
     try {
-        std::shared_ptr<CoinDB::Tx> tx = txModel->getTx(currentRow);
+        std::shared_ptr<CoinDB::Tx> tx = m_txModel->getTx(currentRow);
         QString fileName = QString::fromStdString(uchar_vector(tx->hash()).getHex()) + ".tx";
         fileName = QFileDialog::getSaveFileName(
             nullptr,
@@ -186,7 +186,7 @@ void TxActions::saveRawTxToFile()
 void TxActions::insertRawTxFromFile()
 {
     try {
-        if (!accountModel || !accountModel->isOpen()) throw std::runtime_error("You must create a vault or open an existing vault before inserting transactions.");
+        if (!m_accountModel || !m_accountModel->isOpen()) throw std::runtime_error("You must create a vault or open an existing vault before inserting transactions.");
 
         QString fileName = QFileDialog::getOpenFileName(
             nullptr,
@@ -210,7 +210,7 @@ void TxActions::insertRawTxFromFile()
 
         std::shared_ptr<CoinDB::Tx> tx(new CoinDB::Tx());
         tx->set(uchar_vector(rawhex));
-        tx = accountModel->insertTx(tx);
+        tx = m_accountModel->insertTx(tx);
     }
     catch (const std::exception& e) {
         emit error(e.what());
@@ -222,7 +222,7 @@ void TxActions::viewTxOnWeb()
     const QString URL_PREFIX("https://blockchain.info/tx/");
 
     try {
-        std::shared_ptr<CoinDB::Tx> tx = txModel->getTx(currentRow);
+        std::shared_ptr<CoinDB::Tx> tx = m_txModel->getTx(currentRow);
         if (!QDesktopServices::openUrl(QUrl(URL_PREFIX + QString::fromStdString(uchar_vector(tx->hash()).getHex())))) {
             throw std::runtime_error(tr("Unable to open browser.").toStdString());
         }
@@ -242,8 +242,8 @@ void TxActions::deleteTx()
     if (msgBox.exec() == QMessageBox::Cancel) return;
 
     try {
-        txModel->deleteTx(currentRow);
-        txView->update();
+        m_txModel->deleteTx(currentRow);
+        m_txView->update();
     }
     catch (const std::exception& e) {
         emit error(e.what());

@@ -112,8 +112,9 @@ void AccountHistoryDialog::signTx()
 void AccountHistoryDialog::sendTx()
 {
     try {
-        accountHistoryModel->sendTx(currentRow, networkSync);
-        accountHistoryView->update();
+        throw std::runtime_error("Unsupported operation.");
+        //accountHistoryModel->sendTx(currentRow, networkSync);
+        //accountHistoryView->update();
     }
     catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Error"), e.what());

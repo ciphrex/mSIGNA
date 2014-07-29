@@ -4,14 +4,15 @@
 //
 // txmodel.cpp
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
 #include "txmodel.h"
 
+#include <CoinDB/SynchedVault.h>
+
 #include <CoinQ/CoinQ_script.h>
-#include <CoinQ/CoinQ_netsync.h>
 
 #include <stdutils/stringutils.h>
 
@@ -264,13 +265,13 @@ void TxModel::signTx(int row)
     emit txSigned(msg);
 }
 
-void TxModel::sendTx(int row, CoinQ::Network::NetworkSync* networkSync)
+void TxModel::sendTx(int row, CoinDB::SynchedVault* synchedVault)
 {
     if (row == -1 || row >= rowCount()) {
         throw std::runtime_error(tr("Invalid row.").toStdString());
     }
 
-    if (!networkSync || !networkSync->connected()) {
+    if (!synchedVault->isConnected()) {
         throw std::runtime_error(tr("Must be connected to network to send.").toStdString());
     }
 
@@ -289,14 +290,14 @@ void TxModel::sendTx(int row, CoinQ::Network::NetworkSync* networkSync)
 
     std::shared_ptr<CoinDB::Tx> tx = vault->getTx(txhash);
     Coin::Transaction coin_tx = tx->toCoinCore();
-    networkSync->sendTx(coin_tx);
+    synchedVault->sendTx(coin_tx);
 
     // TODO: Check transaction has propagated before changing status to PROPAGATED
 //    tx->updateStatus(CoinDB::Tx::PROPAGATED);
 //    vault->insertTx(tx);
 
 //    update();
-    networkSync->getTx(txhash);
+    //networkSync->getTx(txhash);
 }
 
 std::shared_ptr<Tx> TxModel::getTx(int row)
