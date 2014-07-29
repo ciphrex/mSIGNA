@@ -226,6 +226,7 @@ private:
     bool selectAccount(int i);
 
     CoinDB::SynchedVault synchedVault;
+    bool bUpdateTxs;
 
     // network
     CoinQ::Network::NetworkSync networkSync;

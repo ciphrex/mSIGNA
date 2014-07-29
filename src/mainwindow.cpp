@@ -107,12 +107,16 @@ MainWindow::MainWindow() :
     accountView->setModel(accountModel);
     accountView->setMenu(accountMenu);
 
-    synchedVault.subscribeBestHeightChanged([&](uint32_t height) { emit updateBestHeight((int)height); });
-    synchedVault.subscribeSyncHeightChanged([&](uint32_t height) { emit updateSyncHeight((int)height); });
+    synchedVault.subscribeBestHeightChanged([this](uint32_t height) { emit updateBestHeight((int)height); });
+    synchedVault.subscribeSyncHeightChanged([this](uint32_t height) { emit updateSyncHeight((int)height); });
 
-    synchedVault.subscribeTxInserted([&](std::shared_ptr<CoinDB::Tx> tx) { emit signal_newTx(tx->hash()); });
-    synchedVault.subscribeTxStatusChanged([&](std::shared_ptr<CoinDB::Tx> tx) { emit signal_newTx(tx->hash()); });
-    synchedVault.subscribeMerkleBlockInserted([&](std::shared_ptr<CoinDB::MerkleBlock> merkleblock) {  emit signal_newBlock(merkleblock->blockheader()->hash(), (int)merkleblock->blockheader()->height()); });
+    synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> tx) { if (bUpdateTxs) emit signal_newTx(tx->hash()); });
+    synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> tx) { if (bUpdateTxs) emit signal_newTx(tx->hash()); });
+    synchedVault.subscribeMerkleBlockInserted([this](std::shared_ptr<CoinDB::MerkleBlock> merkleblock) {
+        bUpdateTxs = false; 
+        emit signal_newBlock(merkleblock->blockheader()->hash(), (int)merkleblock->blockheader()->height());
+        bUpdateTxs = true;
+    });
 
     qRegisterMetaType<bytes_t>("bytes_t");
     connect(this, SIGNAL(signal_newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
@@ -1246,9 +1250,9 @@ void MainWindow::sendRawTx()
 
 void MainWindow::newTx(const bytes_t& hash)
 {
-    QString message = tr("Added transaction ") + QString::fromStdString(uchar_vector(hash).getHex());
+//    QString message = tr("Added transaction ") + QString::fromStdString(uchar_vector(hash).getHex());
 //    updateStatusMessage(tr("Added transaction ") + QString::fromStdString(uchar_vector(hash).getHex()));
-    emit status(message);
+//    emit status(message);
 
     accountModel->update();
     accountView->update();
@@ -1264,9 +1268,9 @@ void MainWindow::newBlock(const bytes_t& hash, int height)
         emit updateSyncHeight(height);
     }
 */
-    QString message = tr("Inserted block ") + QString::fromStdString(uchar_vector(hash).getHex()) + tr(" height: ") + QString::number(height);
+//    QString message = tr("Inserted block ") + QString::fromStdString(uchar_vector(hash).getHex()) + tr(" height: ") + QString::number(height);
 //    updateStatusMessage(tr("Inserted block ") + QString::fromStdString(uchar_vector(hash).getHex()) + tr(" height: ") + QString::number(height));
-    emit status(message);
+//    emit status(message);
 
     accountModel->update();
     accountView->update();
@@ -1396,6 +1400,7 @@ void MainWindow::startNetworkSync()
     try {
         QString message(tr("Connecting to ") + host + ":" + QString::number(port) + "...");
         updateStatusMessage(message);
+        bUpdateTxs = true;
         synchedVault.startSync(host.toStdString(), port);
         //networkSync.start(host.toStdString(), port);
     }
