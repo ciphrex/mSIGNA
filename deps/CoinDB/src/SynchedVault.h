@@ -60,11 +60,16 @@ public:
     std::shared_ptr<Tx> sendTx(const bytes_t& hash);
     std::shared_ptr<Tx> sendTx(unsigned long tx_id);
 
+    // Vault state events
+    typedef Signals::Signal<Vault*> VaultSignal;
+    typedef Signals::Signal<> VoidSignal;
+    Signals::Connection subscribeVaultOpened(VaultSignal::Slot slot) { return m_notifyVaultOpened.connect(slot); }
+    Signals::Connection subscribeVaultClosed(VoidSignal::Slot slot) { return m_notifyVaultClosed.connect(slot); }
+
     // Sync state events
     typedef Signals::Signal<status_t> StatusSignal;
-    Signals::Connection subscribeStatusChanged(StatusSignal::Slot slot) { return m_notifyStatusChanged.connect(slot); }
-
     typedef Signals::Signal<uint32_t> HeightSignal;
+    Signals::Connection subscribeStatusChanged(StatusSignal::Slot slot) { return m_notifyStatusChanged.connect(slot); }
     Signals::Connection subscribeBestHeightChanged(HeightSignal::Slot slot) { return m_notifyBestHeightChanged.connect(slot); }
     Signals::Connection subscribeSyncHeightChanged(HeightSignal::Slot slot) { return m_notifySyncHeightChanged.connect(slot); }
 
@@ -91,6 +96,10 @@ private:
 
     bool                        m_bInsertMerkleBlocks;
     mutable std::mutex          m_vaultMutex;
+
+    // Vault state events
+    VaultSignal                 m_notifyVaultOpened;
+    VoidSignal                  m_notifyVaultClosed;
 
     // Sync state events
     StatusSignal                m_notifyStatusChanged;

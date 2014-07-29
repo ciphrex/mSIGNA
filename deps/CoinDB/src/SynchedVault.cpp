@@ -237,6 +237,8 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
 {
     LOGGER(trace) << "SynchedVault::openVault(" << dbname << ", " << (bCreate ? "true" : "false") << ")" << std::endl;
     std::lock_guard<std::mutex> lock(m_vaultMutex);
+    m_notifyVaultClosed();
+    updateStatus(NOT_LOADED);
     if (m_vault) delete m_vault;
     m_vault = new Vault(dbname, bCreate);
     m_syncHeight = m_vault->getBestHeight();
@@ -253,12 +255,16 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
 
     if (m_networkSync.connected())      { updateStatus(LOADED); }
     else                                { updateStatus(STOPPED); }
+
+    m_notifyVaultOpened(m_vault);
 }
 
 void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate)
 {
     LOGGER(trace) << "SynchedVault::openVault(" << dbuser << ", ..., " << dbname << ", " << (bCreate ? "true" : "false") << ")" << std::endl;
     std::lock_guard<std::mutex> lock(m_vaultMutex);
+    m_notifyVaultClosed();
+    updateStatus(NOT_LOADED);
     if (m_vault) delete m_vault;
     m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate);
     m_syncHeight = m_vault->getBestHeight();
@@ -275,6 +281,8 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
 
     if (m_networkSync.connected())      { updateStatus(LOADED); }
     else                                { updateStatus(STOPPED); }
+
+    m_notifyVaultOpened(m_vault);
 }
 
 void SynchedVault::closeVault()
@@ -285,6 +293,7 @@ void SynchedVault::closeVault()
     if (m_vault)
     {
         //m_vault->clearAllSlots();
+        m_notifyVaultClosed();
         delete m_vault;
         m_vault = nullptr;
         m_syncHeight = 0;
@@ -398,6 +407,8 @@ std::shared_ptr<Tx> SynchedVault::sendTx(unsigned long tx_id)
 void SynchedVault::clearAllSlots()
 {
     LOGGER(trace) << "SynchedVault::clearAllSlots()" << std::endl;
+    m_notifyVaultOpened.clear();
+    m_notifyVaultClosed.clear();
     m_notifyStatusChanged.clear();
     m_notifyBestHeightChanged.clear();
     m_notifySyncHeightChanged.clear();
