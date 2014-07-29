@@ -84,6 +84,9 @@ signals:
     void signal_networkTimeout();
     void signal_networkDoneSync();
 
+    void signal_newTx(const bytes_t& hash);
+    void signal_newBlock(const bytes_t& hash, int height);
+
     void signal_addBestChain(const chain_header_t& header);
     void signal_removeBestChain(const chain_header_t& header);
 

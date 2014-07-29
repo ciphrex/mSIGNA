@@ -110,10 +110,13 @@ MainWindow::MainWindow() :
     synchedVault.subscribeBestHeightChanged([&](uint32_t height) { emit updateBestHeight((int)height); });
     synchedVault.subscribeSyncHeightChanged([&](uint32_t height) { emit updateSyncHeight((int)height); });
 
+    synchedVault.subscribeTxInserted([&](std::shared_ptr<CoinDB::Tx> tx) { emit signal_newTx(tx->hash()); });
+    synchedVault.subscribeTxStatusChanged([&](std::shared_ptr<CoinDB::Tx> tx) { emit signal_newTx(tx->hash()); });
+    synchedVault.subscribeMerkleBlockInserted([&](std::shared_ptr<CoinDB::MerkleBlock> merkleblock) {  emit signal_newBlock(merkleblock->blockheader()->hash(), (int)merkleblock->blockheader()->height()); });
+
     qRegisterMetaType<bytes_t>("bytes_t");
-    synchedVault.subscribeTxInserted([&](std::shared_ptr<CoinDB::Tx> tx) { emit newTx(tx->hash()); });
-    synchedVault.subscribeTxStatusChanged([&](std::shared_ptr<CoinDB::Tx> tx) { emit newTx(tx->hash()); });
-    synchedVault.subscribeMerkleBlockInserted([&](std::shared_ptr<CoinDB::MerkleBlock> merkleblock) {  emit newBlock(merkleblock->blockheader()->hash(), (int)merkleblock->blockheader()->height()); });
+    connect(this, SIGNAL(signal_newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
+    connect(this, SIGNAL(signal_newBlock(const bytes_t&, int)), SLOT(newBlock(const bytes_t&, int)));
 
 /*
     networkSync.subscribeTx([&](const Coin::Transaction& tx) {
