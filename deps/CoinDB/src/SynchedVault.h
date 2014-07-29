@@ -45,6 +45,7 @@ public:
     void openVault(const std::string& dbname, bool bCreate = false);
     void openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate = false);
     void closeVault();
+    bool isVaultOpen() { return (m_vault != nullptr); }
     Vault* getVault() { return m_vault; }
 
     void startSync(const std::string& host, const std::string& port);
@@ -80,6 +81,8 @@ public:
     void clearAllSlots();
 
 private:
+    friend class VaultLock;
+
     Vault* m_vault;
 
     status_t m_status;
@@ -110,6 +113,15 @@ private:
     TxSignal                    m_notifyTxInserted;
     TxSignal                    m_notifyTxStatusChanged;
     MerkleBlockSignal           m_notifyMerkleBlockInserted;
+};
+
+class VaultLock
+{
+public:
+    explicit VaultLock(const SynchedVault& synchedVault) : m_lock(synchedVault.m_vaultMutex) { }
+
+private:
+    std::lock_guard<std::mutex> m_lock;
 };
 
 }
