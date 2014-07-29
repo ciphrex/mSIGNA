@@ -69,6 +69,7 @@ using namespace std;
 
 MainWindow::MainWindow() :
     licenseAccepted(false),
+    synchedVault(getCoinParams()),
     networkSync(getCoinParams()),
     syncHeight(0),
     bestHeight(0),
@@ -1392,7 +1393,8 @@ void MainWindow::startNetworkSync()
     try {
         QString message(tr("Connecting to ") + host + ":" + QString::number(port) + "...");
         updateStatusMessage(message);
-        networkSync.start(host.toStdString(), port);
+        synchedVault.startSync(host.toStdString(), port);
+        //networkSync.start(host.toStdString(), port);
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::startNetworkSync - " << e.what() << std::endl;
@@ -1405,7 +1407,8 @@ void MainWindow::stopNetworkSync()
     disconnectAction->setEnabled(false);
     try {
         updateStatusMessage(tr("Disconnecting..."));
-        networkSync.stop();
+        synchedVault.stopSync();
+        //networkSync.stop();
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::stopNetworkSync - " << e.what() << std::endl;
@@ -1718,6 +1721,7 @@ void MainWindow::createActions()
     connect(connectAction, SIGNAL(triggered()), this, SLOT(startNetworkSync()));
     connect(disconnectAction, SIGNAL(triggered()), this, SLOT(stopNetworkSync()));
 
+    //synchedVault.subscribeStatusChanged
     networkSync.subscribeStatus([this](const std::string& message) {
         LOGGER(debug) << "status slot" << std::endl;
         networkStatus(QString::fromStdString(message)); 
