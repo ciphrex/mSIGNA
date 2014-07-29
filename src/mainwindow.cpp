@@ -290,6 +290,7 @@ void MainWindow::updateNetworkState(network_state_t newState)
         {
         case NETWORK_STATE_STOPPED:
             networkStateLabel->setPixmap(*stoppedIcon);
+            refreshAccounts();
             break;
         case NETWORK_STATE_STARTED:
         case NETWORK_STATE_SYNCHING:
@@ -297,6 +298,7 @@ void MainWindow::updateNetworkState(network_state_t newState)
             break;
         case NETWORK_STATE_SYNCHED:
             networkStateLabel->setPixmap(*synchedIcon);
+            refreshAccounts();
             break;
         default:
             // We should never get here
@@ -306,8 +308,6 @@ void MainWindow::updateNetworkState(network_state_t newState)
         connectAction->setEnabled(!isConnected());
         disconnectAction->setEnabled(isConnected());
         sendRawTxAction->setEnabled(isConnected());
-
-        refreshAccounts();
     }
 }
 
@@ -1276,7 +1276,7 @@ void MainWindow::newTx()
 
 void MainWindow::newBlock()
 {
-    if (isSynched() || syncHeight % 10 == 0)  { refreshAccounts(); }
+    refreshAccounts();
 }
 
 void MainWindow::syncBlocks()
