@@ -36,7 +36,7 @@ public:
 
     static const std::string getStatusString(status_t status);
 
-    SynchedVault();
+    SynchedVault(const CoinQ::CoinParams& coinParams = CoinQ::getBitcoinParams());
     ~SynchedVault();
 
     void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = false, std::function<void(const CoinQBlockTreeMem&)> callback = nullptr);
@@ -49,6 +49,7 @@ public:
     Vault* getVault() { return m_vault; }
 
     void startSync(const std::string& host, const std::string& port);
+    void startSync(const std::string& host, int port);
     void stopSync();
     void suspendBlockUpdates();
     void syncBlocks();

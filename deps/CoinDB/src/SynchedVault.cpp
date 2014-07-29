@@ -38,9 +38,10 @@ const std::string SynchedVault::getStatusString(status_t status)
 }
 
 // Constructor
-SynchedVault::SynchedVault() :
+SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_vault(nullptr),
     m_status(NOT_LOADED),
+    m_networkSync(coinParams),
     m_bBlockTreeLoaded(false),
     m_bConnected(false),
     m_bSynching(false),
@@ -308,6 +309,13 @@ void SynchedVault::startSync(const std::string& host, const std::string& port)
     LOGGER(trace) << "SynchedVault::startSync(" << host << ", " << port << ")" << std::endl;
     m_bInsertMerkleBlocks = false;
     m_networkSync.start(host, port); 
+}
+
+void SynchedVault::startSync(const std::string& host, int port)
+{
+    std::stringstream ss;
+    ss << port;
+    startSync(host, ss.str());
 }
 
 void SynchedVault::stopSync()
