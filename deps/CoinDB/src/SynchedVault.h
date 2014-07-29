@@ -64,6 +64,9 @@ public:
     typedef Signals::Signal<status_t> StatusSignal;
     Signals::Connection subscribeStatusChanged(StatusSignal::Slot slot) { return m_notifyStatusChanged.connect(slot); }
 
+    typedef Signals::Signal<uint32_t> BestHeightSignal;
+    Signals::Connection subscribeBestHeightChanged(BestHeightSignal::Slot slot) { return m_notifyBestHeightChanged.connect(slot); }
+
     // P2P network state events
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
     Signals::Connection subscribeTxStatusChanged(TxSignal::Slot slot) { return m_notifyTxStatusChanged.connect(slot); }
@@ -77,21 +80,25 @@ private:
     void updateStatus(status_t newStatus);
 
     CoinQ::Network::NetworkSync m_networkSync;
-    std::string m_blockTreeFile;
-    bool m_bBlockTreeLoaded;
-    bool m_bConnected;
-    bool m_bSynching;
-    bool m_bBlockTreeSynched;
-    uint32_t m_bestHeight;
-    uint32_t m_syncHeight;
+    std::string                 m_blockTreeFile;
+    bool                        m_bBlockTreeLoaded;
+    bool                        m_bConnected;
+    bool                        m_bSynching;
+    bool                        m_bBlockTreeSynched;
+    uint32_t                    m_bestHeight;
+    uint32_t                    m_syncHeight;
 
-    bool m_bInsertMerkleBlocks;
-    mutable std::mutex m_vaultMutex;
+    bool                        m_bInsertMerkleBlocks;
+    mutable std::mutex          m_vaultMutex;
 
-    StatusSignal m_notifyStatusChanged;
-    TxSignal m_notifyTxInserted;
-    TxSignal m_notifyTxStatusChanged;
-    MerkleBlockSignal m_notifyMerkleBlockInserted;
+    // Sync state events
+    StatusSignal                m_notifyStatusChanged;
+    BestHeightSignal            m_notifyBestHeightChanged;
+
+    // P2P network state events
+    TxSignal                    m_notifyTxInserted;
+    TxSignal                    m_notifyTxStatusChanged;
+    MerkleBlockSignal           m_notifyMerkleBlockInserted;
 };
 
 }

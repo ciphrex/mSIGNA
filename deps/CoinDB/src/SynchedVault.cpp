@@ -109,6 +109,7 @@ SynchedVault::SynchedVault() :
         LOGGER(trace) << "P2P headers sync complete." << std::endl;
         m_bBlockTreeSynched = true;
         m_bestHeight = m_networkSync.getBestHeight();
+        m_notifyBestHeightChanged(m_bestHeight);
         // TODO: notify clients
 
         try
@@ -140,7 +141,7 @@ SynchedVault::SynchedVault() :
     {
         //LOGGER(trace) << "P2P network added best chain. New best height: " << header.height << std::endl;
         m_bestHeight = header.height;
-        // TODO: notify clients
+        m_notifyBestHeightChanged(m_bestHeight);
     });
 
     m_networkSync.subscribeRemoveBestChain([this](const chain_header_t& header)
@@ -153,7 +154,7 @@ SynchedVault::SynchedVault() :
             try
             {
                 m_bestHeight = m_networkSync.getBestHeight();
-                // TODO: notify clients
+                m_notifyBestHeightChanged(m_bestHeight);
             }
             catch (const std::exception& e)
             {
@@ -208,7 +209,7 @@ SynchedVault::SynchedVault() :
         LOGGER(trace) << "P2P network block tree changed." << std::endl;
         m_bBlockTreeSynched = false;
         m_bestHeight = m_networkSync.getBestHeight();
-        // TODO: update state and notify clients
+        m_notifyBestHeightChanged(m_bestHeight);
     });
 }
 
