@@ -124,7 +124,7 @@ int main(int argc, char* argv[])
     app.processEvents();
     splash.showMessage("\n  Loading block headers...");
     app.processEvents();
-    mainWin.loadBlockTree();
+    mainWin.loadHeaders();
 
     // Require splash screen to always remain open for at least a couple seconds
     bool waiting = true;

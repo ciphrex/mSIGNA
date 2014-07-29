@@ -31,7 +31,8 @@ class TxActions;
 
 class RequestPaymentDialog;
 
-#include <CoinQ/CoinQ_netsync.h>
+#include <CoinDB/SynchedVault.h>
+//#include <CoinQ/CoinQ_netsync.h>
 
 #include "paymentrequest.h"
 
@@ -58,7 +59,7 @@ public:
         NETWORK_STATE_SYNCHED
     };
 
-    void loadBlockTree();
+    void loadHeaders();
     void tryConnect();
     bool isConnected() const { return networkState >= NETWORK_STATE_STARTED; }
     bool isSynched() const { return networkState == NETWORK_STATE_SYNCHED; }
@@ -217,6 +218,8 @@ private:
 
     // selects account with index i. returns true iff account with that index exists and was selected.
     bool selectAccount(int i);
+
+    CoinDB::SynchedVault synchedVault;
 
     // network
     CoinQ::Network::NetworkSync networkSync;

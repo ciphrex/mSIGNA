@@ -27,9 +27,6 @@
 // Coin scripts
 #include <CoinQ/CoinQ_script.h>
 
-// Network
-#include <CoinQ/CoinQ_netsync.h>
-
 // Models/Views
 #include "accountmodel.h"
 #include "accountview.h"
@@ -109,6 +106,13 @@ MainWindow::MainWindow() :
     accountView->setModel(accountModel);
     accountView->setMenu(accountMenu);
 
+    synchedVault.subscribeBestHeightChanged([&](uint32_t height) { emit updateBestHeight(height); });
+
+    synchedVault.subscribeTxInserted([&](std::shared_ptr<CoinDB::Tx> tx) { newTx(tx->hash()); });
+    synchedVault.subscribeTxStatusChanged([&](std::shared_ptr<CoinDB::Tx> tx) { newTx(tx->hash()); });
+    synchedVault.subscribeMerkleBlockInserted([&](std::shared_ptr<CoinDB::MerkleBlock> merkleblock) { newBlock(merkleblock->blockheader()->hash(), merkleblock->blockheader()->height()); });
+
+/*
     networkSync.subscribeTx([&](const Coin::Transaction& tx) {
         try {
             accountModel->insertTx(tx);
@@ -117,15 +121,18 @@ MainWindow::MainWindow() :
             // TODO
         }
     });
+*/
 //    networkSync.subscribeBlock([&](const ChainBlock& block) { accountModel->insertBlock(block); });
-    networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleBlock) { accountModel->insertMerkleBlock(merkleBlock); });
-    networkSync.subscribeBlockTreeChanged([&]() { emit updateBestHeight(networkSync.getBestHeight()); });
+//    networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleBlock) { accountModel->insertMerkleBlock(merkleBlock); });
+//    networkSync.subscribeBlockTreeChanged([&]() { emit updateBestHeight(networkSync.getBestHeight()); });
 
+/*
     qRegisterMetaType<bytes_t>("bytes_t");
     connect(accountModel, SIGNAL(newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
     connect(accountModel, SIGNAL(newBlock(const bytes_t&, int)), this, SLOT(newBlock(const bytes_t&, int)));
     connect(accountModel, &AccountModel::updateSyncHeight, [this](int height) { emit updateSyncHeight(height); });
     connect(accountModel, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
+*/
 
     accountSelectionModel = accountView->selectionModel();
     connect(accountSelectionModel, &QItemSelectionModel::currentChanged,
@@ -177,15 +184,15 @@ MainWindow::MainWindow() :
     setAcceptDrops(true);
 }
 
-void MainWindow::loadBlockTree()
+void MainWindow::loadHeaders()
 {
-    networkSync.loadHeaders(blockTreeFile.toStdString(), false,
+    synchedVault.loadHeaders(blockTreeFile.toStdString(), false,
         [this](const CoinQBlockTreeMem& blockTree) {
             std::stringstream progress;
             progress << "Height: " << blockTree.getBestHeight() << " / " << "Total Work: " << blockTree.getTotalWork().getDec();
             emit headersLoadProgress(QString::fromStdString(progress.str()));
         });
-    emit updateBestHeight(networkSync.getBestHeight());
+    emit updateBestHeight(synchedVault.getBestHeight());
 }
 
 void MainWindow::tryConnect()
@@ -203,16 +210,8 @@ void MainWindow::updateStatusMessage(const QString& message)
 
 void MainWindow::closeEvent(QCloseEvent * /*event*/)
 {
-    networkSync.stop();
+    synchedVault.stopSync();
     saveSettings();
-/*
-    if (maybeSave()) {
-        writeSettings();
-        event->accept();
-    } else {
-        event->ignore();
-    }
-*/
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent* event)
@@ -1221,6 +1220,9 @@ void MainWindow::newTx(const bytes_t& hash)
     QString message = tr("Added transaction ") + QString::fromStdString(uchar_vector(hash).getHex());
 //    updateStatusMessage(tr("Added transaction ") + QString::fromStdString(uchar_vector(hash).getHex()));
     emit status(message);
+
+    accountModel->update();
+    accountView->update();
 
     txModel->update();
     txView->update();

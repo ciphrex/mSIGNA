@@ -43,6 +43,7 @@ public:
     AccountModel();
     ~AccountModel() { if (vault) delete vault; }
 
+    void setVault(CoinDB::Vault* vault);
     void update();
 
     // Vault operations
