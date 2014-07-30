@@ -42,6 +42,13 @@ void onClose(Peer& peer, int code, const std::string& message)
     g_bShutdown = true;
 }
 
+void onError(Peer& peer, const std::string& message)
+{
+    cout << "Peer " << peer.name() << " error - " << message << "." << endl;
+
+    g_bShutdown = true;
+}
+
 void onInv(Peer& peer, const Coin::Inventory& inv)
 {
     cout << endl << "Received inventory from " << peer.name() << endl << inv.toIndentedString() << endl;
@@ -121,6 +128,7 @@ int main(int argc, char* argv[])
         peer.subscribeStop([&](Peer& peer) { cout << "Peer " << peer.name() << " stopped." << endl; });
         peer.subscribeOpen(&onOpen);
         peer.subscribeClose(&onClose);
+        peer.subscribeError(&onError);
 
         peer.subscribeTimeout([&](Peer& peer) { cout << "Peer " << peer.name() << " timed out." << endl; });
 
