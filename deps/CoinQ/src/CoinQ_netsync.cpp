@@ -78,16 +78,14 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
 
     m_peer.subscribeTimeout([&](CoinQ::Peer& /*peer*/)
     {
-        m_bConnected = false;
+        stop();
         notifyTimeout();
-        notifyStopped();
     });
 
     m_peer.subscribeClose([&](CoinQ::Peer& /*peer*/, int code, const std::string& message)
     {
         stop();
         notifyClose();
-        notifyStopped();
         std::stringstream ss;
         ss << "Peer closed with code " << code << ": " << message; // TODO: localization
         notifyStatus(ss.str());
