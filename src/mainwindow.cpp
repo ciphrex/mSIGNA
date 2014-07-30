@@ -1305,8 +1305,8 @@ void MainWindow::headersSynched()
     emit updateBestHeight(synchedVault.getBestHeight());
     emit status(tr("Finished loading headers."));
     if (accountModel->isOpen()) {
-        try {
-            syncBlocks();
+    try {
+        syncBlocks();
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::doneHeaderSync - " << e.what() << std::endl;
@@ -1317,22 +1317,12 @@ void MainWindow::headersSynched()
 
 void MainWindow::fetchingBlocks()
 {
-    if (accountModel->isOpen())
-    {
-        updateSyncHeight(accountModel->getBestHeight());
-    }
     updateNetworkState(NETWORK_STATE_SYNCHING);
     emit status(tr("Fetching blocks"));
 }
 
 void MainWindow::blocksSynched()
 {
-    if (accountModel->isOpen())
-    {
-        updateSyncHeight(accountModel->getBestHeight());
-        //synchedVault.getMempool();
-        //networkSync.getMempool();
-    }
     updateNetworkState(NETWORK_STATE_SYNCHED);
     emit status(tr("Finished block sync"));
 }
@@ -1708,17 +1698,19 @@ void MainWindow::createActions()
         //case CoinDB::SynchedVault::NOT_LOADED:
         //case CoinDB::SynchedVault::LOADED:
         case CoinDB::SynchedVault::STOPPED:
-            updateNetworkState(NETWORK_STATE_STOPPED);
+            networkStopped();
             break;
         case CoinDB::SynchedVault::STARTING:
-            updateNetworkState(NETWORK_STATE_STARTED);
+            networkStarted();
             break;
         case CoinDB::SynchedVault::FETCHING_HEADERS:
+            fetchingHeaders();
+            break;
         case CoinDB::SynchedVault::FETCHING_BLOCKS:
-            updateNetworkState(NETWORK_STATE_SYNCHING);
+            fetchingBlocks();
             break;
         case CoinDB::SynchedVault::SYNCHED:
-            updateNetworkState(NETWORK_STATE_SYNCHED);
+            blocksSynched();
             break;
         default:
             break;
