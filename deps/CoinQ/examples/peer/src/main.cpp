@@ -15,6 +15,8 @@
 #include <CoinQ/CoinQ_peer_io.h>
 #include <CoinQ/CoinQ_coinparams.h>
 
+#include <stdutils/stringutils.h>
+
 #include <signal.h>
 
 bool g_bShutdown = false;
@@ -84,46 +86,62 @@ void onMerkleBlock(Peer& peer, const Coin::MerkleBlock& merkleBlock)
 
 int main(int argc, char* argv[])
 {
-    string host("localhost");
-    if (argc > 1) { host = argv[1]; }
+    try
+    {
+        NetworkSelector networkSelector;
 
-    signal(SIGINT, &finish);
-    signal(SIGTERM, &finish);
+        if (argc < 3)
+        {
+            cerr << "# Usage: " << argv[0] << " <network> <host> [port]" << endl
+                 << "# Supported networks: " << stdutils::delimited_list(networkSelector.getNetworkNames(), ", ") << endl;
+            return -1;
+        }
 
-    CoinParams coinParams = getBitcoinParams();
+        CoinParams coinParams = networkSelector.getCoinParams(argv[1]);
+        string host = argv[2];
+        string port = (argc > 3) ? argv[3] : coinParams.default_port();
 
-    CoinQ::io_service_t io_service;
-    CoinQ::io_service_t::work work(io_service);
-    boost::thread thread(boost::bind(&CoinQ::io_service_t::run, &io_service));
+        CoinQ::io_service_t io_service;
+        CoinQ::io_service_t::work work(io_service);
+        boost::thread thread(boost::bind(&CoinQ::io_service_t::run, &io_service));
 
 
-    cout << "Connecting to peer" << endl
-         << "-------------------------------------------" << endl
-         << "  host:             " << host << endl
-         << "  port:             " << coinParams.default_port() << endl
-         << "  magic bytes:      " << hex << coinParams.magic_bytes() << endl
-         << "  protocol version: " << dec << coinParams.protocol_version() << endl
-         << endl;
+        cout << endl << "Connecting to " << coinParams.network_name() << " peer" << endl
+             << "-------------------------------------------" << endl
+             << "  host:             " << host << endl
+             << "  port:             " << port << endl
+             << "  magic bytes:      " << hex << coinParams.magic_bytes() << endl
+             << "  protocol version: " << dec << coinParams.protocol_version() << endl
+             << endl;
 
-    Peer peer(io_service);
-    peer.set(host, coinParams.default_port(), coinParams.magic_bytes(), coinParams.protocol_version(), "peer v1.0", 0, true);
+        Peer peer(io_service);
+        peer.set(host, port, coinParams.magic_bytes(), coinParams.protocol_version(), "peer v1.0", 0, true);
 
-    peer.subscribeStart([&](Peer& peer) { cout << "Peer " << peer.name() << " started." << endl; });
-    peer.subscribeStop([&](Peer& peer) { cout << "Peer " << peer.name() << " stopped." << endl; });
-    peer.subscribeOpen(&onOpen);
-    peer.subscribeClose(&onClose);
+        peer.subscribeStart([&](Peer& peer) { cout << "Peer " << peer.name() << " started." << endl; });
+        peer.subscribeStop([&](Peer& peer) { cout << "Peer " << peer.name() << " stopped." << endl; });
+        peer.subscribeOpen(&onOpen);
+        peer.subscribeClose(&onClose);
 
-    peer.subscribeTimeout([&](Peer& peer) { cout << "Peer " << peer.name() << " timed out." << endl; });
+        peer.subscribeTimeout([&](Peer& peer) { cout << "Peer " << peer.name() << " timed out." << endl; });
 
-    peer.subscribeInv(&onInv);
-    peer.subscribeHeaders(&onHeaders);
-    peer.subscribeTx(&onTx);
-    peer.subscribeBlock(&onBlock);
-    peer.subscribeMerkleBlock(&onMerkleBlock);
+        peer.subscribeInv(&onInv);
+        peer.subscribeHeaders(&onHeaders);
+        peer.subscribeTx(&onTx);
+        peer.subscribeBlock(&onBlock);
+        peer.subscribeMerkleBlock(&onMerkleBlock);
 
-    peer.start();
-    while (!g_bShutdown) { usleep(200); }
-    peer.stop();
+        signal(SIGINT, &finish);
+        signal(SIGTERM, &finish);
+
+        peer.start();
+        while (!g_bShutdown) { usleep(200); }
+        peer.stop();
+    }
+    catch (const exception& e)
+    {
+        cerr << "Error: " << e.what() << endl;
+        return -2;
+    }
 
     return 0;
 }
