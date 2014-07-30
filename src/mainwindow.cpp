@@ -830,10 +830,10 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
 void MainWindow::refreshAccounts()
 {
     accountModel->update();
-    accountView->update();
+    //accountView->update();
 
     txModel->update();
-    txModel->update();
+    txView->update();
 }
 
 void MainWindow::quickNewAccount()
