@@ -114,3 +114,7 @@ cd ../CoinDB
 make lib OS=$OS $OPTIONS
 make install_lib
 
+cd ../CoinDB
+make lib OS=$OS $OPTIONS
+make install
+

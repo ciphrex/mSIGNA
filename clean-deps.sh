@@ -16,6 +16,9 @@ make clean
 cd ../CoinDB
 make clean
 
+cd ../WebSocketClient
+make clean
+
 cd ../../sysroot
 rm -rf include
 rm -rf lib
