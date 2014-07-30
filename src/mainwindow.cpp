@@ -110,6 +110,33 @@ MainWindow::MainWindow() :
     synchedVault.subscribeBestHeightChanged([this](uint32_t height) { emit updateBestHeight((int)height); });
     synchedVault.subscribeSyncHeightChanged([this](uint32_t height) { emit updateSyncHeight((int)height); });
 
+    synchedVault.subscribeStatusChanged([this](CoinDB::SynchedVault::status_t status) {
+        switch (status)
+        {
+        //case CoinDB::SynchedVault::NOT_LOADED:
+        //case CoinDB::SynchedVault::LOADED:
+        case CoinDB::SynchedVault::STOPPED:
+            networkStopped();
+            break;
+        case CoinDB::SynchedVault::STARTING:
+            networkStarted();
+            break;
+        case CoinDB::SynchedVault::FETCHING_HEADERS:
+            fetchingHeaders();
+            break;
+        case CoinDB::SynchedVault::FETCHING_BLOCKS:
+            fetchingBlocks();
+            break;
+        case CoinDB::SynchedVault::SYNCHED:
+            blocksSynched();
+            break;
+        default:
+            break;
+        }
+    });
+
+    synchedVault.subscribeError([this](const std::string& error) { emit showError(QString::fromStdString(error)); });
+
     synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
     synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
     synchedVault.subscribeMerkleBlockInserted([this](std::shared_ptr<CoinDB::MerkleBlock> /*merkleblock*/) { emit signal_newBlock(); });
@@ -1691,31 +1718,6 @@ void MainWindow::createActions()
 
     connect(connectAction, SIGNAL(triggered()), this, SLOT(startNetworkSync()));
     connect(disconnectAction, SIGNAL(triggered()), this, SLOT(stopNetworkSync()));
-
-    synchedVault.subscribeStatusChanged([this](CoinDB::SynchedVault::status_t status) {
-        switch (status)
-        {
-        //case CoinDB::SynchedVault::NOT_LOADED:
-        //case CoinDB::SynchedVault::LOADED:
-        case CoinDB::SynchedVault::STOPPED:
-            networkStopped();
-            break;
-        case CoinDB::SynchedVault::STARTING:
-            networkStarted();
-            break;
-        case CoinDB::SynchedVault::FETCHING_HEADERS:
-            fetchingHeaders();
-            break;
-        case CoinDB::SynchedVault::FETCHING_BLOCKS:
-            fetchingBlocks();
-            break;
-        case CoinDB::SynchedVault::SYNCHED:
-            blocksSynched();
-            break;
-        default:
-            break;
-        }
-    });
 
 /*
     networkSync.subscribeStatus([this](const std::string& message) {
