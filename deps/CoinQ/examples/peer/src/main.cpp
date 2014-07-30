@@ -86,6 +86,7 @@ int main(int argc, char* argv[])
     if (argc > 1) { host = argv[1]; }
 
     signal(SIGINT, &finish);
+    signal(SIGTERM, &finish);
 
     CoinParams coinParams = getBitcoinParams();
 
