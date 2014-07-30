@@ -8,6 +8,8 @@
 
 #include "CoinQ_peer_io.h"
 
+#include <sstream>
+
 using namespace CoinQ;
 
 const unsigned char Peer::DEFAULT_Ipv6[] = {0,0,0,0,0,0,0,0,0,0,255,255,127,0,0,1};
@@ -128,12 +130,16 @@ void Peer::do_read()
                     notifyHeaders(*this, *pHeaders);
                 }
                 else {
-                    std::cout << "Command type not implemented: " << command << std::endl;
+                    std::stringstream err;
+                    err << "Command type not implemented: " << command;
+                    notifyError(*this, err.str());
                 }
                 notifyMessage(*this, peerMessage);
             }
             catch (const std::exception& e) {
-                std::cout << "Message exception: " << e.what() << std::endl;
+                std::stringstream err;
+                err << "Message decode error: " << e.what();
+                notifyError(*this, err.str());
             }
 
             read_message.assign(read_message.begin() + MIN_MESSAGE_HEADER_SIZE + payloadSize, read_message.end());
@@ -150,7 +156,9 @@ void Peer::do_write(boost::shared_ptr<uchar_vector> data)
     boost::asio::async_write(socket_, boost::asio::buffer(*data), boost::asio::transfer_all(),
     strand_.wrap([this](const boost::system::error_code& ec, std::size_t bytes_written) {
         if (ec) {
-            std::cout << "Peer::send() - Error " << ec.value() << ": " << ec.message() << std::endl;
+            std::stringstream err;
+            err << "Write error: " << ec.value() << ": " << ec.message();
+            notifyError(*this, err.str());
             return;
         }
         boost::lock_guard<boost::mutex> sendLock(sendMutex);
@@ -175,7 +183,9 @@ void Peer::do_connect(tcp::resolver::iterator iter)
 {
     boost::asio::async_connect(socket_, iter, strand_.wrap([&](const boost::system::error_code& ec, tcp::resolver::iterator) {
         if (ec) {
-            std::cout << "Peer::start() - Connection error: " << ec.message() << "." << std::endl;
+            std::stringstream err;
+            err << "Connect error: " << ec.message();
+            notifyError(*this, err.str());
             stop();
             notifyClose(*this, ec.value(), ec.message());
         }
@@ -185,11 +195,16 @@ void Peer::do_connect(tcp::resolver::iterator iter)
                 do_handshake();
             }
             catch (const boost::system::error_code& ec) {
-                std::cout << "Connection handler error " << ec.value() << ": " << ec.message() << std::endl;
+                std::stringstream err;
+                err << "Handshake error: " << ec.value() << ": " << ec.message();
+                notifyError(*this, err.str());
                 bRunning = false;
             }
             catch (const std::exception& e) {
-                std::cout << "Connection handler std::exception - " << e.what() << std::endl;
+                std::stringstream err;
+                err << "Handshake error: " << e.what();
+                notifyError(*this, err.str());
+                bRunning = false;
             }
         }
     }));
@@ -213,7 +228,9 @@ void Peer::start()
 
     resolver_.async_resolve(query, [this](const boost::system::error_code& ec, tcp::resolver::iterator iterator) {
         if (ec) {
-            std::cout << "Peer::start() - Error " << ec.value() << ": " << ec.message() << std::endl;
+            std::stringstream err;
+            err << "Resolve error: " << ec.value() << ": " << ec.message();
+            notifyError(*this, err.str());
             notifyClose(*this, ec.value(), ec.message());
             return;
         }

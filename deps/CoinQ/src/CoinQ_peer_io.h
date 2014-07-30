@@ -45,6 +45,7 @@ class Peer;
 
 typedef std::function<void(Peer&)>                                  peer_slot_t;
 typedef std::function<void(Peer&, int, const std::string&)>         peer_closed_slot_t;
+typedef std::function<void(Peer&, const std::string&)>              peer_error_slot_t;
 
 typedef std::function<void(Peer&, const Coin::CoinNodeMessage&)>    peer_message_slot_t;
 typedef std::function<void(Peer&, const Coin::HeadersMessage&)>     peer_headers_slot_t;
@@ -105,6 +106,7 @@ public:
     void subscribeOpen(peer_slot_t slot) { notifyOpen.connect(slot); }
     void subscribeTimeout(peer_slot_t slot) { notifyTimeout.connect(slot); }
     void subscribeClose(peer_closed_slot_t slot) { notifyClose.connect(slot); }
+    void subscribeError(peer_error_slot_t slot) { notifyError.connect(slot); }
 
     static const unsigned char DEFAULT_Ipv6[];
 
@@ -228,6 +230,7 @@ private:
     CoinQSignal<Peer&>                                  notifyStop;
     CoinQSignal<Peer&>                                  notifyOpen;
     CoinQSignal<Peer&, int, const std::string&>         notifyClose;
+    CoinQSignal<Peer&, const std::string&>              notifyError;
 
     CoinQSignal<Peer&>                                  notifyTimeout;
 
