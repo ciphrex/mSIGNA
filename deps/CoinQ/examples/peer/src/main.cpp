@@ -36,6 +36,8 @@ void onOpen(Peer& peer)
 void onClose(Peer& peer, int code, const std::string& message)
 {
     cout << "Peer " << peer.name() << " closed with code " << code << ": " << message << "." << endl;
+
+    g_bShutdown = true;
 }
 
 void onInv(Peer& peer, const Coin::Inventory& inv)
