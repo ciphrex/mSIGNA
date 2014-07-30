@@ -4,12 +4,11 @@
 //
 // txactions.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef VAULT_TXACTIONS_H
-#define VAULT_TXACTIONS_H
+#pragma once
 
 #include <QObject>
 
@@ -22,10 +21,9 @@ class TxModel;
 class TxView;
 class AccountModel;
 
-namespace CoinQ {
-    namespace Network {
-        class NetworkSync;
-    }
+namespace CoinDB
+{
+    class SynchedVault;
 }
 
 class TxActions : public QObject
@@ -33,9 +31,9 @@ class TxActions : public QObject
     Q_OBJECT
 
 public:
-    TxActions(TxModel* model, TxView* view, AccountModel* acctModel, CoinQ::Network::NetworkSync* sync = NULL); // model and view must be valid, non-null.
+    TxActions(TxModel* txModel, TxView* txView, AccountModel* accountModel, CoinDB::SynchedVault* synchedVault = nullptr); // model and view must be valid, non-null.
 
-    void setNetworkSync(CoinQ::Network::NetworkSync* sync) { networkSync = sync; }
+    void setNetworkSync(CoinDB::SynchedVault* synchedVault) { m_synchedVault = synchedVault; }
 
     QMenu* getMenu() const { return menu; }
 
@@ -60,12 +58,12 @@ private:
     void createActions();
     void createMenus();
 
-    TxModel* txModel;
-    TxView* txView;
+    TxModel* m_txModel;
+    TxView* m_txView;
 
-    AccountModel* accountModel;
+    AccountModel* m_accountModel;
 
-    CoinQ::Network::NetworkSync* networkSync;
+    CoinDB::SynchedVault* m_synchedVault;
 
     int currentRow;
 
@@ -82,4 +80,3 @@ private:
     QMenu* menu;
 };
 
-#endif // VAULT_TXACTIONS_H

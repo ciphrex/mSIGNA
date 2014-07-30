@@ -46,6 +46,11 @@ void AccountModel::setColumns()
     setHorizontalHeaderLabels(columns);
 }
 
+void AccountModel::setVault(CoinDB::Vault* vault)
+{
+    this->vault = vault;
+}
+
 void AccountModel::update()
 {
     QString newCurrencySymbol = getCurrencySymbol();

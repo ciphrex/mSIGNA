@@ -38,9 +38,10 @@ const std::string SynchedVault::getStatusString(status_t status)
 }
 
 // Constructor
-SynchedVault::SynchedVault() :
+SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_vault(nullptr),
     m_status(NOT_LOADED),
+    m_networkSync(coinParams),
     m_bBlockTreeLoaded(false),
     m_bConnected(false),
     m_bSynching(false),
@@ -58,6 +59,7 @@ SynchedVault::SynchedVault() :
     m_networkSync.subscribeError([this](const std::string& error)
     {
         LOGGER(trace) << "P2P network error: " << error << std::endl;
+        m_notifyError(error);
     });
 
     m_networkSync.subscribeOpen([this]()
@@ -237,40 +239,52 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
 {
     LOGGER(trace) << "SynchedVault::openVault(" << dbname << ", " << (bCreate ? "true" : "false") << ")" << std::endl;
     std::lock_guard<std::mutex> lock(m_vaultMutex);
+    m_notifyVaultClosed();
+    updateStatus(NOT_LOADED);
     if (m_vault) delete m_vault;
     m_vault = new Vault(dbname, bCreate);
     m_syncHeight = m_vault->getBestHeight();
+    m_notifySyncHeightChanged(m_syncHeight);
     m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
     m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
     m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
     m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
     {
         m_syncHeight = merkleblock->blockheader()->height();
+        m_notifySyncHeightChanged(m_syncHeight);
         m_notifyMerkleBlockInserted(merkleblock);
     });
 
     if (m_networkSync.connected())      { updateStatus(LOADED); }
     else                                { updateStatus(STOPPED); }
+
+    m_notifyVaultOpened(m_vault);
 }
 
 void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate)
 {
     LOGGER(trace) << "SynchedVault::openVault(" << dbuser << ", ..., " << dbname << ", " << (bCreate ? "true" : "false") << ")" << std::endl;
     std::lock_guard<std::mutex> lock(m_vaultMutex);
+    m_notifyVaultClosed();
+    updateStatus(NOT_LOADED);
     if (m_vault) delete m_vault;
     m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate);
     m_syncHeight = m_vault->getBestHeight();
+    m_notifySyncHeightChanged(m_syncHeight);
     m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
     m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
     m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
     m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
     {
         m_syncHeight = merkleblock->blockheader()->height();
+        m_notifySyncHeightChanged(m_syncHeight);
         m_notifyMerkleBlockInserted(merkleblock);
     });
 
     if (m_networkSync.connected())      { updateStatus(LOADED); }
     else                                { updateStatus(STOPPED); }
+
+    m_notifyVaultOpened(m_vault);
 }
 
 void SynchedVault::closeVault()
@@ -281,9 +295,11 @@ void SynchedVault::closeVault()
     if (m_vault)
     {
         //m_vault->clearAllSlots();
+        m_notifyVaultClosed();
         delete m_vault;
         m_vault = nullptr;
         m_syncHeight = 0;
+        m_notifySyncHeightChanged(m_syncHeight);
         updateStatus(NOT_LOADED);
     }
 }
@@ -294,6 +310,13 @@ void SynchedVault::startSync(const std::string& host, const std::string& port)
     LOGGER(trace) << "SynchedVault::startSync(" << host << ", " << port << ")" << std::endl;
     m_bInsertMerkleBlocks = false;
     m_networkSync.start(host, port); 
+}
+
+void SynchedVault::startSync(const std::string& host, int port)
+{
+    std::stringstream ss;
+    ss << port;
+    startSync(host, ss.str());
 }
 
 void SynchedVault::stopSync()
@@ -337,7 +360,6 @@ void SynchedVault::syncBlocks()
 void SynchedVault::updateBloomFilter()
 {
     LOGGER(trace) << "SynchedVault::updateBloomFilter()" << std::endl;
-    if (!m_bConnected) throw std::runtime_error("Not connected.");
 
     if (!m_vault) throw std::runtime_error("No vault is open.");
     std::lock_guard<std::mutex> lock(m_vaultMutex);
@@ -388,12 +410,29 @@ std::shared_ptr<Tx> SynchedVault::sendTx(unsigned long tx_id)
     return tx;
 }
 
+void SynchedVault::sendTx(Coin::Transaction& coin_tx)
+{
+    uchar_vector hash = coin_tx.getHashLittleEndian();
+    LOGGER(trace) << "SynchedVault::sendTx(" << hash.getHex() << ")" << std::endl;
+    if (!m_bConnected) throw std::runtime_error("Not connected.");
+
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+    std::lock_guard<std::mutex> lock(m_vaultMutex);
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+    m_networkSync.sendTx(coin_tx);
+    m_networkSync.getTx(hash);
+}
+
 
 // Event subscriptions
 void SynchedVault::clearAllSlots()
 {
     LOGGER(trace) << "SynchedVault::clearAllSlots()" << std::endl;
+    m_notifyVaultOpened.clear();
+    m_notifyVaultClosed.clear();
     m_notifyStatusChanged.clear();
+    m_notifyBestHeightChanged.clear();
+    m_notifySyncHeightChanged.clear();
     m_notifyTxInserted.clear();
     m_notifyTxStatusChanged.clear();
     m_notifyMerkleBlockInserted.clear();

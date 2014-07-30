@@ -36,7 +36,7 @@ public:
 
     static const std::string getStatusString(status_t status);
 
-    SynchedVault();
+    SynchedVault(const CoinQ::CoinParams& coinParams = CoinQ::getBitcoinParams());
     ~SynchedVault();
 
     void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = false, std::function<void(const CoinQBlockTreeMem&)> callback = nullptr);
@@ -45,10 +45,13 @@ public:
     void openVault(const std::string& dbname, bool bCreate = false);
     void openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate = false);
     void closeVault();
+    bool isVaultOpen() { return (m_vault != nullptr); }
     Vault* getVault() { return m_vault; }
 
     void startSync(const std::string& host, const std::string& port);
+    void startSync(const std::string& host, int port);
     void stopSync();
+    bool isConnected() const { return m_networkSync.connected(); }
     void suspendBlockUpdates();
     void syncBlocks();
     void updateBloomFilter();
@@ -59,13 +62,22 @@ public:
 
     std::shared_ptr<Tx> sendTx(const bytes_t& hash);
     std::shared_ptr<Tx> sendTx(unsigned long tx_id);
+    void sendTx(Coin::Transaction& coin_tx);
+
+    // Vault state events
+    typedef Signals::Signal<Vault*> VaultSignal;
+    typedef Signals::Signal<> VoidSignal;
+    Signals::Connection subscribeVaultOpened(VaultSignal::Slot slot) { return m_notifyVaultOpened.connect(slot); }
+    Signals::Connection subscribeVaultClosed(VoidSignal::Slot slot) { return m_notifyVaultClosed.connect(slot); }
 
     // Sync state events
     typedef Signals::Signal<status_t> StatusSignal;
+    typedef Signals::Signal<uint32_t> HeightSignal;
+    typedef Signals::Signal<const std::string&> ErrorSignal;
     Signals::Connection subscribeStatusChanged(StatusSignal::Slot slot) { return m_notifyStatusChanged.connect(slot); }
-
-    typedef Signals::Signal<uint32_t> BestHeightSignal;
-    Signals::Connection subscribeBestHeightChanged(BestHeightSignal::Slot slot) { return m_notifyBestHeightChanged.connect(slot); }
+    Signals::Connection subscribeBestHeightChanged(HeightSignal::Slot slot) { return m_notifyBestHeightChanged.connect(slot); }
+    Signals::Connection subscribeSyncHeightChanged(HeightSignal::Slot slot) { return m_notifySyncHeightChanged.connect(slot); }
+    Signals::Connection subscribeError(ErrorSignal::Slot slot) { return m_notifyError.connect(slot); }
 
     // P2P network state events
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
@@ -74,6 +86,8 @@ public:
     void clearAllSlots();
 
 private:
+    friend class VaultLock;
+
     Vault* m_vault;
 
     status_t m_status;
@@ -91,14 +105,29 @@ private:
     bool                        m_bInsertMerkleBlocks;
     mutable std::mutex          m_vaultMutex;
 
+    // Vault state events
+    VaultSignal                 m_notifyVaultOpened;
+    VoidSignal                  m_notifyVaultClosed;
+
     // Sync state events
     StatusSignal                m_notifyStatusChanged;
-    BestHeightSignal            m_notifyBestHeightChanged;
+    HeightSignal                m_notifyBestHeightChanged;
+    HeightSignal                m_notifySyncHeightChanged;
+    ErrorSignal                 m_notifyError;
 
     // P2P network state events
     TxSignal                    m_notifyTxInserted;
     TxSignal                    m_notifyTxStatusChanged;
     MerkleBlockSignal           m_notifyMerkleBlockInserted;
+};
+
+class VaultLock
+{
+public:
+    explicit VaultLock(const SynchedVault& synchedVault) : m_lock(synchedVault.m_vaultMutex) { }
+
+private:
+    std::lock_guard<std::mutex> m_lock;
 };
 
 }

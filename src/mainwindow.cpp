@@ -27,9 +27,6 @@
 // Coin scripts
 #include <CoinQ/CoinQ_script.h>
 
-// Network
-#include <CoinQ/CoinQ_netsync.h>
-
 // Models/Views
 #include "accountmodel.h"
 #include "accountview.h"
@@ -72,7 +69,8 @@ using namespace std;
 
 MainWindow::MainWindow() :
     licenseAccepted(false),
-    networkSync(getCoinParams()),
+    synchedVault(getCoinParams()),
+    //networkSync(getCoinParams()),
     syncHeight(0),
     bestHeight(0),
     networkState(NETWORK_STATE_STOPPED),
@@ -109,6 +107,45 @@ MainWindow::MainWindow() :
     accountView->setModel(accountModel);
     accountView->setMenu(accountMenu);
 
+    synchedVault.subscribeBestHeightChanged([this](uint32_t height) { emit updateBestHeight((int)height); });
+    synchedVault.subscribeSyncHeightChanged([this](uint32_t height) { emit updateSyncHeight((int)height); });
+
+    synchedVault.subscribeStatusChanged([this](CoinDB::SynchedVault::status_t status) {
+        switch (status)
+        {
+        //case CoinDB::SynchedVault::NOT_LOADED:
+        //case CoinDB::SynchedVault::LOADED:
+        case CoinDB::SynchedVault::STOPPED:
+            networkStopped();
+            break;
+        case CoinDB::SynchedVault::STARTING:
+            networkStarted();
+            break;
+        case CoinDB::SynchedVault::FETCHING_HEADERS:
+            fetchingHeaders();
+            break;
+        case CoinDB::SynchedVault::FETCHING_BLOCKS:
+            fetchingBlocks();
+            break;
+        case CoinDB::SynchedVault::SYNCHED:
+            blocksSynched();
+            break;
+        default:
+            break;
+        }
+    });
+
+    synchedVault.subscribeError([this](const std::string& error) { emit showError(QString::fromStdString(error)); });
+
+    synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
+    synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
+    synchedVault.subscribeMerkleBlockInserted([this](std::shared_ptr<CoinDB::MerkleBlock> /*merkleblock*/) { emit signal_newBlock(); });
+
+    connect(this, SIGNAL(signal_newTx()), this, SLOT(newTx()));
+    connect(this, SIGNAL(signal_newBlock()), this, SLOT(newBlock()));
+    connect(this, SIGNAL(signal_refreshAccounts()), this, SLOT(refreshAccounts()));
+
+/*
     networkSync.subscribeTx([&](const Coin::Transaction& tx) {
         try {
             accountModel->insertTx(tx);
@@ -117,15 +154,18 @@ MainWindow::MainWindow() :
             // TODO
         }
     });
+*/
 //    networkSync.subscribeBlock([&](const ChainBlock& block) { accountModel->insertBlock(block); });
-    networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleBlock) { accountModel->insertMerkleBlock(merkleBlock); });
-    networkSync.subscribeBlockTreeChanged([&]() { emit updateBestHeight(networkSync.getBestHeight()); });
+//    networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleBlock) { accountModel->insertMerkleBlock(merkleBlock); });
+//    networkSync.subscribeBlockTreeChanged([&]() { emit updateBestHeight(networkSync.getBestHeight()); });
 
+/*
     qRegisterMetaType<bytes_t>("bytes_t");
     connect(accountModel, SIGNAL(newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
     connect(accountModel, SIGNAL(newBlock(const bytes_t&, int)), this, SLOT(newBlock(const bytes_t&, int)));
     connect(accountModel, &AccountModel::updateSyncHeight, [this](int height) { emit updateSyncHeight(height); });
     connect(accountModel, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
+*/
 
     accountSelectionModel = accountView->selectionModel();
     connect(accountSelectionModel, &QItemSelectionModel::currentChanged,
@@ -141,7 +181,7 @@ MainWindow::MainWindow() :
 
     txView = new TxView();
     txView->setModel(txModel);
-    txActions = new TxActions(txModel, txView, accountModel, &networkSync);
+    txActions = new TxActions(txModel, txView, accountModel, &synchedVault);
     connect(txActions, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
 
     txView->setMenu(txActions->getMenu());
@@ -153,6 +193,42 @@ MainWindow::MainWindow() :
     setCentralWidget(tabWidget);
 
     requestPaymentDialog = new RequestPaymentDialog(accountModel, this);
+
+    // Vault open and close
+    synchedVault.subscribeVaultOpened([this](CoinDB::Vault* vault) { emit vaultOpened(vault); });
+    synchedVault.subscribeVaultClosed([this]() { emit vaultClosed(); });
+
+    connect(this, &MainWindow::vaultOpened, [this](CoinDB::Vault* vault) {
+        keychainModel->setVault(vault);
+        keychainModel->update();
+        keychainView->update();
+
+        accountModel->setVault(vault);
+        accountModel->update();
+        accountView->update();
+
+        txModel->setVault(vault);
+        txModel->update();
+        txView->update();
+
+        selectAccount(0);
+
+        // TODO: prompt user to unlock chain codes.
+        synchedVault.getVault()->unlockChainCodes(uchar_vector("1234"));
+    });
+    connect(this, &MainWindow::vaultClosed, [this]() {
+        keychainModel->setVault(nullptr);
+        keychainModel->update();
+
+        accountModel->setVault(nullptr);
+        accountModel->update();
+
+        txModel->setVault(nullptr);
+        txModel->update();
+        txView->update();
+
+        updateStatusMessage(tr("Closed vault"));
+    });
 
     // status updates
     connect(this, &MainWindow::status, [this](const QString& message) { updateStatusMessage(message); });
@@ -177,15 +253,15 @@ MainWindow::MainWindow() :
     setAcceptDrops(true);
 }
 
-void MainWindow::loadBlockTree()
+void MainWindow::loadHeaders()
 {
-    networkSync.loadHeaders(blockTreeFile.toStdString(), false,
+    synchedVault.loadHeaders(blockTreeFile.toStdString(), false,
         [this](const CoinQBlockTreeMem& blockTree) {
             std::stringstream progress;
             progress << "Height: " << blockTree.getBestHeight() << " / " << "Total Work: " << blockTree.getTotalWork().getDec();
             emit headersLoadProgress(QString::fromStdString(progress.str()));
         });
-    emit updateBestHeight(networkSync.getBestHeight());
+    emit updateBestHeight(synchedVault.getBestHeight());
 }
 
 void MainWindow::tryConnect()
@@ -203,16 +279,8 @@ void MainWindow::updateStatusMessage(const QString& message)
 
 void MainWindow::closeEvent(QCloseEvent * /*event*/)
 {
-    networkSync.stop();
+    synchedVault.stopSync();
     saveSettings();
-/*
-    if (maybeSave()) {
-        writeSettings();
-        event->accept();
-    } else {
-        event->ignore();
-    }
-*/
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent* event)
@@ -250,6 +318,7 @@ void MainWindow::updateNetworkState(network_state_t newState)
         {
         case NETWORK_STATE_STOPPED:
             networkStateLabel->setPixmap(*stoppedIcon);
+            emit signal_refreshAccounts();
             break;
         case NETWORK_STATE_STARTED:
         case NETWORK_STATE_SYNCHING:
@@ -257,6 +326,7 @@ void MainWindow::updateNetworkState(network_state_t newState)
             break;
         case NETWORK_STATE_SYNCHED:
             networkStateLabel->setPixmap(*synchedIcon);
+            emit signal_refreshAccounts();
             break;
         default:
             // We should never get here
@@ -354,24 +424,13 @@ void MainWindow::newVault(QString fileName)
     setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
-    try {
-        accountModel->create(fileName);
-        accountView->update();
-
-        keychainModel->setVault(accountModel->getVault());
-        keychainModel->update();
-        keychainView->update();
-
-        txModel->setVault(accountModel->getVault());
-        txModel->update();
-        txView->update();
-
+    try
+    {
+        synchedVault.openVault(fileName.toStdString(), true);
         updateVaultStatus(fileName);
-
-        // TODO: prompt user to unlock chain codes.
-        accountModel->getVault()->unlockChainCodes(uchar_vector("1234"));
     }
-    catch (const exception& e) {
+    catch (const exception& e)
+    {
         LOGGER(debug) << "MainWindow::newVault - " << e.what() << std::endl;
         showError(e.what());
     }
@@ -379,7 +438,8 @@ void MainWindow::newVault(QString fileName)
 
 void MainWindow::promptSync()
 {
-    if (!isConnected()) {
+    if (!isConnected())
+    {
         QMessageBox msgBox;
         msgBox.setText(tr("You are not connected to network."));
         msgBox.setInformativeText(tr("Would you like to connect to network to synchronize your accounts?"));
@@ -389,7 +449,8 @@ void MainWindow::promptSync()
             startNetworkSync();
         }
     }
-    else {
+    else
+    {
         syncBlocks();
     }
 }
@@ -411,12 +472,11 @@ void MainWindow::openVault(QString fileName)
     setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
-    try {
-        loadVault(fileName);
+    try
+    {
+        synchedVault.openVault(fileName.toStdString(), false);    
         updateVaultStatus(fileName);
-        selectAccount(0);
         updateStatusMessage(tr("Opened ") + fileName);
-
         //promptSync();
     }
     catch (const exception& e) {
@@ -446,7 +506,11 @@ void MainWindow::exportVault(QString fileName, bool exportPrivKeys)
 
     try
     {
-        accountModel->exportVault(fileName, exportPrivKeys);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        synchedVault.getVault()->exportVault(fileName.toStdString(), exportPrivKeys);
     }
     catch (const exception& e)
     {
@@ -457,18 +521,13 @@ void MainWindow::exportVault(QString fileName, bool exportPrivKeys)
 
 void MainWindow::closeVault()
 {
-    try {
-        networkSync.stopSyncBlocks();
-
-        accountModel->close();
-        keychainModel->setVault(NULL);
-        txModel->setVault(NULL);
-        txView->update();
-
+    try
+    {
+        synchedVault.closeVault();
         updateVaultStatus();
-        updateStatusMessage(tr("Closed vault"));
     }
-    catch (const exception& e) {
+    catch (const exception& e)
+    {
         LOGGER(debug) << "MainWindow::closeVault - " << e.what() << std::endl;
         showError(e.what());
     }
@@ -477,6 +536,8 @@ void MainWindow::closeVault()
 void MainWindow::newKeychain()
 {
     try {
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
         NewKeychainDialog dlg(this);
         if (dlg.exec()) {
             QString name = dlg.getName();
@@ -491,8 +552,11 @@ void MainWindow::newKeychain()
             secure_bytes_t entropy = random_bytes(32);
             statusBar()->showMessage("");
             LOGGER(debug) << "MainWindow::newKeychain - done getting entropy." << std::endl;
-            accountModel->newKeychain(name, entropy);
-            accountModel->update();
+            CoinDB::VaultLock lock(synchedVault);
+            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+            synchedVault.getVault()->newKeychain(name.toStdString(), entropy);
+            //accountModel->newKeychain(name, entropy);
+            //accountModel->update();
             keychainModel->update();
             keychainView->update();
             tabWidget->setCurrentWidget(keychainView);
@@ -763,6 +827,15 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
     viewUnsignedTxsAction->setEnabled(isSelected);
 }
 
+void MainWindow::refreshAccounts()
+{
+    accountModel->update();
+    accountView->update();
+
+    txModel->update();
+    txModel->update();
+}
+
 void MainWindow::quickNewAccount()
 {
     QuickNewAccountDialog dlg(this);
@@ -824,7 +897,8 @@ void MainWindow::newAccount()
             accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames());
             accountView->update();
             tabWidget->setCurrentWidget(accountView);
-            networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
+            synchedVault.updateBloomFilter();
+            //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
             if (isConnected()) syncBlocks();
         }
     }
@@ -874,8 +948,10 @@ void MainWindow::importAccount(QString fileName)
         keychainModel->update();
         keychainView->update();
         tabWidget->setCurrentWidget(accountView);
-        networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
+        synchedVault.updateBloomFilter();
+        //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         updateStatusMessage(tr("Imported account ") + name);
+        //if (isConnected()) syncBlocks();
         //promptSync();
     }
     catch (const exception& e) {
@@ -972,7 +1048,8 @@ void MainWindow::deleteAccount()
         try {
             accountModel->deleteAccount(accountName);
             accountView->update();
-            networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
+            synchedVault.updateBloomFilter();
+            //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         }
         catch (const exception& e) {
             LOGGER(debug) << "MainWindow::deleteAccount - " << e.what() << std::endl;
@@ -983,6 +1060,7 @@ void MainWindow::deleteAccount()
 
 void MainWindow::viewAccountHistory()
 {
+/*
     QItemSelectionModel* selectionModel = accountView->selectionModel();
     QModelIndexList indexes = selectionModel->selectedRows(0);
     if (indexes.isEmpty()) {
@@ -1003,6 +1081,7 @@ void MainWindow::viewAccountHistory()
         LOGGER(debug) << "MainWindow::viewAccountHistory - " << e.what() << std::endl;
         showError(e.what());
     }
+*/
 }
 
 void MainWindow::viewScripts()
@@ -1159,7 +1238,8 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                     throw std::runtime_error(tr("Must be connected to network to send.").toStdString());
                 }
                 Coin::Transaction coin_tx = tx->toCoinCore();
-                networkSync.sendTx(coin_tx);
+                synchedVault.sendTx(coin_tx);
+                //networkSync.sendTx(coin_tx);
 
                 // TODO: Check transaction has propagated before changing status
                 tx->updateStatus(CoinDB::Tx::PROPAGATED);
@@ -1206,7 +1286,8 @@ void MainWindow::sendRawTx()
         if (dlg.exec()) {
             bytes_t rawTx = dlg.getRawTx();
             Coin::Transaction tx(rawTx);
-            networkSync.sendTx(tx);
+            synchedVault.sendTx(tx);
+            //networkSync.sendTx(tx);
             updateStatusMessage(tr("Sent tx " ) + QString::fromStdString(tx.getHashLittleEndian().getHex()) + tr(" to peer"));
         }
     }
@@ -1216,71 +1297,28 @@ void MainWindow::sendRawTx()
     }
 }
 
-void MainWindow::newTx(const bytes_t& hash)
+void MainWindow::newTx()
 {
-    QString message = tr("Added transaction ") + QString::fromStdString(uchar_vector(hash).getHex());
-//    updateStatusMessage(tr("Added transaction ") + QString::fromStdString(uchar_vector(hash).getHex()));
-    emit status(message);
-
-    txModel->update();
-    txView->update();
+    refreshAccounts();
 }
 
-void MainWindow::newBlock(const bytes_t& hash, int height)
+void MainWindow::newBlock()
 {
-    if (height > syncHeight) {
-        emit updateSyncHeight(height);
-    }
-    QString message = tr("Inserted block ") + QString::fromStdString(uchar_vector(hash).getHex()) + tr(" height: ") + QString::number(height);
-//    updateStatusMessage(tr("Inserted block ") + QString::fromStdString(uchar_vector(hash).getHex()) + tr(" height: ") + QString::number(height));
-    emit status(message);
-
-    txModel->update();
-    txView->update();
+    if (isSynched() || syncHeight % 10 == 0) { refreshAccounts(); }
 }
-
-/*
-void MainWindow::newTx(const coin_tx_t& tx)
-{
-    QString hash = QString::fromStdString(tx.getHashLittleEndian().getHex());
-    try {
-        if (accountModel->insertTx(tx)) {
-            accountView->update();
-            updateStatusMessage(tr("Received transaction ") + hash);
-        }
-    }
-    catch (const exception& e) {
-        LOGGER(debug) << "MainWindow::newTx - " << hash.toStdString() << " : " << e.what();
-        updateStatusMessage(tr("Error attempting to insert transaction ") + hash);
-    }
-}
-
-void MainWindow::newBlock(const chain_block_t& block)
-{
-    QString hash = QString::fromStdString(block.blockHeader.getHashLittleEndian().getHex());
-    updateStatusMessage(tr("Received block ") + hash + tr(" with height ") + QString::number(block.height));
-    if (accountModel->isOpen()) {
-        try {
-            updateStatusaccountModel->insertBlock(block);
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::newBlock - " << hash.toStdString() << " : " << e.what();
-            showError(e.what());
-        }
-    }
-    updateBestHeight(networkSync.getBestHeight());
-}
-*/
 
 void MainWindow::syncBlocks()
 {
     updateStatusMessage(tr("Synchronizing vault"));
+/*
     uint32_t startTime = accountModel->getMaxFirstBlockTimestamp();
     std::vector<bytes_t> locatorHashes = accountModel->getLocatorHashes();
     for (auto& hash: locatorHashes) {
         LOGGER(debug) << "MainWindow::syncBlocks() - hash: " << uchar_vector(hash).getHex() << std::endl;
     }
     networkSync.syncBlocks(locatorHashes, startTime);
+*/
+    synchedVault.syncBlocks();
 }
 
 void MainWindow::fetchingHeaders()
@@ -1291,36 +1329,27 @@ void MainWindow::fetchingHeaders()
 
 void MainWindow::headersSynched()
 {
-    emit updateBestHeight(networkSync.getBestHeight());
+    emit updateBestHeight(synchedVault.getBestHeight());
     emit status(tr("Finished loading headers."));
     if (accountModel->isOpen()) {
-        try {
-            syncBlocks();
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::doneHeaderSync - " << e.what() << std::endl;
-            emit status(QString::fromStdString(e.what()));
-        }
+    try {
+        syncBlocks();
     }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::doneHeaderSync - " << e.what() << std::endl;
+        emit status(QString::fromStdString(e.what()));
+    }
+}
 }
 
 void MainWindow::fetchingBlocks()
 {
-    if (accountModel->isOpen())
-    {
-        updateSyncHeight(accountModel->getBestHeight());
-    }
     updateNetworkState(NETWORK_STATE_SYNCHING);
     emit status(tr("Fetching blocks"));
 }
 
 void MainWindow::blocksSynched()
 {
-    if (accountModel->isOpen())
-    {
-        updateSyncHeight(accountModel->getBestHeight());
-        networkSync.getMempool();
-    }
     updateNetworkState(NETWORK_STATE_SYNCHED);
     emit status(tr("Finished block sync"));
 }
@@ -1335,11 +1364,13 @@ void MainWindow::removeBestChain(const chain_header_t& header)
     bytes_t hash = header.getHashLittleEndian();
     LOGGER(debug) << "MainWindow::removeBestChain - " << uchar_vector(hash).getHex() << std::endl;
     
-    int diff = bestHeight - networkSync.getBestHeight();
+    int diff = bestHeight - synchedVault.getBestHeight();
+    //int diff = bestHeight - networkSync.getBestHeight();
     if (diff >= 0) {
         QString message = tr("Reorganization of ") + QString::number(diff + 1) + tr(" blocks");
         emit status(message);
-        emit updateBestHeight(networkSync.getBestHeight());
+        emit updateBestHeight(synchedVault.getBestHeight());
+        //emit updateBestHeight(networkSync.getBestHeight());
     }
 }
 
@@ -1360,7 +1391,8 @@ void MainWindow::startNetworkSync()
     try {
         QString message(tr("Connecting to ") + host + ":" + QString::number(port) + "...");
         updateStatusMessage(message);
-        networkSync.start(host.toStdString(), port);
+        synchedVault.startSync(host.toStdString(), port);
+        //networkSync.start(host.toStdString(), port);
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::startNetworkSync - " << e.what() << std::endl;
@@ -1373,7 +1405,8 @@ void MainWindow::stopNetworkSync()
     disconnectAction->setEnabled(false);
     try {
         updateStatusMessage(tr("Disconnecting..."));
-        networkSync.stop();
+        synchedVault.stopSync();
+        //networkSync.stop();
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::stopNetworkSync - " << e.what() << std::endl;
@@ -1686,6 +1719,7 @@ void MainWindow::createActions()
     connect(connectAction, SIGNAL(triggered()), this, SLOT(startNetworkSync()));
     connect(disconnectAction, SIGNAL(triggered()), this, SLOT(stopNetworkSync()));
 
+/*
     networkSync.subscribeStatus([this](const std::string& message) {
         LOGGER(debug) << "status slot" << std::endl;
         networkStatus(QString::fromStdString(message)); 
@@ -1750,6 +1784,7 @@ void MainWindow::createActions()
         LOGGER(debug) << "remove best chain slot" << std::endl;
         removeBestChain(header);
     });
+*/
 
     networkSettingsAction = new QAction(tr("Settings..."), this);
     networkSettingsAction->setStatusTip(tr("Configure network settings"));
@@ -1929,6 +1964,8 @@ void MainWindow::clearSettings()
 
 void MainWindow::loadVault(const QString &fileName)
 {
+    synchedVault.openVault(fileName.toStdString(), false);
+/*
     accountModel->load(fileName);
     accountView->update();
     keychainModel->setVault(accountModel->getVault());
@@ -1939,9 +1976,9 @@ void MainWindow::loadVault(const QString &fileName)
     txView->update();
 
     newKeychainAction->setEnabled(true);
-
+*/
     // TODO: Prompt user to unlock chain codes
     accountModel->getVault()->unlockChainCodes(uchar_vector("1234"));
 
-    networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
+    //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
 }

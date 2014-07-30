@@ -31,7 +31,8 @@ class TxActions;
 
 class RequestPaymentDialog;
 
-#include <CoinQ/CoinQ_netsync.h>
+#include <CoinDB/SynchedVault.h>
+//#include <CoinQ/CoinQ_netsync.h>
 
 #include "paymentrequest.h"
 
@@ -58,7 +59,7 @@ public:
         NETWORK_STATE_SYNCHED
     };
 
-    void loadBlockTree();
+    void loadHeaders();
     void tryConnect();
     bool isConnected() const { return networkState >= NETWORK_STATE_STARTED; }
     bool isSynched() const { return networkState == NETWORK_STATE_SYNCHED; }
@@ -73,12 +74,19 @@ signals:
 
     void signal_error(const QString& message);
 
+    void vaultOpened(CoinDB::Vault* vault);
+    void vaultClosed();
+
     void signal_connectionOpen();
     void signal_connectionClosed();
     void signal_networkStarted();
     void signal_networkStopped();
     void signal_networkTimeout();
     void signal_networkDoneSync();
+
+    void signal_newTx();
+    void signal_newBlock();
+    void signal_refreshAccounts();
 
     void signal_addBestChain(const chain_header_t& header);
     void signal_removeBestChain(const chain_header_t& header);
@@ -141,6 +149,7 @@ private slots:
     void viewUnsignedTxs();
     void updateCurrentAccount(const QModelIndex& current, const QModelIndex& previous);
     void updateSelectedAccounts(const QItemSelection& selected, const QItemSelection& deselected);
+    void refreshAccounts();
 
     /////////////////////////
     // TRANSACTION OPERATIONS
@@ -150,8 +159,7 @@ private slots:
     void createRawTx();
     void createTx(const PaymentRequest& paymentRequest = PaymentRequest());
     void signRawTx();
-    //void newTx(const coin_tx_t& tx);
-    void newTx(const bytes_t& hash);
+    void newTx();
     void sendRawTx();
 
     //////////////////////////////
@@ -163,8 +171,7 @@ private slots:
     void blocksSynched();
     void addBestChain(const chain_header_t& header);
     void removeBestChain(const chain_header_t& header);
-    //void newBlock(const chain_block_t& block);
-    void newBlock(const bytes_t& hash, int height);
+    void newBlock();
 
     /////////////////////
     // NETWORK OPERATIONS
@@ -218,8 +225,10 @@ private:
     // selects account with index i. returns true iff account with that index exists and was selected.
     bool selectAccount(int i);
 
+    CoinDB::SynchedVault synchedVault;
+
     // network
-    CoinQ::Network::NetworkSync networkSync;
+    //CoinQ::Network::NetworkSync networkSync;
 
     // menus
     QMenu* fileMenu;
