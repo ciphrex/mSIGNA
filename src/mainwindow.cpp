@@ -116,6 +116,7 @@ MainWindow::MainWindow() :
 
     connect(this, SIGNAL(signal_newTx()), this, SLOT(newTx()));
     connect(this, SIGNAL(signal_newBlock()), this, SLOT(newBlock()));
+    connect(this, SIGNAL(signal_refreshAccounts()), this, SLOT(refreshAccounts()));
 
 /*
     networkSync.subscribeTx([&](const Coin::Transaction& tx) {
@@ -290,7 +291,7 @@ void MainWindow::updateNetworkState(network_state_t newState)
         {
         case NETWORK_STATE_STOPPED:
             networkStateLabel->setPixmap(*stoppedIcon);
-            refreshAccounts();
+            emit signal_refreshAccounts();
             break;
         case NETWORK_STATE_STARTED:
         case NETWORK_STATE_SYNCHING:
@@ -298,7 +299,7 @@ void MainWindow::updateNetworkState(network_state_t newState)
             break;
         case NETWORK_STATE_SYNCHED:
             networkStateLabel->setPixmap(*synchedIcon);
-            refreshAccounts();
+            emit signal_refreshAccounts();
             break;
         default:
             // We should never get here
@@ -1276,7 +1277,7 @@ void MainWindow::newTx()
 
 void MainWindow::newBlock()
 {
-    refreshAccounts();
+    if (isSynched() || syncHeight % 10 == 0) { refreshAccounts(); }
 }
 
 void MainWindow::syncBlocks()

@@ -86,6 +86,7 @@ signals:
 
     void signal_newTx();
     void signal_newBlock();
+    void signal_refreshAccounts();
 
     void signal_addBestChain(const chain_header_t& header);
     void signal_removeBestChain(const chain_header_t& header);
