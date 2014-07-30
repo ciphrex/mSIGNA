@@ -73,9 +73,11 @@ public:
     // Sync state events
     typedef Signals::Signal<status_t> StatusSignal;
     typedef Signals::Signal<uint32_t> HeightSignal;
+    typedef Signals::Signal<const std::string&> ErrorSignal;
     Signals::Connection subscribeStatusChanged(StatusSignal::Slot slot) { return m_notifyStatusChanged.connect(slot); }
     Signals::Connection subscribeBestHeightChanged(HeightSignal::Slot slot) { return m_notifyBestHeightChanged.connect(slot); }
     Signals::Connection subscribeSyncHeightChanged(HeightSignal::Slot slot) { return m_notifySyncHeightChanged.connect(slot); }
+    Signals::Connection subscribeError(ErrorSignal::Slot slot) { return m_notifyError.connect(slot); }
 
     // P2P network state events
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
@@ -111,6 +113,7 @@ private:
     StatusSignal                m_notifyStatusChanged;
     HeightSignal                m_notifyBestHeightChanged;
     HeightSignal                m_notifySyncHeightChanged;
+    ErrorSignal                 m_notifyError;
 
     // P2P network state events
     TxSignal                    m_notifyTxInserted;

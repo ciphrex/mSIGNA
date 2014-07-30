@@ -59,6 +59,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_networkSync.subscribeError([this](const std::string& error)
     {
         LOGGER(trace) << "P2P network error: " << error << std::endl;
+        m_notifyError(error);
     });
 
     m_networkSync.subscribeOpen([this]()
