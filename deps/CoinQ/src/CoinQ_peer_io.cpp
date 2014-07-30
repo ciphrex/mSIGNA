@@ -29,8 +29,9 @@ void Peer::do_handshake()
         if (bHandshakeComplete) return;
         boost::lock_guard<boost::mutex> lock(handshakeMutex);
         if (bHandshakeComplete) return;
-        stop();
         notifyTimeout(*this);
+        notifyClose(*this, ec.value(), ec.message());
+        stop();
     });
 }
 
@@ -42,8 +43,8 @@ void Peer::do_read()
         //std::cout << "error code: " << ec.value() << ": " << ec.message() << std::endl;
         //std::cout << "bytes read: " << bytes_read << std::endl;
         if (ec) {
-            stop();
             notifyClose(*this, ec.value(), ec.message());
+            stop();
             return;
         }
 
@@ -186,8 +187,8 @@ void Peer::do_connect(tcp::resolver::iterator iter)
             std::stringstream err;
             err << "Connect error: " << ec.message();
             notifyError(*this, err.str());
-            stop();
             notifyClose(*this, ec.value(), ec.message());
+            stop();
         }
         else {
             try {
@@ -198,13 +199,15 @@ void Peer::do_connect(tcp::resolver::iterator iter)
                 std::stringstream err;
                 err << "Handshake error: " << ec.value() << ": " << ec.message();
                 notifyError(*this, err.str());
-                bRunning = false;
+                notifyClose(*this, ec.value(), ec.message());
+                stop();
             }
             catch (const std::exception& e) {
                 std::stringstream err;
                 err << "Handshake error: " << e.what();
                 notifyError(*this, err.str());
-                bRunning = false;
+                notifyClose(*this, ec.value(), ec.message());
+                stop();
             }
         }
     }));
@@ -215,15 +218,11 @@ void Peer::do_connect(tcp::resolver::iterator iter)
 void Peer::start()
 
 {
-    if (bRunning) {
-        throw std::runtime_error("Peer already started.");
-    }
-
+    if (bRunning) throw std::runtime_error("Peer already started.");
     boost::unique_lock<boost::shared_mutex> lock(mutex);
-    if (bRunning) {
-        throw std::runtime_error("Peer already started.");
-    }
+    if (bRunning) throw std::runtime_error("Peer already started.");
 
+    bRunning = true;
     tcp::resolver::query query(host_, port_);
 
     resolver_.async_resolve(query, [this](const boost::system::error_code& ec, tcp::resolver::iterator iterator) {
@@ -232,12 +231,9 @@ void Peer::start()
             err << "Resolve error: " << ec.value() << ": " << ec.message();
             notifyError(*this, err.str());
             notifyClose(*this, ec.value(), ec.message());
-            return;
+            stop();
         }
         endpoint_ = *iterator;
-        bWriteReady = false;
-        bHandshakeComplete = false;
-        bRunning = true;
         strand_.post(boost::bind(&Peer::do_connect, this, iterator)); 
     }); 
 }
