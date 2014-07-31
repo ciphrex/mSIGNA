@@ -26,10 +26,13 @@ public:
     void setTxHash(const bytes_t& txHash);
     void update();
 
+    unsigned int getSigsNeeded() const { return m_sigsNeeded; }
+
 private:
     void initColumns();
 
     CoinDB::Vault* m_vault;
     bytes_t m_txHash;
+    unsigned int m_sigsNeeded;
 };
 

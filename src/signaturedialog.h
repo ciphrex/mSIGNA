@@ -15,6 +15,8 @@
 class SignatureModel;
 class SignatureView;
 
+class QLabel;
+
 #include <QDialog>
 
 class SignatureDialog : public QDialog
@@ -27,5 +29,7 @@ public:
 private:
     SignatureModel* m_model;
     SignatureView* m_view;
+
+    QLabel* m_sigsNeededLabel;
 };
 

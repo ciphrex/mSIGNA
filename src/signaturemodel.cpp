@@ -35,6 +35,7 @@ void SignatureModel::update()
     if (!m_vault) return;
 
     SignatureInfo signatureInfo = m_vault->getSignatureInfo(m_txHash);
+    m_sigsNeeded = signatureInfo.sigs_needed();
     for (auto& signer: signatureInfo.present_signers())
     {
         QList<QStandardItem*> row;

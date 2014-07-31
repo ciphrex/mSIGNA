@@ -14,6 +14,7 @@
 #include "signaturemodel.h"
 #include "signatureview.h"
 
+#include <QLabel>
 #include <QVBoxLayout>
 
 SignatureDialog::SignatureDialog(CoinDB::Vault* vault, const bytes_t& txHash, QWidget* parent)
@@ -28,7 +29,11 @@ SignatureDialog::SignatureDialog(CoinDB::Vault* vault, const bytes_t& txHash, QW
     m_view->setModel(m_model);
     m_view->update();
 
+    QString sigsNeededCaption = tr("Additional signatures required: ") + QString::number(m_model->getSigsNeeded());
+    m_sigsNeededLabel = new QLabel(sigsNeededCaption);
+
     QVBoxLayout* mainLayout = new QVBoxLayout();
+    mainLayout->addWidget(m_sigsNeededLabel);
     mainLayout->addWidget(m_view);
     setLayout(mainLayout);
     setWindowTitle(QString::fromStdString(uchar_vector(txHash).getHex()));
