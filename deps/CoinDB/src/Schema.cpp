@@ -1116,11 +1116,12 @@ std::set<bytes_t> Tx::missingSigPubkeys() const
 
 std::set<bytes_t> Tx::presentSigPubkeys() const
 {
-    using namespace CoinQ::Script;
     std::set<bytes_t> pubkeys;
-    for (auto& txin: txins_)
+
+    using namespace CoinQ::Script;
+    Signer signer(toCoinCore(), true);
+    for (auto& script: signer.getScripts())
     {
-        Script script(txin->script());
         std::vector<bytes_t> txinpubkeys = script.presentsigs();
         for (auto& txinpubkey: txinpubkeys) { pubkeys.insert(txinpubkey); }
     } 
