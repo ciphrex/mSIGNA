@@ -81,6 +81,9 @@ HEADERS = \
     src/scriptmodel.h \
     src/scriptview.h \
     src/scriptdialog.h \
+    src/signaturemodel.h \
+    src/signatureview.h \
+    src/signaturedialog.h \
     src/requestpaymentdialog.h \
     src/networksettingsdialog.h \
     src/keychainbackupdialog.h \
@@ -121,6 +124,9 @@ SOURCES = \
     src/scriptmodel.cpp \
     src/scriptview.cpp \
     src/scriptdialog.cpp \
+    src/signaturemodel.cpp \
+    src/signatureview.cpp \
+    src/signaturedialog.cpp \
     src/requestpaymentdialog.cpp \
     src/networksettingsdialog.cpp \
     src/keychainbackupdialog.cpp \
