@@ -2506,6 +2506,7 @@ std::shared_ptr<Tx> Vault::importTx(const std::string& filepath)
     std::shared_ptr<Tx> tx(new Tx());
     {
         boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
         odb::core::transaction t(db_->begin());
         ia >> *tx;
         tx = insertTx_unwrapped(tx);     
