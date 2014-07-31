@@ -228,6 +228,20 @@ void TxModel::update()
     for (auto& row: rows) appendRow(row.second.first);
 }
 
+bytes_t TxModel::getTxHash(int row) const
+{
+    LOGGER(trace) << "TxModel::getTxHash(" << row << ")" << std::endl;
+
+    if (row == -1 || row >= rowCount()) {
+        throw std::runtime_error(tr("Invalid row.").toStdString());
+    }
+
+    QStandardItem* txHashItem = item(row, 8);
+    uchar_vector txhash;
+    txhash.setHex(txHashItem->text().toStdString());
+    return txhash;
+}
+
 void TxModel::signTx(int row)
 {
     LOGGER(trace) << "TxModel::signTx(" << row << ")" << std::endl;

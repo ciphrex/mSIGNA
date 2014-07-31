@@ -28,8 +28,11 @@ public:
     TxModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent = nullptr);
 
     void setVault(CoinDB::Vault* vault);
+    CoinDB::Vault* getVault() const { return vault; }
     void setAccount(const QString& accountName);
     void update();
+
+    bytes_t getTxHash(int row) const;
 
     void signTx(int row);
     void sendTx(int row, CoinDB::SynchedVault* synchedVault);

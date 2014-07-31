@@ -44,6 +44,7 @@ signals:
 
 private slots:
     void updateCurrentTx(const QModelIndex& current, const QModelIndex& previous);
+    void showSignatureDialog();
     void signTx();
     void sendTx();
     void viewRawTx();
@@ -67,6 +68,7 @@ private:
 
     int currentRow;
 
+    QAction* signaturesAction;
     QAction* signTxAction;
     QAction* sendTxAction;
     QAction* viewRawTxAction;

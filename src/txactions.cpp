@@ -15,6 +15,7 @@
 #include "accountmodel.h"
 
 #include "rawtxdialog.h"
+#include "signaturedialog.h"
 
 #include "docdir.h"
 
@@ -44,8 +45,12 @@ TxActions::TxActions(TxModel* txModel, TxView* txView, AccountModel* accountMode
 void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /*previous*/)
 {
     currentRow = current.row();
-    if (m_txModel && currentRow != -1) {
-        QStandardItem* typeItem = m_txModel->item(currentRow, 6);
+    if (m_txModel && currentRow != -1)
+    {
+        QStandardItem* typeItem = m_txModel->item(currentRow, 2);
+        signaturesAction->setEnabled(typeItem->text() == tr("Send"));
+
+        typeItem = m_txModel->item(currentRow, 6);
         int type = typeItem->data(Qt::UserRole).toInt();
         if (type == CoinDB::Tx::UNSIGNED) {
             signTxAction->setEnabled(true);
@@ -92,6 +97,19 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
 void TxActions::updateVaultStatus()
 {
     insertRawTxFromFileAction->setEnabled(m_accountModel && m_accountModel->isOpen());
+}
+
+void TxActions::showSignatureDialog()
+{
+    try
+    {
+        SignatureDialog dlg(m_txModel->getVault(), m_txModel->getTxHash(currentRow));
+        dlg.exec();
+    }
+    catch (const std::exception& e)
+    {
+        emit error(e.what());
+    }
 }
 
 void TxActions::signTx()
@@ -252,6 +270,10 @@ void TxActions::deleteTx()
 
 void TxActions::createActions()
 {
+    signaturesAction = new QAction(tr("Signatures..."), this);
+    signaturesAction->setEnabled(false);
+    connect(signaturesAction, SIGNAL(triggered()), this, SLOT(showSignatureDialog()));
+
     signTxAction = new QAction(tr("Sign Transaction"), this);
     signTxAction->setEnabled(false);
     connect(signTxAction, SIGNAL(triggered()), this, SLOT(signTx()));
@@ -292,6 +314,7 @@ void TxActions::createActions()
 void TxActions::createMenus()
 {
     menu = new QMenu();
+    menu->addAction(signaturesAction);
     menu->addAction(signTxAction);
     menu->addAction(sendTxAction);
     menu->addSeparator();
