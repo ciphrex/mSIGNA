@@ -137,6 +137,7 @@ EC_KEY* secp256k1_key::setPubKey(const bytes_t& pubkey)
 
     const unsigned char* pBegin = (unsigned char*)&pubkey[0];
     if (!o2i_ECPublicKey(&pKey, &pBegin, pubkey.size())) throw std::runtime_error("secp256k1_key::setPubKey() : o2i_ECPublicKey failed.");
+    bSet = true;
     return pKey;
 }
 
@@ -153,11 +154,10 @@ bytes_t CoinCrypto::secp256k1_sign(const secp256k1_key& key, const bytes_t& data
 }
 
 // Verification function
-bool secp256k1_verify(const secp256k1_key& key, const bytes_t& data, const bytes_t& signature)
+bool CoinCrypto::secp256k1_verify(const secp256k1_key& key, const bytes_t& data, const bytes_t& signature)
 {
-    return false;
+    return (ECDSA_verify(0, (const unsigned char*)&data[0], data.size(), (const unsigned char*)&signature[0], signature.size(), key.getKey()) != 0);
 }
-
 
 secp256k1_point::secp256k1_point(const secp256k1_point& source)
 {
