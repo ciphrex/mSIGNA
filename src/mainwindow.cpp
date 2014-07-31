@@ -1223,11 +1223,23 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
         try {
             CreateTxDialog::status_t status = dlg.getStatus();
             bool sign = status == CreateTxDialog::SIGN_AND_SEND || status == CreateTxDialog::SIGN_AND_SAVE;
-            std::shared_ptr<CoinDB::Tx> tx = accountModel->createTx(dlg.getAccountName(), dlg.getInputTxOutIds(), dlg.getTxOuts(), dlg.getFeeValue());
-            tx = accountModel->insertTx(tx, sign);
+            std::shared_ptr<CoinDB::Tx> tx = accountModel->getVault()->createTx(
+                dlg.getAccountName().toStdString(),
+                1,
+                0,
+                dlg.getInputTxOutIds(),
+                dlg.getTxOuts(),
+                dlg.getFeeValue(),
+                0,
+                true);
+            if (!tx) throw std::runtime_error("Error creating transaction.");
+
             saved = true;
-            txModel->update();
-            txView->update();
+            if (sign)
+            {
+                std::vector<std::string> keychains;
+                tx = accountModel->getVault()->signTx(tx->id(), keychains, true);
+            }
             tabWidget->setCurrentWidget(txView);
             if (status == CreateTxDialog::SIGN_AND_SEND) {
                 // TODO: Clean up signing and sending code
@@ -1239,14 +1251,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 }
                 Coin::Transaction coin_tx = tx->toCoinCore();
                 synchedVault.sendTx(coin_tx);
-                //networkSync.sendTx(coin_tx);
-
-                // TODO: Check transaction has propagated before changing status
-                tx->updateStatus(CoinDB::Tx::PROPAGATED);
-                accountModel->getVault()->insertTx(tx);
             }
-            txModel->update();
-            txView->update();
             return;
         }
         catch (const exception& e) {
