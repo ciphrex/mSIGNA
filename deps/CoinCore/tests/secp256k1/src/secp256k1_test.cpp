@@ -21,10 +21,63 @@ int main(int argc, char* argv[])
         uchar_vector data(argv[1]);
         cout << "Using data " << data.getHex() << endl;
 
-        cout << "Creating new key..." << flush; 
+        cout << endl << "Creating new key..." << flush; 
         secp256k1_key key;
         key.newKey();
         cout << "done." << endl;
+
+        uchar_vector privkey = key.getPrivKey();
+        cout << "Private key: " << privkey.getHex() << endl;
+
+        uchar_vector pubkey = key.getPubKey();
+        cout << "Public key: " << pubkey.getHex() << endl;
+
+        cout << endl << "Signing data..." << flush;
+        uchar_vector sig = secp256k1_sign(key, data);
+        cout << "done." << endl;
+        cout << "Signature: " << sig.getHex() << endl;
+
+        cout << endl << "Verifying signature (should be valid)..." << flush;
+        if (secp256k1_verify(key, data, sig))  { cout << "valid." << endl; }
+        else                                    { cout << "invalid." << endl; }
+
+        cout << endl << "Creating public key object..." << flush;
+        secp256k1_key key2;
+        key2.setPubKey(pubkey);
+        cout << "done." << endl;
+
+        try
+        {
+            cout << "Trying to get private key (should fail)..." << flush;
+            privkey = key2.getPrivKey();
+            cout << "done." << endl;
+            cout << "Private key: " << privkey.getHex() << endl;
+        }
+        catch (const exception& e)
+        {
+            cout << "failed - " << e.what() << endl;
+        }
+
+        pubkey = key2.getPubKey();
+        cout << "Public key: " << pubkey.getHex() << endl;
+
+        cout << endl << "Verifying signature (should be valid)..." << flush;
+        if (secp256k1_verify(key2, data, sig))  { cout << "valid." << endl; }
+        else                                    { cout << "invalid." << endl; }
+
+        cout << endl << "Creating new key..." << flush;
+        key.newKey();
+        cout << "done." << endl;
+
+        privkey = key.getPrivKey();
+        cout << "Private key: " << privkey.getHex() << endl;
+
+        pubkey = key.getPubKey();
+        cout << "Public key: " << pubkey.getHex() << endl;
+        
+        cout << endl << "Verifying old signature with new key (should be invalid)..." << flush;
+        if (secp256k1_verify(key, data, sig))   { cout << "valid." << endl; }
+        else                                    { cout << "invalid." << endl; }
     }
     catch (const exception& e)
     {
