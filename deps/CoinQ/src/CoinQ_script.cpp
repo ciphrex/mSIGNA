@@ -374,6 +374,20 @@ std::vector<bytes_t> Script::missingsigs() const
     return missingsigs;
 }
 
+std::vector<bytes_t> Script::presentsigs() const
+{
+    std::vector<bytes_t> presentsigs;
+
+    unsigned int i = 0;
+    for (auto& sig: sigs_)
+    {
+        if (!sig.empty()) { presentsigs.push_back(pubkeys_[i]); }
+        i++;
+    }
+
+    return presentsigs;
+}
+
 bool Script::addSig(const bytes_t& pubkey, const bytes_t& sig)
 {
     unsigned int i = 0;
