@@ -198,7 +198,7 @@ Script::Script(type_t type, unsigned int minsigs, const std::vector<bytes_t>& pu
         
 }
 
-Script::Script(const bytes_t& txinscript)
+Script::Script(const bytes_t& txinscript, const bytes_t& signinghash, bool clearinvalidsigs)
 {
     std::vector<bytes_t> objects;
     unsigned int pos = 0;
@@ -430,6 +430,15 @@ unsigned int Script::mergesigs(const Script& other)
         }
     }
     return sigsadded;
+}
+
+void Signer::setTx(const Coin::Transaction& tx, bool clearinvalidsigs)
+{
+}
+
+std::vector<bytes_t> Signer::sign(const std::vector<secure_bytes_t>& privkeys)
+{
+    return std::vector<bytes_t>();
 }
 
 }

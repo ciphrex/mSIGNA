@@ -12,14 +12,12 @@
 #include "CoinQ_txs.h"
 
 #include <CoinCore/CoinNodeData.h>
+#include <CoinCore/typedefs.h>
 
 #include <utility>
 
 namespace CoinQ {
 namespace Script {
-
-// TODO: place this type into CoinQ or global namespace
-typedef std::vector<unsigned char> bytes_t;
 
 /*
  * opPushData - constructs an operator (of variable length) indicating nBytes of data follow.
@@ -82,7 +80,11 @@ class Script
 public:
     enum type_t { UNKNOWN, PAY_TO_PUBKEY, PAY_TO_PUBKEY_HASH, PAY_TO_MULTISIG_SCRIPT_HASH };
     Script(type_t type, unsigned int minsigs, const std::vector<bytes_t>& pubkeys, const std::vector<bytes_t>& sigs = std::vector<bytes_t>());
-    Script(const bytes_t& txinscript); // with 0-length placeholders for missing signatures
+
+    // If signinghash is empty, 0-length placeholders are expected in txinscript for missing signatures and no signatures are checked.
+    // If signinghash is not empty, all signatures are checked and 0-length placeholders are inserted as necessary.
+    // If clearinvalidsigs is true, invalid signatures are cleared. Otherwise, an exception is thrown if signatures are invalid.
+    explicit Script(const bytes_t& txinscript, const bytes_t& signinghash = bytes_t(), bool clearinvalidsigs = false);
 
     type_t type() const { return type_; }
     unsigned int minsigs() const { return minsigs_; }
@@ -119,6 +121,28 @@ private:
 
     bytes_t redeemscript_; // empty if type is not script hash
     bytes_t hash_;
+};
+
+
+class Signer
+{
+public:
+    Signer() : isSigned_(false) { }
+    explicit Signer(const Coin::Transaction& tx, bool clearinvalidsigs = false) { setTx(tx, clearinvalidsigs); }
+
+    void setTx(const Coin::Transaction& tx, bool clearinvalidsigs = false);
+    const Coin::Transaction& getTx() const { return tx_; }
+
+    // sign returns a vector of the pubkeys for which signatures were added.
+    std::vector<bytes_t> sign(const std::vector<secure_bytes_t>& privkeys);
+
+    bool isSigned() const { return isSigned_; }
+    const std::vector<Script>& getScripts() const { return scripts_; }
+
+private:
+    Coin::Transaction tx_;
+    bool isSigned_;
+    std::vector<Script> scripts_;
 };
 
 }
