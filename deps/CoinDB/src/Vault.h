@@ -12,6 +12,7 @@
 #include "Schema.h"
 #include "VaultExceptions.h"
 #include "SigningRequest.h"
+#include "SignatureInfo.h"
 
 #include <Signals/Signals.h>
 #include <Signals/SignalQueue.h>
@@ -137,6 +138,8 @@ public:
     void                                    deleteTx(unsigned long tx_id); // Throws TxNotFoundException.
     SigningRequest                          getSigningRequest(const bytes_t& hash, bool include_raw_tx = false) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     SigningRequest                          getSigningRequest(unsigned long tx_id, bool include_raw_tx = false) const; // Throws TxNotFoundException.
+    SignatureInfo                           getSignatureInfo(const bytes_t& hash) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException.
+    SignatureInfo                           getSignatureInfo(unsigned long tx_id) const; // Throws TxNotFoundException.
     // signTx tries only unsigned hashes for named keychains. If no keychains are named, tries all keychains. For signed hashes, signTx just returns the already signed transaction. Throws TxNotFoundException.
     std::shared_ptr<Tx>                     signTx(const bytes_t& hash, std::vector<std::string>& keychain_names, bool update = false);
     std::shared_ptr<Tx>                     signTx(unsigned long tx_id, std::vector<std::string>& keychain_names, bool update = false);
@@ -252,6 +255,7 @@ protected:
     void                                    deleteTx_unwrapped(std::shared_ptr<Tx> tx);
     void                                    updateTx_unwrapped(std::shared_ptr<Tx> tx);
     SigningRequest                          getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
+    SignatureInfo                           getSignatureInfo_unwrapped(std::shared_ptr<Tx> tx) const;
     unsigned int                            signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::string>& keychain_names); // Tries to sign as many as it can with the unlocked keychains.
     void                                    exportTxs_unwrapped(boost::archive::text_oarchive& oa, uint32_t minheight) const;
     void                                    importTxs_unwrapped(boost::archive::text_iarchive& ia);

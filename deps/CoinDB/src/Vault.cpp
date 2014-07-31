@@ -2259,6 +2259,65 @@ SigningRequest Vault::getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool i
     return SigningRequest(tx->hash(), sigs_needed, keychain_info, rawtx);
 }
 
+SignatureInfo Vault::getSignatureInfo(const bytes_t& hash) const
+{
+    LOGGER(trace) << "Vault::getSignatureInfo(" << uchar_vector(hash).getHex() << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == hash || odb::query<Tx>::unsigned_hash == hash));
+    if (r.empty()) throw TxNotFoundException(hash);
+
+    std::shared_ptr<Tx> tx(r.begin().load());
+    return getSignatureInfo_unwrapped(tx);
+}
+
+SignatureInfo Vault::getSignatureInfo(unsigned long tx_id) const
+{
+    LOGGER(trace) << "Vault::getSignatureInfo(" << tx_id << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::id == tx_id));
+    if (r.empty()) throw TxNotFoundException();
+
+    std::shared_ptr<Tx> tx(r.begin().load());
+    return getSignatureInfo_unwrapped(tx);
+}
+
+SignatureInfo Vault::getSignatureInfo_unwrapped(std::shared_ptr<Tx> tx) const
+{
+    unsigned int sigs_needed = tx->missingSigCount();
+    std::set<bytes_t> presentSigPubkeys = tx->presentSigPubkeys();
+    std::set<bytes_t> missingSigPubkeys = tx->missingSigPubkeys();
+    std::set<SignatureInfo::keychain_info_t> present_signers;
+    std::set<SignatureInfo::keychain_info_t> missing_signers;
+    {
+        odb::result<Key> key_r(db_->query<Key>(odb::query<Key>::pubkey.in_range(presentSigPubkeys.begin(), presentSigPubkeys.end())));
+        for (auto& keychain: key_r)
+        {
+            std::shared_ptr<Keychain> root_keychain(keychain.root_keychain());
+            present_signers.insert(std::make_pair(root_keychain->name(), root_keychain->hash()));
+        }
+    }
+    {
+        odb::result<Key> key_r(db_->query<Key>(odb::query<Key>::pubkey.in_range(missingSigPubkeys.begin(), missingSigPubkeys.end())));
+        for (auto& keychain: key_r)
+        {
+            std::shared_ptr<Keychain> root_keychain(keychain.root_keychain());
+            missing_signers.insert(std::make_pair(root_keychain->name(), root_keychain->hash()));
+        }
+    }
+
+    return SignatureInfo(sigs_needed, present_signers, missing_signers);
+}
+
 std::shared_ptr<Tx> Vault::signTx(const bytes_t& hash, std::vector<std::string>& keychain_names, bool update)
 {
     LOGGER(trace) << "Vault::signTx(" << uchar_vector(hash).getHex() << ", [" << stdutils::delimited_list(keychain_names, ", ") << "], " << (update ? "update" : "no update") << ")" << std::endl;
