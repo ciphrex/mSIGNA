@@ -2458,14 +2458,13 @@ std::shared_ptr<Tx> Vault::exportTx(const bytes_t& hash, const std::string& file
     boost::lock_guard<boost::mutex> lock(mutex);
 #endif
 
-    //TODO: disable opetation if file is already open
-    std::ofstream ofs(filepath);
-    boost::archive::text_oarchive oa(ofs);
-
-    odb::core::session s;
-    odb::core::transaction t(db_->begin());
-    std::shared_ptr<Tx> tx = getTx_unwrapped(hash);
-    oa << *tx;
+    std::shared_ptr<Tx> tx;
+    {
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = getTx_unwrapped(hash);
+    }
+    exportTx(tx, filepath);
     return tx;
 }
 
@@ -2477,15 +2476,24 @@ std::shared_ptr<Tx> Vault::exportTx(unsigned long tx_id, const std::string& file
     boost::lock_guard<boost::mutex> lock(mutex);
 #endif
 
+    std::shared_ptr<Tx> tx;
+    {
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = getTx_unwrapped(tx_id);
+    }
+    exportTx(tx, filepath);
+    return tx;
+}
+
+void Vault::exportTx(std::shared_ptr<Tx> tx, const std::string& filepath) const
+{
+    LOGGER(trace) << "Vault::exportTx(tx: " << uchar_vector(tx->hash()).getHex()  << ", " << filepath << ")" << std::endl;
+
     //TODO: disable opetation if file is already open
     std::ofstream ofs(filepath);
     boost::archive::text_oarchive oa(ofs);
-
-    odb::core::session s;
-    odb::core::transaction t(db_->begin());
-    std::shared_ptr<Tx> tx = getTx_unwrapped(tx_id);
     oa << *tx;
-    return tx;
 }
 
 std::shared_ptr<Tx> Vault::importTx(const std::string& filepath)
