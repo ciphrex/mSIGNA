@@ -2450,6 +2450,64 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
     return sigsadded;
 }
 
+std::shared_ptr<Tx> Vault::exportTx(const bytes_t& hash, const std::string& filepath) const
+{
+    LOGGER(trace) << "Vault::exportTx(" << uchar_vector(hash).getHex() << ", " << filepath << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+
+    //TODO: disable opetation if file is already open
+    std::ofstream ofs(filepath);
+    boost::archive::text_oarchive oa(ofs);
+
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Tx> tx = getTx_unwrapped(hash);
+    oa << *tx;
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::exportTx(unsigned long tx_id, const std::string& filepath) const
+{
+    LOGGER(trace) << "Vault::exportTx(" << tx_id << ", " << filepath << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+
+    //TODO: disable opetation if file is already open
+    std::ofstream ofs(filepath);
+    boost::archive::text_oarchive oa(ofs);
+
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Tx> tx = getTx_unwrapped(tx_id);
+    oa << *tx;
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::importTx(const std::string& filepath)
+{
+    LOGGER(trace) << "Vault::importTx(" << filepath << ")" << std::endl;
+
+    std::ifstream ifs(filepath);
+    boost::archive::text_iarchive ia(ifs);
+
+    std::shared_ptr<Tx> tx(new Tx());
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::transaction t(db_->begin());
+        ia >> *tx;
+        tx = insertTx_unwrapped(tx);     
+        if (tx) { t.commit(); }
+    }
+
+    signalQueue.flush();
+    return tx;
+}
+
 void Vault::exportTxs(const std::string& filepath, uint32_t minheight) const
 {
     LOGGER(trace) << "Vault::exportTxs(" << filepath << ", " << minheight << ")" << std::endl;

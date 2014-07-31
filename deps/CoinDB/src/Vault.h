@@ -143,6 +143,10 @@ public:
     // signTx tries only unsigned hashes for named keychains. If no keychains are named, tries all keychains. For signed hashes, signTx just returns the already signed transaction. Throws TxNotFoundException.
     std::shared_ptr<Tx>                     signTx(const bytes_t& hash, std::vector<std::string>& keychain_names, bool update = false);
     std::shared_ptr<Tx>                     signTx(unsigned long tx_id, std::vector<std::string>& keychain_names, bool update = false);
+
+    std::shared_ptr<Tx>                     exportTx(const bytes_t& hash, const std::string& filepath) const;
+    std::shared_ptr<Tx>                     exportTx(unsigned long tx_id, const std::string& filepath) const;
+    std::shared_ptr<Tx>                     importTx(const std::string& filepath);
     void                                    exportTxs(const std::string& filepath, uint32_t minheight = 0) const;
     void                                    importTxs(const std::string& filepath);
 
@@ -257,6 +261,7 @@ protected:
     SigningRequest                          getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
     SignatureInfo                           getSignatureInfo_unwrapped(std::shared_ptr<Tx> tx) const;
     unsigned int                            signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::string>& keychain_names); // Tries to sign as many as it can with the unlocked keychains.
+
     void                                    exportTxs_unwrapped(boost::archive::text_oarchive& oa, uint32_t minheight) const;
     void                                    importTxs_unwrapped(boost::archive::text_iarchive& ia);
 
