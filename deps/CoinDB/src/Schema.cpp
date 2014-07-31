@@ -1114,6 +1114,19 @@ std::set<bytes_t> Tx::missingSigPubkeys() const
     return pubkeys;
 }
 
+std::set<bytes_t> Tx::presentSigPubkeys() const
+{
+    using namespace CoinQ::Script;
+    std::set<bytes_t> pubkeys;
+    for (auto& txin: txins_)
+    {
+        Script script(txin->script());
+        std::vector<bytes_t> txinpubkeys = script.presentsigs();
+        for (auto& txinpubkey: txinpubkeys) { pubkeys.insert(txinpubkey); }
+    } 
+    return pubkeys;
+}
+
 std::string Tx::toJson(bool includeRawHex) const
 {
     std::stringstream ss;

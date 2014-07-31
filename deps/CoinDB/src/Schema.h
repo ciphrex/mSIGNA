@@ -1091,6 +1091,7 @@ public:
 
     unsigned int missingSigCount() const;
     std::set<bytes_t> missingSigPubkeys() const;
+    std::set<bytes_t> presentSigPubkeys() const;
 
     std::string toJson(bool includeRawHex = false) const;
 
