@@ -41,13 +41,6 @@ enum ScriptType {
     SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH
 };
 
-/*
-const unsigned char SIGHASH_ALL             = 0x01;
-const unsigned char SIGHASH_NONE            = 0x02;
-const unsigned char SIGHASH_SINGLE          = 0x03;
-const unsigned char SIGHASH_ANYONECANPAY    = 0x80;
-*/
-
 enum SigHashType {
     SIGHASH_ALL             = 0x01,
     SIGHASH_NONE            = 0x02,
