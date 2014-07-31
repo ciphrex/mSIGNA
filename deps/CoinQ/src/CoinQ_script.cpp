@@ -271,7 +271,6 @@ Script::Script(const bytes_t& txinscript, const bytes_t& signinghash, bool clear
 
         if (signinghash.empty())
         {
-            if (pubkeys_.size() > sigs_.size()) throw std::runtime_error("Missing placeholders for nonsigning keys.");
             sigs_ = sigs;
         }
         else
@@ -481,12 +480,28 @@ unsigned int Script::mergesigs(const Script& other)
 void Signer::setTx(const Coin::Transaction& tx, bool clearinvalidsigs)
 {
     tx_ = tx;
-/*
-    for (auto& txin: tx_.txins)
+    tx_.clearScriptSigs();
+
+    Coin::Transaction txCopy = tx_;
+
+    scripts_.clear();
+    unsigned int i = 0;
+    for (auto& txin: tx.inputs)
     {
-        Script script(txin.scriptSig, 
+        bytes_t signinghash;
+        {
+            Script script(txin.scriptSig);
+            txCopy.inputs[i].scriptSig = script.txinscript(Script::SIGN);
+            signinghash = txCopy.getHashWithAppendedCode(0);
+            txCopy.inputs[i].scriptSig.clear();
+        }
+        {
+            Script script(txin.scriptSig, signinghash, clearinvalidsigs);
+            tx_.inputs[i].scriptSig = script.txinscript((script.sigsneeded() == 0) ? Script::BROADCAST : Script::EDIT);
+            scripts_.push_back(script);
+        }
+        i++;
     }
-*/
 }
 
 std::vector<bytes_t> Signer::sign(const std::vector<secure_bytes_t>& privkeys)
