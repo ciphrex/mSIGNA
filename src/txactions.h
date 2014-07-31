@@ -47,6 +47,8 @@ private slots:
     void showSignatureDialog();
     void signTx();
     void sendTx();
+    void exportTxToFile();
+    void importTxFromFile();
     void viewRawTx();
     void copyTxHashToClipboard();
     void copyRawTxToClipboard();
@@ -71,6 +73,8 @@ private:
     QAction* signaturesAction;
     QAction* signTxAction;
     QAction* sendTxAction;
+    QAction* exportTxToFileAction;
+    QAction* importTxFromFileAction;
     QAction* viewRawTxAction;
     QAction* copyTxHashToClipboardAction;
     QAction* copyRawTxToClipboardAction;
