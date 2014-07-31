@@ -25,8 +25,7 @@
 // Some portions taken from bitcoin/bitcoin,
 //      Copyright (c) 2009-2013 Satoshi Nakamoto, the Bitcoin developers
 
-#ifndef __SECP256K1_H_
-#define __SECP256K1_H_
+#pragma once
 
 #include <stdexcept>
 
@@ -46,11 +45,12 @@ public:
     secp256k1_key();
     ~secp256k1_key() { EC_KEY_free(pKey); }
 
-    EC_KEY* getKey() const { return bSet ? pKey : NULL; }
+    EC_KEY* getKey() const { return bSet ? pKey : nullptr; }
     EC_KEY* newKey();
     bytes_t getPrivKey() const;
-    EC_KEY* setPrivKey(const bytes_t& key);
+    EC_KEY* setPrivKey(const bytes_t& privkey);
     bytes_t getPubKey() const;
+    EC_KEY* setPubKey(const bytes_t& pubkey);
 
 private:
     EC_KEY* pKey;
@@ -58,6 +58,7 @@ private:
 };
 
 bytes_t secp256k1_sign(const secp256k1_key& key, const bytes_t& data);
+bool secp256k1_verify(const secp256k1_key& key, const bytes_t& data, const bytes_t& signature);
 
 
 class secp256k1_point
@@ -94,4 +95,3 @@ private:
 
 }
 
-#endif // __SECP256K1_H_1

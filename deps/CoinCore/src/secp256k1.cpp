@@ -96,9 +96,9 @@ bytes_t secp256k1_key::getPrivKey() const
     return bytes_t(privKey, privKey + 32);
 }
 
-EC_KEY* secp256k1_key::setPrivKey(const bytes_t& key)
+EC_KEY* secp256k1_key::setPrivKey(const bytes_t& privkey)
 {
-    BIGNUM* bn = BN_bin2bn(&key[0], key.size(), NULL);
+    BIGNUM* bn = BN_bin2bn(&privkey[0], privkey.size(), NULL);
     if (!bn) {
         throw std::runtime_error("secp256k1_key::setPrivKey() : BN_bin2bn failed.");
     }
@@ -131,6 +131,16 @@ bytes_t secp256k1_key::getPubKey() const
     return pubKey;
 }
 
+EC_KEY* secp256k1_key::setPubKey(const bytes_t& pubkey)
+{
+    if (pubkey.empty()) throw std::runtime_error("secp256k1_key::setPubKey() : pubkey is empty.");
+
+    const unsigned char* pBegin = (unsigned char*)&pubkey[0];
+    if (!o2i_ECPublicKey(&pKey, &pBegin, pubkey.size())) throw std::runtime_error("secp256k1_key::setPubKey() : o2i_ECPublicKey failed.");
+    return pKey;
+}
+
+
 // Signing function
 bytes_t CoinCrypto::secp256k1_sign(const secp256k1_key& key, const bytes_t& data)
 {
@@ -140,6 +150,12 @@ bytes_t CoinCrypto::secp256k1_sign(const secp256k1_key& key, const bytes_t& data
         throw std::runtime_error("secp256k1_sign(): ECDSA_sign failed.");
     }
     return bytes_t(signature, signature + nSize);
+}
+
+// Verification function
+bool secp256k1_verify(const secp256k1_key& key, const bytes_t& data, const bytes_t& signature)
+{
+    return false;
 }
 
 
