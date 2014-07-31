@@ -229,6 +229,8 @@ void TxActions::insertRawTxFromFile()
         std::shared_ptr<CoinDB::Tx> tx(new CoinDB::Tx());
         tx->set(uchar_vector(rawhex));
         tx = m_accountModel->insertTx(tx);
+        m_txModel->update();
+        m_txView->update();
     }
     catch (const std::exception& e) {
         emit error(e.what());
