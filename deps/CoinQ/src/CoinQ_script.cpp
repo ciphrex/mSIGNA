@@ -9,6 +9,9 @@
 #include "CoinQ_script.h"
 
 #include <CoinCore/Base58Check.h>
+#include <CoinCore/secp256k1.h>
+
+using namespace CoinCrypto;
 
 namespace CoinQ {
 namespace Script {
@@ -202,74 +205,117 @@ Script::Script(const bytes_t& txinscript, const bytes_t& signinghash, bool clear
 {
     std::vector<bytes_t> objects;
     unsigned int pos = 0;
-    while (pos < txinscript.size()) {
+    while (pos < txinscript.size())
+    {
         std::size_t size = getDataLength(txinscript, pos);
-        if (pos + size > txinscript.size()) {
-            throw std::runtime_error("Push operation exceeds data size.");
-        }
+        if (pos + size > txinscript.size()) throw std::runtime_error("Push operation exceeds data size.");
         objects.push_back(bytes_t(txinscript.begin() + pos, txinscript.begin() + pos + size));
         pos += size;
     }
 
-    if (objects.size() == 2) {
+    if (objects.size() == 2)
+    {
         type_ = PAY_TO_PUBKEY_HASH;
         pubkeys_.push_back(objects[1]);
         minsigs_ = 1;
         sigs_.push_back(objects[0]);
         hash_ = ripemd160(sha256(pubkeys_[0]));
     }
-    else if (objects.size() >= 3 && objects[0].empty()) {
+    else if (objects.size() >= 3 && objects[0].empty())
+    {
         // Parse redeemscript
         bytes_t redeemscript = objects.back();
+        if (redeemscript.size() < 3) throw std::runtime_error("Redeem script is too short.");
 
-        if (redeemscript.size() < 3) {
-            throw std::runtime_error("Redeem script is too short.");
-        }
+        // Get minsigs. Size opcode is offset by 0x50.
+        unsigned char byte = redeemscript[0];
+        if (byte < 0x51 || byte > 0x60) throw std::runtime_error("Invalid signature minimum.");
+        minsigs_ = byte - 0x50;
 
-        // size opcode is offset by 0x50
-        unsigned char minsigs = redeemscript[0];
-        if (minsigs < 0x51 || minsigs > 0x60) {
-            throw std::runtime_error("Invalid signature minimum.");
-        }
-
-        unsigned char numkeys = 0x50;
+        unsigned char numkeys = 0;
         unsigned int pos = 1;
-        while (true) {
-            unsigned char byte = redeemscript[pos++];
-            if (pos >= redeemscript.size()) {
-                throw std::runtime_error("Script terminates prematurely.");
-            }
-            if (byte >= 0x51 && byte <= 0x60) {
+        while (true)
+        {
+            byte = redeemscript[pos++];
+            if (pos >= redeemscript.size()) throw std::runtime_error("Script terminates prematurely.");
+
+            if (byte >= 0x51 && byte <= 0x60)
+            {
                 // Interpret byte as signature counter.
-                if (byte != numkeys) {
-                    throw std::runtime_error("Invalid signature count.");
-                }
-                if (numkeys < minsigs) {
-                    throw std::runtime_error("The required signature minimum exceeds the number of keys.");
-                }
+                if (byte - 0x50 != numkeys) throw std::runtime_error("Invalid public key count.");
+                if (numkeys < minsigs_) throw std::runtime_error("The required signature minimum exceeds the number of keys.");
+
                 // Redeemscript must terminate with OP_CHECKMULTISIG
-                if (redeemscript[pos++] != 0xae || pos > redeemscript.size()) {
-                    throw std::runtime_error("Invalid script termination.");
-                }
+                if (redeemscript[pos++] != 0xae || pos > redeemscript.size()) throw std::runtime_error("Invalid script termination.");
+
                 break;
             }
             // Interpret byte as pubkey size
-            if (byte > 0x4b || pos + byte > redeemscript.size()) {
+            if (byte > 0x4b || pos + byte > redeemscript.size())
+            {
                 std::stringstream err;
                 err << "Invalid OP at byte " << pos - 1 << ".";
                 throw std::runtime_error(err.str());
             }
             numkeys++;
-            if (numkeys > 0x60) {
-                throw std::runtime_error("Public key maximum of 16 exceeded.");
-            }
+            if (numkeys > 16) throw std::runtime_error("Public key maximum of 16 exceeded.");
+
             pubkeys_.push_back(bytes_t(redeemscript.begin() + pos, redeemscript.begin() + pos + byte));
             pos += byte;
         }
 
         type_ = PAY_TO_MULTISIG_SCRIPT_HASH;
-        minsigs_ = minsigs - 0x50;
-        sigs_.assign(objects.begin() + 1, objects.end() - 1);
+        std::vector<bytes_t> sigs;
+        sigs.assign(objects.begin() + 1, objects.end() - 1);
+        if (sigs.size() > pubkeys_.size()) throw std::runtime_error("Too many signatures.");
+
+        if (signinghash.empty())
+        {
+            if (pubkeys_.size() > sigs_.size()) throw std::runtime_error("Missing placeholders for nonsigning keys.");
+            sigs_ = sigs;
+        }
+        else
+        {
+            // Validate signatures.
+            sigs_.clear();
+            unsigned int iSig = 0;
+            unsigned int nValidSigs = 0;
+            for (auto& pubkey: pubkeys_)
+            {
+                // If we already have enough valid signatures or there are no more signatures or signature is a placeholder
+                if (nValidSigs == minsigs_ || iSig >= sigs.size() || sigs[iSig].empty())
+                {
+                    // Add or keep placeholder.
+                    sigs_.push_back(bytes_t());
+                    iSig++;
+                }
+                else
+                {
+                    // TODO: add support for other hash types.
+                    if (sigs[iSig].back() != 0) throw std::runtime_error("Unsupported hash type.");
+
+                    // Remove hash type byte.
+                    bytes_t signature(sigs[iSig].begin(), sigs[iSig].end() - 1);
+
+                    // Verify signature.
+                    secp256k1_key key;
+                    key.setPubKey(pubkey);
+                    if (secp256k1_verify(key, signinghash, signature))
+                    {
+                        // Signature is valid. Keep it.
+                        sigs_.push_back(sigs[iSig]);
+                        iSig++;
+                        nValidSigs++;
+                    }
+                    else
+                    {
+                        // Signature is invalid. Add placeholder for this pubkey and test it for next pubkey
+                        sigs_.push_back(bytes_t());
+                    }
+                }
+            }
+            if (!clearinvalidsigs && iSig < sigs.size()) throw std::runtime_error("Invalid signature.");
+        }
         redeemscript_ = redeemscript;
         hash_ = ripemd160(sha256(redeemscript));
     }
@@ -434,6 +480,13 @@ unsigned int Script::mergesigs(const Script& other)
 
 void Signer::setTx(const Coin::Transaction& tx, bool clearinvalidsigs)
 {
+    tx_ = tx;
+/*
+    for (auto& txin: tx_.txins)
+    {
+        Script script(txin.scriptSig, 
+    }
+*/
 }
 
 std::vector<bytes_t> Signer::sign(const std::vector<secure_bytes_t>& privkeys)
