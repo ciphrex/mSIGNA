@@ -189,6 +189,9 @@ void TxActions::importTxFromFile()
 
         std::shared_ptr<CoinDB::Tx> tx = m_accountModel->getVault()->importTx(fileName.toStdString());
         if (!tx) throw std::runtime_error("Transaction not inserted.");
+        m_accountModel->update();
+        m_txModel->update();
+        m_txView->update();
     }
     catch (const std::exception& e) {
         emit error(e.what());
@@ -236,7 +239,7 @@ void TxActions::saveRawTxToFile()
 {
     try {
         std::shared_ptr<CoinDB::Tx> tx = m_txModel->getTx(currentRow);
-        QString fileName = QString::fromStdString(uchar_vector(tx->hash()).getHex()) + ".tx";
+        QString fileName = QString::fromStdString(uchar_vector(tx->hash()).getHex()) + ".rawtx";
         fileName = QFileDialog::getSaveFileName(
             nullptr,
             tr("Save Raw Transaction"),
@@ -343,13 +346,13 @@ void TxActions::createActions()
     sendTxAction->setEnabled(false);
     connect(sendTxAction, SIGNAL(triggered()), this, SLOT(sendTx()));
 
-    exportTxToFileAction = new QAction(tr("Save Transaction To File..."), this);
+    exportTxToFileAction = new QAction(tr("Export Transaction To File..."), this);
     exportTxToFileAction->setEnabled(false);
     connect(exportTxToFileAction, SIGNAL(triggered()), this, SLOT(exportTxToFile()));
 
     importTxFromFileAction = new QAction(tr("Import Transaction From File..."), this);
     importTxFromFileAction->setEnabled(false);
-    connect(importTxFromFileAction, SIGNAL(triggered()), this, SLOT(importTxToFile()));
+    connect(importTxFromFileAction, SIGNAL(triggered()), this, SLOT(importTxFromFile()));
 
     viewRawTxAction = new QAction(tr("View Raw Transaction"), this);
     viewRawTxAction->setEnabled(false);
