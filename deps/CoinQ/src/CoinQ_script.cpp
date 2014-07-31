@@ -291,7 +291,7 @@ Script::Script(const bytes_t& txinscript, const bytes_t& signinghash, bool clear
                 else
                 {
                     // TODO: add support for other hash types.
-                    if (sigs[iSig].back() != 0) throw std::runtime_error("Unsupported hash type.");
+                    if (sigs[iSig].back() != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
 
                     // Remove hash type byte.
                     bytes_t signature(sigs[iSig].begin(), sigs[iSig].end() - 1);
@@ -492,7 +492,7 @@ void Signer::setTx(const Coin::Transaction& tx, bool clearinvalidsigs)
         {
             Script script(txin.scriptSig);
             txCopy.inputs[i].scriptSig = script.txinscript(Script::SIGN);
-            signinghash = txCopy.getHashWithAppendedCode(0);
+            signinghash = txCopy.getHashWithAppendedCode(SIGHASH_ALL);
             txCopy.inputs[i].scriptSig.clear();
         }
         {
