@@ -66,6 +66,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     {
         LOGGER(trace) << "P2P network connection opened." << std::endl;
         m_bConnected = true;
+        updateStatus(STARTING);
     });
 
     m_networkSync.subscribeClose([this]()
@@ -136,14 +137,31 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_networkSync.subscribeFetchingBlocks([this]()
     {
         LOGGER(trace) << "P2P fetching blocks." << std::endl;
-        updateStatus(FETCHING_BLOCKS);
+        
+        if (m_vault)
+        {        
+            updateStatus(FETCHING_BLOCKS);
+        }
+        else
+        {
+            m_networkSync.stopSyncBlocks();
+            updateStatus(SYNCHED);
+        }
     });
 
     m_networkSync.subscribeBlocksSynched([this]()
     {
         LOGGER(trace) << "Block sync complete." << std::endl;
-        LOGGER(info) << "Fetching mempool." << std::endl;
-        m_networkSync.getMempool();
+
+        {
+            std::lock_guard<std::mutex> lock(m_vaultMutex);
+            if (m_vault)
+            {
+                LOGGER(info) << "Fetching mempool." << std::endl;
+                m_networkSync.getMempool();
+            }
+        }
+
         updateStatus(SYNCHED);
     });
 
