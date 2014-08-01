@@ -116,8 +116,15 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
         try
         {
-            LOGGER(trace) << "Attempting to sync blocks." << std::endl;
-            syncBlocks();
+            if (m_vault)
+            {
+                LOGGER(trace) << "Attempting to sync blocks." << std::endl;
+                syncBlocks();
+            }
+            else
+            {
+                updateStatus(SYNCHED);
+            }
         }
         catch (const std::exception& e)
         {
