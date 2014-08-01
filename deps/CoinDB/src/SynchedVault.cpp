@@ -352,6 +352,8 @@ void SynchedVault::syncBlocks()
         return;
     }
 
+    updateBloomFilter();
+
     std::vector<bytes_t> locatorHashes = m_vault->getLocatorHashes();
     m_bInsertMerkleBlocks = true;
     m_networkSync.syncBlocks(locatorHashes, startTime);
