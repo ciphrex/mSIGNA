@@ -831,6 +831,8 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
 
 void MainWindow::refreshAccounts()
 {
+    LOGGER(trace) << "MainWindow::refreshAccounts()" << std::endl;
+
     accountModel->update();
     //accountView->update();
 
