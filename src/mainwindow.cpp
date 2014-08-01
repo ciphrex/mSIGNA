@@ -1425,8 +1425,8 @@ void MainWindow::startNetworkSync()
     try {
         QString message(tr("Connecting to ") + host + ":" + QString::number(port) + "...");
         updateStatusMessage(message);
+        networkStarted();
         synchedVault.startSync(host.toStdString(), port);
-        //networkSync.start(host.toStdString(), port);
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::startNetworkSync - " << e.what() << std::endl;
