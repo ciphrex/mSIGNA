@@ -254,16 +254,16 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
 {
     boost::filesystem::path p(filename);
     if (!boost::filesystem::exists(p)) {
-        throw std::runtime_error("File not found.");
+        throw std::runtime_error("Blocktree file not found.");
     }
 
     if (!boost::filesystem::is_regular_file(p)) {
-        throw std::runtime_error("Invalid file type.");
+        throw std::runtime_error("Blocktree invalid file type.");
     }
 
     const unsigned int RECORD_SIZE = MIN_COIN_BLOCK_HEADER_SIZE + 4;
     if (boost::filesystem::file_size(p) % RECORD_SIZE != 0) {
-        throw std::runtime_error("Invalid file length.");
+        throw std::runtime_error("Blocktree invalid file length.");
     }
 
 #ifndef _WIN32
@@ -272,7 +272,7 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
     std::ifstream fs(filename, std::ios::binary);
 #endif
     if (!fs.good()) {
-        throw std::runtime_error("Error opening file for read.");
+        throw std::runtime_error("Blocktree error opening file for read.");
     }
 
     clear();
@@ -286,7 +286,7 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
     while (fs) {
         fs.read(buf, RECORD_SIZE * 64);
         if (fs.bad()) {
-            throw std::runtime_error("Read failure.");
+            throw std::runtime_error("Blocktree file read failure.");
         }
 
         unsigned int nbytesread = fs.gcount();
@@ -296,7 +296,7 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
             header.setSerialized(headerBytes);
             hash = header.getHashLittleEndian();
             if (memcmp(&buf[pos + MIN_COIN_BLOCK_HEADER_SIZE], &hash[0], 4)) {
-                throw std::runtime_error("Checksum error in file.");
+                throw std::runtime_error("Blocktree checksum error in file.");
             }
 
             try {
@@ -319,7 +319,7 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
             }
         }
         if (pos != nbytesread) {
-            throw std::runtime_error("Unexpected end of file."); // Should never happen since length is checked above.
+            throw std::runtime_error("Blocktree unexpected end of file."); // Should never happen since length is checked above.
         }
     }
 }
