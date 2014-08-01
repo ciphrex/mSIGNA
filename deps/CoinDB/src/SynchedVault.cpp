@@ -123,6 +123,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
             }
             else
             {
+                m_networkSync.stopSyncBlocks();
                 updateStatus(SYNCHED);
             }
         }
@@ -328,7 +329,14 @@ void SynchedVault::closeVault()
         m_vault = nullptr;
         m_syncHeight = 0;
         m_notifySyncHeightChanged(m_syncHeight);
-        updateStatus(NOT_LOADED);
+        if (isConnected() && m_networkSync.headersSynched())
+        {
+            updateStatus(SYNCHED);
+        }
+        else
+        { 
+            updateStatus(NOT_LOADED);
+        }
     }
 }
 
