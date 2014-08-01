@@ -792,6 +792,22 @@ bool MainWindow::selectAccount(int i)
     return true;
 }
 
+bool MainWindow::selectAccount(const QString& account)
+{
+    // TODO: find a better implementation
+    for (int i = 0; i < accountModel->rowCount(); i++)
+    {
+        QStandardItem* item = accountModel->item(i, 0);
+        if (item->text() == account)
+        {
+            QItemSelection selection(accountModel->index(i, 0), accountModel->index(i, accountModel->columnCount() - 1));
+            accountView->selectionModel()->select(selection, QItemSelectionModel::SelectCurrent);
+            return true;
+        }
+    }
+    return false;
+}
+
 void MainWindow::updateCurrentAccount(const QModelIndex& /*current*/, const QModelIndex& /*previous*/)
 {
 /*
@@ -945,17 +961,18 @@ void MainWindow::importAccount(QString fileName)
     }
 
     try {
+        synchedVault.suspendBlockUpdates();
         updateStatusMessage(tr("Importing account..."));
         accountModel->importAccount(name, fileName);
         accountModel->update();
         accountView->update();
         keychainModel->update();
         keychainView->update();
+        selectAccount(name);
         tabWidget->setCurrentWidget(accountView);
         synchedVault.updateBloomFilter();
-        //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         updateStatusMessage(tr("Imported account ") + name);
-        //if (isConnected()) syncBlocks();
+        if (synchedVault.isConnected()) { synchedVault.syncBlocks(); }
         //promptSync();
     }
     catch (const exception& e) {
