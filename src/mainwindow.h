@@ -225,6 +225,7 @@ private:
     // selects account with index i. returns true iff account with that index exists and was selected.
     bool selectAccount(int i);
     bool selectAccount(const QString& account);
+    QString selectedAccount;
 
     CoinDB::SynchedVault synchedVault;
 

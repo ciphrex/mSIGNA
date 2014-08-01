@@ -825,14 +825,15 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
     QModelIndexList indexes = selectionModel->selectedRows(0);
     bool isSelected = indexes.size() > 0;
     if (isSelected) {
-        QString accountName = accountModel->data(indexes.at(0)).toString();
-        txModel->setAccount(accountName);
+        selectedAccount = accountModel->data(indexes.at(0)).toString();
+        txModel->setAccount(selectedAccount);
         txModel->update();
         txView->update();
-        tabWidget->setTabText(2, tr("Transactions - ") + accountName);
-        requestPaymentDialog->setCurrentAccount(accountName);
+        tabWidget->setTabText(2, tr("Transactions - ") + selectedAccount);
+        requestPaymentDialog->setCurrentAccount(selectedAccount);
     }
     else {
+        selectedAccount = "";
         tabWidget->setTabText(2, tr("Transactions"));
     }
     deleteAccountAction->setEnabled(isSelected);
@@ -849,11 +850,19 @@ void MainWindow::refreshAccounts()
 {
     LOGGER(trace) << "MainWindow::refreshAccounts()" << std::endl;
 
+    QString prevSelectedAccount = selectedAccount;
     accountModel->update();
     //accountView->update();
 
-    txModel->update();
-    txView->update();
+    if (prevSelectedAccount != selectedAccount)
+    {
+        selectAccount(prevSelectedAccount);
+    }
+    else
+    {
+        txModel->update();
+        txView->update();
+    }
 }
 
 void MainWindow::quickNewAccount()
