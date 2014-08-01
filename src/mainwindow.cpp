@@ -474,9 +474,11 @@ void MainWindow::openVault(QString fileName)
 
     try
     {
+        synchedVault.suspendBlockUpdates();
         synchedVault.openVault(fileName.toStdString(), false);    
         updateVaultStatus(fileName);
         updateStatusMessage(tr("Opened ") + fileName);
+        if (synchedVault.isConnected()) { synchedVault.syncBlocks(); }
         //promptSync();
     }
     catch (const exception& e) {
