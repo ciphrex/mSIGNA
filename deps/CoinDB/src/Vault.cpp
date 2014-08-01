@@ -2046,7 +2046,7 @@ std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx
         boost::lock_guard<boost::mutex> lock(mutex);
         odb::core::session s;
         odb::core::transaction t(db_->begin());
-        std::shared_ptr<Tx> tx = createTx_unwrapped(account_name, tx_version, tx_locktime, coin_ids, txouts, fee, min_confirmations);
+        tx = createTx_unwrapped(account_name, tx_version, tx_locktime, coin_ids, txouts, fee, min_confirmations);
         if (insert)
         {
             tx = insertTx_unwrapped(tx);
