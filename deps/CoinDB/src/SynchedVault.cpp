@@ -319,8 +319,8 @@ void SynchedVault::closeVault()
         delete m_vault;
     }
 
-    m_notifyVaultClosed();
     m_vault = nullptr;
+    m_notifyVaultClosed();
     updateSyncHeight(0);
     if (m_networkSync.connected() && m_networkSync.headersSynched()) { updateStatus(SYNCHED); }
 }
