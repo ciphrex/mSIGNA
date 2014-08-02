@@ -43,8 +43,8 @@ public:
     void openVault(const std::string& dbname, bool bCreate = false);
     void openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate = false);
     void closeVault();
-    bool isVaultOpen() { return (m_vault != nullptr); }
-    Vault* getVault() { return m_vault; }
+    bool isVaultOpen() const { return (m_vault != nullptr); }
+    Vault* getVault() const { return m_vault; }
 
     void startSync(const std::string& host, const std::string& port);
     void startSync(const std::string& host, int port);
