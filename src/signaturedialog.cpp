@@ -20,7 +20,7 @@
 SignatureDialog::SignatureDialog(CoinDB::Vault* vault, const bytes_t& txHash, QWidget* parent)
     : QDialog(parent)
 {
-    resize(QSize(800, 400));
+    resize(QSize(600, 200));
 
     m_model = new SignatureModel(vault, txHash, this);
     m_model->update();
