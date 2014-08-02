@@ -2,19 +2,16 @@
 //
 // CoinQ_peer_io.h 
 //
-// Copyright (c) 2012-2013 Eric Lombrozo
+// Copyright (c) 2012-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef _COINQ_PEER_IO_H_
-#define _COINQ_PEER_IO_H_
+#pragma once
 
 #include "CoinQ_signals.h"
 #include "CoinQ_slots.h"
 
 #include <CoinCore/numericdata.h>
-
-#include <iostream>
 
 #include <queue>
 
@@ -44,7 +41,6 @@ typedef boost::asio::ip::tcp tcp;
 class Peer;
 
 typedef std::function<void(Peer&)>                                  peer_slot_t;
-typedef std::function<void(Peer&, int, const std::string&)>         peer_closed_slot_t;
 typedef std::function<void(Peer&, const std::string&)>              peer_error_slot_t;
 
 typedef std::function<void(Peer&, const Coin::CoinNodeMessage&)>    peer_message_slot_t;
@@ -60,7 +56,7 @@ class Peer
 {
 public:
     Peer(io_service_t& io_service, const std::string& host = "", const std::string& port = "", uint32_t magic_bytes = 0, uint32_t protocol_version = 0, const std::string& user_agent = std::string(), uint32_t start_height = 0, bool relay = true) :
-        io_service_(io_service),
+        //io_service_(io_service),
         strand_(io_service),
         resolver_(io_service),
         socket_(io_service),
@@ -105,7 +101,7 @@ public:
     void subscribeStop(peer_slot_t slot) { notifyStop.connect(slot); }
     void subscribeOpen(peer_slot_t slot) { notifyOpen.connect(slot); }
     void subscribeTimeout(peer_slot_t slot) { notifyTimeout.connect(slot); }
-    void subscribeClose(peer_closed_slot_t slot) { notifyClose.connect(slot); }
+    void subscribeClose(peer_slot_t slot) { notifyClose.connect(slot); }
     void subscribeError(peer_error_slot_t slot) { notifyError.connect(slot); }
 
     static const unsigned char DEFAULT_Ipv6[];
@@ -188,7 +184,7 @@ public:
 
 private:
     // ASIO environment
-    io_service_t& io_service_;
+    //io_service_t& io_service_;
     io_service_t::strand strand_;
     tcp::resolver resolver_;
     tcp::socket socket_;
@@ -229,7 +225,7 @@ private:
     CoinQSignal<Peer&>                                  notifyStart;
     CoinQSignal<Peer&>                                  notifyStop;
     CoinQSignal<Peer&>                                  notifyOpen;
-    CoinQSignal<Peer&, int, const std::string&>         notifyClose;
+    CoinQSignal<Peer&>                                  notifyClose;
     CoinQSignal<Peer&, const std::string&>              notifyError;
 
     CoinQSignal<Peer&>                                  notifyTimeout;
@@ -247,8 +243,8 @@ private:
     void do_write(boost::shared_ptr<uchar_vector> data);
     void do_send(const Coin::CoinNodeMessage& message); // calls do_write from the strand thread 
     void do_handshake();
+    void do_stop();
 };
 
 }
 
-#endif // _COINQ_PEER_IO_H_
