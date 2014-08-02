@@ -2587,6 +2587,28 @@ std::shared_ptr<Tx> Vault::importTx(const std::string& filepath)
     return tx;
 }
 
+std::shared_ptr<Tx> Vault::importTxFromString(const std::string& txstr)
+{
+    LOGGER(trace) << "Vault::importTxFromString(...)" << std::endl;
+
+    std::stringstream ss;
+    ss << txstr;
+    boost::archive::text_iarchive ia(ss);
+
+    std::shared_ptr<Tx> tx(new Tx());
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        ia >> *tx;
+        tx = insertTx_unwrapped(tx);     
+        if (tx) { t.commit(); }
+    }
+
+    signalQueue.flush();
+    return tx;
+}
+
 void Vault::exportTxs(const std::string& filepath, uint32_t minheight) const
 {
     LOGGER(trace) << "Vault::exportTxs(" << filepath << ", " << minheight << ")" << std::endl;

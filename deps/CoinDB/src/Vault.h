@@ -153,6 +153,7 @@ public:
     std::string                             exportTx(unsigned long tx_id) const;
     std::string                             exportTx(std::shared_ptr<Tx> tx) const;
     std::shared_ptr<Tx>                     importTx(const std::string& filepath);
+    std::shared_ptr<Tx>                     importTxFromString(const std::string& txstr);
     void                                    exportTxs(const std::string& filepath, uint32_t minheight = 0) const;
     void                                    importTxs(const std::string& filepath);
 
