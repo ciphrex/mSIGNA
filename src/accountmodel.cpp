@@ -93,70 +93,7 @@ CoinDB::Vault* AccountModel::getVault() const
 {
     return m_synchedVault.getVault();
 } 
-/*
-void AccountModel::create(const QString& fileName)
-{
-    close ();
-    vault = new Vault(fileName.toStdString(), true);
-    emit updateSyncHeight(0);
-}
 
-void AccountModel::load(const QString& fileName)
-{
-    close();
-    vault = new Vault(fileName.toStdString(), false);
-    update();
-    emit updateSyncHeight(vault->getBestHeight());
-}
-
-void AccountModel::exportVault(const QString& fileName, bool exportPrivKeys) const
-{
-    if (!vault)
-    {
-        throw std::runtime_error("No vault is loaded.");
-    }
-
-    vault->exportVault(fileName.toStdString(), exportPrivKeys);
-}
-
-void AccountModel::importVault(const QString& fileName)
-{
-    if (!vault)
-    {
-        throw std::runtime_error("No vault is loaded.");
-    }
-
-    vault->importVault(fileName.toStdString());
-}
-
-void AccountModel::close()
-{
-    if (vault) {
-        delete vault;
-        vault = NULL;
-        update();
-
-        emit updateSyncHeight(0);
-    }
-}
-
-Coin::BloomFilter AccountModel::getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const
-{
-    if (!vault) return Coin::BloomFilter();
-    return vault->getBloomFilter(falsePositiveRate, nTweak, nFlags);
-}
-*/
-
-void AccountModel::newKeychain(const QString& name, const secure_bytes_t& entropy)
-{
-    CoinDB::Vault* vault = m_synchedVault.getVault();
-    if (!vault) {
-        throw std::runtime_error("No vault is loaded.");
-    }
-
-    vault->newKeychain(name.toStdString(), entropy);
-    update();
-}
 
 void AccountModel::newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames)
 {

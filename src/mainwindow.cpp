@@ -532,17 +532,14 @@ void MainWindow::newKeychain()
 
             if (keychainModel->exists(name)) throw std::runtime_error("A keychain with that name already exists.");
 
-            // TODO: Randomize using user input for entropy
-            statusBar()->showMessage("Obtaining entropy...please wait...");
-            LOGGER(debug) << "MainWindow::newKeychain - getting entropy for master key..." << std::endl;
-            secure_bytes_t entropy = random_bytes(32);
-            statusBar()->showMessage("");
-            LOGGER(debug) << "MainWindow::newKeychain - done getting entropy." << std::endl;
-            CoinDB::VaultLock lock(synchedVault);
-            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
-            synchedVault.getVault()->newKeychain(name.toStdString(), entropy);
-            //accountModel->newKeychain(name, entropy);
-            //accountModel->update();
+            {
+                // TODO: Randomize using user input for entropy
+                CoinDB::VaultLock lock(synchedVault);
+                if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+                secure_bytes_t entropy = getEntropy(32);
+                synchedVault.getVault()->newKeychain(name.toStdString(), entropy);
+            }
+
             keychainModel->update();
             keychainView->update();
             tabWidget->setCurrentWidget(keychainView);
@@ -851,6 +848,8 @@ void MainWindow::refreshAccounts()
 
 void MainWindow::quickNewAccount()
 {
+    if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
     QuickNewAccountDialog dlg(this);
     while (dlg.exec()) {
         try {
@@ -877,7 +876,10 @@ void MainWindow::quickNewAccount()
 
             for (auto& keychainName: keychainNames) {
                 // TODO: Randomize using user input for entropy
-                accountModel->newKeychain(keychainName, random_bytes(32));
+                CoinDB::VaultLock lock(synchedVault);
+                if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+                secure_bytes_t entropy = getEntropy(32);
+                synchedVault.getVault()->newKeychain(keychainName.toStdString(), entropy);
             }
 
             accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames);
@@ -1916,20 +1918,13 @@ void MainWindow::clearSettings()
 void MainWindow::loadVault(const QString &fileName)
 {
     synchedVault.openVault(fileName.toStdString(), false);
-/*
-    accountModel->load(fileName);
-    accountView->update();
-    keychainModel->setVault(accountModel->getVault());
-    keychainModel->update();
-    keychainView->update();
-    txModel->setVault(accountModel->getVault());
-    txModel->update();
-    txView->update();
-
-    newKeychainAction->setEnabled(true);
-*/
-    // TODO: Prompt user to unlock chain codes
     accountModel->getVault()->unlockChainCodes(uchar_vector("1234"));
+}
 
-    //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
+secure_bytes_t MainWindow::getEntropy(int bytes)
+{
+    statusBar()->showMessage("Obtaining entropy...please wait...");
+    secure_bytes_t entropy = random_bytes(bytes);
+    statusBar()->showMessage("");
+    return entropy;
 }
