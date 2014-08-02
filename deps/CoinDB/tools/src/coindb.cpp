@@ -583,11 +583,12 @@ cli::result_t cmd_txinfo(const cli::params_t& params)
     }
 
     stringstream ss;
-    ss << "status:      " << Tx::getStatusString(tx->status()) << endl
-       << "hash:        " << uchar_vector(tx->hash()).getHex() << endl
-       << "version:     " << tx->version() << endl
-       << "locktime:    " << tx->locktime() << endl
-       << "timestamp:   " << tx->timestamp();
+    ss << "status:        " << Tx::getStatusString(tx->status()) << endl
+       << "confirmations: " << vault.getTxConfirmations(tx) << endl
+       << "hash:          " << uchar_vector(tx->hash()).getHex() << endl
+       << "version:       " << tx->version() << endl
+       << "locktime:      " << tx->locktime() << endl
+       << "timestamp:     " << tx->timestamp();
 
     ss << endl << endl << formattedTxInHeader();
     for (auto& txin: tx->txins())
@@ -597,6 +598,26 @@ cli::result_t cmd_txinfo(const cli::params_t& params)
     for (auto& txout: tx->txouts())
         ss << endl << formattedTxOut(txout);
     
+    return ss.str();
+}
+
+cli::result_t cmd_txconf(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    uint32_t confirmations;
+    bytes_t hash = uchar_vector(params[1]);
+    if (hash.size() == 32)
+    {
+        confirmations = vault.getTxConfirmations(hash);
+    }
+    else
+    {
+        unsigned long tx_id = strtoul(params[1].c_str(), NULL, 0);
+        confirmations = vault.getTxConfirmations(tx_id);
+    }
+
+    stringstream ss;
+    ss << "confirmations: " << confirmations;
     return ss.str();
 }
 
@@ -1197,6 +1218,11 @@ int main(int argc, char* argv[])
         &cmd_txinfo,
         "txinfo",
         "display transaction information",
+        command::params(2, "db file", "tx hash or id")));
+    shell.add(command(
+        &cmd_txconf,
+        "txconf",
+        "display the number of confirmations a transaction has received",
         command::params(2, "db file", "tx hash or id")));
     shell.add(command(
         &cmd_rawtx,
