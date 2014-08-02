@@ -25,8 +25,6 @@ class SynchedVault
 public:
     enum status_t
     {
-        NOT_LOADED,
-        LOADED,
         STOPPED,
         STARTING,
         FETCHING_HEADERS,
@@ -64,34 +62,48 @@ public:
     std::shared_ptr<Tx> sendTx(unsigned long tx_id);
     void sendTx(Coin::Transaction& coin_tx);
 
+    // Signal types
+    typedef Signals::Signal<>                   VoidSignal;
+    typedef Signals::Signal<Vault*>             VaultSignal;
+    typedef Signals::Signal<const std::string&> ErrorSignal;
+    typedef Signals::Signal<status_t>           StatusSignal;
+    typedef Signals::Signal<uint32_t>           HeightSignal;
+
     // Vault state events
-    typedef Signals::Signal<Vault*> VaultSignal;
-    typedef Signals::Signal<> VoidSignal;
     Signals::Connection subscribeVaultOpened(VaultSignal::Slot slot) { return m_notifyVaultOpened.connect(slot); }
     Signals::Connection subscribeVaultClosed(VoidSignal::Slot slot) { return m_notifyVaultClosed.connect(slot); }
+    Signals::Connection subscribeVaultError(ErrorSignal::Slot slot) { return m_notifyVaultError.connect(slot); }
 
     // Sync state events
-    typedef Signals::Signal<status_t> StatusSignal;
-    typedef Signals::Signal<uint32_t> HeightSignal;
-    typedef Signals::Signal<const std::string&> ErrorSignal;
     Signals::Connection subscribeStatusChanged(StatusSignal::Slot slot) { return m_notifyStatusChanged.connect(slot); }
     Signals::Connection subscribeBestHeightChanged(HeightSignal::Slot slot) { return m_notifyBestHeightChanged.connect(slot); }
     Signals::Connection subscribeSyncHeightChanged(HeightSignal::Slot slot) { return m_notifySyncHeightChanged.connect(slot); }
-    Signals::Connection subscribeError(ErrorSignal::Slot slot) { return m_notifyError.connect(slot); }
+    Signals::Connection subscribeConnectionError(ErrorSignal::Slot slot) { return m_notifyConnectionError.connect(slot); }
 
     // P2P network state events
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
     Signals::Connection subscribeTxStatusChanged(TxSignal::Slot slot) { return m_notifyTxStatusChanged.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return m_notifyMerkleBlockInserted.connect(slot); }
+    Signals::Connection subscribeProtocolError(ErrorSignal::Slot slot) { return m_notifyProtocolError.connect(slot); }
+
     void clearAllSlots();
 
 private:
     friend class VaultLock;
 
-    Vault* m_vault;
+    mutable std::mutex          m_vaultMutex;
+    Vault*                      m_vault;
 
-    status_t m_status;
-    void updateStatus(status_t newStatus);
+    status_t                    m_status;
+    void                        updateStatus(status_t newStatus);
+
+    // Height of best known chain
+    uint32_t                    m_bestHeight;
+    void                        updateBestHeight(uint32_t bestHeight);
+
+    // Height of most recent block stored in vault
+    uint32_t                    m_syncHeight;
+    void                        updateSyncHeight(uint32_t syncHeight);
 
     CoinQ::Network::NetworkSync m_networkSync;
     std::string                 m_blockTreeFile;
@@ -99,26 +111,25 @@ private:
     bool                        m_bConnected;
     bool                        m_bSynching;
     bool                        m_bBlockTreeSynched;
-    uint32_t                    m_bestHeight;
-    uint32_t                    m_syncHeight;
 
     bool                        m_bInsertMerkleBlocks;
-    mutable std::mutex          m_vaultMutex;
 
     // Vault state events
     VaultSignal                 m_notifyVaultOpened;
     VoidSignal                  m_notifyVaultClosed;
+    ErrorSignal                 m_notifyVaultError;
 
     // Sync state events
     StatusSignal                m_notifyStatusChanged;
     HeightSignal                m_notifyBestHeightChanged;
     HeightSignal                m_notifySyncHeightChanged;
-    ErrorSignal                 m_notifyError;
+    ErrorSignal                 m_notifyConnectionError;
 
     // P2P network state events
     TxSignal                    m_notifyTxInserted;
     TxSignal                    m_notifyTxStatusChanged;
     MerkleBlockSignal           m_notifyMerkleBlockInserted;
+    ErrorSignal                 m_notifyProtocolError;
 };
 
 class VaultLock

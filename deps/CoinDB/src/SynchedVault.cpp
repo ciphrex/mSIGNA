@@ -18,10 +18,6 @@ const std::string SynchedVault::getStatusString(status_t status)
 {
     switch (status)
     {
-    case NOT_LOADED:
-        return "NOT_LOADED";
-    case LOADED:
-        return "LOADED";
     case STOPPED:
         return "STOPPED";
     case STARTING:
@@ -40,14 +36,15 @@ const std::string SynchedVault::getStatusString(status_t status)
 // Constructor
 SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_vault(nullptr),
-    m_status(NOT_LOADED),
+    m_status(STOPPED),
+    m_bestHeight(0),
+    m_syncHeight(0),
     m_networkSync(coinParams),
     m_bBlockTreeLoaded(false),
     m_bConnected(false),
     m_bSynching(false),
     m_bBlockTreeSynched(false),
-    m_bestHeight(0),
-    m_syncHeight(0)
+    m_bInsertMerkleBlocks(false)
 {
     LOGGER(trace) << "SynchedVault::SynchedVault()" << std::endl;
 
@@ -59,14 +56,13 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_networkSync.subscribeError([this](const std::string& error)
     {
         LOGGER(trace) << "P2P network error: " << error << std::endl;
-        m_notifyError(error);
+        //m_notifyProtocolError(error);
     });
 
     m_networkSync.subscribeOpen([this]()
     {
         LOGGER(trace) << "P2P network connection opened." << std::endl;
         m_bConnected = true;
-        updateStatus(STARTING);
     });
 
     m_networkSync.subscribeClose([this]()
@@ -79,26 +75,28 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeStarted([this]()
     {
+/*
         LOGGER(trace) << "P2P network sync started." << std::endl;
         m_bSynching = true;
         updateStatus(STARTING);
+*/
         //TODO: notify clients
     });
 
     m_networkSync.subscribeStopped([this]()
     {
+/*
         LOGGER(trace) << "P2P network sync stopped." << std::endl;
         m_bSynching = false;
         updateStatus(STOPPED);
+*/
         //TODO: notify clients
     });
 
     m_networkSync.subscribeTimeout([this]()
     {
         LOGGER(trace) << "P2P network sync timeout." << std::endl;
-        m_bConnected = false;
-        m_bSynching = false;
-        // TODO: notify clients
+        m_notifyConnectionError("Network timed out.");
     });
 
     m_networkSync.subscribeFetchingHeaders([this]()
@@ -111,9 +109,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     {
         LOGGER(trace) << "P2P headers sync complete." << std::endl;
         m_bBlockTreeSynched = true;
-        m_bestHeight = m_networkSync.getBestHeight();
-        m_notifyBestHeightChanged(m_bestHeight);
-        // TODO: notify clients
+        updateBestHeight(m_networkSync.getBestHeight());
 
         try
         {
@@ -167,9 +163,9 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
     {
-        //LOGGER(trace) << "P2P network added best chain. New best height: " << header.height << std::endl;
-        m_bestHeight = header.height;
-        m_notifyBestHeightChanged(m_bestHeight);
+        LOGGER(trace) << "P2P network added best chain. New best height: " << header.height << std::endl;
+
+        updateBestHeight(header.height);
     });
 
     m_networkSync.subscribeRemoveBestChain([this](const chain_header_t& header)
@@ -179,15 +175,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         if (diff >= 0)
         {
             LOGGER(trace) << "Reorganizing " << (diff + 1) << " blocks." << std::endl;
-            try
-            {
-                m_bestHeight = m_networkSync.getBestHeight();
-                m_notifyBestHeightChanged(m_bestHeight);
-            }
-            catch (const std::exception& e)
-            {
-                LOGGER(error) << e.what() << std::endl;
-            }
+            updateBestHeight(m_networkSync.getBestHeight());
         }
     });
 
@@ -208,6 +196,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         catch (const std::exception& e)
         {
             LOGGER(error) << e.what() << std::endl;
+            m_notifyVaultError(e.what());
         } 
     });
 
@@ -229,15 +218,16 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         catch (const std::exception& e)
         {
             LOGGER(error) << e.what() << std::endl;
+            m_notifyVaultError(e.what());
         }
     });
 
     m_networkSync.subscribeBlockTreeChanged([this]()
     {
         LOGGER(trace) << "P2P network block tree changed." << std::endl;
+
         m_bBlockTreeSynched = false;
-        m_bestHeight = m_networkSync.getBestHeight();
-        m_notifyBestHeightChanged(m_bestHeight);
+        updateBestHeight(m_networkSync.getBestHeight());
     });
 }
 
@@ -269,32 +259,20 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
         std::lock_guard<std::mutex> lock(m_vaultMutex);
         m_bInsertMerkleBlocks = false;
         m_notifyVaultClosed();
-        updateStatus(NOT_LOADED);
         if (m_vault) delete m_vault;
         m_vault = new Vault(dbname, bCreate);
-        m_syncHeight = m_vault->getBestHeight();
-        m_notifySyncHeightChanged(m_syncHeight);
+        updateSyncHeight(m_vault->getBestHeight());
         m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
         m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
         {
-            m_syncHeight = merkleblock->blockheader()->height();
-            m_notifySyncHeightChanged(m_syncHeight);
+            updateSyncHeight(merkleblock->blockheader()->height());
             m_notifyMerkleBlockInserted(merkleblock);
         });
     }
 
-    if (m_networkSync.connected())
-    {
-        updateStatus(LOADED);
-        if (m_networkSync.headersSynched()) { syncBlocks(); }
-    }
-    else
-    {
-        updateStatus(STOPPED);
-    }
-
     m_notifyVaultOpened(m_vault);
+    if (m_networkSync.connected() && m_networkSync.headersSynched()) { syncBlocks(); }
 }
 
 void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate)
@@ -304,58 +282,41 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
     {
         std::lock_guard<std::mutex> lock(m_vaultMutex);
         m_notifyVaultClosed();
-        updateStatus(NOT_LOADED);
         if (m_vault) delete m_vault;
         m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate);
-        m_syncHeight = m_vault->getBestHeight();
-        m_notifySyncHeightChanged(m_syncHeight);
+        updateSyncHeight(m_vault->getBestHeight());
+
         m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
         m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
         {
-            m_syncHeight = merkleblock->blockheader()->height();
-            m_notifySyncHeightChanged(m_syncHeight);
+            updateSyncHeight(merkleblock->blockheader()->height());
             m_notifyMerkleBlockInserted(merkleblock);
         });
     }
 
-    if (m_networkSync.connected())
-    {
-        updateStatus(LOADED);
-        if (m_networkSync.headersSynched()) { syncBlocks(); }
-    }
-    else
-    {
-        updateStatus(STOPPED);
-    }
-
     m_notifyVaultOpened(m_vault);
+    if (m_networkSync.connected() && m_networkSync.headersSynched()) { syncBlocks(); }
 }
 
 void SynchedVault::closeVault()
 {
     LOGGER(trace) << "SynchedVault::closeVault()" << std::endl;
-//    suspendBlockUpdates();
-    std::lock_guard<std::mutex> lock(m_vaultMutex);
-    m_bInsertMerkleBlocks = false;
-    m_networkSync.stopSyncBlocks();
-    if (m_vault)
+
     {
-        //m_vault->clearAllSlots();
-        m_notifyVaultClosed();
+        if (!m_vault) return;
+        std::lock_guard<std::mutex> lock(m_vaultMutex);
+        if (!m_vault) return;
+
+        m_bInsertMerkleBlocks = false;
+        m_networkSync.stopSyncBlocks();
         delete m_vault;
-        m_vault = nullptr;
-        m_syncHeight = 0;
-        m_notifySyncHeightChanged(m_syncHeight);
-        if (isConnected() && m_networkSync.headersSynched())
-        {
-            updateStatus(SYNCHED);
-        }
-        else
-        { 
-            updateStatus(NOT_LOADED);
-        }
     }
+
+    m_notifyVaultClosed();
+    m_vault = nullptr;
+    updateSyncHeight(0);
+    if (m_networkSync.connected() && m_networkSync.headersSynched()) { updateStatus(SYNCHED); }
 }
 
 // Peer to peer network operations
@@ -363,6 +324,7 @@ void SynchedVault::startSync(const std::string& host, const std::string& port)
 {
     LOGGER(trace) << "SynchedVault::startSync(" << host << ", " << port << ")" << std::endl;
     m_bInsertMerkleBlocks = false;
+    updateStatus(STARTING);
     m_networkSync.start(host, port); 
 }
 
@@ -392,6 +354,7 @@ void SynchedVault::suspendBlockUpdates()
 void SynchedVault::syncBlocks()
 {
     LOGGER(trace) << "SynchedVault::syncBlocks()" << std::endl;
+
     if (!m_bConnected) throw std::runtime_error("Not connected.");
     {
         if (!m_vault) throw std::runtime_error("No vault is open.");
@@ -472,9 +435,6 @@ void SynchedVault::sendTx(Coin::Transaction& coin_tx)
     LOGGER(trace) << "SynchedVault::sendTx(" << hash.getHex() << ")" << std::endl;
     if (!m_bConnected) throw std::runtime_error("Not connected.");
 
-    if (!m_vault) throw std::runtime_error("No vault is open.");
-    std::lock_guard<std::mutex> lock(m_vaultMutex);
-    if (!m_vault) throw std::runtime_error("No vault is open.");
     m_networkSync.sendTx(coin_tx);
     m_networkSync.getTx(hash);
 }
@@ -484,22 +444,45 @@ void SynchedVault::sendTx(Coin::Transaction& coin_tx)
 void SynchedVault::clearAllSlots()
 {
     LOGGER(trace) << "SynchedVault::clearAllSlots()" << std::endl;
+
     m_notifyVaultOpened.clear();
     m_notifyVaultClosed.clear();
+    m_notifyVaultError.clear();
+
     m_notifyStatusChanged.clear();
     m_notifyBestHeightChanged.clear();
     m_notifySyncHeightChanged.clear();
+    m_notifyConnectionError.clear();
+
     m_notifyTxInserted.clear();
     m_notifyTxStatusChanged.clear();
     m_notifyMerkleBlockInserted.clear();
+    m_notifyProtocolError.clear();
 }
 
 void SynchedVault::updateStatus(status_t newStatus)
 {
-    if (!m_vault) { newStatus = NOT_LOADED; }
     if (m_status != newStatus)
     {
         m_status = newStatus;
         m_notifyStatusChanged(newStatus);
+    }
+}
+
+void SynchedVault::updateBestHeight(uint32_t bestHeight)
+{
+    if (m_bestHeight != bestHeight)
+    {
+        m_bestHeight = bestHeight;
+        m_notifyBestHeightChanged(bestHeight);
+    }
+}
+
+void SynchedVault::updateSyncHeight(uint32_t syncHeight)
+{
+    if (m_syncHeight != syncHeight)
+    {
+        m_syncHeight = syncHeight;
+        m_notifySyncHeightChanged(syncHeight);
     }
 }
