@@ -404,15 +404,9 @@ std::vector<bytes_t> Script::missingsigs() const
     std::vector<bytes_t> missingsigs;
 
     unsigned int i = 0;
-    unsigned int nsigs = 0;
-    for (auto& sig: sigs_) {
-        if (!sig.empty()) {
-            nsigs++;
-            if (nsigs > minsigs_) break;
-        }
-        else {
-            missingsigs.push_back(pubkeys_[i]);
-        }
+    for (auto& sig: sigs_)
+    {
+        if (sig.empty()) { missingsigs.push_back(pubkeys_[i]); }
         i++;
     }
 
