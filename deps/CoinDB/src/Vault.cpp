@@ -1633,6 +1633,50 @@ std::shared_ptr<Tx> Vault::getTx_unwrapped(unsigned long tx_id) const
     return tx;
 }
 
+uint32_t Vault::getTxConfirmations(const bytes_t& hash) const
+{
+    LOGGER(trace) << "Vault::getTxConfirmations(" << uchar_vector(hash).getHex() << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Tx> tx = getTx_unwrapped(hash);
+    return getTxConfirmations_unwrapped(tx);
+}
+    
+uint32_t Vault::getTxConfirmations(unsigned long tx_id) const
+{
+    LOGGER(trace) << "Vault::getTxConfirmations(" << tx_id << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Tx> tx = getTx_unwrapped(tx_id);
+    return getTxConfirmations_unwrapped(tx);
+}
+    
+uint32_t Vault::getTxConfirmations(std::shared_ptr<Tx> tx) const
+{
+    LOGGER(trace) << "Vault::getTxConfirmations(tx: " << uchar_vector(tx->hash()).getHex() << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    return getTxConfirmations_unwrapped(tx);
+}
+
+uint32_t Vault::getTxConfirmations_unwrapped(std::shared_ptr<Tx> tx) const
+{
+    if (!tx->blockheader()) return 0;
+    return (getBestHeight_unwrapped() + 1 - tx->blockheader()->height());
+}
+ 
 std::vector<TxView> Vault::getTxViews(int tx_status_flags, unsigned long start, int count, uint32_t minheight) const
 {
     LOGGER(trace) << "Vault::getTxViews(" << Tx::getStatusString(tx_status_flags) << ", " << start << ", " << count << ")" << std::endl;

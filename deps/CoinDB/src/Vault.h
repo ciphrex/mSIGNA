@@ -132,6 +132,9 @@ public:
     ///////////////////
     std::shared_ptr<Tx>                     getTx(const bytes_t& hash) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     std::shared_ptr<Tx>                     getTx(unsigned long tx_id) const; // Uses the database id. Throws TxNotFoundException.
+    uint32_t                                getTxConfirmations(const bytes_t& hash) const;
+    uint32_t                                getTxConfirmations(unsigned long tx_id) const;
+    uint32_t                                getTxConfirmations(std::shared_ptr<Tx> tx) const;
     std::vector<TxView>                     getTxViews(int tx_status_flags = Tx::ALL, unsigned long start = 0, int count = -1, uint32_t minheight = 0) const; // count = -1 means display all
     std::shared_ptr<Tx>                     insertTx(std::shared_ptr<Tx> tx); // Inserts transaction only if it affects one of our accounts. Returns transaction in vault if change occured. Otherwise returns nullptr.
     std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
@@ -260,6 +263,7 @@ protected:
     ///////////////////
     std::shared_ptr<Tx>                     getTx_unwrapped(const bytes_t& hash) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     std::shared_ptr<Tx>                     getTx_unwrapped(unsigned long tx_id) const; // Uses database id. Throws TxNotFoundException.
+    uint32_t                                getTxConfirmations_unwrapped(std::shared_ptr<Tx> tx) const;
     std::shared_ptr<Tx>                     insertTx_unwrapped(std::shared_ptr<Tx> tx);
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations);
