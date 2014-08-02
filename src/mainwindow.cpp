@@ -107,14 +107,21 @@ MainWindow::MainWindow() :
     accountView->setModel(accountModel);
     accountView->setMenu(accountMenu);
 
+/*
+    qRegisterMetaType<bytes_t>("bytes_t");
+    connect(accountModel, SIGNAL(newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
+    connect(accountModel, SIGNAL(newBlock(const bytes_t&, int)), this, SLOT(newBlock(const bytes_t&, int)));
+    connect(accountModel, &AccountModel::updateSyncHeight, [this](int height) { emit updateSyncHeight(height); });
+*/
+
+    connect(accountModel, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
+
     synchedVault.subscribeBestHeightChanged([this](uint32_t height) { emit updateBestHeight((int)height); });
     synchedVault.subscribeSyncHeightChanged([this](uint32_t height) { emit updateSyncHeight((int)height); });
 
     synchedVault.subscribeStatusChanged([this](CoinDB::SynchedVault::status_t status) {
         switch (status)
         {
-        //case CoinDB::SynchedVault::NOT_LOADED:
-        //case CoinDB::SynchedVault::LOADED:
         case CoinDB::SynchedVault::STOPPED:
             networkStopped();
             break;
@@ -135,7 +142,9 @@ MainWindow::MainWindow() :
         }
     });
 
-    synchedVault.subscribeError([this](const std::string& error) { emit showError(QString::fromStdString(error)); });
+    synchedVault.subscribeConnectionError([this](const std::string& error) { emit signal_error(QString::fromStdString(error)); });
+    synchedVault.subscribeVaultError([this](const std::string& error) { emit signal_error(QString::fromStdString(error)); });
+    connect(this, SIGNAL(signal_error(const QString&)), this, SLOT(showError(const QString&)));
 
     synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
     synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
@@ -144,28 +153,6 @@ MainWindow::MainWindow() :
     connect(this, SIGNAL(signal_newTx()), this, SLOT(newTx()));
     connect(this, SIGNAL(signal_newBlock()), this, SLOT(newBlock()));
     connect(this, SIGNAL(signal_refreshAccounts()), this, SLOT(refreshAccounts()));
-
-/*
-    networkSync.subscribeTx([&](const Coin::Transaction& tx) {
-        try {
-            accountModel->insertTx(tx);
-        }
-        catch (const std::exception& e) {
-            // TODO
-        }
-    });
-*/
-//    networkSync.subscribeBlock([&](const ChainBlock& block) { accountModel->insertBlock(block); });
-//    networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleBlock) { accountModel->insertMerkleBlock(merkleBlock); });
-//    networkSync.subscribeBlockTreeChanged([&]() { emit updateBestHeight(networkSync.getBestHeight()); });
-
-/*
-    qRegisterMetaType<bytes_t>("bytes_t");
-    connect(accountModel, SIGNAL(newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
-    connect(accountModel, SIGNAL(newBlock(const bytes_t&, int)), this, SLOT(newBlock(const bytes_t&, int)));
-    connect(accountModel, &AccountModel::updateSyncHeight, [this](int height) { emit updateSyncHeight(height); });
-    connect(accountModel, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
-*/
 
     accountSelectionModel = accountView->selectionModel();
     connect(accountSelectionModel, &QItemSelectionModel::currentChanged,
@@ -1421,11 +1408,11 @@ void MainWindow::connectionClosed()
 
 void MainWindow::startNetworkSync()
 {
-    connectAction->setEnabled(false);
+    //connectAction->setEnabled(false);
     try {
         QString message(tr("Connecting to ") + host + ":" + QString::number(port) + "...");
         updateStatusMessage(message);
-        networkStarted();
+        //networkStarted();
         synchedVault.startSync(host.toStdString(), port);
     }
     catch (const exception& e) {
@@ -1440,7 +1427,6 @@ void MainWindow::stopNetworkSync()
     try {
         updateStatusMessage(tr("Disconnecting..."));
         synchedVault.stopSync();
-        //networkSync.stop();
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::stopNetworkSync - " << e.what() << std::endl;
@@ -1752,73 +1738,6 @@ void MainWindow::createActions()
 
     connect(connectAction, SIGNAL(triggered()), this, SLOT(startNetworkSync()));
     connect(disconnectAction, SIGNAL(triggered()), this, SLOT(stopNetworkSync()));
-
-/*
-    networkSync.subscribeStatus([this](const std::string& message) {
-        LOGGER(debug) << "status slot" << std::endl;
-        networkStatus(QString::fromStdString(message)); 
-    });
-
-    networkSync.subscribeError([this](const std::string& error) {
-        LOGGER(debug) << "error slot" << std::endl;
-        networkError(QString::fromStdString(error));
-    });
-
-    networkSync.subscribeOpen([this]() {
-        LOGGER(debug) << "open slot" << std::endl;
-        connectionOpen();
-    });
-
-    networkSync.subscribeClose([this]() {
-        LOGGER(debug) << "close slot" << std::endl;
-        connectionClosed();
-    });
-
-    networkSync.subscribeStarted([this]() {
-        LOGGER(debug) << "started slot" << std::endl;
-        networkStarted();
-    });
-
-    networkSync.subscribeStopped([this]() {
-        LOGGER(debug) << "stopped slot" << std::endl;
-        networkStopped();
-    });
-
-    networkSync.subscribeTimeout([this]() {
-        LOGGER(debug) << "timeout slot" << std::endl;
-        networkTimeout();
-    });
-
-    networkSync.subscribeFetchingHeaders([this]() {
-        LOGGER(debug) << "fetching headersvslot" << std::endl;
-        fetchingHeaders();
-    });
-
-    networkSync.subscribeHeadersSynched([this]() {
-        LOGGER(debug) << "headers synched slot" << std::endl;
-        headersSynched();
-    });
-
-    networkSync.subscribeFetchingBlocks([this]() {
-        LOGGER(debug) << "fetching blocks slot" << std::endl;
-        fetchingBlocks();
-    });
-
-    networkSync.subscribeBlocksSynched([this]() {
-        LOGGER(debug) << "blocks synched slot" << std::endl;
-        blocksSynched();
-    });
-
-    networkSync.subscribeAddBestChain([this](const chain_header_t& header) {
-        LOGGER(debug) << "add best chain slot" << std::endl;
-        addBestChain(header);
-    });
-
-    networkSync.subscribeRemoveBestChain([this](const chain_header_t& header) {
-        LOGGER(debug) << "remove best chain slot" << std::endl;
-        removeBestChain(header);
-    });
-*/
 
     networkSettingsAction = new QAction(tr("Settings..."), this);
     networkSettingsAction->setStatusTip(tr("Configure network settings"));
