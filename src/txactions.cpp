@@ -391,7 +391,7 @@ void TxActions::createMenus()
 {
     menu = new QMenu();
     menu->addAction(signaturesAction);
-    menu->addAction(signTxAction);
+    //menu->addAction(signTxAction);
     menu->addAction(sendTxAction);
     menu->addSeparator();
     menu->addAction(exportTxToFileAction);
