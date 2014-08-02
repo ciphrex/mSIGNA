@@ -4,7 +4,7 @@
 //
 // accountmodel.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
@@ -14,9 +14,9 @@
 
 #include <QPair>
 
-#include <CoinDB/Vault.h>
-
 #include <CoinQ/CoinQ_typedefs.h>
+
+#include <CoinDB/SynchedVault.h>
 
 class TaggedOutput
 {
@@ -40,20 +40,21 @@ class AccountModel : public QStandardItemModel
     Q_OBJECT
 
 public:
-    AccountModel();
-    ~AccountModel() { if (vault) delete vault; }
+    AccountModel(CoinDB::SynchedVault& synchedVault);
+    ~AccountModel() { };
 
-    void setVault(CoinDB::Vault* vault);
     void update();
 
+    CoinDB::Vault* getVault() const;
+    bool isOpen() const { return m_synchedVault.isVaultOpen(); }
     // Vault operations
-    void create(const QString& fileName);
-    void load(const QString& fileName);
-    void exportVault(const QString& exportFileName, bool exportPrivKeys) const;
-    void importVault(const QString& importFileName); 
-    void close();
-    bool isOpen() const { return (vault != NULL); }
-    Coin::BloomFilter getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags = 0) const;
+    //void create(const QString& fileName);
+    //void load(const QString& fileName);
+    //void exportVault(const QString& exportFileName, bool exportPrivKeys) const;
+    //void importVault(const QString& importFileName); 
+    //void close();
+    //bool isOpen() const { return (vault != NULL); }
+    //Coin::BloomFilter getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags = 0) const;
 
     // Key Chain operations
     void newKeychain(const QString& name, const secure_bytes_t& entropy);
@@ -85,7 +86,7 @@ public:
     bool insertMerkleBlock(const ChainMerkleBlock& merkleBlock);
     bool deleteMerkleBlock(const bytes_t& hash);
 
-    CoinDB::Vault* getVault() const { return vault; }
+    //CoinDB::Vault* getVault() const { return vault; }
     int getNumAccounts() const { return numAccounts; }
 
     // Overridden methods
@@ -107,7 +108,8 @@ private:
     unsigned char base58_versions[2];
     QString currencySymbol;
 
-    CoinDB::Vault* vault;
+    //CoinDB::Vault* vault;
+    CoinDB::SynchedVault& m_synchedVault;
     int numAccounts;
 };
 

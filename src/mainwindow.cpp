@@ -102,7 +102,7 @@ MainWindow::MainWindow() :
             this, &MainWindow::updateSelectedKeychains);
 
     // Account tab page
-    accountModel = new AccountModel();
+    accountModel = new AccountModel(synchedVault);
     accountView = new AccountView();
     accountView->setModel(accountModel);
     accountView->setMenu(accountMenu);
@@ -142,8 +142,8 @@ MainWindow::MainWindow() :
         }
     });
 
-    synchedVault.subscribeConnectionError([this](const std::string& error) { emit signal_error(QString::fromStdString(error)); });
-    synchedVault.subscribeVaultError([this](const std::string& error) { emit signal_error(QString::fromStdString(error)); });
+    synchedVault.subscribeConnectionError([this](const std::string& error) { emit signal_error(tr("Connection error: ") + QString::fromStdString(error)); });
+    synchedVault.subscribeVaultError([this](const std::string& error) { emit signal_error(tr("Vault error: ") + QString::fromStdString(error)); });
     connect(this, SIGNAL(signal_error(const QString&)), this, SLOT(showError(const QString&)));
 
     synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
@@ -190,7 +190,6 @@ MainWindow::MainWindow() :
         keychainModel->update();
         keychainView->update();
 
-        accountModel->setVault(vault);
         accountModel->update();
         accountView->update();
 
@@ -207,7 +206,6 @@ MainWindow::MainWindow() :
         keychainModel->setVault(nullptr);
         keychainModel->update();
 
-        accountModel->setVault(nullptr);
         accountModel->update();
 
         txModel->setVault(nullptr);
@@ -1183,7 +1181,7 @@ void MainWindow::insertRawTx()
 
 void MainWindow::createRawTx()
 {
-    if (!accountModel->isOpen())
+    if (!synchedVault.isVaultOpen())
     {
         showError(tr("No vault is open."));
         return;
@@ -1218,7 +1216,7 @@ void MainWindow::createRawTx()
 
 void MainWindow::createTx(const PaymentRequest& paymentRequest)
 {
-    if (!accountModel->isOpen())
+    if (!synchedVault.isVaultOpen())
     {
         showError(tr("No vault is open."));
         return;
@@ -1352,7 +1350,7 @@ void MainWindow::headersSynched()
 {
     emit updateBestHeight(synchedVault.getBestHeight());
     emit status(tr("Finished loading headers."));
-    if (accountModel->isOpen()) {
+    if (synchedVault.isVaultOpen()) {
     try {
         syncBlocks();
     }

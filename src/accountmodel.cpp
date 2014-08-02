@@ -29,8 +29,8 @@ using namespace CoinDB;
 using namespace CoinQ::Script;
 using namespace std;
 
-AccountModel::AccountModel()
-    : vault(NULL), numAccounts(0)
+AccountModel::AccountModel(CoinDB::SynchedVault& synchedVault)
+    : m_synchedVault(synchedVault), numAccounts(0)
 {
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
@@ -45,12 +45,12 @@ void AccountModel::setColumns()
     columns << tr("Account") << tr("Policy") << (tr("Balance") + " (" + currencySymbol + ")") << "";
     setHorizontalHeaderLabels(columns);
 }
-
+/*
 void AccountModel::setVault(CoinDB::Vault* vault)
 {
     this->vault = vault;
 }
-
+*/
 void AccountModel::update()
 {
     QString newCurrencySymbol = getCurrencySymbol();
@@ -62,6 +62,7 @@ void AccountModel::update()
 
     removeRows(0, rowCount());
 
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         numAccounts = 0;
         return;
@@ -88,6 +89,11 @@ void AccountModel::update()
     emit updated(accountNames);
 }
 
+CoinDB::Vault* AccountModel::getVault() const
+{
+    return m_synchedVault.getVault();
+} 
+/*
 void AccountModel::create(const QString& fileName)
 {
     close ();
@@ -139,9 +145,11 @@ Coin::BloomFilter AccountModel::getBloomFilter(double falsePositiveRate, uint32_
     if (!vault) return Coin::BloomFilter();
     return vault->getBloomFilter(falsePositiveRate, nTweak, nFlags);
 }
+*/
 
 void AccountModel::newKeychain(const QString& name, const secure_bytes_t& entropy)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -152,6 +160,7 @@ void AccountModel::newKeychain(const QString& name, const secure_bytes_t& entrop
 
 void AccountModel::newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -165,6 +174,7 @@ void AccountModel::newAccount(const QString& name, unsigned int minsigs, const Q
 
 bool AccountModel::accountExists(const QString& name) const
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -174,6 +184,7 @@ bool AccountModel::accountExists(const QString& name) const
 
 void AccountModel::exportAccount(const QString& name, const QString& filePath, bool shared) const
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -183,6 +194,7 @@ void AccountModel::exportAccount(const QString& name, const QString& filePath, b
 
 void AccountModel::importAccount(const QString& /*name*/, const QString& filePath)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -194,6 +206,7 @@ void AccountModel::importAccount(const QString& /*name*/, const QString& filePat
 
 void AccountModel::deleteAccount(const QString& name)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -207,6 +220,7 @@ void AccountModel::deleteAccount(const QString& name)
 
 QPair<QString, bytes_t> AccountModel::issueNewScript(const QString& accountName, const QString& label)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -220,6 +234,7 @@ QPair<QString, bytes_t> AccountModel::issueNewScript(const QString& accountName,
 
 uint32_t AccountModel::getMaxFirstBlockTimestamp() const
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -229,6 +244,7 @@ uint32_t AccountModel::getMaxFirstBlockTimestamp() const
 
 bool AccountModel::insertRawTx(const bytes_t& rawTx)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -246,6 +262,7 @@ bool AccountModel::insertRawTx(const bytes_t& rawTx)
 
 std::shared_ptr<Tx> AccountModel::insertTx(std::shared_ptr<Tx> tx, bool sign)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) return nullptr;
 
     tx = vault->insertTx(tx);
@@ -266,6 +283,7 @@ std::shared_ptr<Tx> AccountModel::insertTx(std::shared_ptr<Tx> tx, bool sign)
 
 std::shared_ptr<Tx> AccountModel::insertTx(const Coin::Transaction& coinTx, Tx::status_t status, bool sign)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         return std::shared_ptr<Tx>();
     }
@@ -290,6 +308,7 @@ std::shared_ptr<Tx> AccountModel::insertTx(const Coin::Transaction& coinTx, Tx::
 
 std::shared_ptr<CoinDB::Tx> AccountModel::createTx(const QString& accountName, std::vector<std::shared_ptr<CoinDB::TxOut>> txouts, uint64_t fee)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) throw std::runtime_error("No vault is loaded.");
  
     std::shared_ptr<Tx> tx = vault->createTx(accountName.toStdString(), 1, 0, txouts, fee,  1);
@@ -298,6 +317,7 @@ std::shared_ptr<CoinDB::Tx> AccountModel::createTx(const QString& accountName, s
 
 std::shared_ptr<CoinDB::Tx> AccountModel::createTx(const QString& accountName, const std::vector<unsigned long>& coinids, std::vector<std::shared_ptr<CoinDB::TxOut>> txouts, uint64_t fee)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) throw std::runtime_error("No vault is loaded.");
  
     std::shared_ptr<Tx> tx = vault->createTx(accountName.toStdString(), 1, 0, coinids, txouts, fee,  1);
@@ -312,6 +332,7 @@ bytes_t AccountModel::createRawTx(const QString& accountName, const std::vector<
 
 Coin::Transaction AccountModel::createTx(const QString& accountName, const std::vector<TaggedOutput>& outputs, uint64_t fee)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -334,6 +355,7 @@ Coin::Transaction AccountModel::createTx(const QString& accountName, const std::
 
 bytes_t AccountModel::signRawTx(const bytes_t& rawTx)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -350,6 +372,7 @@ bytes_t AccountModel::signRawTx(const bytes_t& rawTx)
 
 uint32_t AccountModel::getBestHeight() const
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -359,6 +382,7 @@ uint32_t AccountModel::getBestHeight() const
 
 std::vector<bytes_t> AccountModel::getLocatorHashes() const
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
@@ -368,6 +392,7 @@ std::vector<bytes_t> AccountModel::getLocatorHashes() const
 
 bool AccountModel::insertBlock(const ChainBlock& block)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         return false;
     }
@@ -389,6 +414,7 @@ bool AccountModel::insertBlock(const ChainBlock& block)
 
 bool AccountModel::insertMerkleBlock(const ChainMerkleBlock& merkleBlock)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         return false;
     }
@@ -409,6 +435,7 @@ bool AccountModel::insertMerkleBlock(const ChainMerkleBlock& merkleBlock)
 
 bool AccountModel::deleteMerkleBlock(const bytes_t& hash)
 {
+    CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         return false;
     }
@@ -441,6 +468,7 @@ bool AccountModel::setData(const QModelIndex& index, const QVariant& value, int 
     if (role == Qt::EditRole) {
         if (index.column() == 0) {
             // Account name edited.
+            CoinDB::Vault* vault = m_synchedVault.getVault();
             if (!vault) return false;
 
             try {
