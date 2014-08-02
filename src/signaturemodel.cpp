@@ -35,27 +35,17 @@ void SignatureModel::update()
     if (!m_vault) return;
 
     SignatureInfo signatureInfo = m_vault->getSignatureInfo(m_txHash);
-    m_sigsNeeded = signatureInfo.sigs_needed();
-    for (auto& signer: signatureInfo.present_signers())
+    m_sigsNeeded = signatureInfo.sigsNeeded();
+    for (auto& signingKeychain: signatureInfo.signingKeychains())
     {
         QList<QStandardItem*> row;
-        QString keychainName = QString::fromStdString(signer.first);
-        QString keychainHash = QString::fromStdString(uchar_vector(signer.second).getHex());
+        QString keychainName = QString::fromStdString(signingKeychain.name());
+        QString keychainHash = QString::fromStdString(uchar_vector(signingKeychain.hash()).getHex());
+        QString hasSigned = signingKeychain.hasSigned() ? tr("Yes") : tr("No");
 
         row.append(new QStandardItem(keychainName));
         row.append(new QStandardItem(keychainHash));
-        row.append(new QStandardItem(tr("Yes")));
-        appendRow(row);
-    }
-    for (auto& signer: signatureInfo.missing_signers())
-    {
-        QList<QStandardItem*> row;
-        QString keychainName = QString::fromStdString(signer.first);
-        QString keychainHash = QString::fromStdString(uchar_vector(signer.second).getHex());
-
-        row.append(new QStandardItem(keychainName));
-        row.append(new QStandardItem(keychainHash));
-        row.append(new QStandardItem(tr("No")));
+        row.append(new QStandardItem(hasSigned));
         appendRow(row);
     }
 }
