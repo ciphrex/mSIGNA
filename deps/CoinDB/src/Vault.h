@@ -94,6 +94,8 @@ public:
     void                                    lockAllKeychains();
     void                                    lockKeychain(const std::string& keychain_name);
     void                                    unlockKeychain(const std::string& keychain_name, const secure_bytes_t& unlock_key);
+    bool                                    isKeychainPrivateKeyLocked(const std::string& keychainName) const;
+
 
     ////////////////////////
     // ACCOUNT OPERATIONS //

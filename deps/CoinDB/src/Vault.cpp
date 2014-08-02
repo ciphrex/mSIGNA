@@ -830,6 +830,11 @@ bool Vault::tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keyc
     }
 }
 
+bool Vault::isKeychainPrivateKeyLocked(const std::string& keychainName) const
+{
+    const auto& it = mapPrivateKeyUnlock.find(keychainName);
+    return (it == mapPrivateKeyUnlock.end());
+}
 
 ////////////////////////
 // ACCOUNT OPERATIONS //
