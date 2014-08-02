@@ -53,10 +53,16 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         LOGGER(trace) << "P2P network status: " << message << std::endl;
     });
 
-    m_networkSync.subscribeError([this](const std::string& error)
+    m_networkSync.subscribeProtocolError([this](const std::string& error)
     {
-        LOGGER(trace) << "P2P network error: " << error << std::endl;
-        //m_notifyProtocolError(error);
+        LOGGER(trace) << "P2P protocol error: " << error << std::endl;
+        m_notifyProtocolError(error);
+    });
+
+    m_networkSync.subscribeConnectionError([this](const std::string& error)
+    {
+        LOGGER(trace) << "P2P connection error: " << error << std::endl;
+        m_notifyConnectionError(error);
     });
 
     m_networkSync.subscribeOpen([this]()
@@ -118,7 +124,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
                 LOGGER(trace) << "Attempting to sync blocks." << std::endl;
                 syncBlocks();
             }
-            else
+            else if (m_networkSync.connected())
             {
                 m_networkSync.stopSyncBlocks();
                 updateStatus(SYNCHED);
@@ -138,7 +144,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         {        
             updateStatus(FETCHING_BLOCKS);
         }
-        else
+        else if (m_networkSync.connected())
         {
             m_networkSync.stopSyncBlocks();
             updateStatus(SYNCHED);
@@ -151,14 +157,14 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
         {
             std::lock_guard<std::mutex> lock(m_vaultMutex);
-            if (m_vault)
+            if (m_vault && m_networkSync.connected())
             {
                 LOGGER(info) << "Fetching mempool." << std::endl;
                 m_networkSync.getMempool();
             }
         }
 
-        updateStatus(SYNCHED);
+        if (m_networkSync.connected()) { updateStatus(SYNCHED); }
     });
 
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
