@@ -18,6 +18,16 @@ do
         OS=osx
     ;;
 
+    sqlite)
+        if [[ ! -z "$DB" ]]; then echo "DB cannot be set twice"; exit 1; fi
+        DB=sqlite
+    ;;
+
+    mysql)
+        if [[ ! -z "$DB" ]]; then echo "DB cannot be set twice"; exit 1; fi
+        DB=mysql
+    ;;
+
     debug)
         if [[ ! -z "$BUILD_TYPE" ]]; then echo "Build type cannot be set twice"; exit 2; fi
         BUILD_TYPE=debug
@@ -72,6 +82,11 @@ osx)
     exit
 esac
 
+if [[ -z "$DB" ]]
+then
+    DB=sqlite
+fi
+
 # Use release as default build type
 if [[ -z "$BUILD_TYPE" ]]
 then
@@ -111,10 +126,6 @@ make OS=$OS $OPTIONS
 make install
 
 cd ../CoinDB
-make lib OS=$OS $OPTIONS
+make lib OS=$OS DB=$DB $OPTIONS
 make install_lib
-
-cd ../CoinDB
-make lib OS=$OS $OPTIONS
-make install
 
