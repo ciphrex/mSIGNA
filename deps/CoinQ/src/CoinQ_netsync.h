@@ -2,12 +2,11 @@
 //
 // CoinQ_netsync.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINQ_NETSYNC_H
-#define COINQ_NETSYNC_H
+#pragma once
 
 #ifdef __WIN32__
 #include <winsock2.h>
@@ -148,7 +147,6 @@ private:
     CoinQSignal<void> notifyBlockTreeChanged;
 };
 
-}
+    }
 }
 
-#endif // COINVAULT_NETWORKSYNC_H

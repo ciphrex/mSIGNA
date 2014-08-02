@@ -78,17 +78,13 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
 
     m_peer.subscribeTimeout([&](CoinQ::Peer& /*peer*/)
     {
-        stop();
         notifyTimeout();
     });
 
-    m_peer.subscribeClose([&](CoinQ::Peer& /*peer*/, int code, const std::string& message)
+    m_peer.subscribeClose([&](CoinQ::Peer& /*peer*/)
     {
         stop();
         notifyClose();
-        std::stringstream ss;
-        ss << "Peer closed with code " << code << ": " << message; // TODO: localization
-        notifyStatus(ss.str());
     });
 
     m_peer.subscribeInv([&](CoinQ::Peer& peer, const Coin::Inventory& inv)
@@ -520,7 +516,7 @@ void NetworkSync::stop()
         m_bFetchingHeaders = false;
         m_bFetchingBlocks = false;
 
-        m_peer.stop();
+        //m_peer.stop();
     }
 
     notifyStopped();
