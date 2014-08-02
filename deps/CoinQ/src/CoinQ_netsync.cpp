@@ -527,8 +527,7 @@ void NetworkSync::stop()
         m_bStarted = false;
         m_bFetchingHeaders = false;
         m_bFetchingBlocks = false;
-
-        //m_peer.stop();
+        m_peer.stop();
     }
 
     notifyStopped();

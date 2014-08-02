@@ -33,23 +33,12 @@ void Peer::do_handshake()
         if (!bRunning) return;
         LOGGER(trace) << "Peer timer handler" << std::endl;
 
-        if (ec)
-        {
-            std::stringstream err;
-            err << "Timer error: " << ec.value() << ": " << ec.message();
-            notifyConnectionError(*this, err.str());
-            notifyClose(*this);
-            do_stop();
-            return;
-        }
-
         if (bHandshakeComplete) return;
         boost::lock_guard<boost::mutex> lock(handshakeMutex);
         if (bHandshakeComplete) return;
     
-        notifyTimeout(*this);
-        notifyClose(*this);
         do_stop();
+        notifyTimeout(*this);
     });
 }
 
@@ -62,11 +51,11 @@ void Peer::do_read()
 
         if (ec)
         {
+            do_stop();
+
             std::stringstream err;
             err << "Read error: " << ec.value() << ": " << ec.message();
             notifyConnectionError(*this, err.str());
-            notifyClose(*this);
-            do_stop();
             return;
         }
 
@@ -214,11 +203,11 @@ void Peer::do_connect(tcp::resolver::iterator iter)
 
         if (ec)
         {
+            do_stop();
+
             std::stringstream err;
             err << "Connect error: " << ec.value() << ": " << ec.message();
             notifyConnectionError(*this, err.str());
-            notifyClose(*this);
-            do_stop();
             return;
         }
 
@@ -229,19 +218,19 @@ void Peer::do_connect(tcp::resolver::iterator iter)
         }
         catch (const boost::system::error_code& ec)
         {
+            do_stop();
+
             std::stringstream err;
             err << "Handshake error: " << ec.value() << ": " << ec.message();
             notifyConnectionError(*this, err.str());
-            notifyClose(*this);
-            do_stop();
         }
         catch (const std::exception& e)
         {
+            do_stop();
+
             std::stringstream err;
             err << "Handshake error: " << e.what();
             notifyConnectionError(*this, err.str());
-            notifyClose(*this);
-            do_stop();
         }
     }));
 }
@@ -251,6 +240,7 @@ void Peer::do_stop()
     bRunning = false;
     bHandshakeComplete = false;
     bWriteReady = false;
+    notifyClose(*this);
     notifyStop(*this);
 }
 
@@ -272,11 +262,11 @@ void Peer::start()
 
         if (ec)
         {
+            do_stop();
+
             std::stringstream err;
             err << "Resolve error: " << ec.value() << ": " << ec.message();
             notifyConnectionError(*this, err.str());
-            notifyClose(*this);
-            do_stop();
             return;
         }
 
