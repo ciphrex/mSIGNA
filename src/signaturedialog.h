@@ -10,10 +10,13 @@
 
 #pragma once
 
-#include <CoinDB/Vault.h>
+#include <CoinCore/typedefs.h>
+
+namespace CoinDB { class SynchedVault; }
 
 class SignatureModel;
 class SignatureView;
+class SignatureActions;
 
 class QLabel;
 
@@ -24,11 +27,21 @@ class SignatureDialog : public QDialog
     Q_OBJECT
 
 public:
-    SignatureDialog(CoinDB::Vault* vault, const bytes_t& txHash, QWidget* parent = nullptr);
+    SignatureDialog(CoinDB::SynchedVault& synchedVault, const bytes_t& txHash, QWidget* parent = nullptr);
+    ~SignatureDialog();
+
+    SignatureModel* getModel() const { return m_model; }
+    SignatureView* getView() const { return m_view; }
+
+signals:
+    void txUpdated();
 
 private:
+    CoinDB::SynchedVault& m_synchedVault;
+
     SignatureModel* m_model;
     SignatureView* m_view;
+    SignatureActions* m_actions;
 
     QLabel* m_sigsNeededLabel;
 };

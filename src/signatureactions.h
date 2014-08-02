@@ -17,8 +17,7 @@ class QMenu;
 
 class QString;
 
-class SignatureModel;
-class SignatureView;
+class SignatureDialog;
 
 namespace CoinDB
 {
@@ -30,7 +29,7 @@ class SignatureActions : public QObject
     Q_OBJECT
 
 public:
-    SignatureActions(CoinDB::SynchedVault& synchedVault, SignatureModel& signatureModel, SignatureView& signatureView);
+    SignatureActions(CoinDB::SynchedVault& synchedVault, SignatureDialog& dialog);
 
     QMenu* getMenu() const { return menu; }
 
@@ -49,10 +48,9 @@ private:
 
     CoinDB::SynchedVault& m_synchedVault;
 
-    SignatureModel& m_signatureModel;
-    SignatureView& m_signatureView;
+    SignatureDialog& m_dialog;
 
-    QString currentKeychain;
+    QString m_currentKeychain;
 
     QAction* addSignatureAction;
 

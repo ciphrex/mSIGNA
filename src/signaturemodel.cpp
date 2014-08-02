@@ -10,13 +10,15 @@
 
 #include "signaturemodel.h"
 
+#include <CoinDB/SynchedVault.h>
+
 #include <QStandardItemModel>
 
 using namespace CoinDB;
 using namespace std;
 
-SignatureModel::SignatureModel(CoinDB::Vault* vault, const bytes_t& txHash, QObject* parent)
-    : QStandardItemModel(parent), m_vault(vault), m_txHash(txHash)
+SignatureModel::SignatureModel(CoinDB::SynchedVault& synchedVault, const bytes_t& txHash, QObject* parent)
+    : QStandardItemModel(parent), m_synchedVault(synchedVault), m_txHash(txHash)
 {
     initColumns();
 }
@@ -32,9 +34,10 @@ void SignatureModel::update()
 {
     removeRows(0, rowCount());
 
-    if (!m_vault) return;
+    if (!m_synchedVault.isVaultOpen()) return;
 
-    SignatureInfo signatureInfo = m_vault->getSignatureInfo(m_txHash);
+    CoinDB::Vault* vault = m_synchedVault.getVault();
+    SignatureInfo signatureInfo = vault->getSignatureInfo(m_txHash);
     m_sigsNeeded = signatureInfo.sigsNeeded();
     for (auto& signingKeychain: signatureInfo.signingKeychains())
     {
@@ -49,3 +52,9 @@ void SignatureModel::update()
         appendRow(row);
     }
 }
+
+Qt::ItemFlags SignatureModel::flags(const QModelIndex& /*index*/) const
+{
+    return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+}
+

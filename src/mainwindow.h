@@ -28,6 +28,7 @@ class TxModel;
 class TxView;
 
 class TxActions;
+class SignatureActions;
 
 class RequestPaymentDialog;
 
@@ -332,8 +333,9 @@ private:
     TxModel *txModel;
     TxView *txView;
 
-    // tab actions
+    // categorized actions
     TxActions* txActions;
+    SignatureActions* signatureActions;
 
     // models
     QItemSelectionModel* keychainSelectionModel;

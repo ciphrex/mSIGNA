@@ -107,7 +107,11 @@ void TxActions::showSignatureDialog()
 {
     try
     {
-        SignatureDialog dlg(m_txModel->getVault(), m_txModel->getTxHash(currentRow));
+        SignatureDialog dlg(*m_synchedVault, m_txModel->getTxHash(currentRow));
+        if (m_txModel)
+        {
+            connect(&dlg, &SignatureDialog::txUpdated, [this]() { m_txModel->update(); });
+        }
         dlg.exec();
     }
     catch (const std::exception& e)
