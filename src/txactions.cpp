@@ -68,19 +68,13 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
             sendTxAction->setEnabled(m_synchedVault && m_synchedVault->isConnected() && typeItem->text() == "0");
         }
 
-        if (type == CoinDB::Tx::PROPAGATED || type == CoinDB::Tx::CONFIRMED) {
-            viewTxOnWebAction->setEnabled(true);
-        }
-        else {
-            viewTxOnWebAction->setEnabled(false);
-        }
-
         exportTxToFileAction->setEnabled(true);
         copyTxHashToClipboardAction->setEnabled(true);
         copyRawTxToClipboardAction->setEnabled(true);
         saveRawTxToFileAction->setEnabled(true);
         viewRawTxAction->setEnabled(true);
-        deleteTxAction->setEnabled(true);
+        viewTxOnWebAction->setEnabled(type == CoinDB::Tx::PROPAGATED || type == CoinDB::Tx::CONFIRMED);
+        deleteTxAction->setEnabled(type != CoinDB::Tx::CONFIRMED);
     }
     else {
         signTxAction->setEnabled(false);
