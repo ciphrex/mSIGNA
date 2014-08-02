@@ -2522,6 +2522,50 @@ void Vault::exportTx(std::shared_ptr<Tx> tx, const std::string& filepath) const
     oa << *tx;
 }
 
+std::string Vault::exportTx(const bytes_t& hash) const
+{
+    LOGGER(trace) << "Vault::exportTx(" << uchar_vector(hash).getHex() << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+
+    std::shared_ptr<Tx> tx;
+    {
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = getTx_unwrapped(hash);
+    }
+    return exportTx(tx);
+}
+
+std::string Vault::exportTx(unsigned long tx_id) const
+{
+    LOGGER(trace) << "Vault::exportTx(" << tx_id << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+
+    std::shared_ptr<Tx> tx;
+    {
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = getTx_unwrapped(tx_id);
+    }
+    return exportTx(tx);
+}
+
+std::string Vault::exportTx(std::shared_ptr<Tx> tx) const
+{
+    LOGGER(trace) << "Vault::exportTx(tx: " << uchar_vector(tx->hash()).getHex()  << ")" << std::endl;
+
+    std::stringstream ss;
+    boost::archive::text_oarchive oa(ss);
+    oa << *tx;
+    return ss.str();
+}
+
 std::shared_ptr<Tx> Vault::importTx(const std::string& filepath)
 {
     LOGGER(trace) << "Vault::importTx(" << filepath << ")" << std::endl;

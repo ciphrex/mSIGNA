@@ -149,6 +149,9 @@ public:
     std::shared_ptr<Tx>                     exportTx(const bytes_t& hash, const std::string& filepath) const;
     std::shared_ptr<Tx>                     exportTx(unsigned long tx_id, const std::string& filepath) const;
     void                                    exportTx(std::shared_ptr<Tx> tx, const std::string& filepath) const;
+    std::string                             exportTx(const bytes_t& hash) const;
+    std::string                             exportTx(unsigned long tx_id) const;
+    std::string                             exportTx(std::shared_ptr<Tx> tx) const;
     std::shared_ptr<Tx>                     importTx(const std::string& filepath);
     void                                    exportTxs(const std::string& filepath, uint32_t minheight = 0) const;
     void                                    importTxs(const std::string& filepath);
