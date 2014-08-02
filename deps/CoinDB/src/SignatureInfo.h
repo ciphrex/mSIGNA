@@ -16,22 +16,46 @@
 namespace CoinDB
 {
 
+class SigningKeychain
+{
+public:
+    SigningKeychain(const std::string& name, const bytes_t& hash, bool hasSigned) :
+        name_(name), hash_(hash), hasSigned_(hasSigned) { }
+
+    const std::string&  name() const        { return name_; }
+    const bytes_t&      hash() const        { return hash_; }
+    bool                hasSigned() const   { return hasSigned_; }
+
+private:
+    std::string name_;
+    bytes_t     hash_;
+    bool        hasSigned_;
+};
+
+struct SigningKeychainCompare
+{
+    bool operator() (const SigningKeychain& lhs, const SigningKeychain& rhs) const
+    {
+        if (lhs.hash() == rhs.hash()) return false;
+        return lhs.name() < rhs.name();
+    }
+};
+
+typedef std::set<SigningKeychain, SigningKeychainCompare> SigningKeychainSet;
+
 class SignatureInfo
 {
 public:
-    typedef std::pair<std::string, bytes_t> keychain_info_t;
-    SignatureInfo() : sigs_needed_(0) { }
-    SignatureInfo(unsigned int sigs_needed, const std::set<keychain_info_t>& present_signers, const std::set<keychain_info_t>& missing_signers) :
-        sigs_needed_(sigs_needed), present_signers_(present_signers), missing_signers_(missing_signers) { }
+    SignatureInfo() : sigsNeeded_(0) { }
+    SignatureInfo(unsigned int sigsNeeded, const SigningKeychainSet& signingKeychains) :
+        sigsNeeded_(sigsNeeded), signingKeychains_(signingKeychains) { }
 
-    unsigned int sigs_needed() const { return sigs_needed_; }
-    const std::set<keychain_info_t>& present_signers() const { return present_signers_; }
-    const std::set<keychain_info_t>& missing_signers() const { return missing_signers_; }
+    unsigned int                sigsNeeded() const          { return sigsNeeded_; }
+    const SigningKeychainSet&   signingKeychains() const    { return signingKeychains_; }
 
 private:
-    unsigned int sigs_needed_;
-    std::set<keychain_info_t> present_signers_;
-    std::set<keychain_info_t> missing_signers_;
+    unsigned int sigsNeeded_;
+    SigningKeychainSet signingKeychains_;
 };
 
 }

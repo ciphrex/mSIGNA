@@ -2293,29 +2293,50 @@ SignatureInfo Vault::getSignatureInfo(unsigned long tx_id) const
 
 SignatureInfo Vault::getSignatureInfo_unwrapped(std::shared_ptr<Tx> tx) const
 {
-    unsigned int sigs_needed = tx->missingSigCount();
-    std::set<bytes_t> presentSigPubkeys = tx->presentSigPubkeys();
-    std::set<bytes_t> missingSigPubkeys = tx->missingSigPubkeys();
-    std::set<SignatureInfo::keychain_info_t> present_signers;
-    std::set<SignatureInfo::keychain_info_t> missing_signers;
+    // Assume for now all inputs belong to the same account.
+    CoinQ::Script::Signer signer = tx->signer();
+
+    unsigned int sigsNeeded = 0;
+    std::set<bytes_t> missingpubkeys;
+    std::set<bytes_t> presentpubkeys;
+
+    for (auto& script: signer.getScripts())
     {
-        odb::result<Key> key_r(db_->query<Key>(odb::query<Key>::pubkey.in_range(presentSigPubkeys.begin(), presentSigPubkeys.end())));
-        for (auto& keychain: key_r)
+        unsigned int n = script.sigsneeded();
+        if (n > sigsNeeded) sigsNeeded = n;
+
         {
-            std::shared_ptr<Keychain> root_keychain(keychain.root_keychain());
-            present_signers.insert(std::make_pair(root_keychain->name(), root_keychain->hash()));
+            std::vector<bytes_t> pubkeys = script.missingsigs();
+            for (auto& pubkey: pubkeys) { missingpubkeys.insert(pubkey); }
         }
-    }
-    {
-        odb::result<Key> key_r(db_->query<Key>(odb::query<Key>::pubkey.in_range(missingSigPubkeys.begin(), missingSigPubkeys.end())));
-        for (auto& keychain: key_r)
+
         {
-            std::shared_ptr<Keychain> root_keychain(keychain.root_keychain());
-            missing_signers.insert(std::make_pair(root_keychain->name(), root_keychain->hash()));
+            std::vector<bytes_t> pubkeys = script.presentsigs();
+            for (auto& pubkey: pubkeys) { presentpubkeys.insert(pubkey); }
         }
     }
 
-    return SignatureInfo(sigs_needed, present_signers, missing_signers);
+    SigningKeychainSet signingKeychainSet;
+
+    {
+        odb::result<Key> key_r(db_->query<Key>(odb::query<Key>::pubkey.in_range(missingpubkeys.begin(), missingpubkeys.end())));
+        for (auto& keychain: key_r)
+        {
+            std::shared_ptr<Keychain> root_keychain(keychain.root_keychain());
+            signingKeychainSet.insert(SigningKeychain(root_keychain->name(), root_keychain->hash(), false));
+        }
+    }
+
+    {
+        odb::result<Key> key_r(db_->query<Key>(odb::query<Key>::pubkey.in_range(presentpubkeys.begin(), presentpubkeys.end())));
+        for (auto& keychain: key_r)
+        {
+            std::shared_ptr<Keychain> root_keychain(keychain.root_keychain());
+            signingKeychainSet.insert(SigningKeychain(root_keychain->name(), root_keychain->hash(), true));
+        }
+    }
+
+    return SignatureInfo(sigsNeeded, signingKeychainSet);
 }
 
 std::shared_ptr<Tx> Vault::signTx(const bytes_t& hash, std::vector<std::string>& keychain_names, bool update)

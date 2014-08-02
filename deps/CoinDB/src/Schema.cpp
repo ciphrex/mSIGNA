@@ -16,8 +16,6 @@
 #include <CoinCore/hdkeys.h>
 #include <CoinCore/aes.h>
 
-#include <CoinQ/CoinQ_script.h>
-
 #include <logger/logger.h>
 
 //#define ENABLE_CRYPTO
@@ -1126,6 +1124,11 @@ std::set<bytes_t> Tx::presentSigPubkeys() const
         for (auto& txinpubkey: txinpubkeys) { pubkeys.insert(txinpubkey); }
     } 
     return pubkeys;
+}
+
+CoinQ::Script::Signer Tx::signer() const
+{
+    return CoinQ::Script::Signer(toCoinCore(), true);
 }
 
 std::string Tx::toJson(bool includeRawHex) const

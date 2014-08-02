@@ -15,6 +15,7 @@
 
 #include <CoinQ/CoinQ_typedefs.h>
 #include <CoinQ/CoinQ_blocks.h>
+#include <CoinQ/CoinQ_script.h>
 
 #include <odb/core.hxx>
 #include <odb/nullable.hxx>
@@ -1092,6 +1093,8 @@ public:
     unsigned int missingSigCount() const;
     std::set<bytes_t> missingSigPubkeys() const;
     std::set<bytes_t> presentSigPubkeys() const;
+
+    CoinQ::Script::Signer signer() const;
 
     std::string toJson(bool includeRawHex = false) const;
 
