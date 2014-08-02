@@ -26,6 +26,8 @@ public:
     void setModel(SignatureModel* model);
     #pragma clang diagnostic pop
 
+    void setMenu(QMenu* menu) { m_menu = menu; }
+
 public slots:
     void update();
 
@@ -34,5 +36,6 @@ protected:
 
 private:
     SignatureModel* m_model;
+    QMenu* m_menu;
 };
 

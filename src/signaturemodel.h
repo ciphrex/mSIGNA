@@ -24,6 +24,7 @@ public:
 
     void setVault(CoinDB::Vault* vault);
     void setTxHash(const bytes_t& txHash);
+    const bytes_t getTxHash() const { return m_txHash; }
     void update();
 
     unsigned int getSigsNeeded() const { return m_sigsNeeded; }

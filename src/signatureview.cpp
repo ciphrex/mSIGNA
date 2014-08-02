@@ -15,7 +15,7 @@
 #include <QContextMenuEvent>
 
 SignatureView::SignatureView(QWidget* parent)
-    : QTreeView(parent), m_model(nullptr)
+    : QTreeView(parent), m_model(nullptr), m_menu(nullptr)
 {
 }
 
@@ -33,12 +33,8 @@ void SignatureView::update()
     QTreeView::update();
 }
 
-void SignatureView::contextMenuEvent(QContextMenuEvent* /*event*/)
+void SignatureView::contextMenuEvent(QContextMenuEvent* event)
 {
-/*
-    QMenu menu(this);
-    if (exportPrivateAction)    menu.addAction(exportPrivateAction);
-    if (exportPublicAction)     menu.addAction(exportPublicAction);
-    if (!menu.isEmpty())        menu.exec(event->globalPos());
-*/
+    if (m_menu) m_menu->exec(event->globalPos());
 }
+

@@ -84,6 +84,7 @@ HEADERS = \
     src/signaturemodel.h \
     src/signatureview.h \
     src/signaturedialog.h \
+    src/signatureactions.h \
     src/requestpaymentdialog.h \
     src/networksettingsdialog.h \
     src/keychainbackupdialog.h \
@@ -127,6 +128,7 @@ SOURCES = \
     src/signaturemodel.cpp \
     src/signatureview.cpp \
     src/signaturedialog.cpp \
+    src/signatureactions.cpp \
     src/requestpaymentdialog.cpp \
     src/networksettingsdialog.cpp \
     src/keychainbackupdialog.cpp \
