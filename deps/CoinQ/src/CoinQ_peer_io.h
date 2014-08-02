@@ -96,13 +96,14 @@ public:
     void subscribeTx(peer_tx_slot_t slot) { notifyTx.connect(slot); }
     void subscribeAddr(peer_addr_slot_t slot) { notifyAddr.connect(slot); }
     void subscribeInv(peer_inv_slot_t slot) { notifyInv.connect(slot); }
+    void subscribeProtocolError(peer_error_slot_t slot) { notifyProtocolError.connect(slot); }
 
     void subscribeStart(peer_slot_t slot) { notifyStart.connect(slot); }
     void subscribeStop(peer_slot_t slot) { notifyStop.connect(slot); }
     void subscribeOpen(peer_slot_t slot) { notifyOpen.connect(slot); }
     void subscribeTimeout(peer_slot_t slot) { notifyTimeout.connect(slot); }
     void subscribeClose(peer_slot_t slot) { notifyClose.connect(slot); }
-    void subscribeError(peer_error_slot_t slot) { notifyError.connect(slot); }
+    void subscribeConnectionError(peer_error_slot_t slot) { notifyConnectionError.connect(slot); }
 
     static const unsigned char DEFAULT_Ipv6[];
 
@@ -221,12 +222,13 @@ private:
     CoinQSignal<Peer&, const Coin::Transaction&>        notifyTx;
     CoinQSignal<Peer&, const Coin::AddrMessage&>        notifyAddr;
     CoinQSignal<Peer&, const Coin::Inventory&>          notifyInv;
+    CoinQSignal<Peer&, const std::string&>              notifyProtocolError;
 
     CoinQSignal<Peer&>                                  notifyStart;
     CoinQSignal<Peer&>                                  notifyStop;
     CoinQSignal<Peer&>                                  notifyOpen;
     CoinQSignal<Peer&>                                  notifyClose;
-    CoinQSignal<Peer&, const std::string&>              notifyError;
+    CoinQSignal<Peer&, const std::string&>              notifyConnectionError;
 
     CoinQSignal<Peer&>                                  notifyTimeout;
 

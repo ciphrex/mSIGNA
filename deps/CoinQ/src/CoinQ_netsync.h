@@ -73,8 +73,12 @@ public:
     void subscribeStarted(void_slot_t slot) { notifyStarted.connect(slot); }
     void subscribeStopped(void_slot_t slot) { notifyStopped.connect(slot); }
     void subscribeOpen(void_slot_t slot) { notifyOpen.connect(slot); }
-    void subscribeTimeout(void_slot_t slot) { notifyTimeout.connect(slot); }
     void subscribeClose(void_slot_t slot) { notifyClose.connect(slot); }
+    void subscribeTimeout(void_slot_t slot) { notifyTimeout.connect(slot); }
+
+    void subscribeConnectionError(string_slot_t slot) { notifyConnectionError.connect(slot); }
+    void subscribeProtocolError(string_slot_t slot) { notifyProtocolError.connect(slot); }
+    void subscribeBlockTreeError(string_slot_t slot) { notifyBlockTreeError.connect(slot); }
 
     void subscribeFetchingHeaders(void_slot_t slot) { notifyFetchingHeaders.connect(slot); }
     void subscribeHeadersSynched(void_slot_t slot) { notifyHeadersSynched.connect(slot); }
@@ -83,7 +87,6 @@ public:
     void subscribeBlocksSynched(void_slot_t slot) { notifyBlocksSynched.connect(slot); }
 
     void subscribeStatus(string_slot_t slot) { notifyStatus.connect(slot); }
-    void subscribeError(string_slot_t slot) { notifyError.connect(slot); }
 
     // PEER EVENT SUBSCRIPTIONS
     void subscribeTx(tx_slot_t slot) { notifyTx.connect(slot); }
@@ -126,8 +129,12 @@ private:
     CoinQSignal<void> notifyStarted;
     CoinQSignal<void> notifyStopped;
     CoinQSignal<void> notifyOpen;
-    CoinQSignal<void> notifyTimeout;
     CoinQSignal<void> notifyClose;
+    CoinQSignal<void> notifyTimeout;
+
+    CoinQSignal<const std::string&> notifyConnectionError;
+    CoinQSignal<const std::string&> notifyProtocolError;
+    CoinQSignal<const std::string&> notifyBlockTreeError;
 
     CoinQSignal<void> notifyFetchingHeaders;
     CoinQSignal<void> notifyHeadersSynched;
@@ -136,7 +143,6 @@ private:
     CoinQSignal<void> notifyBlocksSynched;
 
     CoinQSignal<const std::string&> notifyStatus;
-    CoinQSignal<const std::string&> notifyError;
 
     // Peer signals
     CoinQSignal<const Coin::Transaction&> notifyTx;

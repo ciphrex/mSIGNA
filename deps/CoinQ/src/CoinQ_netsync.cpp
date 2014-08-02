@@ -72,8 +72,15 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         }
         catch (const std::exception& e)
         {
-            notifyError(e.what());
+            LOGGER(error) << "NetworkSync - m_peer open handler - " << e.what() << std::endl;
+            notifyBlockTreeError(e.what());
         }
+    });
+
+    m_peer.subscribeClose([&](CoinQ::Peer& /*peer*/)
+    {
+        stop();
+        notifyClose();
     });
 
     m_peer.subscribeTimeout([&](CoinQ::Peer& /*peer*/)
@@ -81,10 +88,14 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         notifyTimeout();
     });
 
-    m_peer.subscribeClose([&](CoinQ::Peer& /*peer*/)
+    m_peer.subscribeConnectionError([&](CoinQ::Peer& /*peer*/, const std::string& error)
     {
-        stop();
-        notifyClose();
+        notifyConnectionError(error);
+    });
+
+    m_peer.subscribeProtocolError([&](CoinQ::Peer& /*peer*/, const std::string& error)
+    {
+        notifyProtocolError(error);
     });
 
     m_peer.subscribeInv([&](CoinQ::Peer& peer, const Coin::Inventory& inv)
@@ -131,7 +142,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                         std::stringstream err;
                         err << "Block tree insertion error for block " << item.getHashLittleEndian().getHex() << ": " << e.what(); // TODO: localization
                         LOGGER(error) << err.str() << std::endl;
-                        notifyError(err.str());
+                        notifyBlockTreeError(err.str());
                         throw e;
                     }
                 }
@@ -252,7 +263,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
             std::stringstream err;
             err << "NetworkSync merkle block handler - block hash: " << hash.getHex() << " - " << e.what();
             LOGGER(error) << err.str() << std::endl;
-            notifyError(err.str());
+            notifyBlockTreeError(err.str());
 
             try
             {
@@ -264,7 +275,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 err.clear();
                 err << "NetworkSync merkle block handler - error fetching block headers: " << e.what();
                 LOGGER(error) << err.str() << std::endl;
-                notifyError(e.what());
+                notifyBlockTreeError(e.what());
             } 
         }
     });
@@ -304,7 +315,8 @@ void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProof
     }
     catch (const std::exception& e)
     {
-        notifyError(e.what());
+        LOGGER(error) << "NetworkSync::loadHeaders() - " << e.what() << std::endl;
+        notifyBlockTreeError(e.what());
     }
 
     m_blockTree.clear();

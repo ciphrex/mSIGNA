@@ -8,6 +8,8 @@
 
 #include "CoinQ_peer_io.h"
 
+#include <logger/logger.h>
+
 #include <sstream>
 
 using namespace CoinQ;
@@ -29,12 +31,13 @@ void Peer::do_handshake()
     timer_.expires_from_now(boost::posix_time::seconds(5));
     timer_.async_wait([this](const boost::system::error_code& ec) {
         if (!bRunning) return;
+        LOGGER(trace) << "Peer timer handler" << std::endl;
 
         if (ec)
         {
             std::stringstream err;
             err << "Timer error: " << ec.value() << ": " << ec.message();
-            notifyError(*this, err.str());
+            notifyConnectionError(*this, err.str());
             notifyClose(*this);
             do_stop();
             return;
@@ -55,12 +58,13 @@ void Peer::do_read()
     boost::asio::async_read(socket_, boost::asio::buffer(read_buffer, READ_BUFFER_SIZE), boost::asio::transfer_at_least(MIN_MESSAGE_HEADER_SIZE),
     strand_.wrap([this](const boost::system::error_code& ec, std::size_t bytes_read) {
         if (!bRunning) return;
+        LOGGER(trace) << "Peer read handler." << std::endl;
 
         if (ec)
         {
             std::stringstream err;
             err << "Read error: " << ec.value() << ": " << ec.message();
-            notifyError(*this, err.str());
+            notifyConnectionError(*this, err.str());
             notifyClose(*this);
             do_stop();
             return;
@@ -152,7 +156,7 @@ void Peer::do_read()
                 {
                     std::stringstream err;
                     err << "Command type not implemented: " << command;
-                    notifyError(*this, err.str());
+                    notifyProtocolError(*this, err.str());
                 }
 
                 notifyMessage(*this, peerMessage);
@@ -161,7 +165,7 @@ void Peer::do_read()
             {
                 std::stringstream err;
                 err << "Message decode error: " << e.what();
-                notifyError(*this, err.str());
+                notifyProtocolError(*this, err.str());
             }
 
             read_message.assign(read_message.begin() + MIN_MESSAGE_HEADER_SIZE + payloadSize, read_message.end());
@@ -178,12 +182,13 @@ void Peer::do_write(boost::shared_ptr<uchar_vector> data)
     boost::asio::async_write(socket_, boost::asio::buffer(*data), boost::asio::transfer_all(),
     strand_.wrap([this](const boost::system::error_code& ec, std::size_t bytes_written) {
         if (!bRunning) return;
+        LOGGER(trace) << "Peer write handler." << std::endl;
 
         if (ec)
         {
             std::stringstream err;
             err << "Write error: " << ec.value() << ": " << ec.message();
-            notifyError(*this, err.str());
+            notifyConnectionError(*this, err.str());
             return;
         }
 
@@ -203,14 +208,15 @@ void Peer::do_send(const Coin::CoinNodeMessage& message)
 
 void Peer::do_connect(tcp::resolver::iterator iter)
 {
-    boost::asio::async_connect(socket_, iter, strand_.wrap([&](const boost::system::error_code& ec, tcp::resolver::iterator) {
+    boost::asio::async_connect(socket_, iter, strand_.wrap([this](const boost::system::error_code& ec, tcp::resolver::iterator) {
         if (!bRunning) return;
+        LOGGER(trace) << "Peer connect handler." << std::endl;
 
         if (ec)
         {
             std::stringstream err;
             err << "Connect error: " << ec.value() << ": " << ec.message();
-            notifyError(*this, err.str());
+            notifyConnectionError(*this, err.str());
             notifyClose(*this);
             do_stop();
             return;
@@ -225,7 +231,7 @@ void Peer::do_connect(tcp::resolver::iterator iter)
         {
             std::stringstream err;
             err << "Handshake error: " << ec.value() << ": " << ec.message();
-            notifyError(*this, err.str());
+            notifyConnectionError(*this, err.str());
             notifyClose(*this);
             do_stop();
         }
@@ -233,7 +239,7 @@ void Peer::do_connect(tcp::resolver::iterator iter)
         {
             std::stringstream err;
             err << "Handshake error: " << e.what();
-            notifyError(*this, err.str());
+            notifyConnectionError(*this, err.str());
             notifyClose(*this);
             do_stop();
         }
@@ -262,12 +268,13 @@ void Peer::start()
 
     resolver_.async_resolve(query, [this](const boost::system::error_code& ec, tcp::resolver::iterator iterator) {
         if (!bRunning) return;
+        LOGGER(trace) << "Peer resolve handler." << std::endl;
 
         if (ec)
         {
             std::stringstream err;
             err << "Resolve error: " << ec.value() << ": " << ec.message();
-            notifyError(*this, err.str());
+            notifyConnectionError(*this, err.str());
             notifyClose(*this);
             do_stop();
             return;
