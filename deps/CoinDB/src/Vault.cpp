@@ -1633,6 +1633,34 @@ std::shared_ptr<Tx> Vault::getTx_unwrapped(unsigned long tx_id) const
     return tx;
 }
 
+std::vector<std::string> Vault::getSerializedUnsignedTxs(const std::string& account_name) const
+{
+    LOGGER(trace) << "Vault::getSerializedUnsignedTxs(" << account_name << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    return getSerializedUnsignedTxs_unwrapped(account_name);
+}
+
+std::vector<std::string> Vault::getSerializedUnsignedTxs_unwrapped(const std::string& account_name) const
+{
+    std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
+
+    odb::result<TxOutView> view_r(db_->query<TxOutView>(odb::query<TxOutView>::sending_account::id == account->id() && odb::query<TxOutView>::Tx::status == Tx::UNSIGNED));
+
+    std::set<unsigned long> txIds;
+    for (auto& view: view_r) { txIds.insert(view.tx_id); }
+
+    odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::id.in_range(txIds.begin(), txIds.end())));
+
+    std::vector<std::string> serializedTxs;
+    for (auto& tx: tx_r) { serializedTxs.push_back(tx.toSerialized()); }
+    return serializedTxs;
+}
+
 uint32_t Vault::getTxConfirmations(const bytes_t& hash) const
 {
     LOGGER(trace) << "Vault::getTxConfirmations(" << uchar_vector(hash).getHex() << ")" << std::endl;
