@@ -18,6 +18,10 @@
 
 #include <logger/logger.h>
 
+// support for boost serialization
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+
 //#define ENABLE_CRYPTO
 
 using namespace CoinDB;
@@ -1171,3 +1175,20 @@ std::string Tx::toJson(bool includeRawHex) const
     ss << "}";
     return ss.str();
 }
+
+std::string Tx::toSerialized() const
+{
+    std::stringstream ss;
+    boost::archive::text_oarchive oa(ss);
+    oa << *this;
+    return ss.str();
+}
+
+void Tx::fromSerialized(const std::string& serialized)
+{
+    std::stringstream ss;
+    ss << serialized;
+    boost::archive::text_iarchive ia(ss);
+    ia >> *this;
+}
+

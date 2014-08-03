@@ -1098,6 +1098,9 @@ public:
 
     std::string toJson(bool includeRawHex = false) const;
 
+    std::string toSerialized() const;
+    void fromSerialized(const std::string& serialized);
+
 private:
     friend class odb::access;
 
