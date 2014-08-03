@@ -41,7 +41,7 @@ enum ErrorCodes
     TX_NOT_FOUND = 401,
     TX_INVALID_INPUTS,
     TX_OUTPUTS_EXCEED_INPUTS,
-    TX_OUTPUT_NOT_FOUND
+    TX_OUTPUT_NOT_FOUND,
 
     // Block header errors
     BLOCKHEADER_NOT_FOUND = 501,
@@ -222,7 +222,7 @@ public:
 class TxOutputNotFoundException : public TxException
 {
 public:
-    explicit TxOutputNotFoundException(const bytes_t& outhash = bytes_t(), int outindex = -1) : TxException("Transaction outputs exceed inputs.", TX_OUTPUT_NOT_FOUND_EXAMPLE, outhash) : outindex_(outindex) { }
+    explicit TxOutputNotFoundException(const bytes_t& outhash = bytes_t(), int outindex = -1) : TxException("Transaction output not found.", TX_OUTPUT_NOT_FOUND, outhash),  outindex_(outindex) { }
 
     int outindex() const { return outindex_; }
 

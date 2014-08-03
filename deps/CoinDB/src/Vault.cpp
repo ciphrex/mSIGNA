@@ -2548,7 +2548,7 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
     return sigsadded;
 }
 
-std::shared<TxOut> Vault::getTxOut(const bytes_t& outhash, uint32_t outindex) const
+std::shared_ptr<TxOut> Vault::getTxOut(const bytes_t& outhash, uint32_t outindex) const
 {
     LOGGER(trace) << "Vault::getTxOut(" << uchar_vector(outhash).getHex() << ", " << outindex << ")" << std::endl;
 
@@ -2560,15 +2560,15 @@ std::shared<TxOut> Vault::getTxOut(const bytes_t& outhash, uint32_t outindex) co
     return getTxOut_unwrapped(outhash, outindex);
 }
 
-std::shared<TxOut> getTxOut_unwrapped(const bytes_t& outhash, uint32_t outindex) const
+std::shared_ptr<TxOut> Vault::getTxOut_unwrapped(const bytes_t& outhash, uint32_t outindex) const
 {
-    odb::result<TxOut> r(db_->query<TxOut>(odb::query<TxOut>::tx::hash == outhash && odb::query<TxOut>::txindex == outindex));
+    odb::result<TxOut> r(db_->query<TxOut>(odb::query<TxOut>::tx->hash == outhash && odb::query<TxOut>::txindex == outindex));
     if (r.empty()) throw TxOutputNotFoundException(outhash, (int)outindex);
     std::shared_ptr<TxOut> txout(r.begin().load());
     return txout;
 }
 
-std::shared<TxOut> Vault::setSendingLabel(const bytes_t& outhash, uint32_t outindex, const std::string& label)
+std::shared_ptr<TxOut> Vault::setSendingLabel(const bytes_t& outhash, uint32_t outindex, const std::string& label)
 {
     LOGGER(trace) << "Vault::setSendingLabel(" << uchar_vector(outhash).getHex() << ", " << outindex << ", " << label << ")" << std::endl;
 
@@ -2580,7 +2580,7 @@ std::shared<TxOut> Vault::setSendingLabel(const bytes_t& outhash, uint32_t outin
     return txout;
 }
 
-std::shared<TxOut> Vault::setSendingLabel_unwrapped(const bytes_t& outhash, uint32_t outindex, const std::string& label)
+std::shared_ptr<TxOut> Vault::setSendingLabel_unwrapped(const bytes_t& outhash, uint32_t outindex, const std::string& label)
 {
     std::shared_ptr<TxOut> txout = getTxOut_unwrapped(outhash, outindex);
     txout->sending_label(label);
@@ -2588,7 +2588,7 @@ std::shared<TxOut> Vault::setSendingLabel_unwrapped(const bytes_t& outhash, uint
     return txout;
 }
 
-std::shared<TxOut> Vault::setReceivingLabel(const bytes_t& outhash, uint32_t outindex, const std::string& label)
+std::shared_ptr<TxOut> Vault::setReceivingLabel(const bytes_t& outhash, uint32_t outindex, const std::string& label)
 {
     LOGGER(trace) << "Vault::setReceivingLabel(" << uchar_vector(outhash).getHex() << ", " << outindex << ", " << label << ")" << std::endl;
 
@@ -2600,7 +2600,7 @@ std::shared<TxOut> Vault::setReceivingLabel(const bytes_t& outhash, uint32_t out
     return txout;
 }
 
-std::shared<TxOut> Vault::setReceivingLabel_unwrapped(const bytes_t& outhash, uint32_t outindex, const std::string& label)
+std::shared_ptr<TxOut> Vault::setReceivingLabel_unwrapped(const bytes_t& outhash, uint32_t outindex, const std::string& label)
 {
     std::shared_ptr<TxOut> txout = getTxOut_unwrapped(outhash, outindex);
     txout->receiving_label(label);

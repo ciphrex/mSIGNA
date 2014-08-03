@@ -150,7 +150,7 @@ public:
     std::shared_ptr<Tx>                     signTx(const bytes_t& hash, std::vector<std::string>& keychain_names, bool update = false);
     std::shared_ptr<Tx>                     signTx(unsigned long tx_id, std::vector<std::string>& keychain_names, bool update = false);
 
-    std::shared_ptr<TxOut>                  getTxOut(const bytes& outhash, uint32_t outindex) const;
+    std::shared_ptr<TxOut>                  getTxOut(const bytes_t& outhash, uint32_t outindex) const;
     std::shared_ptr<TxOut>                  setSendingLabel(const bytes_t& outhash, uint32_t outindex, const std::string& label);
     std::shared_ptr<TxOut>                  setReceivingLabel(const bytes_t& outhash, uint32_t outindex, const std::string& label);
 
@@ -279,7 +279,7 @@ protected:
     SignatureInfo                           getSignatureInfo_unwrapped(std::shared_ptr<Tx> tx) const;
     unsigned int                            signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::string>& keychain_names); // Tries to sign as many as it can with the unlocked keychains.
 
-    std::shared_ptr<TxOut>                  getTxOut_unwrapped(const bytes_t& outhash, uint32_t outindex) const
+    std::shared_ptr<TxOut>                  getTxOut_unwrapped(const bytes_t& outhash, uint32_t outindex) const;
     std::shared_ptr<TxOut>                  setSendingLabel_unwrapped(const bytes_t& outhash, uint32_t outindex, const std::string& label);
     std::shared_ptr<TxOut>                  setReceivingLabel_unwrapped(const bytes_t& outhash, uint32_t outindex, const std::string& label);
 
