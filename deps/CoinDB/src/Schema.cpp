@@ -1139,7 +1139,7 @@ std::string Tx::toJson(bool includeRawHex) const
        << "\"locktime\":" << locktime_ << ","
        << "\"hash\":\"" << uchar_vector(hash()).getHex() << "\","
        << "\"unsignedhash\":\"" << uchar_vector(unsigned_hash()).getHex() << "\","
-       << "\"status\":\"" << getStatusString(status_, true) << "\","
+       << "\"status\":\"" << getStatusString(status_) << "\","
        << "\"height\":";
     if (blockheader_)   { ss << blockheader_->height(); }
     else                { ss << "null"; }
