@@ -2548,6 +2548,67 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
     return sigsadded;
 }
 
+std::shared<TxOut> Vault::getTxOut(const bytes_t& outhash, uint32_t outindex) const
+{
+    LOGGER(trace) << "Vault::getTxOut(" << uchar_vector(outhash).getHex() << ", " << outindex << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    return getTxOut_unwrapped(outhash, outindex);
+}
+
+std::shared<TxOut> getTxOut_unwrapped(const bytes_t& outhash, uint32_t outindex) const
+{
+    odb::result<TxOut> r(db_->query<TxOut>(odb::query<TxOut>::tx::hash == outhash && odb::query<TxOut>::txindex == outindex));
+    if (r.empty()) throw TxOutputNotFoundException(outhash, (int)outindex);
+    std::shared_ptr<TxOut> txout(r.begin().load());
+    return txout;
+}
+
+std::shared<TxOut> Vault::setSendingLabel(const bytes_t& outhash, uint32_t outindex, const std::string& label)
+{
+    LOGGER(trace) << "Vault::setSendingLabel(" << uchar_vector(outhash).getHex() << ", " << outindex << ", " << label << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<TxOut> txout = setSendingLabel_unwrapped(outhash, outindex, label);
+    t.commit();
+    return txout;
+}
+
+std::shared<TxOut> Vault::setSendingLabel_unwrapped(const bytes_t& outhash, uint32_t outindex, const std::string& label)
+{
+    std::shared_ptr<TxOut> txout = getTxOut_unwrapped(outhash, outindex);
+    txout->sending_label(label);
+    db_->update(txout);
+    return txout;
+}
+
+std::shared<TxOut> Vault::setReceivingLabel(const bytes_t& outhash, uint32_t outindex, const std::string& label)
+{
+    LOGGER(trace) << "Vault::setReceivingLabel(" << uchar_vector(outhash).getHex() << ", " << outindex << ", " << label << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<TxOut> txout = setReceivingLabel_unwrapped(outhash, outindex, label);
+    t.commit();
+    return txout;
+}
+
+std::shared<TxOut> Vault::setReceivingLabel_unwrapped(const bytes_t& outhash, uint32_t outindex, const std::string& label)
+{
+    std::shared_ptr<TxOut> txout = getTxOut_unwrapped(outhash, outindex);
+    txout->receiving_label(label);
+    db_->update(txout);
+    return txout;
+}
+
+
 std::shared_ptr<Tx> Vault::exportTx(const bytes_t& hash, const std::string& filepath) const
 {
     LOGGER(trace) << "Vault::exportTx(" << uchar_vector(hash).getHex() << ", " << filepath << ")" << std::endl;

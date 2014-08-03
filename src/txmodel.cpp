@@ -193,7 +193,11 @@ void TxModel::update()
         row.append(new QStandardItem("")); // placeholder for balance, once sorted
         row.append(confirmationsItem);
         row.append(new QStandardItem(address));
-        row.append(new QStandardItem(hash));
+
+        // Store the tx hash and tx index to uniquely identify the output.
+        QStandardItem* hashItem = new QStandardItem(hash);
+        hashItem->setData(item.tx_index, Qt::UserRole);
+        row.append(hashItem);
 
         rows.append(std::make_pair(std::make_pair(item.tx_id, nConfirmations), std::make_pair(row, value)));
     }
