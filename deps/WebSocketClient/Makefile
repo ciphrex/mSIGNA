@@ -109,10 +109,10 @@ obj/JsonRpc.o: src/JsonRpc.cpp src/JsonRpc.h
 # Client
 client: jsonrpc lib/libWebSocketClient.a
 
-lib/libWebSocketClient.a: obj/WebSocketClient.o
+lib/libWebSocketClient.a: obj/Client.o
 	$(ARCHIVER) rcs $@ $^
 
-obj/WebSocketClient.o: src/WebSocketClient.cpp src/WebSocketClient.h
+obj/Client.o: src/Client.cpp src/Client.h
 	$(CXX) $(CXXFLAGS) $(INCLUDE_PATH) -c $< -o $@
 
 tests: client_tests
@@ -136,7 +136,7 @@ install_jsonrpc:
 
 install_client: install_jsonrpc
 	-mkdir -p $(SYSROOT)/include/WebSocketClient
-	-rsync -u src/WebSocketClient.h $(SYSROOT)/include/WebSocketClient/
+	-rsync -u src/Client.h $(SYSROOT)/include/WebSocketClient/
 	-mkdir -p $(SYSROOT)/lib
 	-rsync -u lib/libWebSocketClient.a $(SYSROOT)/lib/
 

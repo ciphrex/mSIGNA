@@ -1,11 +1,13 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// WebSocketClient.cpp
+// WebSocketAPI
+//
+// Client.cpp
 //
 // Copyright (c) 2014 Eric Lombrozo, all rights reserved
 //
 
-#include "WebSocketClient.h"
+#include "Client.h"
 
 //#define REPORT_LOW_LEVEL
 

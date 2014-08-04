@@ -5,7 +5,7 @@
 // Copyright (c) 2014 Eric Lombrozo, all rights reserved
 //
 
-#include <WebSocketClient.h>
+#include <Client.h>
 
 #include <iostream>
 
