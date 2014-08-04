@@ -129,19 +129,19 @@ tests/build/RippleClientTest$(EXE_EXT): tests/src/RippleClientTest.cpp lib/libWe
 install: install_jsonrpc install_client
 
 install_jsonrpc:
-	-mkdir -p $(SYSROOT)/include/WebSocketClient
-	-rsync -u src/JsonRpc.h $(SYSROOT)/include/WebSocketClient/
+	-mkdir -p $(SYSROOT)/include/WebSocketAPI
+	-rsync -u src/JsonRpc.h $(SYSROOT)/include/WebSocketAPI/
 	-mkdir -p $(SYSROOT)/lib
 	-rsync -u lib/libJsonRpc.a $(SYSROOT)/lib/
 
 install_client: install_jsonrpc
-	-mkdir -p $(SYSROOT)/include/WebSocketClient
-	-rsync -u src/Client.h $(SYSROOT)/include/WebSocketClient/
+	-mkdir -p $(SYSROOT)/include/WebSocketAPI
+	-rsync -u src/Client.h $(SYSROOT)/include/WebSocketAPI/
 	-mkdir -p $(SYSROOT)/lib
 	-rsync -u lib/libWebSocketClient.a $(SYSROOT)/lib/
 
 remove:
-	-rm -rf $(SYSROOT)/include/WebSocketClient
+	-rm -rf $(SYSROOT)/include/WebSocketAPI
 	-rm $(SYSROOT)/lib/libJsonRpc.a
 	-rm $(SYSROOT)/lib/libWebSocketClient.a
 	
