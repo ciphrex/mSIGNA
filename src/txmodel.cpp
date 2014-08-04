@@ -121,6 +121,7 @@ void TxModel::update()
         if (description.isEmpty()) description = "Not available";
 
         // The type stuff is just to test the new db schema. It's all wrong, we're not going to use TxOutViews for this.
+        TxType txType;
         QString type;
         QString amount;
         QString fee;
@@ -128,10 +129,12 @@ void TxModel::update()
         bytes_t this_txhash = item.tx_status == Tx::UNSIGNED ? item.tx_unsigned_hash : item.tx_hash;
         switch (item.role_flags) {
         case TxOut::ROLE_NONE:
+            txType = NONE;
             type = tr("None");
             break;
 
         case TxOut::ROLE_SENDER:
+            txType = SEND;
             type = tr("Send");
             amount = "-";
             value -= item.value;
@@ -150,12 +153,14 @@ void TxModel::update()
             break;
 
         case TxOut::ROLE_RECEIVER:
+            txType = RECEIVE;
             type = tr("Receive");
             amount = "+";
             value += item.value;
             break;
 
         default:
+            txType = UNKNOWN;
             type = tr("Unknown");
         }
 
@@ -187,7 +192,11 @@ void TxModel::update()
 
         row.append(new QStandardItem(time));
         row.append(new QStandardItem(description));
-        row.append(new QStandardItem(type));
+
+        QStandardItem* typeItem = new QStandardItem(type);
+        typeItem->setData(txType, Qt::UserRole);
+        row.append(typeItem);
+
         row.append(new QStandardItem(amount));
         row.append(new QStandardItem(fee));
         row.append(new QStandardItem("")); // placeholder for balance, once sorted
@@ -358,8 +367,53 @@ QVariant TxModel::data(const QModelIndex& index, int role) const
     }
 }
 
-Qt::ItemFlags TxModel::flags(const QModelIndex& /*index*/) const
+bool TxModel::setData(const QModelIndex& index, const QVariant& value, int role)
 {
+    if (role == Qt::EditRole) {
+        if (index.column() == 1) {
+            // Keychain name edited.
+            if (!vault) return false;
+ 
+            try {
+                // Get account role (sender/receiver)
+                QStandardItem* typeItem = item(index.row(), 2);
+                int txtype = typeItem->data(Qt::UserRole).toInt();                
+                if (txtype != SEND && txtype != RECEIVE) return false;
+
+                // Get outpoint information
+                QStandardItem* txHashItem = item(index.row(), 8);
+                uchar_vector txhash;
+                txhash.setHex(txHashItem->text().toStdString());
+                uint32_t txindex = (uint32_t)txHashItem->data(Qt::UserRole).toInt();
+
+                if (txtype == SEND)
+                {
+                    vault->setSendingLabel(txhash, txindex, value.toString().toStdString());
+                }
+                else
+                {
+                    vault->setReceivingLabel(txhash, txindex, value.toString().toStdString());
+                }
+
+                setItem(index.row(), index.column(), new QStandardItem(value.toString()));
+                return true;
+            }
+            catch (const std::exception& e) {
+                emit error(QString::fromStdString(e.what()));
+            }
+        }
+        return false;
+    }
+ 
+    return true;
+}
+
+Qt::ItemFlags TxModel::flags(const QModelIndex& index) const
+{
+    if (index.column() == 1) {
+        return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable;
+    }
+ 
     return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
 }
 
