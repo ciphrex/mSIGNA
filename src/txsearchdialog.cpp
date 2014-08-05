@@ -46,5 +46,5 @@ TxSearchDialog::TxSearchDialog(const TxModel& txModel, QWidget* parent)
 
 QString TxSearchDialog::getTxHash() const
 {
-    return m_txHashEdit->text();
+    return m_txHashEdit->text().toLower();
 }

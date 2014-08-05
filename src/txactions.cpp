@@ -103,10 +103,27 @@ void TxActions::searchTx()
 {
     try
     {
+        // Sanity checks
+        if (!m_txModel) throw std::runtime_error("No transaction model loaded.");
+        if (!m_txView) throw std::runtime_error("No transaction view loaded.");
+
         TxSearchDialog dlg(m_txModel);
         if (dlg.exec())
         {
-            emit error("Not implemented yet.");
+            QString txhash = dlg.getTxHash();
+
+            // TODO: faster search
+            int row = 0;
+            for (; row < m_txModel->rowCount(); row++)
+            {
+                QStandardItem* hashItem = m_txModel->item(row, 8);
+                if (hashItem->text().left(txhash.size()) == txhash) break;    
+            }
+
+            if (row >= m_txModel->rowCount()) throw std::runtime_error("Transaction not found.");
+
+            QItemSelection selection(m_txModel->index(row, 0), m_txModel->index(row, m_txModel->columnCount() - 1));
+            m_txView->selectionModel()->select(selection, QItemSelectionModel::SelectCurrent);
         }
     }
     catch (const std::exception& e)
