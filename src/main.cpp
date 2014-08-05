@@ -109,9 +109,14 @@ int main(int argc, char* argv[])
     splash.showMessage("\n  Loading settings...");
     MainWindow mainWin; // constructor loads settings
     QObject::connect(&mainWin, &MainWindow::status, [&](const QString& message) { splash.showMessage(QString("\n ") + message); });
-    QObject::connect(&mainWin, &MainWindow::headersLoadProgress, [&](const QString& message) { splash.showMessage(QString("\n Loading block headers... ") + message); });
+    QObject::connect(&mainWin, &MainWindow::headersLoadProgress, [&](const QString& message)
+    {
+        splash.showMessage(QString("\n Loading block headers... ") + message);
+        app.processEvents();
+    });
 
     splash.showMessage("\n  Starting command server...");
+    app.processEvents();
     if (!commandServer.start()) {
         LOGGER(debug) << "Could not start command server." << std::endl;
     }
@@ -121,7 +126,6 @@ int main(int argc, char* argv[])
         app.connect(&commandServer, SIGNAL(gotCommand(const QString&)), &mainWin, SLOT(processCommand(const QString&)));
     }
 
-    app.processEvents();
     splash.showMessage("\n  Loading block headers...");
     app.processEvents();
     mainWin.loadHeaders();
@@ -133,7 +137,6 @@ int main(int argc, char* argv[])
     timer.async_wait([&](const boost::system::error_code& /*ec*/) { waiting = false; });
     timer_io.run();
 
-    app.processEvents();
     splash.showMessage("\n  Initializing...");
     app.processEvents();
     while (waiting) { usleep(200); }
