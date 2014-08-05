@@ -513,6 +513,7 @@ void NetworkSync::stopSyncBlocks()
 
 void NetworkSync::start(const std::string& host, const std::string& port)
 {
+    LOGGER(trace) << "NetworkSync::start(" << host << ", " << port << ")" << std::endl;
     {
         if (m_bStarted) throw std::runtime_error("NetworkSync::start() - already started.");
         boost::lock_guard<boost::mutex> lock(m_startMutex);

@@ -24,6 +24,7 @@
 #include "CoinQ_typedefs.h"
 #include "CoinQ_coinparams.h"
 
+#include <CoinCore/typedefs.h>
 #include <CoinCore/BloomFilter.h>
 
 typedef Coin::Transaction coin_tx_t;
