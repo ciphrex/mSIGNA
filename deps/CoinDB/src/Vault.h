@@ -184,11 +184,13 @@ public:
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return notifyTxInserted.connect(slot); }
     Signals::Connection subscribeTxStatusChanged(TxSignal::Slot slot) { return notifyTxStatusChanged.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return notifyMerkleBlockInserted.connect(slot); }
+    Signals::Connection subscribeHaveAllConfirmedTxs(Signals::Signal<>::Slot slot) { return notifyHaveAllConfirmedTxs.connect(slot); }
     void clearAllSlots()
     {
         notifyTxInserted.clear();
         notifyTxStatusChanged.clear();
         notifyMerkleBlockInserted.clear();
+        notifyHaveAllConfirmedTxs.clear();
     }
 
 protected:
@@ -310,6 +312,7 @@ protected:
     TxSignal                                notifyTxInserted;
     TxSignal                                notifyTxStatusChanged;
     MerkleBlockSignal                       notifyMerkleBlockInserted;
+    Signals::Signal<>                       notifyHaveAllConfirmedTxs;
 
 private:
     mutable boost::mutex mutex;

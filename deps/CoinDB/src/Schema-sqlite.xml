@@ -1,4 +1,23 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="sqlite" version="1">
+  <changeset version="11">
+    <alter-table name="MerkleBlock">
+      <add-column name="ismissingtxs" type="INTEGER" null="false"/>
+    </alter-table>
+    <add-table name="MerkleBlock_missingtxhashes" kind="container">
+      <column name="object_id" type="INTEGER" null="false"/>
+      <column name="value" type="BLOB" null="false"/>
+      <foreign-key name="object_id_fk" on-delete="CASCADE">
+        <column name="object_id"/>
+        <references table="MerkleBlock">
+          <column name="id"/>
+        </references>
+      </foreign-key>
+      <index name="MerkleBlock_missingtxhashes_object_id_i">
+        <column name="object_id"/>
+      </index>
+    </add-table>
+  </changeset>
+
   <model version="10">
     <table name="Version" kind="object">
       <column name="id" type="INTEGER" null="false"/>

@@ -55,13 +55,14 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 10
-#define SCHEMA_VERSION      10
+#define SCHEMA_VERSION      11
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
 #endif
 
 typedef std::vector<unsigned long> ids_t;
+typedef std::set<bytes_t> hashset_t;
 
 #pragma db object pointer(std::shared_ptr)
 class Version
@@ -773,6 +774,11 @@ public:
     void flags(const bytes_t& flags) { flags_ = flags; }
     const bytes_t& flags() const { return flags_; }
 
+    const hashset_t& missingtxhashes() const { return missingtxhashes_; }
+    hashset_t::size_type marknotmissing(const bytes_t& hash);
+
+    bool ismissingtxs() const { return ismissingtxs_; }
+
     std::string toJson() const;
 
 private:
@@ -791,6 +797,12 @@ private:
     std::vector<bytes_t> hashes_;
 
     bytes_t flags_;
+
+    #pragma db value_not_null \
+        id_column("object_id") value_column("value")
+    hashset_t missingtxhashes_;
+
+    bool ismissingtxs_;
 
     friend class boost::serialization::access;
     template<class Archive>

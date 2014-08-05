@@ -13,6 +13,7 @@
 
 #include <CoinCore/hash.h>
 #include <CoinCore/CoinNodeData.h>
+#include <CoinCore/MerkleTree.h>
 #include <CoinCore/hdkeys.h>
 #include <CoinCore/aes.h>
 
@@ -646,11 +647,17 @@ void BlockHeader::updateHash()
 
 void MerkleBlock::fromCoinCore(const Coin::MerkleBlock& merkleblock, uint32_t height)
 {
+    Coin::PartialMerkleTree tree(merkleblock.nTxs, merkleblock.hashes, merkleblock.flags, merkleblock.blockHeader.merkleRoot);
     blockheader_ = std::shared_ptr<BlockHeader>(new BlockHeader(merkleblock.blockHeader, height));
     txcount_ = merkleblock.nTxs;
     hashes_.assign(merkleblock.hashes.begin(), merkleblock.hashes.end()); 
     for (auto& hash: hashes_) { std::reverse(hash.begin(), hash.end()); }
     flags_ = merkleblock.flags;
+
+    missingtxhashes_.clear();
+    std::vector<uchar_vector> txhashes = tree.getTxHashesLittleEndianVector();
+    for (auto& hash: txhashes) { missingtxhashes_.insert(hash); }
+    ismissingtxs_ = !missingtxhashes_.empty();
 }
 
 Coin::MerkleBlock MerkleBlock::toCoinCore() const
@@ -662,6 +669,13 @@ Coin::MerkleBlock MerkleBlock::toCoinCore() const
     for (auto& hash: merkleblock.hashes) { std::reverse(hash.begin(), hash.end()); }
     merkleblock.flags = flags_;
     return merkleblock;
+}
+
+hashset_t::size_type MerkleBlock::marknotmissing(const bytes_t& hash)
+{
+    hashset_t::size_type count = missingtxhashes_.erase(hash);
+    ismissingtxs_ = !missingtxhashes_.empty();
+    return count;
 }
 
 std::string MerkleBlock::toJson() const
