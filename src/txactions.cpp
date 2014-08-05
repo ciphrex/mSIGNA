@@ -375,7 +375,7 @@ void TxActions::deleteTx()
 void TxActions::createActions()
 {
     searchTxAction = new QAction(tr("Search For Transaction..."), this);
-    searchTxAction->setEnabled(true);
+    searchTxAction->setEnabled(false);
     connect(searchTxAction, SIGNAL(triggered()), this, SLOT(searchTx()));
 
     signaturesAction = new QAction(tr("Signatures..."), this);
