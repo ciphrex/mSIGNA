@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include "Schema.h"
+
 #include <stdutils/customerror.h>
 
 namespace CoinDB
@@ -18,6 +20,7 @@ enum ErrorCodes
 {
     // Vault errors
     VAULT_WRONG_SCHEMA_VERSION = 101,
+    VAULT_MISSING_TXS,
 
     // Keychain errors
     KEYCHAIN_NOT_FOUND = 201,
@@ -81,6 +84,17 @@ public:
 
 private:
     uint32_t schema_version_;
+};
+
+class VaultMissingTxsException : public VaultException
+{
+public:
+    explicit VaultMissingTxsException(const std::string& vault_name, const CoinDB::hashset_t& txhashes) : VaultException("Vault is missing transactions.", VAULT_MISSING_TXS, vault_name), txhashes_(txhashes) { }
+
+    const CoinDB::hashset_t& txhashes() const { return txhashes_; }
+
+private:
+    CoinDB::hashset_t txhashes_;
 };
 
 // KEYCHAIN EXCEPTIONS

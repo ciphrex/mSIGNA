@@ -297,6 +297,29 @@ Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint
     return filter;
 }
 
+hashset_t Vault::getMissingTxHashes() const
+{
+    LOGGER(trace) << "Vault::getMissingTxHashes()" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    return getMissingTxHashes_unwrapped();
+}
+
+hashset_t Vault::getMissingTxHashes_unwrapped() const
+{
+    hashset_t hashset;
+    odb::result<MerkleBlock> r(db_->query<MerkleBlock>((odb::query<MerkleBlock>::ismissingtxs == true) + "ORDER BY" + odb::query<MerkleBlock>::blockheader->height));
+    for (auto& merkleblock: r)
+    {
+        for (auto& hash: merkleblock.missingtxhashes()) { hashset.insert(hash); }
+    }
+    return hashset;
+}
+
 void Vault::exportVault(const std::string& filepath, bool exportprivkeys, const secure_bytes_t& exportChainCodeUnlockKey) const
 {
     LOGGER(trace) << "Vault::exportVault(" << filepath << ", " << (exportprivkeys ? "true" : "false") << ", ...)" << std::endl;
@@ -2972,6 +2995,9 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock(std::shared_ptr<MerkleBloc
 
 std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock)
 {
+    hashset_t txhashes = getMissingTxHashes_unwrapped();
+    if (txhashes.size() > 0) throw VaultMissingTxsException(name_, txhashes);
+
     auto& new_blockheader = merkleblock->blockheader();
     std::string new_blockheader_hash = uchar_vector(new_blockheader->hash()).getHex();
 
@@ -3064,10 +3090,7 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
     if (confirmations_updated)
     {
         db_->update(merkleblock);
-        if (merkleblock->missingtxhashes().empty())
-        {
-            signalQueue.push(notifyHaveAllConfirmedTxs.bind());
-        }
+        if (!merkleblock->ismissingtxs()) { signalQueue.push(notifyHaveAllConfirmedTxs.bind()); }
     }
 
     return merkleblock;     
