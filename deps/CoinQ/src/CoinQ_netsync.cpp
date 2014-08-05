@@ -103,10 +103,30 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         if (!m_bConnected) return;
         LOGGER(trace) << "Received inventory message:" << std::endl << inv.toIndentedString() << std::endl;
 
-        Coin::GetDataMessage getData(inv);
-        getData.toFilteredBlocks();
+        using namespace Coin;
+        GetDataMessage getData;
+        for (auto& item: inv.items)
+        {
+            switch (item.itemType)
+            {
+            case MSG_TX:
+                if (m_bBlocksSynched)
+                {
+                    getData.items.push_back(item);
+                }
+                break;
+            case MSG_BLOCK:
+                if (m_bHeadersSynched)
+                {
+                    getData.items.push_back(InventoryItem(MSG_FILTERED_BLOCK, item.hash));
+                }
+                break;
+            default:
+                break;
+            } 
+        }
 
-        m_peer.send(getData);
+        if (!getData.items.empty()) { m_peer.send(getData); }
     });
 
     m_peer.subscribeTx([&](CoinQ::Peer& /*peer*/, const Coin::Transaction& tx)
@@ -232,11 +252,11 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 return;
             }
 
-            ChainHeader header = m_blockTree.getHeader(hash);
-            notifyMerkleBlock(ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork));
-
             if (m_bFetchingBlocks)
             {
+                ChainHeader header = m_blockTree.getHeader(hash);
+                notifyMerkleBlock(ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork));
+
                 uint32_t bestHeight = m_blockTree.getBestHeight();
                 if (bestHeight > (uint32_t)header.height) // We still need to fetch more blocks
                 {
