@@ -42,6 +42,7 @@ enum ErrorCodes
     TX_INVALID_INPUTS,
     TX_OUTPUTS_EXCEED_INPUTS,
     TX_OUTPUT_NOT_FOUND,
+    TX_MISMATCH,
 
     // Block header errors
     BLOCKHEADER_NOT_FOUND = 501,
@@ -228,6 +229,12 @@ public:
 
 private:
     int outindex_;
+};
+
+class TxMismatchException : public TxException
+{
+public:
+    explicit TxMismatchException(const bytes_t& hash = bytes_t()) : TxException("Transaction mismatch.", TX_MISMATCH, hash) { }
 };
 
 // BLOCK HEADER EXCEPTIONS

@@ -1741,15 +1741,15 @@ std::vector<TxView> Vault::getTxViews(int tx_status_flags, unsigned long start, 
     return views; 
 }
 
-std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx)
+std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx, bool replace_labels)
 {
-    LOGGER(trace) << "Vault::insertTx(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
+    LOGGER(trace) << "Vault::insertTx(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << "replace_labels: " << (replace_labels ? "true" : "false") << std::endl;
 
     {
         boost::lock_guard<boost::mutex> lock(mutex);
         odb::core::session s;
         odb::core::transaction t(db_->begin());
-        tx = insertTx_unwrapped(tx);
+        tx = insertTx_unwrapped(tx, replace_labels);
         if (tx) t.commit();
     }
 
@@ -1757,22 +1757,66 @@ std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx)
     return tx;
 }
 
-std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
+std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool replace_labels)
 {
-    LOGGER(trace) << "Vault::insertTx_unwrapped(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
-
     // TODO: Validate signatures
     tx->updateStatus();
+    std::string hashstr = uchar_vector(tx->hash()).getHex();
+    std::string unsignedhashstr = uchar_vector(tx->unsigned_hash()).getHex();
+    LOGGER(trace) << "Vault::insertTx_unwrapped(...) - hash: " << hashstr << ", unsigned hash: " << unsignedhashstr << std::endl;
+
 
     odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::unsigned_hash == tx->unsigned_hash()));
 
     // First handle situations where we have a duplicate
     if (!tx_r.empty())
     {
-        LOGGER(debug) << "Vault::insertTx_unwrapped - We have a transaction with the same unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
+        LOGGER(debug) << "Vault::insertTx_unwrapped - We have a transaction with the same unsigned hash: " << unsignedhashstr << std::endl;
         std::shared_ptr<Tx> stored_tx(tx_r.begin().load());
 
-        // First handle situations where the transaction we currently have is not fully signed.
+        // Sanity check: TxIn and TxOut counts should match
+        if (tx->txins().size() != stored_tx->txins().size() ||
+            tx->txouts().size() != stored_tx->txouts().size())
+        {
+            throw TxMismatchException(stored_tx->hash());
+        }
+
+        bool updated = false;
+
+        // Update labels.
+        std::size_t i = 0;
+        txouts_t txouts = tx->txouts();
+        for (auto& txout: stored_tx->txouts())
+        {
+            bool labels_updated = false;
+
+            if (!txouts[i]->sending_label().empty() && (replace_labels || txout->sending_label().empty()))
+            {
+                txout->sending_label(txouts[i]->sending_label());
+                labels_updated = true;
+            }
+
+            if (!txouts[i]->receiving_label().empty() && (replace_labels || txout->receiving_label().empty()))
+            {
+                txout->receiving_label(txouts[i]->receiving_label());
+                labels_updated = true;
+            }
+
+            if (labels_updated)
+            {
+                db_->update(txout);
+                updated = true;
+            }
+
+            i++;
+        }
+
+        if (updated)
+        {
+            LOGGER(debug) << "Vault::insertTx_unwrapped - LABELS UPDATED. hash: " << hashstr << std::endl;
+        }
+
+        // Update signatures.
         if (stored_tx->status() == Tx::UNSIGNED)
         {
             if (tx->status() != Tx::UNSIGNED)
@@ -1788,14 +1832,12 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                 }
                 stored_tx->updateStatus(tx->status());
                 db_->update(stored_tx);
-                signalQueue.push(notifyTxStatusChanged.bind(stored_tx));
-                //notifyTxStatusChanged(stored_tx);
-                return stored_tx;
+                updated = true;
             }
             else
             {
-                // The transaction we received is unsigned but might have more signatures. Only add new signatures.
-                bool updated = false;
+                // The transaction we received is unsigned but might have more signatures. Merge signatures
+                bool sigs_updated = false;
                 std::size_t i = 0;
                 txins_t txins = tx->txins();
                 for (auto& txin: stored_tx->txins())
@@ -1810,19 +1852,17 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                         LOGGER(debug) << "Vault::insertTx_unwrapped - ADDED " << sigsadded << " NEW SIGNATURE(S) TO INPUT " << i << ", " << sigsneeded << " STILL NEEDED." << std::endl;
                         txin->script(stored_script.txinscript(sigsneeded ? Script::EDIT : Script::BROADCAST));
                         db_->update(txin);
-                        updated = true;
+                        sigs_updated = true;
                     }
                     i++;
                 }
-                if (updated)
+
+                if (sigs_updated)
                 {
                     stored_tx->updateStatus();
                     db_->update(stored_tx);
-                    signalQueue.push(notifyTxStatusChanged.bind(stored_tx));
-                    //notifyTxStatusChanged(stored_tx);
-                    return stored_tx;
+                    updated = true;
                 }
-                return nullptr;
             }
         }
         else
@@ -1835,22 +1875,23 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx)
                     LOGGER(debug) << "Vault::insertTx_unwrapped - UPDATING TRANSACTION STATUS FROM " << stored_tx->status() << " TO " << tx->status() << ". hash: " << uchar_vector(stored_tx->hash()).getHex() << std::endl;
                     stored_tx->updateStatus(tx->status());
                     db_->update(stored_tx);
-                    signalQueue.push(notifyTxStatusChanged.bind(stored_tx));
-                    //notifyTxStatusChanged(stored_tx);
-                    return stored_tx;
+                    updated = true;
                 }
                 else
                 {
-                    LOGGER(debug) << "Vault::insertTx_unwrapped - Transaction not updated. hash: " << uchar_vector(stored_tx->hash()).getHex() << std::endl;
-                    return nullptr;
+                    LOGGER(debug) << "Vault::insertTx_unwrapped - Transaction signatures not updated. hash: " << uchar_vector(stored_tx->hash()).getHex() << std::endl;
                 }
             }
             else
             {
-                LOGGER(debug) << "Vault::insertTx_unwrapped - Stored transaction is already signed, received transaction is missing signatures. Ignore. hash: " << uchar_vector(stored_tx->hash()).getHex() << std::endl;
-                return nullptr;
+                LOGGER(debug) << "Vault::insertTx_unwrapped - Stored transaction is already signed, received transaction is missing signatures. Ignore signatures. hash: " << uchar_vector(stored_tx->hash()).getHex() << std::endl;
             }
         }
+
+        if (!updated) return nullptr;
+
+        signalQueue.push(notifyTxStatusChanged.bind(stored_tx));
+        return stored_tx;
     }
 
     // If we get here it means we've either never seen this transaction before or it doesn't affect our accounts.
