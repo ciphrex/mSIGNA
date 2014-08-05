@@ -13,6 +13,7 @@
 #include <sstream>
 
 using namespace CoinQ;
+using namespace std;
 
 const unsigned char Peer::DEFAULT_Ipv6[] = {0,0,0,0,0,0,0,0,0,0,255,255,127,0,0,1};
 
@@ -25,6 +26,8 @@ void Peer::do_handshake()
     peerAddress.set(NODE_NETWORK, DEFAULT_Ipv6, strtoul(port_.c_str(), NULL, 0));
     Coin::VersionMessage versionMessage(protocol_version_, NODE_NETWORK, time(NULL), peerAddress, peerAddress, getRandomNonce64(), user_agent_.c_str(), start_height_, relay_);
     Coin::CoinNodeMessage msg(magic_bytes_, &versionMessage);
+
+    LOGGER(trace) << "Sending version message." << endl;
     do_send(msg);
 
     // Give peer 5 seconds to respond
