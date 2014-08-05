@@ -47,6 +47,10 @@ public:
     void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = true, std::function<void(const CoinQBlockTreeMem&)> callback = nullptr);
     bool headersSynched() const { return m_bHeadersSynched; }
     int getBestHeight();
+    const ChainHeader& getBestHeader() const { return m_blockTree.getHeader(-1); }
+    const ChainHeader& getHeader(const bytes_t& hash) const { return m_blockTree.getHeader(hash); }
+    const ChainHeader& getHeader(int height) const { return m_blockTree.getHeader(height); }
+    const ChainHeader& getHeaderBefore(uint32_t timestamp) const { return m_blockTree.getHeaderBefore(timestamp); }
 
 /*
     void start();
