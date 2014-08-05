@@ -543,6 +543,11 @@ void NetworkSync::getTx(uchar_vector& hash)
     m_peer.getTx(hash);
 }
 
+void NetworkSync::getTxs(const hashvector_t& hashes)
+{
+    m_peer.getTxs(hashes);
+}
+
 void NetworkSync::getMempool()
 {
     m_peer.getMempool();

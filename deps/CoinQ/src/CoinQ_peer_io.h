@@ -11,6 +11,7 @@
 #include "CoinQ_signals.h"
 #include "CoinQ_slots.h"
 
+#include <CoinCore/typedefs.h>
 #include <CoinCore/numericdata.h>
 
 #include <queue>
@@ -124,6 +125,17 @@ public:
         Coin::Inventory inv;
         inv.addItem(tx);
         Coin::GetDataMessage getData(inv);
+        send(getData);
+    }
+
+    void getTxs(const hashvector_t& txhashes)
+    {
+        using namespace Coin;
+
+        if (txhashes.empty()) return;
+        Inventory inv;
+        for (auto& hash: txhashes) { inv.addItem(InventoryItem(MSG_TX, hash)); }
+        GetDataMessage getData(inv);
         send(getData);
     }
  

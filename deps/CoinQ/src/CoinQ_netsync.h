@@ -67,6 +67,7 @@ public:
     // MESSAGES TO PEER
     void sendTx(Coin::Transaction& tx);
     void getTx(uchar_vector& hash);
+    void getTxs(const hashvector_t& hashes);
     void getMempool();
 
     // SYNC EVENT SUBSCRIPTIONS
