@@ -297,6 +297,26 @@ Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint
     return filter;
 }
 
+hashvector_t Vault::getIncompleteBlockHashes() const
+{
+    LOGGER(trace) << "Vault::getIncompleteBlockHashes()" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    return getIncompleteBlockHashes_unwrapped();
+}
+
+hashvector_t Vault::getIncompleteBlockHashes_unwrapped() const
+{
+    hashvector_t hashes;
+    odb::result<MerkleBlock> r(db_->query<MerkleBlock>((odb::query<MerkleBlock>::ismissingtxs == true) + "ORDER BY" + odb::query<MerkleBlock>::blockheader->height));
+    for (auto& merkleblock: r) { hashes.push_back(merkleblock.blockheader()->hash()); }
+    return hashes;
+}
+
 hashvector_t Vault::getMissingTxHashes() const
 {
     LOGGER(trace) << "Vault::getMissingTxHashes()" << std::endl;
@@ -2995,11 +3015,6 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock(std::shared_ptr<MerkleBloc
 
 std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock)
 {
-/*
-    hashvector_t txhashes = getMissingTxHashes_unwrapped();
-    if (txhashes.size() > 0) throw VaultMissingTxsException(name_, txhashes);
-*/
-
     auto& new_blockheader = merkleblock->blockheader();
     std::string new_blockheader_hash = uchar_vector(new_blockheader->hash()).getHex();
 
