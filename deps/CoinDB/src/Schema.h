@@ -62,7 +62,6 @@ typedef odb::nullable<unsigned long> null_id_t;
 #endif
 
 typedef std::vector<unsigned long> ids_t;
-typedef std::set<bytes_t> hashset_t;
 
 #pragma db object pointer(std::shared_ptr)
 class Version

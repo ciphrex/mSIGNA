@@ -60,7 +60,7 @@ public:
     uint32_t                                getHorizonHeight() const;
     std::vector<bytes_t>                    getLocatorHashes() const;
     Coin::BloomFilter                       getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
-    hashset_t                               getMissingTxHashes() const;
+    hashvector_t                            getMissingTxHashes() const;
 
     void                                    exportVault(const std::string& filepath, bool exportprivkeys = true, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
 
@@ -206,7 +206,7 @@ protected:
     uint32_t                                getHorizonHeight_unwrapped() const;
     std::vector<bytes_t>                    getLocatorHashes_unwrapped() const;
     Coin::BloomFilter                       getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
-    hashset_t                               getMissingTxHashes_unwrapped() const;
+    hashvector_t                            getMissingTxHashes_unwrapped() const;
 
     ///////////////////////////
     // CHAIN CODE OPERATIONS //

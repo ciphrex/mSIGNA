@@ -89,12 +89,12 @@ private:
 class VaultMissingTxsException : public VaultException
 {
 public:
-    explicit VaultMissingTxsException(const std::string& vault_name, const CoinDB::hashset_t& txhashes) : VaultException("Vault is missing transactions.", VAULT_MISSING_TXS, vault_name), txhashes_(txhashes) { }
+    explicit VaultMissingTxsException(const std::string& vault_name, const hashvector_t& txhashes) : VaultException("Vault is missing transactions.", VAULT_MISSING_TXS, vault_name), txhashes_(txhashes) { }
 
-    const CoinDB::hashset_t& txhashes() const { return txhashes_; }
+    const hashvector_t& txhashes() const { return txhashes_; }
 
 private:
-    CoinDB::hashset_t txhashes_;
+    hashvector_t txhashes_;
 };
 
 // KEYCHAIN EXCEPTIONS

@@ -297,7 +297,7 @@ Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint
     return filter;
 }
 
-hashset_t Vault::getMissingTxHashes() const
+hashvector_t Vault::getMissingTxHashes() const
 {
     LOGGER(trace) << "Vault::getMissingTxHashes()" << std::endl;
 
@@ -309,15 +309,15 @@ hashset_t Vault::getMissingTxHashes() const
     return getMissingTxHashes_unwrapped();
 }
 
-hashset_t Vault::getMissingTxHashes_unwrapped() const
+hashvector_t Vault::getMissingTxHashes_unwrapped() const
 {
-    hashset_t hashset;
+    hashvector_t hashes;
     odb::result<MerkleBlock> r(db_->query<MerkleBlock>((odb::query<MerkleBlock>::ismissingtxs == true) + "ORDER BY" + odb::query<MerkleBlock>::blockheader->height));
     for (auto& merkleblock: r)
     {
-        for (auto& hash: merkleblock.missingtxhashes()) { hashset.insert(hash); }
+        for (auto& hash: merkleblock.missingtxhashes()) { hashes.push_back(hash); }
     }
-    return hashset;
+    return hashes;
 }
 
 void Vault::exportVault(const std::string& filepath, bool exportprivkeys, const secure_bytes_t& exportChainCodeUnlockKey) const
@@ -2995,7 +2995,7 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock(std::shared_ptr<MerkleBloc
 
 std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock)
 {
-    hashset_t txhashes = getMissingTxHashes_unwrapped();
+    hashvector_t txhashes = getMissingTxHashes_unwrapped();
     if (txhashes.size() > 0) throw VaultMissingTxsException(name_, txhashes);
 
     auto& new_blockheader = merkleblock->blockheader();
