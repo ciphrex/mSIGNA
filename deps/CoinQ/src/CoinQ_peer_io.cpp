@@ -51,6 +51,7 @@ void Peer::do_read()
 
         if (ec)
         {
+            read_message.clear();
             do_stop();
 
             std::stringstream err;
@@ -284,10 +285,10 @@ void Peer::stop()
         boost::unique_lock<boost::shared_mutex> lock(mutex);
         if (!bRunning) return;
 
-        do_clearSendQueue();
         bRunning = false;
         socket_.cancel();
         socket_.close();
+        do_clearSendQueue();
         bHandshakeComplete = false;
         bWriteReady = false;
     }
