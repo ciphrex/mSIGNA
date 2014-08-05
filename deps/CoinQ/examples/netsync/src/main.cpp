@@ -107,6 +107,8 @@ int main(int argc, char* argv[])
 
         networkSync.subscribeHeadersSynched([&]() {
             cout << "NetworkSync headers synched." << endl;
+            hashvector_t hashes;
+            networkSync.syncBlocks(hashes, time(NULL) - 10*60*60); // Start 10 hours earlier
         });
 
         networkSync.subscribeFetchingBlocks([&]() {
