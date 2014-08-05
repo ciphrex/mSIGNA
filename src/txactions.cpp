@@ -113,17 +113,24 @@ void TxActions::searchTx()
             QString txhash = dlg.getTxHash();
 
             // TODO: faster search
+            QStandardItem* hashItem = nullptr;
             int row = 0;
             for (; row < m_txModel->rowCount(); row++)
             {
-                QStandardItem* hashItem = m_txModel->item(row, 8);
-                if (hashItem->text().left(txhash.size()) == txhash) break;    
+                QStandardItem* item = m_txModel->item(row, 8);
+                if (item->text().left(txhash.size()) == txhash)
+                {
+                    hashItem = item;
+                    break;
+                }
             }
 
-            if (row >= m_txModel->rowCount()) throw std::runtime_error("Transaction not found.");
+            if (!hashItem) throw std::runtime_error("Transaction not found.");
 
             QItemSelection selection(m_txModel->index(row, 0), m_txModel->index(row, m_txModel->columnCount() - 1));
+            m_txView->clearSelection();
             m_txView->selectionModel()->select(selection, QItemSelectionModel::SelectCurrent);
+            m_txView->scrollTo(hashItem->index(), QAbstractItemView::PositionAtCenter);
         }
     }
     catch (const std::exception& e)
