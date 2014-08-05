@@ -26,15 +26,15 @@ public:
     void setModel(TxModel* model);
     #pragma clang diagnostic pop
 
-    void setMenu(QMenu* menu) { this->menu = menu; }
+    void setMenu(QMenu* menu) { m_menu = menu; }
     void update();
 
 protected:
     void contextMenuEvent(QContextMenuEvent* event);
 
 private:
-    TxModel* accountHistoryModel;
+    TxModel* m_model;
 
-    QMenu* menu;
+    QMenu* m_menu;
 };
 
