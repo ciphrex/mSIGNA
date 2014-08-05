@@ -1798,7 +1798,7 @@ std::vector<TxView> Vault::getTxViews(int tx_status_flags, unsigned long start, 
 
 std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx, bool replace_labels)
 {
-    LOGGER(trace) << "Vault::insertTx(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << "replace_labels: " << (replace_labels ? "true" : "false") << std::endl;
+    LOGGER(trace) << "Vault::insertTx(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << ", replace_labels: " << (replace_labels ? "true" : "false") << std::endl;
 
     {
         boost::lock_guard<boost::mutex> lock(mutex);
@@ -2143,8 +2143,8 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool repla
             if (merkleblock.marknotmissing(tx->hash()))
             {
                 db_->update(merkleblock);
-                odb::result<MerkleBlock> missing_r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::ismissingtxs == true));
-                if (missing_r.empty()) { signalQueue.push(notifyHaveAllConfirmedTxs.bind()); }
+                odb::result<IncompleteBlockCountView> r(db_->query<IncompleteBlockCountView>());
+                if (r.empty() || r.begin()->count == 0) { signalQueue.push(notifyHaveAllConfirmedTxs.bind()); }
                 break;
             }
         }
@@ -3195,8 +3195,8 @@ unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)
 
     if (count > 0)
     {
-        odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::ismissingtxs == true));
-        if (r.empty()) { signalQueue.push(notifyHaveAllConfirmedTxs.bind()); }
+        odb::result<IncompleteBlockCountView> r(db_->query<IncompleteBlockCountView>());
+        if (r.empty() || r.begin()->count == 0) { signalQueue.push(notifyHaveAllConfirmedTxs.bind()); }
     }
 
     return count;

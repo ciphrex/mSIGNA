@@ -1658,6 +1658,14 @@ struct ConfirmedTxView
     uint32_t block_height;
 };
 
+#pragma db view \
+    object(MerkleBlock) query(MerkleBlock::ismissingtxs_ == true)
+struct IncompleteBlockCountView
+{
+    #pragma db column("count(" + MerkleBlock::id_ + ")")
+    unsigned long count;
+};
+
 }
 
 BOOST_CLASS_VERSION(CoinDB::BlockHeader, 1)

@@ -300,6 +300,7 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
         });
         m_vault->subscribeHaveAllConfirmedTxs([this]()
         {
+            LOGGER(trace) << "SynchedVault - HaveAllConfirmedTxs handler called." << std::endl;
             if (m_networkSync.connected() && m_networkSync.blocksSynched()) { updateStatus(SYNCHED); }
         });
     }
@@ -342,6 +343,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         });
         m_vault->subscribeHaveAllConfirmedTxs([this]()
         {
+            LOGGER(trace) << "SynchedVault - HaveAllConfirmedTxs handler called." << std::endl;
             if (m_networkSync.connected() && m_networkSync.blocksSynched()) { updateStatus(SYNCHED); }
         });
     }
