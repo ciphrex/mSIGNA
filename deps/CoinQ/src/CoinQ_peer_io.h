@@ -258,6 +258,7 @@ private:
     void do_send(const Coin::CoinNodeMessage& message); // calls do_write from the strand thread 
     void do_handshake();
     void do_stop();
+    void do_clearSendQueue();
 };
 
 }

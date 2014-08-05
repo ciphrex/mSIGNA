@@ -94,6 +94,7 @@ void Peer::do_read()
 
                 std::string command = peerMessage.getCommand();
                 if (command == "verack") {
+                    LOGGER(trace) << "Peer verack received." << std::endl;
                     // Signal completion of handshake
                     if (bHandshakeComplete) throw std::runtime_error("Second verack received.");
                     boost::unique_lock<boost::mutex> lock(handshakeMutex);
@@ -237,6 +238,7 @@ void Peer::do_connect(tcp::resolver::iterator iter)
 
 void Peer::do_stop()
 {
+    do_clearSendQueue();
     bRunning = false;
     bHandshakeComplete = false;
     bWriteReady = false;
@@ -282,6 +284,7 @@ void Peer::stop()
         boost::unique_lock<boost::shared_mutex> lock(mutex);
         if (!bRunning) return;
 
+        do_clearSendQueue();
         bRunning = false;
         socket_.cancel();
         socket_.close();
@@ -301,5 +304,11 @@ bool Peer::send(Coin::CoinNodeStructure& message)
     Coin::CoinNodeMessage wrappedMessage(magic_bytes_, &message);
     do_send(wrappedMessage);
     return true;
+}
+
+void Peer::do_clearSendQueue()
+{
+    boost::lock_guard<boost::mutex> sendLock(sendMutex);
+    while (!sendQueue.empty()) { sendQueue.pop(); }
 }
 
