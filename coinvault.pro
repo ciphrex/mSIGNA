@@ -63,6 +63,7 @@ HEADERS = \
     src/paymentrequest.h \
     src/numberformats.h \
     src/currencyvalidator.h \
+    src/hexvalidator.h \
     src/accountmodel.h \
     src/accountview.h \
     src/keychainmodel.h \
@@ -108,6 +109,7 @@ SOURCES = \
     src/paymentrequest.cpp \
     src/numberformats.cpp \
     src/currencyvalidator.cpp \
+    src/hexvalidator.cpp \
     src/accountmodel.cpp \
     src/accountview.cpp \
     src/keychainmodel.cpp \

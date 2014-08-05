@@ -11,6 +11,8 @@
 #include "txsearchdialog.h"
 #include "txmodel.h"
 
+#include "hexvalidator.h"
+
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -33,6 +35,7 @@ TxSearchDialog::TxSearchDialog(const TxModel& txModel, QWidget* parent)
 
     // Transaction Hash Edit
     m_txHashEdit = new QLineEdit();
+    m_txHashEdit->setValidator(new HexValidator(1, 32, HexValidator::ACCEPT_LOWER | HexValidator::ACCEPT_UPPER, this));
 
     QVBoxLayout* mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
