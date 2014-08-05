@@ -97,6 +97,11 @@ void Vault::open(int argc, char** argv, bool create, uint32_t version)
         setSchemaVersion_unwrapped(version);
         t.commit();
     }
+    else
+    {
+        uint32_t schemaVersion = getSchemaVersion();
+        if (schemaVersion != version) throw VaultWrongSchemaVersionException(name_, schemaVersion);
+    }
 }
 
 void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version)
@@ -111,6 +116,11 @@ void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const s
         odb::core::transaction t(db_->begin());
         setSchemaVersion_unwrapped(version);
         t.commit();
+    }
+    else
+    {
+        uint32_t schemaVersion = getSchemaVersion();
+        if (schemaVersion != version) throw VaultWrongSchemaVersionException(name_, schemaVersion);
     }
 }
 

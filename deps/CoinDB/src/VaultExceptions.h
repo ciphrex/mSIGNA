@@ -16,8 +16,11 @@ namespace CoinDB
 
 enum ErrorCodes
 {
+    // Vault errors
+    VAULT_WRONG_SCHEMA_VERSION = 101,
+
     // Keychain errors
-    KEYCHAIN_NOT_FOUND = 101,
+    KEYCHAIN_NOT_FOUND = 201,
     KEYCHAIN_ALREADY_EXISTS,
     KEYCHAIN_CHAIN_CODE_LOCKED,
     KEYCHAIN_CHAIN_CODE_UNLOCK_FAILED,
@@ -27,33 +30,57 @@ enum ErrorCodes
     KEYCHAIN_INVALID_PRIVATE_KEY,
 
     // Account errors
-    ACCOUNT_NOT_FOUND = 201,
+    ACCOUNT_NOT_FOUND = 301,
     ACCOUNT_ALREADY_EXISTS,
     ACCOUNT_INSUFFICIENT_FUNDS,
     ACCOUNT_CANNOT_ISSUE_CHANGE_SCRIPT,
 
     // Account bin errors
-    ACCOUNTBIN_NOT_FOUND = 301,
+    ACCOUNTBIN_NOT_FOUND = 401,
     ACCOUNTBIN_ALREADY_EXISTS,
     ACCOUNTBIN_OUT_OF_SCRIPTS,
 
     // Tx errors
-    TX_NOT_FOUND = 401,
+    TX_NOT_FOUND = 501,
     TX_INVALID_INPUTS,
     TX_OUTPUTS_EXCEED_INPUTS,
     TX_OUTPUT_NOT_FOUND,
     TX_MISMATCH,
 
     // Block header errors
-    BLOCKHEADER_NOT_FOUND = 501,
+    BLOCKHEADER_NOT_FOUND = 601,
 
     // Merkle block errors
-    MERKLEBLOCK_INVALID = 602,
+    MERKLEBLOCK_INVALID = 701,
 
     // Chain code errors
-    CHAINCODE_LOCKED = 702,
+    CHAINCODE_LOCKED = 801,
     CHAINCODE_UNLOCK_FAILED,
     CHAINCODE_SET_UNLOCK_KEY_FAILED
+};
+
+// VAULT EXCEPTIONS
+class VaultException : public stdutils::custom_error
+{
+public:
+    virtual ~VaultException() throw() { }
+    const std::string& vault_name() const { return vault_name_; }
+
+protected:
+    explicit VaultException(const std::string& what, int code, const std::string& vault_name) : stdutils::custom_error(what, code), vault_name_(vault_name) { }
+
+    std::string vault_name_;
+};
+ 
+class VaultWrongSchemaVersionException : public VaultException
+{
+public:
+    explicit VaultWrongSchemaVersionException(const std::string& vault_name, uint32_t schema_version) : VaultException("Wrong darabase schema version.", VAULT_WRONG_SCHEMA_VERSION, vault_name), schema_version_(schema_version) { }
+
+    uint32_t schema_version() const { return schema_version_; }
+
+private:
+    uint32_t schema_version_;
 };
 
 // KEYCHAIN EXCEPTIONS
