@@ -69,6 +69,7 @@ public:
     void getTx(const bytes_t& hash);
     void getTxs(const hashvector_t& hashes);
     void getMempool();
+    void getFilteredBlock(const bytes_t& hash);
 
     // SYNC EVENT SUBSCRIPTIONS
     void subscribeStarted(void_slot_t slot) { notifyStarted.connect(slot); }

@@ -139,7 +139,7 @@ public:
         send(getData);
     }
  
-    void getBlock(const uchar_vector& hash)
+    void getBlock(const bytes_t& hash)
     {
         Coin::InventoryItem block(MSG_BLOCK, hash);
         Coin::Inventory inv;
@@ -148,7 +148,7 @@ public:
         send(getData); 
     }
 
-    void getFilteredBlock(const uchar_vector& hash)
+    void getFilteredBlock(const bytes_t& hash)
     {
         Coin::InventoryItem block(MSG_FILTERED_BLOCK, hash);
         Coin::Inventory inv;

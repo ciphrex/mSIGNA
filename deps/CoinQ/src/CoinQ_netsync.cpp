@@ -553,6 +553,11 @@ void NetworkSync::getMempool()
     m_peer.getMempool();
 }
 
+void NetworkSync::getFilteredBlock(const bytes_t& hash)
+{
+    m_peer.getFilteredBlock(hash);
+}
+
 void NetworkSync::setBloomFilter(const Coin::BloomFilter& bloomFilter)
 {
     m_bloomFilter = bloomFilter;
