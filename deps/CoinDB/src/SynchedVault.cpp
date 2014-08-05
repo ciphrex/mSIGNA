@@ -407,10 +407,16 @@ void SynchedVault::syncBlocks()
     LOGGER(trace) << "SynchedVault::syncBlocks()" << std::endl;
 
     if (!m_bConnected) throw std::runtime_error("Not connected.");
+
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+    std::lock_guard<std::mutex> lock(m_vaultMutex);
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+
+    hashvector_t txhashes = m_vault->getMissingTxHashes();
+    if (!txhashes.empty())
     {
-        if (!m_vault) throw std::runtime_error("No vault is open.");
-        std::lock_guard<std::mutex> lock(m_vaultMutex);
-        if (!m_vault) throw std::runtime_error("No vault is open.");
+        LOGGER(info) << "Fetching " << txhashes.size() << " missing tx(s)." << std::endl;
+        m_networkSync.getTxs(txhashes);
     }
 
     uint32_t startTime = m_vault->getMaxFirstBlockTimestamp();
@@ -420,7 +426,7 @@ void SynchedVault::syncBlocks()
         return;
     }
 
-    updateBloomFilter();
+    m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
 
     std::vector<bytes_t> locatorHashes = m_vault->getLocatorHashes();
     m_bInsertMerkleBlocks = true;
