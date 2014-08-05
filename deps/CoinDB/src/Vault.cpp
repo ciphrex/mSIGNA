@@ -2995,8 +2995,10 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock(std::shared_ptr<MerkleBloc
 
 std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock)
 {
+/*
     hashvector_t txhashes = getMissingTxHashes_unwrapped();
     if (txhashes.size() > 0) throw VaultMissingTxsException(name_, txhashes);
+*/
 
     auto& new_blockheader = merkleblock->blockheader();
     std::string new_blockheader_hash = uchar_vector(new_blockheader->hash()).getHex();
