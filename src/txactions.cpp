@@ -94,6 +94,7 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
 void TxActions::updateVaultStatus()
 {
     bool bEnabled = (m_accountModel && m_accountModel->isOpen());
+    searchTxAction->setEnabled(bEnabled);
     importTxFromFileAction->setEnabled(bEnabled);
     insertRawTxFromFileAction->setEnabled(bEnabled);
 }
@@ -349,6 +350,10 @@ void TxActions::deleteTx()
 
 void TxActions::createActions()
 {
+    searchTxAction = new QAction(tr("Search For Transaction..."), this);
+    searchTxAction->setEnabled(true);
+    connect(searchTxAction, SIGNAL(triggered()), this, SLOT(searchTx()));
+
     signaturesAction = new QAction(tr("Signatures..."), this);
     signaturesAction->setEnabled(false);
     connect(signaturesAction, SIGNAL(triggered()), this, SLOT(showSignatureDialog()));
@@ -401,6 +406,8 @@ void TxActions::createActions()
 void TxActions::createMenus()
 {
     menu = new QMenu();
+    menu->addAction(searchTxAction);
+    menu->addSeparator();
     menu->addAction(signaturesAction);
     //menu->addAction(signTxAction);
     menu->addAction(sendTxAction);
