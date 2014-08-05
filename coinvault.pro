@@ -70,6 +70,7 @@ HEADERS = \
     src/quicknewaccountdialog.h \
     src/newaccountdialog.h \
     src/newkeychaindialog.h \
+    src/txsearchdialog.h \
     src/rawtxdialog.h \
     src/createtxdialog.h \
     src/unspenttxoutmodel.h \
@@ -114,6 +115,7 @@ SOURCES = \
     src/quicknewaccountdialog.cpp \
     src/newaccountdialog.cpp \
     src/newkeychaindialog.cpp \
+    src/txsearchdialog.cpp \
     src/rawtxdialog.cpp \
     src/createtxdialog.cpp \
     src/unspenttxoutmodel.cpp \

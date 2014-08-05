@@ -15,6 +15,7 @@
 #include "accountmodel.h"
 
 #include "rawtxdialog.h"
+#include "txsearchdialog.h"
 #include "signaturedialog.h"
 
 #include "docdir.h"
@@ -95,6 +96,22 @@ void TxActions::updateVaultStatus()
     bool bEnabled = (m_accountModel && m_accountModel->isOpen());
     importTxFromFileAction->setEnabled(bEnabled);
     insertRawTxFromFileAction->setEnabled(bEnabled);
+}
+
+void TxActions::searchTx()
+{
+    try
+    {
+        TxSearchDialog dlg(m_txModel);
+        if (dlg.exec())
+        {
+            emit error("Not implemented yet.");
+        }
+    }
+    catch (const std::exception& e)
+    {
+        emit error(e.what());
+    }
 }
 
 void TxActions::showSignatureDialog()
