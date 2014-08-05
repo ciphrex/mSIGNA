@@ -159,12 +159,21 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
             std::lock_guard<std::mutex> lock(m_vaultMutex);
             if (m_vault && m_networkSync.connected())
             {
+                hashvector_t txhashes = m_vault->getMissingTxHashes();
+                if (txhashes.empty())
+                {
+                     updateStatus(SYNCHED);
+                }
+                else
+                {
+                    LOGGER(info) << "Fetching missing transactions." << std::endl;
+                    m_networkSync.getTxs(txhashes);
+                }
+
                 LOGGER(info) << "Fetching mempool." << std::endl;
                 m_networkSync.getMempool();
             }
         }
-
-        if (m_networkSync.connected()) { updateStatus(SYNCHED); }
     });
 
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
@@ -289,6 +298,10 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
             updateSyncHeight(merkleblock->blockheader()->height());
             m_notifyMerkleBlockInserted(merkleblock);
         });
+        m_vault->subscribeHaveAllConfirmedTxs([this]()
+        {
+            if (m_networkSync.connected() && m_networkSync.blocksSynched()) { updateStatus(SYNCHED); }
+        });
     }
 
     m_notifyVaultOpened(m_vault);
@@ -326,6 +339,10 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         {
             updateSyncHeight(merkleblock->blockheader()->height());
             m_notifyMerkleBlockInserted(merkleblock);
+        });
+        m_vault->subscribeHaveAllConfirmedTxs([this]()
+        {
+            if (m_networkSync.connected() && m_networkSync.blocksSynched()) { updateStatus(SYNCHED); }
         });
     }
 
