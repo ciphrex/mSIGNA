@@ -260,6 +260,9 @@ void Peer::start()
     if (bRunning) throw std::runtime_error("Peer already started.");
 
     bRunning = true;
+    bHandshakeComplete = false;
+    bWriteReady = false;
+
     tcp::resolver::query query(host_, port_);
 
     resolver_.async_resolve(query, [this](const boost::system::error_code& ec, tcp::resolver::iterator iterator) {
