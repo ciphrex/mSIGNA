@@ -59,13 +59,15 @@ int main(int argc, char* argv[])
              << endl;
 
         INIT_LOGGER("netsync.log");
+        LOGGER(info) << endl << endl << endl << endl << endl << endl;
     
         signal(SIGINT, &finish);
         signal(SIGTERM, &finish);
 
         Network::NetworkSync networkSync(coinParams);
-        networkSync.loadHeaders("blocktree.dat");
-        networkSync.start(host, port);
+        networkSync.loadHeaders("blocktree.dat", false, [&](const CoinQBlockTreeMem& blocktree) {
+            cout << "Best height: " << blocktree.getBestHeight() << " Total work: " << blocktree.getTotalWork().getDec() << endl;
+        });
 
         networkSync.subscribeStarted([&]() {
             cout << "NetworkSync started." << endl;
@@ -143,8 +145,11 @@ int main(int argc, char* argv[])
             cout << "NetworkSync block tree changed." << endl;
         });
 
+        LOGGER(info) << "Starting..." << endl;
         networkSync.start(host, port);
         while (!g_bShutdown) { usleep(200); }
+
+        LOGGER(info) << "Stopping..." << endl;
         networkSync.stop();
     }
     catch (const exception& e)
