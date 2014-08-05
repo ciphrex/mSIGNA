@@ -30,6 +30,7 @@
 #include <stdutils/uchar_vector.h>
 
 #include <list>
+#include <set>
 #include <queue>
 #include <sstream>
 
@@ -92,6 +93,27 @@ public:
         return rval;
     }
 
+    std::set<uchar_vector> getTxHashesSet() const
+    {
+        std::set<uchar_vector> rval;
+        for (auto& hash: txHashes_) { rval.insert(hash); }
+        return rval;
+    }
+    std::set<uchar_vector> getTxHashesLittleEndianSet() const
+    {
+        std::set<uchar_vector> rval;
+        for (auto& hash: txHashes_) { rval.insert(uchar_vector(hash).getReverse()); }
+        return rval;
+    }
+
+    const std::list<unsigned int>& getTxIndices() const { return txIndices_; }
+    std::vector<unsigned int> getTxIndicesVector() const
+    {
+        std::vector<unsigned int> rval;
+        for (auto& index: txIndices_) { rval.push_back(index); }
+        return rval;
+    }
+
     uchar_vector getFlags() const;
 
     const uchar_vector& getRoot() const { return root_; }
@@ -104,12 +126,15 @@ private:
     unsigned int depth_;
     std::list<uchar_vector> merkleHashes_;
     std::list<uchar_vector> txHashes_;
+    std::list<unsigned int> txIndices_;
     std::list<bool> bits_;
     uchar_vector root_;
 
     void setCompressed(std::queue<uchar_vector>& hashQueue, std::queue<bool>& bitQueue, unsigned int depth);
     void setUncompressed(const std::vector<MerkleLeaf>& leaves, std::size_t begin, std::size_t end, unsigned int depth);
     void merge(std::queue<uchar_vector>& hashQueue1, std::queue<uchar_vector>& hashQueue2, std::queue<bool>& bitQueue1, std::queue<bool>& bitQueue2, unsigned int depth);
+
+    void updateTxIndices();
 };
 
 } // namespace Coin

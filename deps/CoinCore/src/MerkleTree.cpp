@@ -80,6 +80,12 @@ std::string PartialMerkleTree::toIndentedString() const
         ss << "  " << i++ << ": " << uchar_vector(hash).getReverse().getHex() << std::endl;
     }
 
+    ss << "txIndices: " << std::endl;
+    i = 0;
+    for (auto& index: txIndices_) {
+        ss << "  " << i++ << ": " << index << std::endl;
+    }
+
     ss << "flags: " << getFlags().getHex() << std::endl;
     return ss.str();
 }
@@ -115,6 +121,8 @@ void PartialMerkleTree::setCompressed(unsigned int nTxs, const std::vector<uchar
     if (!merkleRoot.empty() && merkleRoot != getRootLittleEndian()) {
         throw std::runtime_error("PartialMerkleTree::setCompressed - Invalid merkle root.");
     }
+
+    updateTxIndices();
 }
 
 void PartialMerkleTree::setCompressed(std::queue<uchar_vector>& hashQueue, std::queue<bool>& bitQueue, unsigned int depth)
@@ -181,6 +189,8 @@ void PartialMerkleTree::setUncompressed(const std::vector<MerkleLeaf>& leaves)
     while (n > 0) { depth++; n >>= 1; }
 
     setUncompressed(leaves, 0, leaves.size(), depth);
+
+    updateTxIndices();
 }
 
 void PartialMerkleTree::setUncompressed(const std::vector<MerkleLeaf>& leaves, std::size_t begin, std::size_t end, unsigned int depth)
@@ -267,6 +277,8 @@ void PartialMerkleTree::merge(const PartialMerkleTree& other)
     bits_.clear();
 
     merge(hashQueue1, hashQueue2, bitQueue1, bitQueue2, depth_);
+
+    updateTxIndices();
 }
 
 void PartialMerkleTree::merge(std::queue<uchar_vector>& hashQueue1, std::queue<uchar_vector>& hashQueue2, std::queue<bool>& bitQueue1, std::queue<bool>& bitQueue2, unsigned int depth)
@@ -388,3 +400,17 @@ uchar_vector PartialMerkleTree::getFlags() const
     flags.push_back(byte);
     return flags;
 }
+
+void PartialMerkleTree::updateTxIndices()
+{
+    // TODO: optimize
+    std::set<uchar_vector> txHashesSet = getTxHashesSet();
+    txIndices_.clear();
+    unsigned int i = 0;
+    for (auto& hash: merkleHashes_)
+    {
+        if (txHashesSet.count(hash)) { txIndices_.push_back(i); } 
+        i++;
+    }
+}
+
