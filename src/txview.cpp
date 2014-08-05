@@ -17,6 +17,7 @@
 TxView::TxView(QWidget* parent)
     : QTreeView(parent), m_model(nullptr), m_menu(nullptr)
 {
+    setSelectionBehavior(QAbstractItemView::SelectRows);
 }
 
 void TxView::setModel(TxModel* model)
