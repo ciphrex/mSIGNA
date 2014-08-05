@@ -20,3 +20,4 @@ const QString& getVersionText();
 const QString& getCommitHash();
 const QString& getShortCommitHash();
 
+uint32_t getSchemaVersion();
