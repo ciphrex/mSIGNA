@@ -266,7 +266,21 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
         m_bInsertMerkleBlocks = false;
         m_notifyVaultClosed();
         if (m_vault) delete m_vault;
-        m_vault = new Vault(dbname, bCreate);
+        try
+        {
+            m_vault = new Vault(dbname, bCreate);
+        }
+        catch (const VaultException& e)
+        {
+            m_vault = nullptr;
+            throw e;
+        }
+        catch (const std::exception& e)
+        {
+            m_vault = nullptr;
+            throw e;
+        }
+
         updateSyncHeight(m_vault->getBestHeight());
         m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
         m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
@@ -289,7 +303,21 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         std::lock_guard<std::mutex> lock(m_vaultMutex);
         m_notifyVaultClosed();
         if (m_vault) delete m_vault;
-        m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate);
+        try
+        {
+            m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate);
+        }
+        catch (const VaultException& e)
+        {
+            m_vault = nullptr;
+            throw e;
+        }
+        catch (const std::exception& e)
+        {
+            m_vault = nullptr;
+            throw e;
+        }
+
         updateSyncHeight(m_vault->getBestHeight());
 
         m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });

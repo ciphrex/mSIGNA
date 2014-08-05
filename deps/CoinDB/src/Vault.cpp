@@ -91,15 +91,16 @@ void Vault::open(int argc, char** argv, bool create, uint32_t version)
     boost::lock_guard<boost::mutex> lock(mutex);
     db_ = open_database(argc, argv, create);
     if (argc >= 2) name_ = argv[1];
+
+    odb::core::transaction t(db_->begin());
     if (create)
     {
-        odb::core::transaction t(db_->begin());
         setSchemaVersion_unwrapped(version);
         t.commit();
     }
     else
     {
-        uint32_t schemaVersion = getSchemaVersion();
+        uint32_t schemaVersion = getSchemaVersion_unwrapped();
         if (schemaVersion != version) throw VaultWrongSchemaVersionException(name_, schemaVersion);
     }
 }
@@ -111,15 +112,16 @@ void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const s
     boost::lock_guard<boost::mutex> lock(mutex);
     db_ = openDatabase(dbuser, dbpasswd, dbname, create);
     name_ = dbname;
+
+    odb::core::transaction t(db_->begin());
     if (create)
     {
-        odb::core::transaction t(db_->begin());
         setSchemaVersion_unwrapped(version);
         t.commit();
     }
     else
     {
-        uint32_t schemaVersion = getSchemaVersion();
+        uint32_t schemaVersion = getSchemaVersion_unwrapped();
         if (schemaVersion != version) throw VaultWrongSchemaVersionException(name_, schemaVersion);
     }
 }
