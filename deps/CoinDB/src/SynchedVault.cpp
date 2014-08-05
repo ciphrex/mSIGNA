@@ -167,7 +167,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
                 else
                 {
                     LOGGER(info) << "Fetching " << blockhashes.size() << " incomplete block(s)." << std::endl;
-                    for (auto& hash: blockhashes) { m_networkSync.getFilteredBlock(hash); }
+                    //for (auto& hash: blockhashes) { m_networkSync.getFilteredBlock(hash); }
                 }
 
                 LOGGER(info) << "Fetching mempool." << std::endl;
