@@ -104,9 +104,9 @@ public:
     virtual bool deleteHeader(const uchar_vector& hash) = 0;
  
     virtual bool hasHeader(const uchar_vector& hash) const = 0;
-    virtual ChainHeader getHeader(const uchar_vector& hash) const = 0;
-    virtual ChainHeader getHeader(int height) const = 0; // Use -1 to get top block
-    virtual ChainHeader getHeaderBefore(uint32_t timestamp) const = 0;
+    virtual const ChainHeader& getHeader(const uchar_vector& hash) const = 0;
+    virtual const ChainHeader& getHeader(int height) const = 0; // Use -1 to get top block
+    virtual const ChainHeader& getHeaderBefore(uint32_t timestamp) const = 0;
 
     virtual int getBestHeight() const = 0;
     virtual BigInt getTotalWork() const = 0;
@@ -167,9 +167,9 @@ public:
     bool deleteHeader(const uchar_vector& hash);
 
     bool hasHeader(const uchar_vector& hash) const;
-    ChainHeader getHeader(const uchar_vector& hash) const;
-    ChainHeader getHeader(int height) const;
-    ChainHeader getHeaderBefore(uint32_t timestamp) const;
+    const ChainHeader& getHeader(const uchar_vector& hash) const;
+    const ChainHeader& getHeader(int height) const;
+    const ChainHeader& getHeaderBefore(uint32_t timestamp) const;
 
     int getBestHeight() const { return mBestHeight; }
     BigInt getTotalWork() const { return mTotalWork; }

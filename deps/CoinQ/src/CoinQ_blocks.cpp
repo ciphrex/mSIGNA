@@ -181,7 +181,7 @@ bool CoinQBlockTreeMem::hasHeader(const uchar_vector& hash) const
     return (mHeaderHashMap.find(hash) != mHeaderHashMap.end());
 }
 
-ChainHeader CoinQBlockTreeMem::getHeader(const uchar_vector& hash) const
+const ChainHeader& CoinQBlockTreeMem::getHeader(const uchar_vector& hash) const
 {
     header_hash_map_t::const_iterator it = mHeaderHashMap.find(hash);
     if (it == mHeaderHashMap.end()) {
@@ -190,7 +190,7 @@ ChainHeader CoinQBlockTreeMem::getHeader(const uchar_vector& hash) const
     return it->second;
 }
 
-ChainHeader CoinQBlockTreeMem::getHeader(int height) const
+const ChainHeader& CoinQBlockTreeMem::getHeader(int height) const
 {
     if (mHeaderHeightMap.size() > 0) {
         if (height < 0) height += mBestHeight + 1;
@@ -205,7 +205,7 @@ ChainHeader CoinQBlockTreeMem::getHeader(int height) const
     throw std::runtime_error("Not found.");
 }
 
-ChainHeader CoinQBlockTreeMem::getHeaderBefore(uint32_t timestamp) const
+const ChainHeader& CoinQBlockTreeMem::getHeaderBefore(uint32_t timestamp) const
 {
     if (mBestHeight == -1) {
         throw std::runtime_error("Tree is empty.");
