@@ -538,7 +538,7 @@ void NetworkSync::sendTx(Coin::Transaction& tx)
     m_peer.send(tx); 
 }
 
-void NetworkSync::getTx(uchar_vector& hash)
+void NetworkSync::getTx(const bytes_t& hash)
 {
     m_peer.getTx(hash);
 }

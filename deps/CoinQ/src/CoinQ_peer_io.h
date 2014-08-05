@@ -119,7 +119,7 @@ public:
     std::string resolved_name() const { std::stringstream ss; ss << endpoint_.address().to_string() << ":" << endpoint_.port(); return ss.str(); }
     std::string name() const { std::stringstream ss; ss << host_ << ":" << port_; return ss.str(); }
 
-    void getTx(const uchar_vector& hash)
+    void getTx(const bytes_t& hash)
     {
         Coin::InventoryItem tx(MSG_TX, hash);
         Coin::Inventory inv;
