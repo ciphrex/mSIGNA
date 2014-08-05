@@ -159,15 +159,15 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
             std::lock_guard<std::mutex> lock(m_vaultMutex);
             if (m_vault && m_networkSync.connected())
             {
-                hashvector_t txhashes = m_vault->getMissingTxHashes();
-                if (txhashes.empty())
+                hashvector_t blockhashes = m_vault->getIncompleteBlockHashes();
+                if (blockhashes.empty())
                 {
-                     updateStatus(SYNCHED);
+                    updateStatus(SYNCHED);
                 }
                 else
                 {
-                    LOGGER(info) << "Fetching missing transactions." << std::endl;
-                    m_networkSync.getTxs(txhashes);
+                    LOGGER(info) << "Fetching " << blockhashes.size() << " incomplete block(s)." << std::endl;
+                    for (auto& hash: blockhashes) { m_networkSync.getFilteredBlock(hash); }
                 }
 
                 LOGGER(info) << "Fetching mempool." << std::endl;
@@ -411,13 +411,6 @@ void SynchedVault::syncBlocks()
     if (!m_vault) throw std::runtime_error("No vault is open.");
     std::lock_guard<std::mutex> lock(m_vaultMutex);
     if (!m_vault) throw std::runtime_error("No vault is open.");
-
-    hashvector_t txhashes = m_vault->getMissingTxHashes();
-    if (!txhashes.empty())
-    {
-        LOGGER(info) << "Fetching " << txhashes.size() << " missing tx(s)." << std::endl;
-        m_networkSync.getTxs(txhashes);
-    }
 
     uint32_t startTime = m_vault->getMaxFirstBlockTimestamp();
     if (startTime == 0)
