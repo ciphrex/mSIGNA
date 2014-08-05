@@ -1016,6 +1016,20 @@ cli::result_t cmd_importmerkleblocks(const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_incompleteblocks(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    hashvector_t hashes = vault.getIncompleteBlockHashes();
+
+    stringstream ss;
+    for (auto& hash: hashes)
+    {
+        ss << uchar_vector(hash).getHex() << endl;
+    }
+    return ss.str();
+}
+
 cli::result_t cmd_randombytes(const cli::params_t& params)
 {
     uchar_vector bytes = random_bytes(strtoul(params[0].c_str(), NULL, 0));
@@ -1330,6 +1344,11 @@ int main(int argc, char* argv[])
         "importmerkleblocks",
         "import merkle blocks from file",
         command::params(2, "db file", "input file")));
+    shell.add(command(
+        &cmd_incompleteblocks,
+        "incompleteblocks",
+        "display hashes of blocks for which we do not have all our transactions",
+        command::params(1, "db file")));
 
     // Miscellaneous
     shell.add(command(
