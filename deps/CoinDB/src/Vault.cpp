@@ -2150,6 +2150,10 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
     tx->set(cointx, time(NULL));
 	tx->blockheader(blockheader);
 
+    std::set<std::shared_ptr<TxIn>> updated_txins;
+    std::set<std::shared_ptr<TxOut>> updated_txouts;
+    std::set<std::shared_ptr<Tx>> updated_txs;
+	
     std::shared_ptr<Account> sendingaccount;
     scripts_t::size_type i = 0;
     for (auto& txin: tx->txins())
@@ -2170,16 +2174,11 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
             {
                 std::shared_ptr<TxOut> txout(txout_r.begin().load());
                 txin->outpoint(txout);
-				db_->persist(txin);
 
                 txout->spent(txin);
 				txout->sending_account(sendingaccount);
-                db_->update(txout);
+				updated_txouts.insert(txout);
             }
-			else
-			{
-				db_->persist(txin);
-			}
         }
     }
 
@@ -2195,6 +2194,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
 			signingscript->markUsed();
 			db_->update(signingscript);
 
+			txout->signingscript(signingscript);
 			txout->receiving_label(signingscript->label());
 
 			odb::result<TxIn> txin_r(db_->query<TxIn>(odb::query<TxIn>::outhash == tx->hash() && odb::query<TxIn>::outindex == txout->txindex()));
@@ -2202,21 +2202,27 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
 			{
 				std::shared_ptr<TxIn> txin(txin_r.begin().load());
 				txout->spent(txin);
-				db_->persist(txout);
 
 				txin->outpoint(txout);
-				db_->update(txin);
-			}
-			else
-			{
-				db_->persist(txout);
+				txin->tx()->updateTotals();
+				updated_txins.insert(txin);
+				updated_txs.insert(txin->tx());
 			}
 		}
     }
 
 	if (sendingaccount || isReceive)
 	{
+		tx->updateTotals();
+
 		db_->persist(tx);
+		for (auto& txin:  tx->txins())		{ db_->persist(txin);  }
+		for (auto& txout: tx->txouts())		{ db_->persist(txout); }
+
+		for (auto& txin: updated_txins)		{ db_->update(txin);   }
+		for (auto& txout: updated_txouts)	{ db_->update(txout);  }
+		for (auto& tx: updated_txs)			{ db_->update(tx);	   }
+
 		signalQueue.push(notifyTxInserted.bind(tx));
 		return tx;
 	}
