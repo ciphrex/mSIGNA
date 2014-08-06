@@ -338,7 +338,6 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 }
                 else if (bestHeight == m_lastRequestedBlockHeight && bestHeight == (uint32_t)header.height)
                 {
-                    m_bFetchingBlocks = false;
                     m_bBlocksFetched = true;
                 }
             }
