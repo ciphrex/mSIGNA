@@ -50,7 +50,6 @@ void Peer::do_read()
     boost::asio::async_read(socket_, boost::asio::buffer(read_buffer, READ_BUFFER_SIZE), boost::asio::transfer_at_least(MIN_MESSAGE_HEADER_SIZE),
     strand_.wrap([this](const boost::system::error_code& ec, std::size_t bytes_read) {
         if (!bRunning) return;
-        LOGGER(trace) << "Peer read handler." << std::endl;
 
         if (ec)
         {
@@ -98,7 +97,8 @@ void Peer::do_read()
 
                 std::string command = peerMessage.getCommand();
                 if (command == "verack") {
-                    LOGGER(trace) << "Peer verack received." << std::endl;
+                    LOGGER(trace) << "Peer read handler - VERACK" << std::endl;
+
                     // Signal completion of handshake
                     if (bHandshakeComplete) throw std::runtime_error("Second verack received.");
                     boost::unique_lock<boost::mutex> lock(handshakeMutex);
@@ -111,6 +111,8 @@ void Peer::do_read()
                 }
                 else if (command == "version")
                 {
+                    LOGGER(trace) << "Peer read handler - VERSION" << std::endl;
+
                     // TODO: Check version information
                     Coin::VerackMessage verackMessage;
                     Coin::CoinNodeMessage msg(magic_bytes_, &verackMessage);
@@ -118,36 +120,50 @@ void Peer::do_read()
                 }
                 else if (command == "inv")
                 {
+                    LOGGER(trace) << "Peer read handler - INV" << std::endl;
+
                     Coin::Inventory* pInventory = static_cast<Coin::Inventory*>(peerMessage.getPayload());
                     notifyInv(*this, *pInventory);
                 }
                 else if (command == "tx")
                 {
+                    LOGGER(trace) << "Peer read handler - TX" << std::endl;
+
                     Coin::Transaction* pTx = static_cast<Coin::Transaction*>(peerMessage.getPayload());
                     notifyTx(*this, *pTx);
                 }
                 else if (command == "block")
                 {
+                    LOGGER(trace) << "Peer read handler - BLOCK" << std::endl;
+
                     Coin::CoinBlock* pBlock = static_cast<Coin::CoinBlock*>(peerMessage.getPayload());
                     notifyBlock(*this, *pBlock);
                 }
                 else if (command == "merkleblock")
                 {
+                    LOGGER(trace) << "Peer read handler - MERKLEBLOCK" << std::endl;
+
                     Coin::MerkleBlock* pMerkleBlock = static_cast<Coin::MerkleBlock*>(peerMessage.getPayload());
                     notifyMerkleBlock(*this, *pMerkleBlock);
                 }
                 else if (command == "addr")
                 {
+                    LOGGER(trace) << "Peer read handler - ADDR" << std::endl;
+
                     Coin::AddrMessage* pAddr = static_cast<Coin::AddrMessage*>(peerMessage.getPayload());
                     notifyAddr(*this, *pAddr);
                 }
                 else if (command == "headers")
                 {
+                    LOGGER(trace) << "Peer read handler - HEADERS" << std::endl;
+
                     Coin::HeadersMessage* pHeaders = static_cast<Coin::HeadersMessage*>(peerMessage.getPayload());
                     notifyHeaders(*this, *pHeaders);
                 }
                 else
                 {
+                    LOGGER(error) << "Peer read handler - command not implemented: " << command << std::endl;
+
                     std::stringstream err;
                     err << "Command type not implemented: " << command;
                     notifyProtocolError(*this, err.str());
