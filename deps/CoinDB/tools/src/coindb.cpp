@@ -30,7 +30,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-const std::string COINDB_VERSION = "v0.4.3";
+const std::string COINDB_VERSION = "v0.4.4";
 
 using namespace std;
 using namespace odb::core;
