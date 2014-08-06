@@ -1593,7 +1593,9 @@ struct BalanceView
 };
 
 #pragma db view \
-    object(BlockHeader)
+	object(MerkleBlock) \
+    object(BlockHeader: MerkleBlock::blockheader_) \
+	query(MerkleBlock::txsinserted_ == true)
 struct BestHeightView
 {
     #pragma db column("max(" + BlockHeader::height_ + ")")
