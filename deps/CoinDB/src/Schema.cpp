@@ -647,17 +647,11 @@ void BlockHeader::updateHash()
 
 void MerkleBlock::fromCoinCore(const Coin::MerkleBlock& merkleblock, uint32_t height)
 {
-    Coin::PartialMerkleTree tree(merkleblock.nTxs, merkleblock.hashes, merkleblock.flags, merkleblock.blockHeader.merkleRoot);
     blockheader_ = std::shared_ptr<BlockHeader>(new BlockHeader(merkleblock.blockHeader, height));
     txcount_ = merkleblock.nTxs;
     hashes_.assign(merkleblock.hashes.begin(), merkleblock.hashes.end()); 
     for (auto& hash: hashes_) { std::reverse(hash.begin(), hash.end()); }
     flags_ = merkleblock.flags;
-
-    missingtxhashes_.clear();
-    std::vector<uchar_vector> txhashes = tree.getTxHashesLittleEndianVector();
-    for (auto& hash: txhashes) { missingtxhashes_.insert(hash); }
-    ismissingtxs_ = !missingtxhashes_.empty();
 }
 
 Coin::MerkleBlock MerkleBlock::toCoinCore() const
@@ -705,15 +699,17 @@ std::string MerkleBlock::toJson() const
 
 TxIn::TxIn(const Coin::TxIn& coin_txin)
 {
-    outhash_ = coin_txin.getOutpointHash();
-    outindex_ = coin_txin.getOutpointIndex();
-    script_ = coin_txin.scriptSig;
-    sequence_ = coin_txin.sequence;
+	fromCoinCore(coin_txin);
 }
 
 TxIn::TxIn(const bytes_t& raw)
 {
     Coin::TxIn coin_txin(raw);
+	fromCoinCore(coin_txin);
+}
+
+void TxIn::fromCoinCore(const Coin::TxIn& coin_txin)
+{
     outhash_ = coin_txin.getOutpointHash();
     outindex_ = coin_txin.getOutpointIndex();
     script_ = coin_txin.scriptSig;

@@ -22,8 +22,13 @@ enum ErrorCodes
     VAULT_WRONG_SCHEMA_VERSION = 101,
     VAULT_MISSING_TXS,
 
+    // Chain code errors
+    CHAINCODE_LOCKED = 201,
+    CHAINCODE_UNLOCK_FAILED,
+    CHAINCODE_SET_UNLOCK_KEY_FAILED
+
     // Keychain errors
-    KEYCHAIN_NOT_FOUND = 201,
+    KEYCHAIN_NOT_FOUND = 301,
     KEYCHAIN_ALREADY_EXISTS,
     KEYCHAIN_CHAIN_CODE_LOCKED,
     KEYCHAIN_CHAIN_CODE_UNLOCK_FAILED,
@@ -33,33 +38,34 @@ enum ErrorCodes
     KEYCHAIN_INVALID_PRIVATE_KEY,
 
     // Account errors
-    ACCOUNT_NOT_FOUND = 301,
+    ACCOUNT_NOT_FOUND = 401,
     ACCOUNT_ALREADY_EXISTS,
     ACCOUNT_INSUFFICIENT_FUNDS,
     ACCOUNT_CANNOT_ISSUE_CHANGE_SCRIPT,
 
     // Account bin errors
-    ACCOUNTBIN_NOT_FOUND = 401,
+    ACCOUNTBIN_NOT_FOUND = 501,
     ACCOUNTBIN_ALREADY_EXISTS,
     ACCOUNTBIN_OUT_OF_SCRIPTS,
 
     // Tx errors
-    TX_NOT_FOUND = 501,
+    TX_NOT_FOUND = 601,
     TX_INVALID_INPUTS,
     TX_OUTPUTS_EXCEED_INPUTS,
     TX_OUTPUT_NOT_FOUND,
     TX_MISMATCH,
 
     // Block header errors
-    BLOCKHEADER_NOT_FOUND = 601,
+    BLOCKHEADER_NOT_FOUND = 701,
 
     // Merkle block errors
-    MERKLEBLOCK_INVALID = 701,
+    MERKLEBLOCK_INVALID = 801,
 
-    // Chain code errors
-    CHAINCODE_LOCKED = 801,
-    CHAINCODE_UNLOCK_FAILED,
-    CHAINCODE_SET_UNLOCK_KEY_FAILED
+    // MerkleTx errors
+    MERKLETX_BAD_INSERTION_ORDER = 901,
+	MERKLETX_MISMATCH,
+	MERKLETX_FAILED_TO_CONNECT,
+	MERKLETX_INVALID_HEIGHT
 };
 
 // VAULT EXCEPTIONS
@@ -95,6 +101,44 @@ public:
 
 private:
     hashvector_t txhashes_;
+};
+
+// CHAIN CODE EXCEPTIONS
+class ChainCodeException : public stdutils::custom_error
+{
+public:
+    virtual ~ChainCodeException() throw() { }
+
+protected:
+    explicit ChainCodeException(const std::string& what, int code) : stdutils::custom_error(what, code) { }
+};
+
+class ChainCodesAreLockedException : public ChainCodeException
+{
+public:
+    explicit ChainCodesAreLockedException() : ChainCodeException("Chain codes are locked.", CHAINCODE_LOCKED) { }
+};
+
+class ChainCodeUnlockFailedForKeychainException : public ChainCodeException
+{
+public:
+    explicit ChainCodeUnlockFailedForKeychainException(const std::string& keychain_name) : ChainCodeException("Chain code is locked for a keychain.", CHAINCODE_UNLOCK_FAILED), keychain_name_(keychain_name) { }
+    virtual ~ChainCodeUnlockFailedForKeychainException() throw() { }
+    const std::string& keychain_name() const { return keychain_name_; }
+
+protected:
+    std::string keychain_name_;
+};
+
+class ChainCodeSetUnlockKeyFailedForKeychainException : public ChainCodeException
+{
+public:
+    explicit ChainCodeSetUnlockKeyFailedForKeychainException(const std::string& keychain_name) : ChainCodeException("Failed to set unlock key for keychain chain code.", CHAINCODE_SET_UNLOCK_KEY_FAILED), keychain_name_(keychain_name) { }
+    virtual ~ChainCodeSetUnlockKeyFailedForKeychainException() throw() { }
+    const std::string& keychain_name() const { return keychain_name_; }
+
+protected:
+    std::string keychain_name_;
 };
 
 // KEYCHAIN EXCEPTIONS
@@ -322,42 +366,53 @@ public:
     explicit MerkleBlockInvalidException(const bytes_t& hash, uint32_t height) : MerkleBlockException("Merkle block is invalid.", MERKLEBLOCK_INVALID, hash, height) { }
 };
 
-// CHAIN CODE EXCEPTIONS
-class ChainCodeException : public stdutils::custom_error
+// MERKLETX EXCEPTIONS
+class MerkleTxException : public stdutils::custom_error
 {
 public:
-    virtual ~ChainCodeException() throw() { }
+    virtual ~MerkleTxException() throw() { }
+
+    const bytes_t& blockhash() const { return blockhash_; }
+    uint32_t height() const { return height_; }
+
+    const bytes_t& txhash() const { return txhash_; }
+
+    unsigned int txindex() const { return txindex_; }
+    unsigned int txtotal() const { return txtotal_; }
 
 protected:
-    explicit ChainCodeException(const std::string& what, int code) : stdutils::custom_error(what, code) { }
+    explicit MerkleTxException(const std::string& what, int code, const bytes_t& blockhash, uint32_t height, const bytes_t& txhash, unsigned int txindex, unsigned int txtotal) : stdutils::custom_error(what, code), blockhash_(blockhash), height_(height), txhash_(txhash), txindex_(txindex), txtotal_(txtotal) { }
+
+    bytes_t blockhash_;
+    uint32_t height_;
+    bytes_t txhash_;
+    unsigned int txindex_;
+    unsigned int txtotal_;
 };
 
-class ChainCodesAreLockedException : public ChainCodeException
+class MerkleTxBadInsertionOrderException : public MerkleTxException
 {
 public:
-    explicit ChainCodesAreLockedException() : ChainCodeException("Chain codes are locked.", CHAINCODE_LOCKED) { }
+    explicit MerkleTxBadInsertionOrderException(const bytes_t& blockhash, uint32_t height, const bytes_t& txhash, unsigned int txindex, unsigned int txtotal) : MerkleTxException("Merkle transaction was inserted out of order.", MERKLETX_BAD_INSERTION_ORDER, blockhash, height, txhash, txindex, txtotal) { }
 };
 
-class ChainCodeUnlockFailedForKeychainException : public ChainCodeException
+class MerkleTxMismatchException : public MerkleTxException
 {
 public:
-    explicit ChainCodeUnlockFailedForKeychainException(const std::string& keychain_name) : ChainCodeException("Chain code is locked for a keychain.", CHAINCODE_UNLOCK_FAILED), keychain_name_(keychain_name) { }
-    virtual ~ChainCodeUnlockFailedForKeychainException() throw() { }
-    const std::string& keychain_name() const { return keychain_name_; }
-
-protected:
-    std::string keychain_name_;
+    explicit MerkleTxMismatchException(const bytes_t& blockhash, uint32_t height, const bytes_t& txhash, unsigned int txindex, unsigned int txtotal) : MerkleTxException("Stored transaction does not match inserted transaction.", MERKLETX_MISMATCH, blockhash, height, txhash, txindex, txtotal) { }
 };
 
-class ChainCodeSetUnlockKeyFailedForKeychainException : public ChainCodeException
+class MerkleTxFailedToConnectException : public MerkleTxException
 {
 public:
-    explicit ChainCodeSetUnlockKeyFailedForKeychainException(const std::string& keychain_name) : ChainCodeException("Failed to set unlock key for keychain chain code.", CHAINCODE_SET_UNLOCK_KEY_FAILED), keychain_name_(keychain_name) { }
-    virtual ~ChainCodeSetUnlockKeyFailedForKeychainException() throw() { }
-    const std::string& keychain_name() const { return keychain_name_; }
-
-protected:
-    std::string keychain_name_;
+    explicit MerkleTxFailedToConnectException(const bytes_t& blockhash, uint32_t height, const bytes_t& txhash, unsigned int txindex, unsigned int txtotal) : MerkleTxException("Merkleblock cannot connect to chain.", MERKLETX_FAILED_TO_CONNECT, blockhash, height, txhash, txindex, txtotal) { }
 };
+
+class MerkleTxInvalidHeightException : public MerkleTxException
+{
+public:
+    explicit MerkleTxInvalidHeightException(const bytes_t& blockhash, uint32_t height, const bytes_t& txhash, unsigned int txindex, unsigned int txtotal) : MerkleTxException("Merkleblock has invalid height.", MERKLETX_INVALID_HEIGHT, blockhash, height, txhash, txindex, txtotal) { }
+};
+
 
 }

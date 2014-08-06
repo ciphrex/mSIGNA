@@ -2154,6 +2154,137 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool repla
     return nullptr; 
 }
 
+std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader)
+{
+    std::stringstream tracer 
+    tracer << "Vault::insertNewTx(" << cointx.getHashLittleEndian().getHex() << ", ";
+    if (blockheader)    { tracer << uchar_vector(blockheader->hash()).getHex(); }
+    else                { tracer << "null"; }
+    tracer << ")" << std::endl;
+    LOGGER(trace) << tracer.str() << std::endl;
+
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = insertNewTx_unwrapped(cointx, blockheader);
+        if (tx) t.commit();
+    }
+
+    signalQueue.flush();
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader)
+{
+}
+
+std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool validatesigs)
+{
+    LOGGER(trace) << "Vault::insertMerkleTx(" << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << ", " << cointx.getHashLittleEndian().getHex() << ", " << txindex << ", " << txcount << ", " << (validatesigs ? "true" : "false") << std::endl;
+
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = insertMerkleTx_unwrapped(chainmerkleblock, cointx, txindex, txcount, validatesigs);
+        if (tx) t.commit();
+    }
+
+    signalQueue.flush();
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool validatesigs)
+{
+    bytes_t blockhash = chainmerkleblock.blockHeader.getHashLittleEndian();
+    bytes_t txhash = cointx.getHashLittleEndian();
+
+    // Instantiate merkleblock
+    std::shared_ptr<MerkleBlock> merkleblock;
+    {
+        odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == blockhash));
+        if (!r.empty())
+        {
+            merkleblock = r.begin().load();
+        }
+        else
+        {
+            // Connect to chain
+            if (txindex != 0) throw MerkleTxBadInsertionOrderException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+            odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.blockHeader.prevBlockHash))
+            if (r.empty())
+            {
+                odb::result<BlockCountView> r(db_->query<BlockCountView>());
+                if (!r.empty() && r.begin()->count > 0) throw MerkleTxFailedToConnectException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+            }
+            else
+            {
+                if (chainmerkleblock.height != r.begin().load()->blockheader()->height() + 1)
+                    throw MerkleTxInvalidHeightException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+            }
+
+            merkleblock = std::make_shared<MerkleBlock>(chain_merkle_block);
+            db_->persist(merkleblock->blockheader());
+            db_->persist(merkleblock);
+        }
+    }
+
+    // If we already have the transaction, just update it.
+    {
+        odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
+        if (!r.empty())
+        {
+            std::shared_ptr<Tx> tx(r.begin().load());
+            tx->blockheader(merkleblock->blockheader());
+            tx->status(CONFIRMED);
+            tx->conflicting(false);
+            db_->update(tx);
+            return tx;
+        }
+        else
+        {
+            Coin::Transaction cointxcopy(cointx);
+            cointxcopy.clearScriptSigs();
+            bytes_t txunsignedhash = cointxcopy.getHashLittleEndian();
+            odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::unsignedhash == txunsignedhash));
+            if (!r.empty())
+            {
+                // We have an unsigned version of the transaction
+                std::shared_ptr<Tx> tx(r.begin().load());
+
+                // Sanity check - the following condition should never be true, but using out-of-bounds indices will crash the program
+                if (tx->txins().size() != cointx.inputs.size())
+                    throw MerkleTxMismatchException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+
+                // Replace stored tx inputs with new ones since this transaction is signed
+                txins_t::size_type i = 0;
+                for (auto& txin: tx->txins())
+                {
+                    txin->fromCoinCore(cointx.inputs[i++]);
+                    db_->update(txin);
+                }
+
+                // Another sanity check - compare hashes
+                if (tx->toCoinCore().getHashLittleEndian() != txhash)
+                    throw MerkleTxMismatchException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+
+                tx->blockheader(merkleblock->blockheader());
+                tx->hash(txhash);
+                tx->status(CONFIRMED);
+                tx->conflicting(false);
+                db_->update(tx);
+                return tx;
+            }
+        } 
+    }
+
+    // We've never seen this transaction before - treat it as a new transaction
+    std::shared_ptr<Tx> tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader());
+
+    if (txindex + 1 == txcount
+}
+
 std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts, bool insert)
 {
     LOGGER(trace) << "Vault::createTx(" << account_name << ", " << tx_version << ", " << tx_locktime << ", " << txouts.size() << " txout(s), " << fee << ", " << maxchangeouts << ", " << (insert ? "insert" : "no insert") << ")" << std::endl;
