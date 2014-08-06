@@ -37,7 +37,7 @@ typedef ChainMerkleBlock chain_merkle_block_t;
 namespace CoinQ {
     namespace Network {
 
-typedef std::function<void(const ChainMerkleBlock&, const Coin::Transaction&, unsigned int /*txIndex*/, unsigned int /*txTotal*/)> merkle_tx_slot_t;
+typedef std::function<void(const ChainMerkleBlock&, const Coin::Transaction&, unsigned int /*txIndex*/, unsigned int /*txCount*/)> merkle_tx_slot_t;
 
 class NetworkSync
 {
@@ -143,7 +143,7 @@ private:
     ChainMerkleBlock m_currentMerkleBlock;
     std::queue<bytes_t> m_currentMerkleTxHashes;
     unsigned int m_currentMerkleTxIndex;
-    unsigned int m_currentMerkleTxTotal;
+    unsigned int m_currentMerkleTxCount;
 
     // Sync signals
     CoinQSignal<void> notifyStarted;

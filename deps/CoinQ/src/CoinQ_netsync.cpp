@@ -152,8 +152,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
 
                 if (m_currentMerkleTxHashes.front() != txhash) throw runtime_error("Transaction received out of order.");
                 m_currentMerkleTxHashes.pop();
-                notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex++, m_currentMerkleTxTotal);
-                if (m_bBlocksFetched && m_currentMerkleTxIndex == m_currentMerkleTxTotal)
+                notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex++, m_currentMerkleTxCount);
+                if (m_bBlocksFetched && m_currentMerkleTxIndex == m_currentMerkleTxCount)
                 {
                     m_bBlocksSynched = true;
                     notifyBlocksSynched();
@@ -316,7 +316,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 std::vector<uchar_vector> txhashes = tree.getTxHashesLittleEndianVector();
                 for (auto& txhash: txhashes) { m_currentMerkleTxHashes.push(txhash); }
                 m_currentMerkleTxIndex = 0;
-                m_currentMerkleTxTotal = txhashes.size();
+                m_currentMerkleTxCount = txhashes.size();
 
                 notifyMerkleBlock(m_currentMerkleBlock);
 
