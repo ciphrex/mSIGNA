@@ -27,6 +27,8 @@
 #include <CoinCore/typedefs.h>
 #include <CoinCore/BloomFilter.h>
 
+#include <queue>
+
 typedef Coin::Transaction coin_tx_t;
 typedef ChainHeader chain_header_t;
 typedef ChainBlock chain_block_t;
@@ -34,6 +36,8 @@ typedef ChainMerkleBlock chain_merkle_block_t;
 
 namespace CoinQ {
     namespace Network {
+
+typedef std::function<void(const ChainMerkleBlock&, const Coin::Transaction&, unsigned int /*txIndex*/, unsigned int /*txTotal*/)> merkle_tx_slot_t;
 
 class NetworkSync
 {
@@ -96,7 +100,9 @@ public:
     void subscribeStatus(string_slot_t slot) { notifyStatus.connect(slot); }
 
     // PEER EVENT SUBSCRIPTIONS
-    void subscribeTx(tx_slot_t slot) { notifyTx.connect(slot); }
+    void subscribeNewTx(tx_slot_t slot) { notifyNewTx.connect(slot); }
+    void subscribeMerkleTx(merkle_tx_slot_t slot) { notifyMerkleTx.connect(slot); }
+
     void subscribeBlock(chain_block_slot_t slot) { notifyBlock.connect(slot); }
     void subscribeMerkleBlock(chain_merkle_block_slot_t slot) { notifyMerkleBlock.connect(slot); }
     void subscribeAddBestChain(chain_header_slot_t slot) { notifyAddBestChain.connect(slot); }
@@ -124,6 +130,7 @@ private:
     bool m_bHeadersSynched;
 
     bool m_bFetchingBlocks;
+    bool m_bBlocksFetched;
     bool m_bBlocksSynched;
 
     uint32_t m_lastRequestedBlockHeight;
@@ -131,6 +138,12 @@ private:
     Coin::BloomFilter m_bloomFilter;
 
     void initBlockFilter();
+
+    // Merkle block state
+    ChainMerkleBlock m_currentMerkleBlock;
+    std::queue<bytes_t> m_currentMerkleTxHashes;
+    unsigned int m_currentMerkleTxIndex;
+    unsigned int m_currentMerkleTxTotal;
 
     // Sync signals
     CoinQSignal<void> notifyStarted;
@@ -152,7 +165,9 @@ private:
     CoinQSignal<const std::string&> notifyStatus;
 
     // Peer signals
-    CoinQSignal<const Coin::Transaction&> notifyTx;
+    CoinQSignal<const Coin::Transaction&> notifyNewTx;
+    CoinQSignal<const ChainMerkleBlock&, const Coin::Transaction&, unsigned int, unsigned int> notifyMerkleTx;
+
     CoinQSignal<const ChainBlock&> notifyBlock;
     CoinQSignal<const ChainMerkleBlock&> notifyMerkleBlock;
     CoinQSignal<const ChainHeader&> notifyAddBestChain;

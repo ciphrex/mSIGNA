@@ -10,11 +10,14 @@
 
 #include "CoinQ_typedefs.h"
 
+#include <CoinCore/MerkleTree.h>
+
 #include <stdint.h>
 
 #include <logger/logger.h>
 
 using namespace CoinQ::Network;
+using namespace std;
 
 NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_coinParams(coinParams),
@@ -132,8 +135,39 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_peer.subscribeTx([&](CoinQ::Peer& /*peer*/, const Coin::Transaction& tx)
     {
         if (!m_bConnected) return;
-        LOGGER(trace) << "Received transaction: " << tx.getHashLittleEndian().getHex() << std::endl;
-        notifyTx(tx);
+        bytes_t txhash = tx.getHashLittleEndian();
+        LOGGER(trace) << "Received transaction: " << uchar_vector(txhash).getHex() << std::endl;
+
+        if (m_bBlocksSynched)
+        {
+            notifyNewTx(tx);
+            return;
+        }
+
+        try
+        {
+            if (m_bFetchingBlocks)
+            {
+                if (m_currentMerkleTxHashes.empty()) throw runtime_error("Should not be receiving transactions before blocks when fetching blocks.");
+
+                if (m_currentMerkleTxHashes.front() != txhash) throw runtime_error("Transaction received out of order.");
+                m_currentMerkleTxHashes.pop();
+                notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex++, m_currentMerkleTxTotal);
+                if (m_bBlocksFetched && m_currentMerkleTxIndex == m_currentMerkleTxTotal)
+                {
+                    m_bBlocksSynched = true;
+                    notifyBlocksSynched();
+                }
+            }
+            else
+            {
+                throw runtime_error("Should not be receiving transactions if not synched and not fetching blocks.");
+            }
+        }
+        catch (const exception& e)
+        {
+            notifyProtocolError(e.what());
+        }
     });
 
     m_peer.subscribeHeaders([&](CoinQ::Peer& peer, const Coin::HeadersMessage& headersMessage)
@@ -237,6 +271,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         uchar_vector hash = merkleBlock.blockHeader.getHashLittleEndian();
 
         try {
+            if (!m_currentMerkleTxHashes.empty()) throw std::runtime_error("Block was received before getting transactions from last block.");
+
             if (m_blockTree.hasHeader(hash)) {
                 // Do nothing but skip over last else.
             }
@@ -248,14 +284,36 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 notifyHeadersSynched();
             }
             else {
-                LOGGER(debug) << "NetworkSync merkle block handler - block rejected - hash: " << hash.getHex() << std::endl;
+                m_bHeadersSynched = false;
+                m_bBlocksSynched = false;
+                m_bBlocksFetched = false;
+                m_bFetchingBlocks = false;
+
+                // Possible reorg
+                LOGGER(error) << "NetworkSync merkle block handler - block rejected: " << hash.getHex() << " - possible reorg." << endl;
+                try
+                {
+                    m_peer.getHeaders(m_blockTree.getLocatorHashes(-1));
+                }
+                catch (const exception& e) {
+                    LOGGER(error) << "Block tree error: " << e.what() << endl;
+                    notifyBlockTreeError(e.what());
+                }
                 return;
             }
 
             if (m_bFetchingBlocks)
             {
+                // Set tx hashes
+                Coin::PartialMerkleTree tree(merkleBlock.nTxs, merkleBlock.hashes, merkleBlock.flags, merkleBlock.blockHeader.merkleRoot);
                 ChainHeader header = m_blockTree.getHeader(hash);
-                notifyMerkleBlock(ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork));
+                m_currentMerkleBlock = ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork);
+                std::vector<uchar_vector> txhashes = tree.getTxHashesLittleEndianVector();
+                for (auto& txhash: txhashes) { m_currentMerkleTxHashes.push(txhash); }
+                m_currentMerkleTxIndex = 0;
+                m_currentMerkleTxTotal = txhashes.size();
+
+                notifyMerkleBlock(m_currentMerkleBlock);
 
                 uint32_t bestHeight = m_blockTree.getBestHeight();
                 if (bestHeight > (uint32_t)header.height) // We still need to fetch more blocks
@@ -269,34 +327,25 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     LOGGER(debug) << status.str() << std::endl;
                     notifyStatus(status.str());
                     m_lastRequestedBlockHeight = nextHeader.height;
-                    m_peer.getFilteredBlock(hash);
+                    try
+                    {
+                        m_peer.getFilteredBlock(hash);
+                    }
+                    catch (const exception& e)
+                    {
+                        notifyConnectionError(e.what());
+                    }
                 }
                 else if (bestHeight == m_lastRequestedBlockHeight && bestHeight == (uint32_t)header.height)
                 {
                     m_bFetchingBlocks = false;
-                    m_bBlocksSynched = true;
-                    notifyBlocksSynched();
+                    m_bBlocksFetched = true;
                 }
             }
         }
-        catch (const std::exception& e) {
-            std::stringstream err;
-            err << "NetworkSync merkle block handler - block hash: " << hash.getHex() << " - " << e.what();
-            LOGGER(error) << err.str() << std::endl;
-            notifyBlockTreeError(err.str());
-
-            try
-            {
-                LOGGER(debug) << "NetworkSync merkle block handler - possible reorg - attempting to fetch block headers..." << std::endl;
-
-                m_peer.getHeaders(m_blockTree.getLocatorHashes(-1));
-            }
-            catch (const std::exception& e) {
-                err.clear();
-                err << "NetworkSync merkle block handler - error fetching block headers: " << e.what();
-                LOGGER(error) << err.str() << std::endl;
-                notifyBlockTreeError(e.what());
-            } 
+        catch (const exception& e) {
+            LOGGER(error) << "NetworkSync - protocol error: " << e.what() << std::endl;
+            notifyProtocolError(e.what());
         }
     });
 }
@@ -409,7 +458,8 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
     if (!m_bConnected) throw std::runtime_error("NetworkSync::syncBlocks() - must connect before synching.");
 */
 
-    m_bFetchingBlocks = false; 
+    m_bFetchingBlocks = false;
+    m_bBlocksFetched = false;
 
     ChainHeader header;
     bool foundHeader = false;
