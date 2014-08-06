@@ -61,7 +61,6 @@ public:
     std::vector<bytes_t>                    getLocatorHashes() const;
     Coin::BloomFilter                       getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
     hashvector_t                            getIncompleteBlockHashes() const;
-    hashvector_t                            getMissingTxHashes() const;
 
     void                                    exportVault(const std::string& filepath, bool exportprivkeys = true, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
 
@@ -140,7 +139,7 @@ public:
     std::vector<TxView>                     getTxViews(int tx_status_flags = Tx::ALL, unsigned long start = 0, int count = -1, uint32_t minheight = 0) const; // count = -1 means display all
     std::vector<std::string>                getSerializedUnsignedTxs(const std::string& account_name) const;
     std::shared_ptr<Tx>                     insertTx(std::shared_ptr<Tx> tx, bool replace_labels = false); // Inserts transaction only if it affects one of our accounts. Returns transaction in vault if change occured. Otherwise returns nullptr.
-	std::shared_ptr<Tx>						insertNewTx(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader == nullptr);
+	std::shared_ptr<Tx>						insertNewTx(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader = nullptr);
     std::shared_ptr<Tx>                     insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool validatesigs = false);
     std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
     std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations, bool insert = false); // Pass empty output scripts to generate change outputs.
@@ -186,15 +185,13 @@ public:
     // SLOT SUBSCRIPTIONS //
     ////////////////////////
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return notifyTxInserted.connect(slot); }
-    Signals::Connection subscribeTxStatusChanged(TxSignal::Slot slot) { return notifyTxStatusChanged.connect(slot); }
+    Signals::Connection subscribeTxStatusChanged(TxSignal::Slot slot) { return notifyTxUpdated.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return notifyMerkleBlockInserted.connect(slot); }
-    Signals::Connection subscribeHaveAllConfirmedTxs(Signals::Signal<>::Slot slot) { return notifyHaveAllConfirmedTxs.connect(slot); }
     void clearAllSlots()
     {
         notifyTxInserted.clear();
-        notifyTxStatusChanged.clear();
+        notifyTxUpdated.clear();
         notifyMerkleBlockInserted.clear();
-        notifyHaveAllConfirmedTxs.clear();
     }
 
 protected:
@@ -210,7 +207,6 @@ protected:
     std::vector<bytes_t>                    getLocatorHashes_unwrapped() const;
     Coin::BloomFilter                       getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
     hashvector_t                            getIncompleteBlockHashes_unwrapped() const;
-    hashvector_t                            getMissingTxHashes_unwrapped() const;
 
     ///////////////////////////
     // CHAIN CODE OPERATIONS //
@@ -279,7 +275,7 @@ protected:
     std::vector<std::string>                getSerializedUnsignedTxs_unwrapped(const std::string& account_name) const;
     uint32_t                                getTxConfirmations_unwrapped(std::shared_ptr<Tx> tx) const;
     std::shared_ptr<Tx>                     insertTx_unwrapped(std::shared_ptr<Tx> tx, bool replace_labels = false);
-	std::shared_ptr<Tx>						insertNewTx_unwrapped(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader == nullptr);
+	std::shared_ptr<Tx>						insertNewTx_unwrapped(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader = nullptr);
     std::shared_ptr<Tx>                     insertMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool validatesigs = false);
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations);
@@ -318,9 +314,8 @@ protected:
     Signals::SignalQueue                    signalQueue;
 
     TxSignal                                notifyTxInserted;
-    TxSignal                                notifyTxStatusChanged;
+    TxSignal                                notifyTxUpdated;
     MerkleBlockSignal                       notifyMerkleBlockInserted;
-    Signals::Signal<>                       notifyHaveAllConfirmedTxs;
 
 private:
     mutable boost::mutex mutex;

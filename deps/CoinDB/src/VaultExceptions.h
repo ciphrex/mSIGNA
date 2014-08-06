@@ -25,7 +25,7 @@ enum ErrorCodes
     // Chain code errors
     CHAINCODE_LOCKED = 201,
     CHAINCODE_UNLOCK_FAILED,
-    CHAINCODE_SET_UNLOCK_KEY_FAILED
+    CHAINCODE_SET_UNLOCK_KEY_FAILED,
 
     // Keychain errors
     KEYCHAIN_NOT_FOUND = 301,
@@ -54,7 +54,7 @@ enum ErrorCodes
     TX_OUTPUTS_EXCEED_INPUTS,
     TX_OUTPUT_NOT_FOUND,
     TX_MISMATCH,
-	TX_NOT_SIGNED
+	TX_NOT_SIGNED,
 
     // Block header errors
     BLOCKHEADER_NOT_FOUND = 701,

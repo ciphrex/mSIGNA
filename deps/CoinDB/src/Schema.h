@@ -1081,7 +1081,7 @@ public:
     uint32_t timestamp() const { return timestamp_; }
 
     bool updateStatus(status_t status = NO_STATUS); // Will keep the status it already had if it didn't change and no parameter is passed. Returns true iff status changed.
-	void status(status_t status) { status_ = status }
+	void status(status_t status) { status_ = status; }
     status_t status() const { return status_; }
 
     void conflicting(bool conflicting) { conflicting_ = conflicting; }
@@ -1659,7 +1659,7 @@ struct ConfirmedTxView
 };
 
 #pragma db view \
-    object(MerkleBlock) query(MerkleBlock::ismissingtxs_ == true)
+    object(MerkleBlock) query(MerkleBlock::txsinserted_ == false)
 struct IncompleteBlockCountView
 {
     #pragma db column("count(" + MerkleBlock::id_ + ")")

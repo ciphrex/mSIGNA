@@ -194,9 +194,9 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         }
     });
 
-    m_networkSync.subscribeTx([this](const Coin::Transaction& coinTx)
+    m_networkSync.subscribeNewTx([this](const Coin::Transaction& cointx)
     {
-        LOGGER(trace) << "P2P network received transaction " << coinTx.getHashLittleEndian().getHex() << std::endl;
+        LOGGER(trace) << "P2P network received transaction " << cointx.getHashLittleEndian().getHex() << std::endl;
 
         if (!m_vault) return;
         std::lock_guard<std::mutex> lock(m_vaultMutex);
@@ -204,9 +204,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
         try
         {
-            std::shared_ptr<Tx> tx(new Tx());
-            tx->set(coinTx);
-            m_vault->insertTx(tx);
+            m_vault->insertNewTx(cointx);
         }
         catch (const std::exception& e)
         {
@@ -298,11 +296,6 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
             updateSyncHeight(merkleblock->blockheader()->height());
             m_notifyMerkleBlockInserted(merkleblock);
         });
-        m_vault->subscribeHaveAllConfirmedTxs([this]()
-        {
-            LOGGER(trace) << "SynchedVault - HaveAllConfirmedTxs handler called." << std::endl;
-            if (m_networkSync.connected() && m_networkSync.blocksSynched()) { updateStatus(SYNCHED); }
-        });
     }
 
     m_notifyVaultOpened(m_vault);
@@ -340,11 +333,6 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         {
             updateSyncHeight(merkleblock->blockheader()->height());
             m_notifyMerkleBlockInserted(merkleblock);
-        });
-        m_vault->subscribeHaveAllConfirmedTxs([this]()
-        {
-            LOGGER(trace) << "SynchedVault - HaveAllConfirmedTxs handler called." << std::endl;
-            if (m_networkSync.connected() && m_networkSync.blocksSynched()) { updateStatus(SYNCHED); }
         });
     }
 

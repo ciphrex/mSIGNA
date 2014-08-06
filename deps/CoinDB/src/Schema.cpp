@@ -679,13 +679,6 @@ Coin::MerkleBlock MerkleBlock::toCoinCore() const
     return merkleblock;
 }
 
-hashset_t::size_type MerkleBlock::marknotmissing(const bytes_t& hash)
-{
-    hashset_t::size_type count = missingtxhashes_.erase(hash);
-    ismissingtxs_ = !missingtxhashes_.empty();
-    return count;
-}
-
 std::string MerkleBlock::toJson() const
 {
     std::stringstream ss;
