@@ -54,6 +54,7 @@ enum ErrorCodes
     TX_OUTPUTS_EXCEED_INPUTS,
     TX_OUTPUT_NOT_FOUND,
     TX_MISMATCH,
+	TX_NOT_SIGNED
 
     // Block header errors
     BLOCKHEADER_NOT_FOUND = 701,
@@ -320,6 +321,12 @@ class TxMismatchException : public TxException
 {
 public:
     explicit TxMismatchException(const bytes_t& hash = bytes_t()) : TxException("Transaction mismatch.", TX_MISMATCH, hash) { }
+};
+
+class TxNotSignedException : public TxException
+{
+public:
+    explicit TxNotSignedException(const bytes_t& hash = bytes_t()) : TxException("Transaction is not signed.", TX_NOT_SIGNED, hash) { }
 };
 
 // BLOCK HEADER EXCEPTIONS

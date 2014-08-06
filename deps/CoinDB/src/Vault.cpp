@@ -2177,6 +2177,46 @@ std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::sha
 
 std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader)
 {
+    using namespace CoinQ::Script;
+
+    Signer signer(cointx);
+    if (!signer.isSigned()) throw TxNotSignedException(cointx.getHashLittleEndian());
+    signer.clearSigs();
+    const std::vector<Script>& scripts = signer.getScripts();
+
+    std::shared_ptr<Tx> tx(new Tx());
+    tx->set(cointx, time(NULL));
+
+    std::shared_ptr<Account> sendingaccount;
+    scripts_t::size_type i = 0;
+    for (auto& txin: tx->txins())
+    { 
+        txin->script(scripts[i].txinscript(Script::EDIT));
+        odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txinscript == txin->script()));
+        if (!r.empty())
+        {
+            // Search for outpoint it spends
+            odb::result<TxOut> txout_r(db_->query<TxOut>(odb:query<TxOut>::tx->hash == txin->outhash() && odb::query<TxOut>::txindex == txin->outindex()));
+            if (!txout_r.empty())
+            {
+                std::shared_ptr<TxOut> txout(r.begin().load());
+                txin->outpoint(txout);
+                txout->spent(txin);
+                db_->update(txout);
+            }
+
+            // TODO: support sending from multiple accounts in one transaction
+            std::shared_ptr<SigningScript> signingscript(r.begin().load());
+            if (!sendingaccount) { sendingaccount = signingscript->account(); }
+            signingscript->markUsed();
+        }
+    }
+
+    std::shared_ptr<Account> receivingaccount;
+    for (auto& txout: tx->txouts())
+    {
+        odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == txout->script()));
+    }
 }
 
 std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool validatesigs)
@@ -2240,6 +2280,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
             tx->status(CONFIRMED);
             tx->conflicting(false);
             db_->update(tx);
+            signalQueue.push(notifyTxUpdated.bind(tx));
             return tx;
         }
         else
@@ -2274,6 +2315,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
                 tx->status(CONFIRMED);
                 tx->conflicting(false);
                 db_->update(tx);
+                signalQueue.push(notifyTxUpdated.bind(tx));
                 return tx;
             }
         } 
@@ -2282,7 +2324,14 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
     // We've never seen this transaction before - treat it as a new transaction
     std::shared_ptr<Tx> tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader());
 
-    if (txindex + 1 == txcount
+    if (txindex + 1 == txcount)
+    {
+        merkleblock->txsinserted(true);
+        db_->update(merkleblock);
+        signalQueue.push(notifyMerkleBlockInserted.bind(merkleblock));
+    }
+
+    return tx;
 }
 
 std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts, bool insert)

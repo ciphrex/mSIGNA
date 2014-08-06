@@ -597,6 +597,20 @@ void SigningScript::status(status_t status)
     if (status > UNUSED) account_bin_->markSigningScriptIssued(index_);
 }
 
+void SigningScript::markUsed()
+{
+	if (account_bin_->index() == AccountBin::CHANGE_INDEX)
+	{
+		status_ = CHANGE;
+	}
+	else
+	{
+		status_ = USED;
+	}
+
+	account_bin_->markSigningScriptIssued(index_);
+}
+
 
 /*
  * class BlockHeader

@@ -619,6 +619,8 @@ public:
     void status(status_t status);
     status_t status() const { return status_; }
 
+	void markUsed();
+
     const bytes_t& txinscript() const { return txinscript_; }
     const bytes_t& txoutscript() const { return txoutscript_; }
 
