@@ -72,57 +72,60 @@ int main(int argc, char* argv[])
         });
 
         networkSync.subscribeStarted([&]() {
-            cout << "NetworkSync started." << endl;
+            cout << endl << "NetworkSync started." << endl;
         });
 
         networkSync.subscribeStopped([&]() {
-            cout << "NetworkSync stopped." << endl;
+            cout << endl << "NetworkSync stopped." << endl;
         });
 
         networkSync.subscribeOpen([&]() {
-            cout << "NetworkSync open." << endl;
+            cout << endl << "NetworkSync open." << endl;
         });
 
         networkSync.subscribeClose([&]() {
-            cout << "NetworkSync closed." << endl;
+            cout << endl << "NetworkSync closed." << endl;
         });
 
         networkSync.subscribeTimeout([&]() {
-            cout << "NetworkSync timeout." << endl;
+            cout << endl << "NetworkSync timeout." << endl;
         });
 
         networkSync.subscribeConnectionError([&](const string& error) {
-            cout << "NetworkSync connection error: " << error << endl;
+            cout << endl << "NetworkSync connection error: " << error << endl;
         });
 
         networkSync.subscribeProtocolError([&](const string& error) {
-            cout << "NetworkSync protocol error: " << error << endl;
+            cout << endl << "NetworkSync protocol error: " << error << endl;
         });
 
         networkSync.subscribeBlockTreeError([&](const string& error) {
-            cout << "NetworkSync block tree error: " << error << endl;
+            cout << endl << "NetworkSync block tree error: " << error << endl;
         });
 
         networkSync.subscribeFetchingHeaders([&]() {
-            cout << "NetworkSync fetching headers." << endl;
+            cout << endl << "NetworkSync fetching headers." << endl;
         });
 
         networkSync.subscribeHeadersSynched([&]() {
-            cout << "NetworkSync headers synched." << endl;
+            cout << endl << "NetworkSync headers synched." << endl;
             hashvector_t hashes;
             networkSync.syncBlocks(hashes, time(NULL) - 10*60*60); // Start 10 hours earlier
         });
 
         networkSync.subscribeFetchingBlocks([&]() {
-            cout << "NetworkSync fetching blocks." << endl;
+            cout << endl << "NetworkSync fetching blocks." << endl;
         });
 
         networkSync.subscribeBlocksSynched([&]() {
-            cout << "NetworkSync blocks synched." << endl;
+            cout << endl << "NetworkSync blocks synched." << endl;
+
+            cout << endl << "Fetching mempool..." << endl;
+            networkSync.getMempool();
         });
 
         networkSync.subscribeStatus([&](const string& status) {
-            cout << "NetworkSync status: " << status << endl;
+            cout << endl << "NetworkSync status: " << status << endl;
         });
 
         networkSync.subscribeNewTx([&](const Transaction& tx) {
@@ -135,7 +138,7 @@ int main(int argc, char* argv[])
         });
 
         networkSync.subscribeBlock([&](const ChainBlock& block) {
-            cout << "NEW BLOCK: " << block.blockHeader.getHashLittleEndian().getHex() << " height: " << block.height << endl;
+            cout << endl << "NEW BLOCK: " << block.blockHeader.getHashLittleEndian().getHex() << " height: " << block.height << endl;
         });
 
         networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleblock) {
@@ -161,15 +164,15 @@ int main(int argc, char* argv[])
         });
 
         networkSync.subscribeAddBestChain([&](const ChainHeader& header) {
-            cout << "NetworkSync added to best chain: " << header.getHashLittleEndian().getHex() << " height: " << header.height << endl;
+            cout << endl << "NetworkSync added to best chain: " << header.getHashLittleEndian().getHex() << " height: " << header.height << endl;
         });
 
         networkSync.subscribeRemoveBestChain([&](const ChainHeader& header) {
-            cout << "NetworkSync removed from best chain: " << header.getHashLittleEndian().getHex() << " height: " << header.height << endl;
+            cout << endl << "NetworkSync removed from best chain: " << header.getHashLittleEndian().getHex() << " height: " << header.height << endl;
         });
 
         networkSync.subscribeBlockTreeChanged([&]() {
-            cout << "NetworkSync block tree changed." << endl;
+            cout << endl << "NetworkSync block tree changed." << endl;
         });
 
         // Set the bloom filter
