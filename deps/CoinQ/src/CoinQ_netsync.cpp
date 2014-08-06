@@ -318,7 +318,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 m_currentMerkleTxIndex = 0;
                 m_currentMerkleTxCount = txhashes.size();
 
-                notifyMerkleBlock(m_currentMerkleBlock);
+                if (m_currentMerkleTxCount == 0) { notifyMerkleBlock(m_currentMerkleBlock); }
 
                 uint32_t bestHeight = m_blockTree.getBestHeight();
                 if (bestHeight > (uint32_t)header.height) // We still need to fetch more blocks

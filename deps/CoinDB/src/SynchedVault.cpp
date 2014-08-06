@@ -126,7 +126,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
             }
             else if (m_networkSync.connected())
             {
-                m_networkSync.stopSyncBlocks();
+                //m_networkSync.stopSyncBlocks();
                 updateStatus(SYNCHED);
             }
         }
@@ -134,6 +134,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         {
             LOGGER(error) << e.what() << std::endl;
         }
+
     });
 
     m_networkSync.subscribeFetchingBlocks([this]()
@@ -154,7 +155,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_networkSync.subscribeBlocksSynched([this]()
     {
         LOGGER(trace) << "Block sync complete." << std::endl;
-
+/*
         {
             std::lock_guard<std::mutex> lock(m_vaultMutex);
             if (m_vault && m_networkSync.connected())
@@ -173,7 +174,8 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
                 LOGGER(info) << "Fetching mempool." << std::endl;
                 m_networkSync.getMempool();
             }
-        }
+		}
+*/
     });
 
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
@@ -246,6 +248,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         try
         {
             std::shared_ptr<MerkleBlock> merkleblock(new MerkleBlock(chainMerkleBlock));
+			merkleblock->txsinserted(true);
             m_vault->insertMerkleBlock(merkleblock);
         }
         catch (const std::exception& e)

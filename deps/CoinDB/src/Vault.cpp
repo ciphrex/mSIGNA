@@ -2259,7 +2259,6 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
             // Connect to chain
             if (txindex != 0) throw MerkleTxBadInsertionOrderException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
 
-			LOGGER(trace) << "Query 1" << std::endl;
 			odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.blockHeader.prevBlockHash));
 			if (r.empty())
 			{
@@ -2274,7 +2273,6 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
 
 			{
 				// Unconfirm any transactions with equal or larger height
-				LOGGER(trace) << "Query 2" << std::endl;
 				odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::blockheader->height >= (unsigned int)chainmerkleblock.height));
 				for (odb::result<Tx>::iterator it = r.begin(); it != r.end(); ++it)
 				{
@@ -2287,14 +2285,12 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
 
 			{
 				// Delete any merkleblocks with equal or larger height
-				LOGGER(trace) << "Query 3" << std::endl;
 				odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->height >= (unsigned int)chainmerkleblock.height));
 				for (auto& merkleblock: r) { db_->erase(merkleblock); }
 			}
 
 			{
 				// Delete any blockheaders with equal or larger height
-				LOGGER(trace) << "Query 4" << std::endl;
 				odb::result<BlockHeader> r(db_->query<BlockHeader>(odb::query<BlockHeader>::height >= (unsigned int)chainmerkleblock.height));
 				for (auto& blockheader: r) { db_->erase(blockheader); }
 			}
@@ -2358,7 +2354,16 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
     }
 
     // We've never seen this transaction before - treat it as a new transaction
-    std::shared_ptr<Tx> tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader());
+	std::shared_ptr<Tx> tx;
+	try
+	{
+		tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader());
+	}
+	catch (const std::runtime_error& e)
+	{
+		LOGGER(error) << "insertNewTx_unwrapped() threw exception: " << e.what() << std::endl;
+	}
+	
 
     if (txindex + 1 == txcount)
     {
