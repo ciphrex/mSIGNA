@@ -196,7 +196,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeNewTx([this](const Coin::Transaction& cointx)
     {
-        LOGGER(trace) << "P2P network received transaction " << cointx.getHashLittleEndian().getHex() << std::endl;
+        LOGGER(trace) << "P2P network received new transaction " << cointx.getHashLittleEndian().getHex() << std::endl;
 
         if (!m_vault) return;
         std::lock_guard<std::mutex> lock(m_vaultMutex);
@@ -212,6 +212,26 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
             m_notifyVaultError(e.what());
         } 
     });
+
+	m_networkSync.subscribeMerkleTx([this](const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount)
+	{
+        LOGGER(trace) << "P2P network received merkle transaction " << cointx.getHashLittleEndian().getHex() << " in block " << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << std::endl;
+
+        if (!m_vault) return;
+        std::lock_guard<std::mutex> lock(m_vaultMutex);
+        if (!m_vault) return;
+
+        try
+        {
+            m_vault->insertMerkleTx(chainmerkleblock, cointx, txindex, txcount);
+        }
+        catch (const std::exception& e)
+        {
+            LOGGER(error) << e.what() << std::endl;
+            m_notifyVaultError(e.what());
+        } 
+	
+	});
 
     m_networkSync.subscribeMerkleBlock([this](const ChainMerkleBlock& chainMerkleBlock)
     {
