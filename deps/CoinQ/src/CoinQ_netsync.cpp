@@ -167,6 +167,9 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         catch (const exception& e)
         {
             notifyProtocolError(e.what());
+
+            // TODO: Attempt to recover
+            
         }
     });
 
@@ -281,6 +284,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 m_blockTree.flushToFile(m_blockTreeFile);
                 notifyStatus("Done flushing block chain to file");
                 m_bHeadersSynched = true;
+                m_bBlocksFetched = false;
+                m_bBlocksSynched = false;
                 notifyHeadersSynched();
             }
             else {
@@ -339,6 +344,11 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 else if (bestHeight == m_lastRequestedBlockHeight && bestHeight == (uint32_t)header.height)
                 {
                     m_bBlocksFetched = true;
+                    if (m_currentMerkleTxHashes.empty())
+                    {
+                        m_bBlocksSynched = true;
+                        notifyBlocksSynched();
+                    }
                 }
             }
         }
