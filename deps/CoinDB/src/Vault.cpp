@@ -2151,10 +2151,10 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
     tx->set(cointx, time(NULL), Tx::PROPAGATED);
     tx->blockheader(blockheader);
 
+    std::set<std::shared_ptr<SigningScript>>    updated_scripts;
     std::set<std::shared_ptr<TxIn>>             updated_txins;
     std::set<std::shared_ptr<TxOut>>            updated_txouts;
     std::set<std::shared_ptr<Tx>>               updated_txs;
-    std::set<std::shared_ptr<SigningScript>>    updated_scripts;
 
     std::shared_ptr<Account> sending_account;
     for (auto& txin: tx->txins())
@@ -2199,6 +2199,8 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
     bool receive = false;
     for (auto& txout: tx->txouts())
     {
+        txout->sending_account(sending_account);
+
         odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == txout->script()));
         if (!r.empty())
         {
@@ -2209,7 +2211,6 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
             updated_scripts.insert(signingscript);
 
             txout->signingscript(signingscript);
-            txout->sending_account(sending_account);
 
             // Search for an input that claims it (to support out-of-order insertion)
             odb::result<TxIn> txin_r(db_->query<TxIn>(odb::query<TxIn>::outhash == tx->hash() && odb::query<TxIn>::outindex == txout->txindex()));
@@ -2219,7 +2220,6 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
                 txout->spent(txin);
 
                 txin->outpoint(txout);
-                txin->tx()->updateTotals();
                 updated_txins.insert(txin);
                 updated_txs.insert(txin->tx());
             }
@@ -2228,16 +2228,15 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
 
     if (sending_account || receive)
     {
-        tx->updateTotals();
+        for (auto& script:  updated_scripts)        { db_->update(script);                  } 
 
-        db_->persist(tx);
-        for (auto& txin:    tx->txins())            { db_->persist(txin);  }
-        for (auto& txout:   tx->txouts())           { db_->persist(txout); }
+        tx->updateTotals(); db_->persist(tx);
+        for (auto& txin:    tx->txins())            { db_->persist(txin);                   }
+        for (auto& txout:   tx->txouts())           { db_->persist(txout);                  }
 
-        for (auto& txin:    updated_txins)          { db_->update(txin);   }
-        for (auto& txout:   updated_txouts)         { db_->update(txout);  }
-        for (auto& tx:      updated_txs)            { db_->update(tx);     }
-        for (auto& script:  updated_scripts)        { db_->update(script); } 
+        for (auto& txin:    updated_txins)          { db_->update(txin);                    }
+        for (auto& txout:   updated_txouts)         { db_->update(txout);                   }
+        for (auto& tx:      updated_txs)            { tx->updateTotals(); db_->update(tx);  }
 
         signalQueue.push(notifyTxInserted.bind(tx));
         return tx;
