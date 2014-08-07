@@ -39,6 +39,9 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_status(STOPPED),
     m_bestHeight(0),
     m_syncHeight(0),
+    m_filterFalsePositiveRate(0.001),
+    m_filterTweak(0),
+    m_filterFlags(0),
     m_networkSync(coinParams),
     m_bBlockTreeLoaded(false),
     m_bConnected(false),
@@ -427,6 +430,13 @@ void SynchedVault::syncBlocks()
     std::vector<bytes_t> locatorHashes = m_vault->getLocatorHashes();
     m_bInsertMerkleBlocks = true;
     m_networkSync.syncBlocks(locatorHashes, startTime);
+}
+
+void SynchedVault::setFilterParams(double falsePositiveRate, uint32_t nTweak, uint8_t nFlags)
+{
+    m_filterFalsePositiveRate = falsePositiveRate;
+    m_filterTweak = nTweak;
+    m_filterFlags = nFlags;
 }
 
 void SynchedVault::updateBloomFilter()

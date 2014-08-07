@@ -52,6 +52,8 @@ public:
     bool isConnected() const { return m_networkSync.connected(); }
     void suspendBlockUpdates();
     void syncBlocks();
+
+    void setFilterParams(double falsePositiveRate, uint32_t nTweak, uint8_t nFlags);
     void updateBloomFilter();
 
     status_t getStatus() const { return m_status; }
@@ -106,6 +108,11 @@ private:
     // Height of most recent block stored in vault
     uint32_t                    m_syncHeight;
     void                        updateSyncHeight(uint32_t syncHeight);
+
+    // Bloom filter parameters
+    double                      m_filterFalsePositiveRate;
+    uint32_t                    m_filterTweak;
+    uint8_t                     m_filterFlags;
 
     CoinQ::Network::NetworkSync m_networkSync;
     std::string                 m_blockTreeFile;
