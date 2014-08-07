@@ -306,15 +306,16 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
             try {
                 if (mBestHeight >= 0) {
                     insertHeader(header, bCheckProofOfWork);
-                    count++;
                     if (count % 10000 == 0) {
                         if (callback) callback(*this);
                         LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - header hash: " << header.getHashLittleEndian().getHex() << " height: " << count << std::endl;
                     }
+                    count++;
                 }
                 else { 
-                    LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - genesis hash: " << header.getHashLittleEndian().getHex() << std::endl;
                     setGenesisBlock(header);
+                    if (callback) callback(*this);
+                    LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - genesis hash: " << header.getHashLittleEndian().getHex() << std::endl;
                     count++;
                 }
             }
@@ -326,6 +327,8 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
             throw std::runtime_error("Blocktree unexpected end of file."); // Should never happen since length is checked above.
         }
     }
+
+    if (callback) callback(*this);
 }
 
 void CoinQBlockTreeMem::flushToFile(const std::string& filename)
