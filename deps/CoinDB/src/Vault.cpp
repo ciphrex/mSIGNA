@@ -2148,7 +2148,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
     }
 
     std::shared_ptr<Tx> tx(new Tx());
-    tx->set(cointx, time(NULL));
+    tx->set(cointx, time(NULL), Tx::PROPAGATED);
     tx->blockheader(blockheader);
 
     std::set<std::shared_ptr<TxIn>>             updated_txins;
@@ -2156,48 +2156,61 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
     std::set<std::shared_ptr<Tx>>               updated_txs;
     std::set<std::shared_ptr<SigningScript>>    updated_scripts;
 
-    std::shared_ptr<Account> sendingaccount;
-    scripts_t::size_type i = 0;
+    std::shared_ptr<Account> sending_account;
     for (auto& txin: tx->txins())
-    {
-        odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txinscript == txin->script()));
+    {   bytes_t unsigned_script;
+        try
+        {
+            unsigned_script = txin->unsigned_script();
+        }
+        catch (const std::exception& e)
+        {
+            LOGGER(error) << "Vault::insertNewTx_unwrapped() - unrecognized input script type: " << e.what() << std::endl;
+            continue;
+        }
+
+        LOGGER(trace) << "insertNewTx_unwrapped() - unsigned_script: " << uchar_vector(unsigned_script).getHex() << std::endl;
+
+        odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txinscript == unsigned_script));
         if (!r.empty())
         {
             // TODO: support sending from multiple accounts in one transaction
             std::shared_ptr<SigningScript> signingscript(r.begin().load());
-            if (!sendingaccount) { sendingaccount = signingscript->account(); }
             signingscript->markUsed();
             updated_scripts.insert(signingscript);
+
+            sending_account = signingscript->account();
 
             // Search for outpoint it spends
             odb::result<TxOut> txout_r(db_->query<TxOut>(odb::query<TxOut>::tx->hash == txin->outhash() && odb::query<TxOut>::txindex == txin->outindex()));
             if (!txout_r.empty())
             {
                 std::shared_ptr<TxOut> txout(txout_r.begin().load());
+                // if (txout->script() != signingscript->txoutscript()) throw TxInvalidOutpointException();
                 txin->outpoint(txout);
 
                 txout->spent(txin);
-                txout->sending_account(sendingaccount);
                 updated_txouts.insert(txout);
             }
         }
     }
 
-    bool isReceive = false;
+    bool receive = false;
     for (auto& txout: tx->txouts())
     {
         odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == txout->script()));
         if (!r.empty())
         {
-            isReceive = true;
+            receive = true;
 
             std::shared_ptr<SigningScript> signingscript(r.begin().load());
             signingscript->markUsed();
             updated_scripts.insert(signingscript);
 
             txout->signingscript(signingscript);
-            txout->receiving_label(signingscript->label());
+            txout->sending_account(sending_account);
 
+            // Search for an input that claims it (to support out-of-order insertion)
             odb::result<TxIn> txin_r(db_->query<TxIn>(odb::query<TxIn>::outhash == tx->hash() && odb::query<TxIn>::outindex == txout->txindex()));
             if (!txin_r.empty())
             {
@@ -2212,7 +2225,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
         }
     }
 
-    if (sendingaccount || isReceive)
+    if (sending_account || receive)
     {
         tx->updateTotals();
 

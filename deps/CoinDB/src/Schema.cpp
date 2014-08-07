@@ -732,6 +732,15 @@ Coin::TxIn TxIn::toCoinCore() const
     return coin_txin;
 }
 
+bytes_t TxIn::unsigned_script() const
+{
+    using namespace CoinQ::Script;
+
+    Script script(script_);
+    script.clearSigs();
+    return script.txinscript(Script::EDIT);
+}
+
 bytes_t TxIn::raw() const
 {
     return toCoinCore().getSerialized();

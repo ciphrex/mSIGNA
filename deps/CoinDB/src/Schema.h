@@ -855,6 +855,7 @@ public:
 
     void script(const bytes_t& script) { script_ = script; }
     const bytes_t& script() const { return script_; }
+    bytes_t unsigned_script() const; // throws exception if script type is not recognized
 
     uint32_t sequence() const { return sequence_; }
     bytes_t raw() const;
