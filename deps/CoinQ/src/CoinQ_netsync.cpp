@@ -288,7 +288,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 m_blockTree.flushToFile(m_blockTreeFile);
                 notifyStatus("Done flushing block chain to file");
                 //m_bHeadersSynched = true;
-                m_bBlocksFetched = false;
+                //m_bBlocksFetched = false;
                 m_bBlocksSynched = false;
                 //if (!m_bFetchingBlocks) { notifyHeadersSynched(); }
             }
@@ -350,10 +350,10 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     else if (bestHeight == m_lastRequestedBlockHeight)
                     {
                         m_bBlocksFetched = true;
+                        m_lastRequestedBlockHeight++; // The request is not made explicitly - it is implied.
                         if (m_currentMerkleTxHashes.empty())
                         {
                             m_bBlocksSynched = true;
-                            m_lastRequestedBlockHeight++; // The request is not made explicitly - it is implied.
                             notifyBlocksSynched();
                         }
                     }
