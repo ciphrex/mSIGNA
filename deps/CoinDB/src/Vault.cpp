@@ -2115,21 +2115,21 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool repla
     return nullptr; 
 }
 
-std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader)
+std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader, bool verifysigs)
 {
     std::stringstream ss;
     ss << "Vault::insertNewTx(" << cointx.getHashLittleEndian().getHex() << ", ";
     if (blockheader)    { ss << uchar_vector(blockheader->hash()).getHex(); }
     else                { ss << "null"; }
-    ss << ")" << std::endl;
+    ss << ", " << (verifysigs ? "true" : "false") << ")" << std::endl;
     LOGGER(trace) << ss.str() << std::endl;
 
-	std::shared_ptr<Tx> tx;
+    std::shared_ptr<Tx> tx;
     {
         boost::lock_guard<boost::mutex> lock(mutex);
         odb::core::session s;
         odb::core::transaction t(db_->begin());
-        tx = insertNewTx_unwrapped(cointx, blockheader);
+        tx = insertNewTx_unwrapped(cointx, blockheader, verifysigs);
         t.commit();
     }
 
@@ -2137,28 +2137,29 @@ std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::sha
     return tx;
 }
 
-std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader)
+std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader, bool verifysigs)
 {
     using namespace CoinQ::Script;
 
-    Signer signer(cointx);
-    if (!signer.isSigned()) throw TxNotSignedException(cointx.getHashLittleEndian());
-    signer.clearSigs();
-    const std::vector<Script>& scripts = signer.getScripts();
+    if (verifysigs)
+    {
+        Signer signer(cointx);
+        if (!signer.isSigned()) throw TxNotSignedException(cointx.getHashLittleEndian());
+    }
 
     std::shared_ptr<Tx> tx(new Tx());
     tx->set(cointx, time(NULL));
-	tx->blockheader(blockheader);
+    tx->blockheader(blockheader);
 
-    std::set<std::shared_ptr<TxIn>> updated_txins;
-    std::set<std::shared_ptr<TxOut>> updated_txouts;
-    std::set<std::shared_ptr<Tx>> updated_txs;
-	
+    std::set<std::shared_ptr<TxIn>>             updated_txins;
+    std::set<std::shared_ptr<TxOut>>            updated_txouts;
+    std::set<std::shared_ptr<Tx>>               updated_txs;
+    std::set<std::shared_ptr<SigningScript>>    updated_scripts;
+
     std::shared_ptr<Account> sendingaccount;
     scripts_t::size_type i = 0;
     for (auto& txin: tx->txins())
-    { 
-        txin->script(scripts[i++].txinscript(Script::EDIT));
+    {
         odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txinscript == txin->script()));
         if (!r.empty())
         {
@@ -2166,7 +2167,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
             std::shared_ptr<SigningScript> signingscript(r.begin().load());
             if (!sendingaccount) { sendingaccount = signingscript->account(); }
             signingscript->markUsed();
-			db_->update(signingscript);
+            updated_scripts.insert(signingscript);
 
             // Search for outpoint it spends
             odb::result<TxOut> txout_r(db_->query<TxOut>(odb::query<TxOut>::tx->hash == txin->outhash() && odb::query<TxOut>::txindex == txin->outindex()));
@@ -2176,70 +2177,71 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
                 txin->outpoint(txout);
 
                 txout->spent(txin);
-				txout->sending_account(sendingaccount);
-				updated_txouts.insert(txout);
+                txout->sending_account(sendingaccount);
+                updated_txouts.insert(txout);
             }
         }
     }
 
-	bool isReceive = false;
+    bool isReceive = false;
     for (auto& txout: tx->txouts())
     {
         odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == txout->script()));
-		if (!r.empty())
-		{
-			isReceive = true;
+        if (!r.empty())
+        {
+            isReceive = true;
 
-			std::shared_ptr<SigningScript> signingscript(r.begin().load());
-			signingscript->markUsed();
-			db_->update(signingscript);
+            std::shared_ptr<SigningScript> signingscript(r.begin().load());
+            signingscript->markUsed();
+            updated_scripts.insert(signingscript);
 
-			txout->signingscript(signingscript);
-			txout->receiving_label(signingscript->label());
+            txout->signingscript(signingscript);
+            txout->receiving_label(signingscript->label());
 
-			odb::result<TxIn> txin_r(db_->query<TxIn>(odb::query<TxIn>::outhash == tx->hash() && odb::query<TxIn>::outindex == txout->txindex()));
-			if (!txin_r.empty())
-			{
-				std::shared_ptr<TxIn> txin(txin_r.begin().load());
-				txout->spent(txin);
+            odb::result<TxIn> txin_r(db_->query<TxIn>(odb::query<TxIn>::outhash == tx->hash() && odb::query<TxIn>::outindex == txout->txindex()));
+            if (!txin_r.empty())
+            {
+                std::shared_ptr<TxIn> txin(txin_r.begin().load());
+                txout->spent(txin);
 
-				txin->outpoint(txout);
-				txin->tx()->updateTotals();
-				updated_txins.insert(txin);
-				updated_txs.insert(txin->tx());
-			}
-		}
+                txin->outpoint(txout);
+                txin->tx()->updateTotals();
+                updated_txins.insert(txin);
+                updated_txs.insert(txin->tx());
+            }
+        }
     }
 
-	if (sendingaccount || isReceive)
-	{
-		tx->updateTotals();
+    if (sendingaccount || isReceive)
+    {
+        tx->updateTotals();
 
-		db_->persist(tx);
-		for (auto& txin:  tx->txins())		{ db_->persist(txin);  }
-		for (auto& txout: tx->txouts())		{ db_->persist(txout); }
+        db_->persist(tx);
+        for (auto& txin:    tx->txins())            { db_->persist(txin);  }
+        for (auto& txout:   tx->txouts())           { db_->persist(txout); }
 
-		for (auto& txin: updated_txins)		{ db_->update(txin);   }
-		for (auto& txout: updated_txouts)	{ db_->update(txout);  }
-		for (auto& tx: updated_txs)			{ db_->update(tx);	   }
+        for (auto& txin:    updated_txins)          { db_->update(txin);   }
+        for (auto& txout:   updated_txouts)         { db_->update(txout);  }
+        for (auto& tx:      updated_txs)            { db_->update(tx);     }
+        for (auto& script:  updated_scripts)        { db_->update(script); } 
 
-		signalQueue.push(notifyTxInserted.bind(tx));
-		return tx;
-	}
+        signalQueue.push(notifyTxInserted.bind(tx));
+        return tx;
+    }
 
-	return nullptr;
+    return nullptr;
 }
 
-std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool validatesigs)
+std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs)
 {
-    LOGGER(trace) << "Vault::insertMerkleTx(" << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << ", " << cointx.getHashLittleEndian().getHex() << ", " << txindex << ", " << txcount << ", " << (validatesigs ? "true" : "false") << std::endl;
+    LOGGER(trace) << "Vault::insertMerkleTx(" << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << ", " << cointx.getHashLittleEndian().getHex() << ", " << txindex << ", " << txcount << ", " << (verifysigs ? "true" : "false") << std::endl;
 
-	std::shared_ptr<Tx> tx;
+    std::shared_ptr<Tx> tx;
     {
         boost::lock_guard<boost::mutex> lock(mutex);
         odb::core::session s;
         odb::core::transaction t(db_->begin());
-        tx = insertMerkleTx_unwrapped(chainmerkleblock, cointx, txindex, txcount, validatesigs);
+        tx = insertMerkleTx_unwrapped(chainmerkleblock, cointx, txindex, txcount, verifysigs);
         t.commit();
     }
 
@@ -2247,7 +2249,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblo
     return tx;
 }
 
-std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool validatesigs)
+std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs)
 {
     bytes_t blockhash = chainmerkleblock.blockHeader.getHashLittleEndian();
     bytes_t txhash = cointx.getHashLittleEndian();
@@ -2265,43 +2267,43 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
             // Connect to chain
             if (txindex != 0) throw MerkleTxBadInsertionOrderException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
 
-			odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.blockHeader.prevBlockHash));
-			if (r.empty())
-			{
-				odb::result<BlockCountView> r(db_->query<BlockCountView>());
-				if (!r.empty() && r.begin()->count > 0) throw MerkleTxFailedToConnectException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
-			}
-			else
-			{
-				if ((unsigned int)chainmerkleblock.height != r.begin().load()->blockheader()->height() + 1)
-					throw MerkleTxInvalidHeightException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
-			}
+            odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.blockHeader.prevBlockHash));
+            if (r.empty())
+            {
+                odb::result<BlockCountView> r(db_->query<BlockCountView>());
+                if (!r.empty() && r.begin()->count > 0) throw MerkleTxFailedToConnectException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+            }
+            else
+            {
+                if ((unsigned int)chainmerkleblock.height != r.begin().load()->blockheader()->height() + 1)
+                    throw MerkleTxInvalidHeightException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+            }
 
-			{
-				// Unconfirm any transactions with equal or larger height
-				odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::blockheader->height >= (unsigned int)chainmerkleblock.height));
-				for (odb::result<Tx>::iterator it = r.begin(); it != r.end(); ++it)
-				{
-					std::shared_ptr<Tx> tx(it.load());
-					tx->status(Tx::PROPAGATED);
-					db_->update(tx);
-					signalQueue.push(notifyTxUpdated.bind(tx));
-				}
-			}
+            {
+                // Unconfirm any transactions with equal or larger height
+                odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::blockheader->height >= (unsigned int)chainmerkleblock.height));
+                for (odb::result<Tx>::iterator it = r.begin(); it != r.end(); ++it)
+                {
+                    std::shared_ptr<Tx> tx(it.load());
+                    tx->status(Tx::PROPAGATED);
+                    db_->update(tx);
+                    signalQueue.push(notifyTxUpdated.bind(tx));
+                }
+            }
 
-			{
-				// Delete any merkleblocks with equal or larger height
-				odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->height >= (unsigned int)chainmerkleblock.height));
-				for (auto& merkleblock: r) { db_->erase(merkleblock); }
-			}
+            {
+                // Delete any merkleblocks with equal or larger height
+                odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->height >= (unsigned int)chainmerkleblock.height));
+                for (auto& merkleblock: r) { db_->erase(merkleblock); }
+            }
 
-			{
-				// Delete any blockheaders with equal or larger height
-				odb::result<BlockHeader> r(db_->query<BlockHeader>(odb::query<BlockHeader>::height >= (unsigned int)chainmerkleblock.height));
-				for (auto& blockheader: r) { db_->erase(blockheader); }
-			}
+            {
+                // Delete any blockheaders with equal or larger height
+                odb::result<BlockHeader> r(db_->query<BlockHeader>(odb::query<BlockHeader>::height >= (unsigned int)chainmerkleblock.height));
+                for (auto& blockheader: r) { db_->erase(blockheader); }
+            }
 
-			// Instantiate the new merkle block and store
+            // Instantiate the new merkle block and store
             merkleblock = std::make_shared<MerkleBlock>(chainmerkleblock);
             db_->persist(merkleblock->blockheader());
             db_->persist(merkleblock);
@@ -2360,16 +2362,15 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
     }
 
     // We've never seen this transaction before - treat it as a new transaction
-	std::shared_ptr<Tx> tx;
-	try
-	{
-		tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader());
-	}
-	catch (const std::runtime_error& e)
-	{
-		LOGGER(error) << "insertNewTx_unwrapped() threw exception: " << e.what() << std::endl;
-	}
-	
+    std::shared_ptr<Tx> tx;
+    try
+    {
+        tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader(), verifysigs);
+    }
+    catch (const std::runtime_error& e)
+    {
+        LOGGER(error) << "insertNewTx_unwrapped() threw exception: " << e.what() << std::endl;
+    }
 
     if (txindex + 1 == txcount)
     {
