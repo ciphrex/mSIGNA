@@ -217,15 +217,15 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 peer.getHeaders(m_blockTree.getLocatorHashes(1));
             }
             else
-            {  
-                notifyStatus("Flushing block chain to file...");
-
+            {
+                if (!m_blockTree.flushed())
                 {
+                    notifyStatus("Flushing block chain to file...");
                     m_blockTree.flushToFile(m_blockTreeFile);
-                    m_bHeadersSynched = true;
+                    notifyStatus("Done flushing block chain to file");
                 }
 
-                notifyStatus("Done flushing block chain to file");
+                m_bHeadersSynched = true;
                 notifyHeadersSynched();
             }
         }
@@ -270,10 +270,14 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_peer.subscribeMerkleBlock([&](CoinQ::Peer& /*peer*/, const Coin::MerkleBlock& merkleBlock)
     {
         if (!m_bConnected) return;
-        LOGGER(trace) << "Received merkle block:" << std::endl << merkleBlock.toIndentedString() << std::endl;
+
         uchar_vector hash = merkleBlock.blockHeader.getHashLittleEndian();
+        LOGGER(trace) << "Received merkle block: " << hash.getHex() << std::endl;
 
         try {
+            // Constructing the partial tree will validate the merkle root - throws exception if invalid.
+            Coin::PartialMerkleTree tree(merkleBlock.nTxs, merkleBlock.hashes, merkleBlock.flags, merkleBlock.blockHeader.merkleRoot);
+
             if (!m_currentMerkleTxHashes.empty()) throw std::runtime_error("Block was received before getting transactions from last block.");
 
             if (m_blockTree.hasHeader(hash)) {
@@ -283,16 +287,16 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 notifyStatus("Flushing block chain to file...");
                 m_blockTree.flushToFile(m_blockTreeFile);
                 notifyStatus("Done flushing block chain to file");
-                m_bHeadersSynched = true;
+                //m_bHeadersSynched = true;
                 m_bBlocksFetched = false;
                 m_bBlocksSynched = false;
-                notifyHeadersSynched();
+                //if (!m_bFetchingBlocks) { notifyHeadersSynched(); }
             }
             else {
                 m_bHeadersSynched = false;
                 m_bBlocksSynched = false;
                 m_bBlocksFetched = false;
-                m_bFetchingBlocks = false;
+                //m_bFetchingBlocks = false;
 
                 // Possible reorg
                 LOGGER(error) << "NetworkSync merkle block handler - block rejected: " << hash.getHex() << " - possible reorg." << endl;
@@ -307,47 +311,50 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 return;
             }
 
-            if (m_bFetchingBlocks)
+            // TODO: queue received merkleblocks locally so we do not need to refetch from peer and can support downloading out-of-order from multiple peers.
+            if (m_bFetchingBlocks && m_bHeadersSynched)
             {
-                // Set tx hashes
-                Coin::PartialMerkleTree tree(merkleBlock.nTxs, merkleBlock.hashes, merkleBlock.flags, merkleBlock.blockHeader.merkleRoot);
                 ChainHeader header = m_blockTree.getHeader(hash);
-                m_currentMerkleBlock = ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork);
-                std::vector<uchar_vector> txhashes = tree.getTxHashesLittleEndianVector();
-                for (auto& txhash: txhashes) { m_currentMerkleTxHashes.push(txhash); }
-                m_currentMerkleTxIndex = 0;
-                m_currentMerkleTxCount = txhashes.size();
-
-                if (m_currentMerkleTxCount == 0) { notifyMerkleBlock(m_currentMerkleBlock); }
-
-                uint32_t bestHeight = m_blockTree.getBestHeight();
-                if (bestHeight > (uint32_t)header.height) // We still need to fetch more blocks
+                if ((uint32_t)header.height == m_lastRequestedBlockHeight)
                 {
-                    const ChainHeader& nextHeader = m_blockTree.getHeader(header.height + 1);
-                    uchar_vector hash = nextHeader.getHashLittleEndian();
-                    std::string hashString = hash.getHex();
+                    // Set tx hashes
+                    m_currentMerkleBlock = ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork);
+                    std::vector<uchar_vector> txhashes = tree.getTxHashesLittleEndianVector();
+                    for (auto& txhash: txhashes) { m_currentMerkleTxHashes.push(txhash); }
+                    m_currentMerkleTxIndex = 0;
+                    m_currentMerkleTxCount = txhashes.size();
 
-                    std::stringstream status;
-                    status << "Asking for block " << hashString << " / height: " << nextHeader.height;
-                    LOGGER(debug) << status.str() << std::endl;
-                    notifyStatus(status.str());
-                    m_lastRequestedBlockHeight = nextHeader.height;
-                    try
+                    if (m_currentMerkleTxCount == 0) { notifyMerkleBlock(m_currentMerkleBlock); }
+
+                    uint32_t bestHeight = m_blockTree.getBestHeight();
+                    if (bestHeight > (uint32_t)header.height) // We still need to fetch more blocks
                     {
-                        m_peer.getFilteredBlock(hash);
+                        const ChainHeader& nextHeader = m_blockTree.getHeader(header.height + 1);
+                        uchar_vector hash = nextHeader.getHashLittleEndian();
+                        std::string hashString = hash.getHex();
+
+                        std::stringstream status;
+                        status << "Asking for block " << hashString << " / height: " << nextHeader.height;
+                        LOGGER(debug) << status.str() << std::endl;
+                        notifyStatus(status.str());
+                        m_lastRequestedBlockHeight = nextHeader.height;
+                        try
+                        {
+                            m_peer.getFilteredBlock(hash);
+                        }
+                        catch (const exception& e)
+                        {
+                            notifyConnectionError(e.what());
+                        }
                     }
-                    catch (const exception& e)
+                    else if (bestHeight == m_lastRequestedBlockHeight)
                     {
-                        notifyConnectionError(e.what());
-                    }
-                }
-                else if (bestHeight == m_lastRequestedBlockHeight && bestHeight == (uint32_t)header.height)
-                {
-                    m_bBlocksFetched = true;
-                    if (m_currentMerkleTxHashes.empty())
-                    {
-                        m_bBlocksSynched = true;
-                        notifyBlocksSynched();
+                        m_bBlocksFetched = true;
+                        if (m_currentMerkleTxHashes.empty())
+                        {
+                            m_bBlocksSynched = true;
+                            notifyBlocksSynched();
+                        }
                     }
                 }
             }
@@ -384,11 +391,11 @@ void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProof
     {
         m_blockTree.loadFromFile(blockTreeFile, bCheckProofOfWork,
             [&](const CoinQBlockTreeMem& blockTree) { if (callback) callback(blockTree); });
-        m_bHeadersSynched = true;
+        //m_bHeadersSynched = true;
         std::stringstream status;
         status << "Best Height: " << m_blockTree.getBestHeight() << " / " << "Total Work: " << m_blockTree.getTotalWork().getDec();
         notifyStatus(status.str());
-        notifyHeadersSynched();
+        //notifyHeadersSynched();
         return;
     }
     catch (const std::exception& e)
@@ -399,9 +406,9 @@ void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProof
 
     m_blockTree.clear();
     m_blockTree.setGenesisBlock(m_coinParams.genesis_block());
-    m_bHeadersSynched = true;
+    //m_bHeadersSynched = true;
     notifyStatus("Block tree file not found. A new one will be created.");
-    notifyHeadersSynched();
+    //notifyHeadersSynched();
 }
 
 /*
@@ -580,8 +587,6 @@ void NetworkSync::start(const std::string& host, const std::string& port)
 
         std::string port_ = port.empty() ? m_coinParams.default_port() : port;
         m_bStarted = true;
-        m_bFetchingHeaders = false;
-        m_bFetchingBlocks = false;
         m_peer.set(host, port_, m_coinParams.magic_bytes(), m_coinParams.protocol_version(), "Wallet v0.1", 0, false);
         m_peer.start();
     }
@@ -605,8 +610,11 @@ void NetworkSync::stop()
 
         m_bConnected = false;
         m_bStarted = false;
+        m_bHeadersSynched = false;
+        m_bBlocksSynched = false;
         m_bFetchingHeaders = false;
         m_bFetchingBlocks = false;
+        while (!m_currentMerkleTxHashes.empty()) { m_currentMerkleTxHashes.pop(); }
         m_peer.stop();
     }
 
