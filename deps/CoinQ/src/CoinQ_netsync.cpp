@@ -353,6 +353,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                         if (m_currentMerkleTxHashes.empty())
                         {
                             m_bBlocksSynched = true;
+                            m_lastRequestedBlockHeight++; // The request is not made explicitly - it is implied.
                             notifyBlocksSynched();
                         }
                     }
