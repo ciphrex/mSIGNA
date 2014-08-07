@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "CoinQ_exceptions.h"
+
 #include <CoinCore/CoinNodeData.h>
 
 #include <vector>
@@ -18,6 +20,8 @@ namespace CoinQ {
 class CoinParams
 {
 public:
+    CoinParams() { }
+
     CoinParams(
         uint32_t magic_bytes,
         uint32_t protocol_version,
