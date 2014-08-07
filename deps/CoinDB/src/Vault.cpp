@@ -2170,8 +2170,6 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
             continue;
         }
 
-        LOGGER(trace) << "insertNewTx_unwrapped() - unsigned_script: " << uchar_vector(unsigned_script).getHex() << std::endl;
-
         odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txinscript == unsigned_script));
         if (!r.empty())
         {
