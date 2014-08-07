@@ -135,7 +135,7 @@ OBJS = \
     obj/SynchedVault.o
 
 TOOLS = \
-    tools/build/coindb$(EXE_EXT)
+    tools/coindb/build/coindb$(EXE_EXT)
 
 TESTS = \
     tests/build/SynchedVaultTest$(EXE_EXT)
@@ -186,7 +186,7 @@ obj/SynchedVault.o: src/SynchedVault.cpp src/SynchedVault.h src/VaultExceptions.
 #
 # coindb command line tool
 #
-tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp tools/src/formatting.h lib/libCoinDB.a
+tools/coindb/build/coindb$(EXE_EXT): tools/coindb/src/coindb.cpp tools/coindb/src/formatting.h lib/libCoinDB.a
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS) $(PLATFORM_LIBS)
 
 #
