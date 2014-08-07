@@ -1,10 +1,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// SynchedVaultTest.cpp
+// syncdb.cpp
 //
 // Copyright (c) 2014 Eric Lombrozo
 //
 // All Rights Reserved.
+//
+// Utility for synchronizing a coin database with p2p network
 //
 
 #include <SynchedVault.h>

@@ -135,18 +135,14 @@ OBJS = \
     obj/SynchedVault.o
 
 TOOLS = \
-    tools/coindb/build/coindb$(EXE_EXT)
+    tools/coindb/build/coindb$(EXE_EXT) \
+    tools/syncdb/build/syncdb$(EXE_EXT)
 
-TESTS = \
-    tests/build/SynchedVaultTest$(EXE_EXT)
-
-all: lib tools tests
+all: lib tools
 
 lib: lib/libCoinDB.a
 
 tools: $(TOOLS) 
-
-tests: $(TESTS)
 
 lib/libCoinDB.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
@@ -190,9 +186,9 @@ tools/coindb/build/coindb$(EXE_EXT): tools/coindb/src/coindb.cpp tools/coindb/sr
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS) $(PLATFORM_LIBS)
 
 #
-# SynchedVault unit test
+# syncdb command line tool
 #
-tests/build/SynchedVaultTest$(EXE_EXT): tests/src/SynchedVaultTest.cpp lib/libCoinDB.a
+tools/syncdb/build/syncdb$(EXE_EXT): tools/syncdb/src/syncdb.cpp lib/libCoinDB.a
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS) $(PLATFORM_LIBS)
 
 install: install_lib install_tools
@@ -215,6 +211,14 @@ remove_lib:
 
 remove_tools:
 	-rm $(SYSROOT)/bin/coindb$(EXE_EXT)
+	-rm $(SYSROOT)/bin/syncdb$(EXE_EXT)
 
-clean:
-	-rm -f obj/*.o odb/*-odb*.* lib/*.a tools/build/*
+clean: clean_lib
+
+clean_all: clean_lib clean_tools
+
+clean_lib:
+	-rm -f obj/*.o odb/*-odb*.* lib/*.a
+
+clean_tools:
+	-rm -f $(TOOLS)
