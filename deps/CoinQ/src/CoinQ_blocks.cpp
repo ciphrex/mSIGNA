@@ -89,6 +89,7 @@ void CoinQBlockTreeMem::setGenesisBlock(const Coin::CoinBlockHeader& header)
         throw std::runtime_error("Tree is not empty.");
     }
 
+    bFlushed = false;
     uchar_vector hash = header.getHashLittleEndian();
     ChainHeader& genesisHeader = mHeaderHashMap[hash] = header;
     mHeaderHeightMap[0] = &genesisHeader;
@@ -145,6 +146,8 @@ bool CoinQBlockTreeMem::insertHeader(const Coin::CoinBlockHeader& header, bool b
     }
 
 //std::cout << "Inserted header: " << headerHash.getHex() << " - height: " << chainHeader.height << " total work: " << chainHeader.chainWork.getDec() << std::endl;
+
+    bFlushed = false;
     return true;
 }
 
@@ -173,6 +176,7 @@ bool CoinQBlockTreeMem::deleteHeader(const uchar_vector& hash)
     assert(nErased == 1);
     notifyDelete(header);
     mHeaderHashMap.erase(hash);
+    bFlushed = false;
     return true;
 }
 
@@ -364,5 +368,7 @@ void CoinQBlockTreeMem::flushToFile(const std::string& filename)
     if (!!ec) {
         throw std::runtime_error(ec.message());
     }
+
+    bFlushed = true;
 }
 

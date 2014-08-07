@@ -120,6 +120,8 @@ public:
 class CoinQBlockTreeMem : public ICoinQBlockTree
 {
 private:
+    bool bFlushed;
+
     typedef std::map<uchar_vector, ChainHeader> header_hash_map_t;
     header_hash_map_t mHeaderHashMap;
 
@@ -146,9 +148,9 @@ protected:
 
 public:
     CoinQBlockTreeMem(bool _bCheckTimestamp = true, bool _bCheckProofOfWork = true)
-        : mBestHeight(-1), mTotalWork(0), pHead(NULL), bCheckTimestamp(_bCheckTimestamp), bCheckProofOfWork(_bCheckProofOfWork) { }
+        : bFlushed(true), mBestHeight(-1), mTotalWork(0), pHead(NULL), bCheckTimestamp(_bCheckTimestamp), bCheckProofOfWork(_bCheckProofOfWork) { }
     CoinQBlockTreeMem(const Coin::CoinBlockHeader& header, bool _bCheckTimestamp = true, bool _bCheckProofOfWork = true)
-        : mBestHeight(-1), mTotalWork(0), pHead(NULL), bCheckTimestamp(_bCheckTimestamp), bCheckProofOfWork(_bCheckProofOfWork) { setGenesisBlock(header); }
+        : bFlushed(true), mBestHeight(-1), mTotalWork(0), pHead(NULL), bCheckTimestamp(_bCheckTimestamp), bCheckProofOfWork(_bCheckProofOfWork) { setGenesisBlock(header); }
 
     void subscribeAddBestChain(chain_header_slot_t slot) { notifyAddBestChain.connect(slot); }
     void subscribeRemoveBestChain(chain_header_slot_t slot) { notifyRemoveBestChain.connect(slot); }
@@ -182,6 +184,8 @@ public:
     void loadFromFile(const std::string& filename, bool bCheckProofOfWork = true, std::function<void(const CoinQBlockTreeMem&)> callback = nullptr); 
 
     void flushToFile(const std::string& filename);
+
+    bool flushed() const { return bFlushed; }
 };
 
 #endif // _COINQ_BLOCKS_H_
