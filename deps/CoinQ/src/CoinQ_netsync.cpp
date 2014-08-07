@@ -150,8 +150,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
             {
                 if (m_currentMerkleTxHashes.empty()) throw runtime_error("Should not be receiving transactions before blocks when fetching blocks.");
 
-                if (m_currentMerkleTxHashes.front() != txhash) throw runtime_error("Transaction received out of order.");
-                m_currentMerkleTxHashes.pop();
+                if (!m_currentMerkleTxHashes.count(txhash)) throw runtime_error("Expecting merkle block transactions, but transaction received is not in merkle block.");
+                m_currentMerkleTxHashes.erase(txhash);
                 notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex++, m_currentMerkleTxCount);
                 if (m_bBlocksFetched && m_currentMerkleTxIndex == m_currentMerkleTxCount)
                 {
@@ -277,6 +277,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         try {
             // Constructing the partial tree will validate the merkle root - throws exception if invalid.
             Coin::PartialMerkleTree tree(merkleBlock.nTxs, merkleBlock.hashes, merkleBlock.flags, merkleBlock.blockHeader.merkleRoot);
+            LOGGER(trace) << "Merkle Tree:" << std::endl << tree.toIndentedString() << std::endl;
 
             if (!m_currentMerkleTxHashes.empty()) throw std::runtime_error("Block was received before getting transactions from last block.");
 
@@ -320,7 +321,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     // Set tx hashes
                     m_currentMerkleBlock = ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork);
                     std::vector<uchar_vector> txhashes = tree.getTxHashesLittleEndianVector();
-                    for (auto& txhash: txhashes) { m_currentMerkleTxHashes.push(txhash); }
+                    for (auto& txhash: txhashes) { m_currentMerkleTxHashes.insert(txhash); }
                     m_currentMerkleTxIndex = 0;
                     m_currentMerkleTxCount = txhashes.size();
 
@@ -615,7 +616,7 @@ void NetworkSync::stop()
         m_bBlocksSynched = false;
         m_bFetchingHeaders = false;
         m_bFetchingBlocks = false;
-        while (!m_currentMerkleTxHashes.empty()) { m_currentMerkleTxHashes.pop(); }
+        m_currentMerkleTxHashes.clear();
         m_peer.stop();
     }
 

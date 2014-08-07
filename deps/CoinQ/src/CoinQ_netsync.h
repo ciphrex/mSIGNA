@@ -27,8 +27,6 @@
 #include <CoinCore/typedefs.h>
 #include <CoinCore/BloomFilter.h>
 
-#include <queue>
-
 typedef Coin::Transaction coin_tx_t;
 typedef ChainHeader chain_header_t;
 typedef ChainBlock chain_block_t;
@@ -141,7 +139,7 @@ private:
 
     // Merkle block state
     ChainMerkleBlock m_currentMerkleBlock;
-    std::queue<bytes_t> m_currentMerkleTxHashes;
+    std::set<bytes_t> m_currentMerkleTxHashes;
     unsigned int m_currentMerkleTxIndex;
     unsigned int m_currentMerkleTxCount;
 
