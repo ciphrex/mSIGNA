@@ -10,7 +10,11 @@
 //
 
 #include <SynchedVault.h>
+
+#include <CoinQ/CoinQ_coinparams.h>
+
 #include <logger/logger.h>
+#include <stdutils/stringutils.h>
 
 #include <iostream>
 #include <signal.h>
@@ -19,8 +23,10 @@
 #include <chrono>
 
 using namespace CoinDB;
+using namespace CoinQ;
 using namespace std;
 
+const std::string VERSION_INFO = "v0.1.0";
 const std::string BLOCKTREE_FILENAME = "blocktree.dat";
 
 bool g_bShutdown = false;
@@ -33,21 +39,47 @@ void finish(int sig)
 
 int main(int argc, char* argv[])
 {
-    if (argc != 4)
+    NetworkSelector networkSelector;
+
+    try
     {
-        cout << "Usage: " << argv[0] << " [vault file] [p2p host] [p2p port]" << endl;
-        return 0;
+        if (argc < 4)
+        {
+            cerr << "SyncDB by Eric Lombrozo " << VERSION_INFO << endl
+                 << "# Usage: " << argv[0] << " <network> <dbname> <host> [port]" << endl
+                 << "# Supported networks: " << stdutils::delimited_list(networkSelector.getNetworkNames(), ", ") << endl;
+            return -1;
+        }
+
+        networkSelector.select(argv[1]);
+    }
+    catch (const exception& e)
+    {
+        cerr << "Error: " << e.what() << endl;
+        return -2;
     }
 
-    string filename(argv[1]);
-    string host(argv[2]);
-    string port(argv[3]);
+    const CoinParams& coinParams = networkSelector.getCoinParams();
+
+    string dbname = argv[2];
+    string host = argv[3];
+    string port = argc > 4 ? argv[4] : coinParams.default_port();
+
+    cout << endl << "Network Settings" << endl
+         << "-------------------------------------------" << endl
+         << "  network:          " << coinParams.network_name() << endl
+         << "  host:             " << host << endl
+         << "  port:             " << port << endl
+         << "  magic bytes:      " << hex << coinParams.magic_bytes() << endl
+         << "  protocol version: " << dec << coinParams.protocol_version() << endl
+         << endl;
+
         
     INIT_LOGGER("SynchedVaultTest.log");
 
     signal(SIGINT, &finish);
 
-    SynchedVault synchedVault;
+    SynchedVault synchedVault(coinParams);
     synchedVault.subscribeTxInserted([](std::shared_ptr<Tx> tx)
     {
         cout << "Transaction inserted: " << uchar_vector(tx->hash()).getHex() << endl;
@@ -63,11 +95,16 @@ int main(int argc, char* argv[])
 
     try
     {
-        LOGGER(debug) << "Opening vault " << filename << endl;
-        synchedVault.openVault(filename);
-        LOGGER(debug) << "Loading block tree " << BLOCKTREE_FILENAME << endl;
+        cout << "Opening coin database " << dbname << endl;
+        LOGGER(info) << "Opening coin database " << dbname << endl;
+        synchedVault.openVault(dbname);
+
+        cout << "Loading block tree " << BLOCKTREE_FILENAME << endl;
+        LOGGER(info) << "Loading block tree " << BLOCKTREE_FILENAME << endl;
         synchedVault.loadHeaders(BLOCKTREE_FILENAME);
-        LOGGER(debug) << "Attempting to sync with " << host << ":" << port << endl;
+
+        cout << "Connecting to " << host << ":" << port << endl;
+        LOGGER(info) << "Connecting to " << host << ":" << port << endl;
         synchedVault.startSync(host, port);
     }
     catch (const std::exception& e)
