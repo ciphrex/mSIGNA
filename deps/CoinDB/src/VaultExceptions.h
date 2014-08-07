@@ -85,7 +85,7 @@ protected:
 class VaultWrongSchemaVersionException : public VaultException
 {
 public:
-    explicit VaultWrongSchemaVersionException(const std::string& vault_name, uint32_t schema_version) : VaultException("Wrong darabase schema version.", VAULT_WRONG_SCHEMA_VERSION, vault_name), schema_version_(schema_version) { }
+    explicit VaultWrongSchemaVersionException(const std::string& vault_name, uint32_t schema_version) : VaultException("Wrong database schema version.", VAULT_WRONG_SCHEMA_VERSION, vault_name), schema_version_(schema_version) { }
 
     uint32_t schema_version() const { return schema_version_; }
 
