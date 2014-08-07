@@ -126,7 +126,6 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
             }
             else if (m_networkSync.connected())
             {
-                //m_networkSync.stopSyncBlocks();
                 updateStatus(SYNCHED);
             }
         }
@@ -148,34 +147,21 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         else if (m_networkSync.connected())
         {
             m_networkSync.stopSyncBlocks();
-            updateStatus(SYNCHED);
+            //updateStatus(SYNCHED);
         }
     });
 
     m_networkSync.subscribeBlocksSynched([this]()
     {
         LOGGER(trace) << "Block sync complete." << std::endl;
-/*
-        {
-            std::lock_guard<std::mutex> lock(m_vaultMutex);
-            if (m_vault && m_networkSync.connected())
-            {
-                hashvector_t blockhashes = m_vault->getIncompleteBlockHashes();
-                if (blockhashes.empty())
-                {
-                    updateStatus(SYNCHED);
-                }
-                else
-                {
-                    LOGGER(info) << "Fetching " << blockhashes.size() << " incomplete block(s)." << std::endl;
-                    //for (auto& hash: blockhashes) { m_networkSync.getFilteredBlock(hash); }
-                }
 
-                LOGGER(info) << "Fetching mempool." << std::endl;
-                m_networkSync.getMempool();
-            }
-		}
-*/
+        if (m_networkSync.connected())
+        {
+            updateStatus(SYNCHED);
+
+            LOGGER(info) << "Fetching mempool." << std::endl;
+            m_networkSync.getMempool();
+        }
     });
 
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
