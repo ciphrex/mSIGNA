@@ -108,6 +108,7 @@ public:
     virtual const ChainHeader& getHeader(int height) const = 0; // Use -1 to get top block
     virtual const ChainHeader& getHeaderBefore(uint32_t timestamp) const = 0;
 
+    virtual uchar_vector getBestHash() const = 0;
     virtual int getBestHeight() const = 0;
     virtual BigInt getTotalWork() const = 0;
 
@@ -173,6 +174,7 @@ public:
     const ChainHeader& getHeader(int height) const;
     const ChainHeader& getHeaderBefore(uint32_t timestamp) const;
 
+    uchar_vector getBestHash() const { return getHeader(-1).getHashLittleEndian(); }
     int getBestHeight() const { return mBestHeight; }
     BigInt getTotalWork() const { return mTotalWork; }
 
