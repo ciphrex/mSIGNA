@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
          << endl;
 
         
-    INIT_LOGGER("SynchedVaultTest.log");
+    INIT_LOGGER("syncdb.log");
 
     signal(SIGINT, &finish);
 
