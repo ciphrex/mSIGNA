@@ -41,6 +41,11 @@ void finish(int sig)
 
 void subscribeHandlers(SynchedVault& synchedVault)
 {
+    synchedVault.subscribeStatusChanged([&](SynchedVault::status_t status) {
+        cout << "Sync status changed to " << SynchedVault::getStatusString(status) << endl;
+        if (status == SynchedVault::STOPPED) { g_bShutdown = true; }
+    });
+
     synchedVault.subscribeTxInserted([](std::shared_ptr<Tx> tx)
     {
         cout << "Transaction inserted: " << uchar_vector(tx->hash()).getHex() << endl;
@@ -123,9 +128,12 @@ int main(int argc, char* argv[])
         LOGGER(info) << "Opening coin database " << dbname << endl;
         synchedVault.openVault(dbuser, dbpasswd, dbname);
 
-        cout << "Loading block tree " << BLOCKTREE_FILENAME << endl;
+        cout << "Loading block tree " << BLOCKTREE_FILENAME << "..." << endl;
         LOGGER(info) << "Loading block tree " << BLOCKTREE_FILENAME << endl;
-        synchedVault.loadHeaders(BLOCKTREE_FILENAME);
+        synchedVault.loadHeaders(BLOCKTREE_FILENAME, false, [&](const CoinQBlockTreeMem& blockTree) { 
+            cout << "  " << blockTree.getBestHash().getHex() << " height: " << blockTree.getBestHeight() << endl;
+        });
+        cout << "Done." << endl << endl;
 
         cout << "Connecting to " << host << ":" << port << endl;
         LOGGER(info) << "Connecting to " << host << ":" << port << endl;
