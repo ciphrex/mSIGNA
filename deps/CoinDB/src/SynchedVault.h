@@ -84,6 +84,8 @@ public:
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
     Signals::Connection subscribeTxStatusChanged(TxSignal::Slot slot) { return m_notifyTxStatusChanged.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return m_notifyMerkleBlockInserted.connect(slot); }
+    Signals::Connection subscribeTxInsertionError(TxErrorSignal::Slot slot) { return m_notifyTxInsertionError.connect(slot); }
+    Signals::Connection subscribeMerkleBlockInsertionError(MerkleBlockErrorSignal::Slot slot) { return m_notifyMerkleBlockInsertionError.connect(slot); }
     Signals::Connection subscribeProtocolError(ErrorSignal::Slot slot) { return m_notifyProtocolError.connect(slot); }
 
     void clearAllSlots();
@@ -129,6 +131,8 @@ private:
     TxSignal                    m_notifyTxInserted;
     TxSignal                    m_notifyTxStatusChanged;
     MerkleBlockSignal           m_notifyMerkleBlockInserted;
+    TxErrorSignal               m_notifyTxInsertionError;
+    MerkleBlockErrorSignal      m_notifyMerkleBlockInsertionError;
     ErrorSignal                 m_notifyProtocolError;
 };
 

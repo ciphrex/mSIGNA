@@ -37,6 +37,34 @@ void finish(int sig)
     g_bShutdown = true;
 }
 
+void subscribeHandlers(SynchedVault& synchedVault)
+{
+    synchedVault.subscribeTxInserted([](std::shared_ptr<Tx> tx)
+    {
+        cout << "Transaction inserted: " << uchar_vector(tx->hash()).getHex() << endl;
+    });
+
+    synchedVault.subscribeTxStatusChanged([](std::shared_ptr<Tx> tx)
+    {
+        cout << "Transaction status changed: " << uchar_vector(tx->hash()).getHex() << " New status: " << Tx::getStatusString(tx->status()) << endl;
+    });
+
+    synchedVault.subscribeMerkleBlockInserted([](std::shared_ptr<MerkleBlock> merkleblock)
+    {
+        cout << "Merkle block inserted: " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " Height: " << merkleblock->blockheader()->height() << endl;
+    });
+
+    synchedVault.subscribeTxInsertionError([](std::shared_ptr<Tx> tx, const std::string& description)
+    {
+        cout << "Transaction insertion error: " << uchar_vector(tx->hash()).getHex() << endl << "  " << description << endl;
+    });
+
+    synchedVault.subscribeMerkleBlockInsertionError([](std::shared_ptr<MerkleBlock> merkleblock, const std::string& description)
+    {
+        cout << "Merkle block insertion error: " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " Height: " << merkleblock->blockheader()->height() << endl << "  " << description << endl;
+    });
+}
+
 int main(int argc, char* argv[])
 {
     NetworkSelector networkSelector;
@@ -80,18 +108,7 @@ int main(int argc, char* argv[])
     signal(SIGINT, &finish);
 
     SynchedVault synchedVault(coinParams);
-    synchedVault.subscribeTxInserted([](std::shared_ptr<Tx> tx)
-    {
-        cout << "Transaction inserted: " << uchar_vector(tx->hash()).getHex() << endl;
-    });
-    synchedVault.subscribeTxStatusChanged([](std::shared_ptr<Tx> tx)
-    {
-        cout << "Transaction status changed: " << uchar_vector(tx->hash()).getHex() << " New status: " << Tx::getStatusString(tx->status()) << endl;
-    });
-    synchedVault.subscribeMerkleBlockInserted([](std::shared_ptr<MerkleBlock> merkleblock)
-    {
-        cout << "Merkle block inserted: " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " Height: " << merkleblock->blockheader()->height() << endl;
-    });
+    subscribeHandlers(synchedVault);
 
     try
     {

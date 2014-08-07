@@ -2166,6 +2166,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
         catch (const std::exception& e)
         {
             LOGGER(error) << "Vault::insertNewTx_unwrapped() - unrecognized input script type: " << e.what() << std::endl;
+            signalQueue.push(notifyTxInsertionError.bind(tx, "Unrecognized input script type."));
             continue;
         }
 
@@ -2383,6 +2384,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
     catch (const std::runtime_error& e)
     {
         LOGGER(error) << "insertNewTx_unwrapped() threw exception: " << e.what() << std::endl;
+        signalQueue.push(notifyMerkleBlockInsertionError.bind(merkleblock, e.what()));
     }
 
     if (txindex + 1 == txcount)

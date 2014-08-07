@@ -319,6 +319,8 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
             updateSyncHeight(merkleblock->blockheader()->height());
             m_notifyMerkleBlockInserted(merkleblock);
         });
+        m_vault->subscribeTxInsertionError([this](std::shared_ptr<Tx> tx, std::string description) { m_notifyTxInsertionError(tx, description); });
+        m_vault->subscribeMerkleBlockInsertionError([this](std::shared_ptr<MerkleBlock> merkleblock, std::string description) { m_notifyMerkleBlockInsertionError(merkleblock, description); });
     }
 
     m_notifyVaultOpened(m_vault);
@@ -357,6 +359,8 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
             updateSyncHeight(merkleblock->blockheader()->height());
             m_notifyMerkleBlockInserted(merkleblock);
         });
+        m_vault->subscribeTxInsertionError([this](std::shared_ptr<Tx> tx, std::string description) { m_notifyTxInsertionError(tx, description); });
+        m_vault->subscribeMerkleBlockInsertionError([this](std::shared_ptr<MerkleBlock> merkleblock, std::string description) { m_notifyMerkleBlockInsertionError(merkleblock, description); });
     }
 
     m_notifyVaultOpened(m_vault);
@@ -520,6 +524,8 @@ void SynchedVault::clearAllSlots()
     m_notifyTxInserted.clear();
     m_notifyTxStatusChanged.clear();
     m_notifyMerkleBlockInserted.clear();
+    m_notifyTxInsertionError.clear();
+    m_notifyMerkleBlockInsertionError.clear();
     m_notifyProtocolError.clear();
 }
 

@@ -33,6 +33,9 @@ namespace CoinDB
 typedef Signals::Signal<std::shared_ptr<Tx>> TxSignal;
 typedef Signals::Signal<std::shared_ptr<MerkleBlock>> MerkleBlockSignal;
 
+typedef Signals::Signal<std::shared_ptr<Tx>, const std::string& /*description*/> TxErrorSignal;
+typedef Signals::Signal<std::shared_ptr<MerkleBlock>, const std::string& /*description*/> MerkleBlockErrorSignal;
+
 class Vault
 {
 public:
@@ -187,11 +190,17 @@ public:
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return notifyTxInserted.connect(slot); }
     Signals::Connection subscribeTxStatusChanged(TxSignal::Slot slot) { return notifyTxUpdated.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return notifyMerkleBlockInserted.connect(slot); }
+
+    Signals::Connection subscribeTxInsertionError(TxErrorSignal::Slot slot) { return notifyTxInsertionError.connect(slot); }
+    Signals::Connection subscribeMerkleBlockInsertionError(MerkleBlockErrorSignal::Slot slot) { return notifyMerkleBlockInsertionError.connect(slot); }
     void clearAllSlots()
     {
         notifyTxInserted.clear();
         notifyTxUpdated.clear();
         notifyMerkleBlockInserted.clear();
+
+        notifyTxInsertionError.clear();
+        notifyMerkleBlockInsertionError.clear();
     }
 
 protected:
@@ -316,6 +325,9 @@ protected:
     TxSignal                                notifyTxInserted;
     TxSignal                                notifyTxUpdated;
     MerkleBlockSignal                       notifyMerkleBlockInserted;
+
+    TxErrorSignal                           notifyTxInsertionError;
+    MerkleBlockErrorSignal                  notifyMerkleBlockInsertionError;
 
 private:
     mutable boost::mutex mutex;
