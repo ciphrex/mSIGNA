@@ -9,6 +9,8 @@
 // Utility for synchronizing a coin database with p2p network
 //
 
+#include <config.h>
+
 #include <SynchedVault.h>
 
 #include <CoinQ/CoinQ_coinparams.h>
@@ -112,9 +114,14 @@ int main(int argc, char* argv[])
 
     try
     {
+        CoinDBConfig config;
+        config.init(argc, argv);
+        string dbuser = config.getDatabaseUser();
+        string dbpasswd = config.getDatabasePassword();
+
         cout << "Opening coin database " << dbname << endl;
         LOGGER(info) << "Opening coin database " << dbname << endl;
-        synchedVault.openVault(dbname);
+        synchedVault.openVault(dbuser, dbpasswd, dbname);
 
         cout << "Loading block tree " << BLOCKTREE_FILENAME << endl;
         LOGGER(info) << "Loading block tree " << BLOCKTREE_FILENAME << endl;
