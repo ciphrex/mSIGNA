@@ -291,7 +291,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
             Coin::PartialMerkleTree tree(merkleBlock.nTxs, merkleBlock.hashes, merkleBlock.flags, merkleBlock.blockHeader.merkleRoot);
             LOGGER(trace) << "Merkle Tree:" << std::endl << tree.toIndentedString() << std::endl;
 
-            if (!m_currentMerkleTxHashes.empty()) throw std::runtime_error("Block was received before getting transactions from last block.");
+            //if (!m_currentMerkleTxHashes.empty()) throw std::runtime_error("Block was received before getting transactions from last block.");
 
             if (m_blockTree.hasHeader(hash)) {
                 // Do nothing but skip over last else.
@@ -300,7 +300,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 notifyStatus("Flushing block chain to file...");
                 m_blockTree.flushToFile(m_blockTreeFile);
                 notifyStatus("Done flushing block chain to file");
-                //m_bHeadersSynched = true;
+                m_bHeadersSynched = true;
                 m_bBlocksFetched = false;
                 m_bBlocksSynched = false;
                 //if (!m_bFetchingBlocks) { notifyHeadersSynched(); }
@@ -328,11 +328,13 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
             if (m_bFetchingBlocks && m_bHeadersSynched)
             {
                 ChainHeader header = m_blockTree.getHeader(hash);
+                LOGGER(trace) << "m_lastRequestedBlockHeight: " << m_lastRequestedBlockHeight << ", header.height: " << header.height << std::endl;
                 if ((uint32_t)header.height == m_lastRequestedBlockHeight)
                 {
                     // Set tx hashes
                     m_currentMerkleBlock = ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork);
                     std::vector<uchar_vector> txhashes = tree.getTxHashesLittleEndianVector();
+                    while (!m_currentMerkleTxHashes.empty()) { m_currentMerkleTxHashes.pop(); }
                     for (auto& txhash: txhashes) { m_currentMerkleTxHashes.push(txhash); }
                     m_currentMerkleTxIndex = 0;
                     m_currentMerkleTxCount = txhashes.size();
