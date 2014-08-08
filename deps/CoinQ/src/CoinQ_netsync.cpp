@@ -703,9 +703,11 @@ void NetworkSync::setBloomFilter(const Coin::BloomFilter& bloomFilter)
 void NetworkSync::processConfirmations()
 {
     LOGGER(trace) << "NetworkSync::processConfirmations()" << endl;
+    if (m_currentMerkleTxHashes.empty()) return;
+
     while (m_processedTxs.count(m_currentMerkleTxHashes.front()))
     {
-        LOGGER(trace) << "NetworkSync::processConfirmations() - " << m_currentMerkleTxCount << " of " << m_currentMerkleTxCount << " - m_processedTxs.size(): " << m_processedTxs.size() << endl;
+        LOGGER(trace) << "NetworkSync::processConfirmations() - Merkle transaction count: " << m_currentMerkleTxCount << " - Mempool transaction count: " << m_processedTxs.size() << endl;
         notifyTxConfirmed(m_currentMerkleBlock, m_currentMerkleTxHashes.front(), m_currentMerkleTxIndex, m_currentMerkleTxCount);
         m_processedTxs.erase(m_currentMerkleTxHashes.front());
 
