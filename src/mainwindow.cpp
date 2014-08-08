@@ -245,6 +245,7 @@ void MainWindow::loadHeaders()
             std::stringstream progress;
             progress << "Height: " << blockTree.getBestHeight() << " / " << "Total Work: " << blockTree.getTotalWork().getDec();
             emit headersLoadProgress(QString::fromStdString(progress.str()));
+            return true;
         });
     emit updateBestHeight(synchedVault.getBestHeight());
 }
