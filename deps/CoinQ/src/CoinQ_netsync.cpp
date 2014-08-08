@@ -28,6 +28,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_bConnected(false),
     m_bHeadersSynched(false),
     m_bFetchingBlocks(false),
+    m_bBlocksFetched(true),
     m_bBlocksSynched(false)
 {
     // Select hash functions
@@ -158,17 +159,20 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 {
                     if (txhash == m_currentMerkleTxHashes.front())
                     {
-                        notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex++, m_currentMerkleTxCount);
+                        notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex, m_currentMerkleTxCount);
                         m_currentMerkleTxHashes.pop();
+                        m_currentMerkleTxIndex++;
                         break;
                     }
+                    m_currentMerkleTxHashes.pop();
                     m_currentMerkleTxIndex++;
                 }
 
                 // Once the queue is empty, signal completion of block sync.
                 // The m_bBlocksSynched flag ensures we won't end up here again until we receive a new block.
-                if (m_currentMerkleTxHashes.empty())
+                if (m_currentMerkleTxHashes.empty() && m_bBlocksFetched)
                 {
+                    LOGGER(trace) << "Block sync detected from tx handler." << endl;
                     m_bBlocksSynched = true;
                     notifyBlocksSynched();
                 }
@@ -339,9 +343,11 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     if (m_currentMerkleTxCount == 0) { notifyMerkleBlock(m_currentMerkleBlock); }
 
                     uint32_t bestHeight = m_blockTree.getBestHeight();
+                    LOGGER(trace) << "bestHeight: " << bestHeight << endl;
                     if (bestHeight > (uint32_t)header.height)
                     {
                         // We still have more blocks to fetch
+                        m_bBlocksFetched = false;
                         const ChainHeader& nextHeader = m_blockTree.getHeader(header.height + 1);
                         uchar_vector hash = nextHeader.getHashLittleEndian();
                         std::string hashString = hash.getHex();
@@ -360,14 +366,16 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                             notifyConnectionError(e.what());
                         }
                     }
-                    else //if (bestHeight == m_lastRequestedBlockHeight)
+                    else if (bestHeight == m_lastRequestedBlockHeight)
                     {
                         // No more blocks to fetch for now
+                        m_bBlocksFetched = true;
                         m_lastRequestedBlockHeight++; // The request is not made explicitly - it is implied. Now we wait...
 
                         // If filtered block contains none of our transactions, we must signal completion here rather than in tx handler
                         if (m_currentMerkleTxHashes.empty())
                         {
+                            LOGGER(trace) << "Block sync detected from merkle block handler." << endl;
                             m_bBlocksSynched = true;
                             notifyBlocksSynched();
                         }
@@ -493,6 +501,7 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
 */
 
     m_bFetchingBlocks = true;
+    m_bBlocksFetched = false;
     m_bBlocksSynched = false;
 
     ChainHeader header;

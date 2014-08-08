@@ -129,6 +129,7 @@ private:
     bool m_bHeadersSynched;
 
     bool m_bFetchingBlocks;
+    bool m_bBlocksFetched;
     bool m_bBlocksSynched;
 
     uint32_t m_lastRequestedBlockHeight;
