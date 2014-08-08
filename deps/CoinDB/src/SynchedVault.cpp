@@ -47,6 +47,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_bConnected(false),
     m_bSynching(false),
     m_bBlockTreeSynched(false),
+    m_bGotMempool(false),
     m_bInsertMerkleBlocks(false)
 {
     LOGGER(trace) << "SynchedVault::SynchedVault()" << std::endl;
@@ -146,10 +147,11 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         {
             updateStatus(SYNCHED);
 
-            if (m_vault)
+            if (m_vault && !m_bGotMempool)
             {
                 LOGGER(info) << "SynchedVault - Fetching mempool." << std::endl;
                 m_networkSync.getMempool();
+                m_bGotMempool = true;
             }
         }
     });
@@ -316,6 +318,7 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
         });
         m_vault->subscribeTxInsertionError([this](std::shared_ptr<Tx> tx, std::string description) { m_notifyTxInsertionError(tx, description); });
         m_vault->subscribeMerkleBlockInsertionError([this](std::shared_ptr<MerkleBlock> merkleblock, std::string description) { m_notifyMerkleBlockInsertionError(merkleblock, description); });
+        m_vault->subscribeTxConfirmationError([this](std::shared_ptr<MerkleBlock> merkleblock, bytes_t txhash) { m_notifyTxConfirmationError(merkleblock, txhash); });
     }
 
     m_notifyVaultOpened(m_vault);
@@ -356,6 +359,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         });
         m_vault->subscribeTxInsertionError([this](std::shared_ptr<Tx> tx, std::string description) { m_notifyTxInsertionError(tx, description); });
         m_vault->subscribeMerkleBlockInsertionError([this](std::shared_ptr<MerkleBlock> merkleblock, std::string description) { m_notifyMerkleBlockInsertionError(merkleblock, description); });
+        m_vault->subscribeTxConfirmationError([this](std::shared_ptr<MerkleBlock> merkleblock, bytes_t txhash) { m_notifyTxConfirmationError(merkleblock, txhash); });
     }
 
     m_notifyVaultOpened(m_vault);
@@ -434,6 +438,7 @@ void SynchedVault::syncBlocks()
     m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
 
     std::vector<bytes_t> locatorHashes = m_vault->getLocatorHashes();
+    m_bGotMempool = false;
     m_bInsertMerkleBlocks = true;
     m_networkSync.syncBlocks(locatorHashes, startTime);
 }

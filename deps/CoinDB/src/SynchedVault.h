@@ -88,6 +88,7 @@ public:
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return m_notifyMerkleBlockInserted.connect(slot); }
     Signals::Connection subscribeTxInsertionError(TxErrorSignal::Slot slot) { return m_notifyTxInsertionError.connect(slot); }
     Signals::Connection subscribeMerkleBlockInsertionError(MerkleBlockErrorSignal::Slot slot) { return m_notifyMerkleBlockInsertionError.connect(slot); }
+    Signals::Connection subscribeTxConfirmationError(TxConfirmationErrorSignal::Slot slot) { return m_notifyTxConfirmationError.connect(slot); }
     Signals::Connection subscribeProtocolError(ErrorSignal::Slot slot) { return m_notifyProtocolError.connect(slot); }
 
     void clearAllSlots();
@@ -120,6 +121,7 @@ private:
     bool                        m_bConnected;
     bool                        m_bSynching;
     bool                        m_bBlockTreeSynched;
+    bool                        m_bGotMempool;
 
     bool                        m_bInsertMerkleBlocks;
 
@@ -140,6 +142,7 @@ private:
     MerkleBlockSignal           m_notifyMerkleBlockInserted;
     TxErrorSignal               m_notifyTxInsertionError;
     MerkleBlockErrorSignal      m_notifyMerkleBlockInsertionError;
+    TxConfirmationErrorSignal   m_notifyTxConfirmationError;
     ErrorSignal                 m_notifyProtocolError;
 };
 
