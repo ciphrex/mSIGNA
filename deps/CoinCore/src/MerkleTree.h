@@ -119,7 +119,7 @@ public:
     const uchar_vector& getRoot() const { return root_; }
     uchar_vector getRootLittleEndian() const { return uchar_vector(root_).getReverse(); }
 
-    std::string toIndentedString() const;
+    std::string toIndentedString(bool showIndices = false) const;
 
 private:
     unsigned int nTxs_;

@@ -63,7 +63,7 @@ uchar_vector MerkleTree::getRoot() const
 //
 // class PartialMerkleTree implementation
 //
-std::string PartialMerkleTree::toIndentedString() const
+std::string PartialMerkleTree::toIndentedString(bool showIndices) const
 {
     std::stringstream ss;
     ss << "root: " << uchar_vector(root_).getReverse().getHex() << std::endl;
@@ -80,10 +80,13 @@ std::string PartialMerkleTree::toIndentedString() const
         ss << "  " << i++ << ": " << uchar_vector(hash).getReverse().getHex() << std::endl;
     }
 
-    ss << "txIndices: " << std::endl;
-    i = 0;
-    for (auto& index: txIndices_) {
-        ss << "  " << i++ << ": " << index << std::endl;
+    if (showIndices)
+    {
+        ss << "txIndices: " << std::endl;
+        i = 0;
+        for (auto& index: txIndices_) {
+            ss << "  " << i++ << ": " << index << std::endl;
+        }
     }
 
     ss << "flags: " << getFlags().getHex() << std::endl;
