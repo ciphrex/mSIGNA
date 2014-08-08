@@ -53,30 +53,30 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeStatus([this](const std::string& message)
     {
-        LOGGER(trace) << "P2P network status: " << message << std::endl;
+        LOGGER(trace) << "SynchedVault - Status: " << message << std::endl;
     });
 
     m_networkSync.subscribeProtocolError([this](const std::string& error)
     {
-        LOGGER(trace) << "P2P protocol error: " << error << std::endl;
+        LOGGER(trace) << "SynchedVault - Protocol error: " << error << std::endl;
         m_notifyProtocolError(error);
     });
 
     m_networkSync.subscribeConnectionError([this](const std::string& error)
     {
-        LOGGER(trace) << "P2P connection error: " << error << std::endl;
+        LOGGER(trace) << "SynchedVault - Connection error: " << error << std::endl;
         m_notifyConnectionError(error);
     });
 
     m_networkSync.subscribeOpen([this]()
     {
-        LOGGER(trace) << "P2P network connection opened." << std::endl;
+        LOGGER(trace) << "SynchedVault - connection opened." << std::endl;
         m_bConnected = true;
     });
 
     m_networkSync.subscribeClose([this]()
     {
-        LOGGER(trace) << "P2P network connection closed." << std::endl;
+        LOGGER(trace) << "SynchedVault - connection closed." << std::endl;
         m_bConnected = false;
         m_bSynching = false;
         updateStatus(STOPPED);
@@ -84,99 +84,86 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeStarted([this]()
     {
-/*
-        LOGGER(trace) << "P2P network sync started." << std::endl;
-        m_bSynching = true;
-        updateStatus(STARTING);
-*/
-        //TODO: notify clients
+        LOGGER(trace) << "SynchedVault - Sync started." << std::endl;
     });
 
     m_networkSync.subscribeStopped([this]()
     {
-/*
-        LOGGER(trace) << "P2P network sync stopped." << std::endl;
-        m_bSynching = false;
-        updateStatus(STOPPED);
-*/
-        //TODO: notify clients
+        LOGGER(trace) << "SynchedVault - Sync stopped." << std::endl;
     });
 
     m_networkSync.subscribeTimeout([this]()
     {
-        LOGGER(trace) << "P2P network sync timeout." << std::endl;
+        LOGGER(trace) << "SynchedVault - Sync timeout." << std::endl;
         m_notifyConnectionError("Network timed out.");
     });
 
     m_networkSync.subscribeFetchingHeaders([this]()
     {
-        LOGGER(trace) << "P2P fetching headers." << std::endl;
+        LOGGER(trace) << "SynchedVault - Fetching headers." << std::endl;
         updateStatus(FETCHING_HEADERS);
     });
 
     m_networkSync.subscribeHeadersSynched([this]()
     {
-        LOGGER(trace) << "P2P headers sync complete." << std::endl;
+        LOGGER(trace) << "SynchedVault - Headers sync complete." << std::endl;
         m_bBlockTreeSynched = true;
         updateBestHeight(m_networkSync.getBestHeight());
 
-        try
+        if (!m_networkSync.connected())
         {
-            if (m_vault)
+            updateStatus(STOPPED);
+        }
+        else if (!m_vault)
+        {
+            updateStatus(SYNCHED);
+        }
+        else
+        {
+            try
             {
-                LOGGER(trace) << "Attempting to sync blocks." << std::endl;
                 syncBlocks();
             }
-            else if (m_networkSync.connected())
+            catch (const std::exception& e)
             {
-                updateStatus(SYNCHED);
+                LOGGER(error) << e.what() << std::endl;
             }
         }
-        catch (const std::exception& e)
-        {
-            LOGGER(error) << e.what() << std::endl;
-        }
-
     });
 
     m_networkSync.subscribeFetchingBlocks([this]()
     {
-        LOGGER(trace) << "P2P fetching blocks." << std::endl;
+        LOGGER(trace) << "SynchedVault - Fetching blocks." << std::endl;
         
-        if (m_vault)
-        {        
-            updateStatus(FETCHING_BLOCKS);
-        }
-        else if (m_networkSync.connected())
-        {
-            m_networkSync.stopSyncBlocks();
-            //updateStatus(SYNCHED);
-        }
+        if (m_vault) { updateStatus(FETCHING_BLOCKS); }
     });
 
     m_networkSync.subscribeBlocksSynched([this]()
     {
-        LOGGER(trace) << "Block sync complete." << std::endl;
+        LOGGER(trace) << "SynchedVault - Block sync complete." << std::endl;
 
         if (m_networkSync.connected())
         {
             updateStatus(SYNCHED);
 
-            LOGGER(info) << "Fetching mempool." << std::endl;
-            m_networkSync.getMempool();
+            if (m_vault)
+            {
+                LOGGER(info) << "SynchedVault - Fetching mempool." << std::endl;
+                m_networkSync.getMempool();
+            }
         }
     });
 
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
     {
-        LOGGER(trace) << "P2P network added best chain. New best height: " << header.height << std::endl;
+        LOGGER(trace) << "SynchedVault - Added best chain. New best height: " << header.height << std::endl;
 
         updateBestHeight(header.height);
     });
 
     m_networkSync.subscribeRemoveBestChain([this](const chain_header_t& header)
     {
-        LOGGER(trace) << "P2P network removed best chain." << std::endl;
+        LOGGER(trace) << "SynchedVault - removed best chain." << std::endl;
         int diff = m_bestHeight - m_networkSync.getBestHeight();
         if (diff >= 0)
         {
@@ -187,7 +174,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeNewTx([this](const Coin::Transaction& cointx)
     {
-        LOGGER(trace) << "P2P network received new transaction " << cointx.getHashLittleEndian().getHex() << std::endl;
+        LOGGER(trace) << "SynchedVault - Received new transaction " << cointx.getHashLittleEndian().getHex() << std::endl;
 
         if (!m_vault) return;
         std::lock_guard<std::mutex> lock(m_vaultMutex);
@@ -206,7 +193,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
 	m_networkSync.subscribeMerkleTx([this](const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount)
 	{
-        LOGGER(trace) << "P2P network received merkle transaction " << cointx.getHashLittleEndian().getHex() << " in block " << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << std::endl;
+        LOGGER(trace) << "SynchedVault - Received merkle transaction " << cointx.getHashLittleEndian().getHex() << " in block " << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << std::endl;
 
         if (!m_vault) return;
         std::lock_guard<std::mutex> lock(m_vaultMutex);
@@ -226,7 +213,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeMerkleBlock([this](const ChainMerkleBlock& chainMerkleBlock)
     {
-        LOGGER(trace) << "P2P network received merkle block " << chainMerkleBlock.blockHeader.getHashLittleEndian().getHex() << " height: " << chainMerkleBlock.height << std::endl;
+        LOGGER(trace) << "SynchedVault - received merkle block " << chainMerkleBlock.blockHeader.getHashLittleEndian().getHex() << " height: " << chainMerkleBlock.height << std::endl;
 
         if (!m_vault) return;
         if (!m_bInsertMerkleBlocks) return;
@@ -249,7 +236,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeBlockTreeChanged([this]()
     {
-        LOGGER(trace) << "P2P network block tree changed." << std::endl;
+        LOGGER(trace) << "SynchedVault - block tree changed." << std::endl;
 
         m_bBlockTreeSynched = false;
         updateBestHeight(m_networkSync.getBestHeight());
@@ -265,7 +252,7 @@ SynchedVault::~SynchedVault()
 }
 
 // Block tree operations
-void SynchedVault::loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork, std::function<void(const CoinQBlockTreeMem&)> callback)
+void SynchedVault::loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork, CoinQBlockTreeMem::callback_t callback)
 {
     LOGGER(trace) << "SynchedVault::loadHeaders(" << blockTreeFile << ", " << (bCheckProofOfWork ? "true" : "false") << ")" << std::endl;
 
