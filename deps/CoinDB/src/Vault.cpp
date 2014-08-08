@@ -2121,7 +2121,7 @@ std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::sha
     ss << "Vault::insertNewTx(" << cointx.getHashLittleEndian().getHex() << ", ";
     if (blockheader)    { ss << uchar_vector(blockheader->hash()).getHex(); }
     else                { ss << "null"; }
-    ss << ", " << (verifysigs ? "true" : "false") << ")" << std::endl;
+    ss << ", " << (verifysigs ? "true" : "false") << ")";
     LOGGER(trace) << ss.str() << std::endl;
 
     std::shared_ptr<Tx> tx;
