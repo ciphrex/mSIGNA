@@ -164,8 +164,6 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 // The m_bBlocksSynched flag ensures we won't end up here again until we receive a new block.
                 if (m_currentMerkleTxHashes.empty() && m_bBlocksFetched)
                 {
-                    m_processedTxs.clear();
-
                     LOGGER(trace) << "Block sync detected from tx handler." << endl;
                     m_bBlocksSynched = true;
                     notifyBlocksSynched();
@@ -382,8 +380,6 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                         // If filtered block contains none of our transactions, we must signal completion here rather than in tx handler
                         if (m_currentMerkleTxHashes.empty())
                         {
-                            m_processedTxs.clear();
-
                             LOGGER(trace) << "Block sync detected from merkle block handler." << endl;
                             m_bBlocksSynched = true;
                             notifyBlocksSynched();
