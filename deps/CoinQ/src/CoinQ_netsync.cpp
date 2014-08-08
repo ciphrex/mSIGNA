@@ -104,7 +104,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_peer.subscribeInv([&](CoinQ::Peer& peer, const Coin::Inventory& inv)
     {
         if (!m_bConnected) return;
-        LOGGER(trace) << "Received inventory message:" << std::endl << inv.toIndentedString() << std::endl;
+        LOGGER(trace) << "Received inventory message:" << std::endl << inv.toIndentedString(2) << std::endl;
 
         using namespace Coin;
         GetDataMessage getData;
