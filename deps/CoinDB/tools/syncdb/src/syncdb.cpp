@@ -9,7 +9,7 @@
 // Utility for synchronizing a coin database with p2p network
 //
 
-#include <config.h>
+#include "SyncDBConfig.h"
 
 #include <SynchedVault.h>
 
@@ -28,8 +28,7 @@ using namespace CoinDB;
 using namespace CoinQ;
 using namespace std;
 
-const std::string VERSION_INFO = "v0.1.0";
-const std::string BLOCKTREE_FILENAME = "blocktree.dat";
+const std::string VERSION_INFO = "v0.1.2";
 
 bool g_bShutdown = false;
 
@@ -74,15 +73,23 @@ void subscribeHandlers(SynchedVault& synchedVault)
 
 int main(int argc, char* argv[])
 {
+    SyncDBConfig config;
     NetworkSelector networkSelector;
 
     try
     {
+        if (!config.parseParams(argc, argv))
+        {
+            cout << config.getHelpOptions();
+            return 0;
+        }
+
         if (argc < 4)
         {
             cerr << "SyncDB by Eric Lombrozo " << VERSION_INFO << endl
                  << "# Usage: " << argv[0] << " <network> <dbname> <host> [port]" << endl
-                 << "# Supported networks: " << stdutils::delimited_list(networkSelector.getNetworkNames(), ", ") << endl;
+                 << "# Supported networks: " << stdutils::delimited_list(networkSelector.getNetworkNames(), ", ") << endl
+                 << "# Use " << argv[0] << " --help for more options." << endl;
             return -1;
         }
 
@@ -109,29 +116,30 @@ int main(int argc, char* argv[])
          << "  protocol version: " << dec << coinParams.protocol_version() << endl
          << endl;
 
-        
-    INIT_LOGGER("syncdb.log");
+    string logfile = config.getDataDir() + "/syncdb.log";    
+    INIT_LOGGER(logfile.c_str());
+
+    string blocktreefile = config.getDataDir() + "/" + coinParams.network_name() + "_headers.dat";
 
     signal(SIGINT, &finish);
+    signal(SIGTERM, &finish);
 
+    LOGGER(trace) << "foo" << endl;
     SynchedVault synchedVault(coinParams);
+    LOGGER(trace) << "bar" << endl;
     subscribeHandlers(synchedVault);
 
     try
     {
-        CoinDBConfig config;
-        config.init(argc, argv);
-        string dbuser = config.getDatabaseUser();
-        string dbpasswd = config.getDatabasePassword();
-
         cout << "Opening coin database " << dbname << endl;
         LOGGER(info) << "Opening coin database " << dbname << endl;
-        synchedVault.openVault(dbuser, dbpasswd, dbname);
+        synchedVault.openVault(config.getDatabaseUser(), config.getDatabasePassword(), dbname);
 
-        cout << "Loading block tree " << BLOCKTREE_FILENAME << "..." << endl;
-        LOGGER(info) << "Loading block tree " << BLOCKTREE_FILENAME << endl;
-        synchedVault.loadHeaders(BLOCKTREE_FILENAME, false, [&](const CoinQBlockTreeMem& blockTree) { 
+        cout << "Loading block tree " << blocktreefile << "..." << endl;
+        LOGGER(info) << "Loading block tree " << blocktreefile << endl;
+        synchedVault.loadHeaders(blocktreefile, false, [&](const CoinQBlockTreeMem& blockTree) {
             cout << "  " << blockTree.getBestHash().getHex() << " height: " << blockTree.getBestHeight() << endl;
+            return !g_bShutdown;
         });
         cout << "Done." << endl << endl;
 
@@ -142,6 +150,7 @@ int main(int argc, char* argv[])
     catch (const std::exception& e)
     {
         cerr << "Error: " << e.what() << endl;
+        synchedVault.stopSync();
         return 1;
     }
 
