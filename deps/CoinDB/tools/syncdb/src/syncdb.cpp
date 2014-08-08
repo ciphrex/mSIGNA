@@ -41,46 +41,67 @@ void finish(int sig)
 void subscribeHandlers(SynchedVault& synchedVault)
 {
     synchedVault.subscribeStatusChanged([&](SynchedVault::status_t status) {
-        cout << "Sync status: " << SynchedVault::getStatusString(status) << endl;
+        stringstream ss;
+        ss << "Sync status: " << SynchedVault::getStatusString(status);
+        LOGGER(info) << ss.str() << endl;
+        cout << ss.str() << endl;
         if (status == SynchedVault::STOPPED) { g_bShutdown = true; }
     });
 
     synchedVault.subscribeTxInserted([](std::shared_ptr<Tx> tx)
     {
-        cout << "Transaction inserted: " << uchar_vector(tx->hash()).getHex() << endl;
+        stringstream ss;
+        ss << "Transaction inserted: " << uchar_vector(tx->hash()).getHex();
+        LOGGER(info) << ss.str() << endl;
+        cout << ss.str() << endl;
     });
 
     synchedVault.subscribeTxStatusChanged([](std::shared_ptr<Tx> tx)
     {
-        cout << "Transaction status changed: " << uchar_vector(tx->hash()).getHex() << " New status: " << Tx::getStatusString(tx->status()) << endl;
+        stringstream ss;
+        ss << "Transaction status changed: " << uchar_vector(tx->hash()).getHex() << " New status: " << Tx::getStatusString(tx->status());
+        LOGGER(info) << ss.str() << endl;
+        cout << ss.str() << endl;
     });
 
     synchedVault.subscribeMerkleBlockInserted([](std::shared_ptr<MerkleBlock> merkleblock)
     {
-        cout << "Merkle block inserted: " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " Height: " << merkleblock->blockheader()->height() << endl;
+        stringstream ss;
+        ss << "Merkle block inserted: " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " Height: " << merkleblock->blockheader()->height();
+        LOGGER(info) << ss.str() << endl;
+        cout << ss.str() << endl;
     });
 
     synchedVault.subscribeTxInsertionError([](std::shared_ptr<Tx> tx, const std::string& description)
     {
-        cout << "Transaction insertion error: " << uchar_vector(tx->hash()).getHex() << endl << "  " << description << endl;
+        stringstream ss;
+        ss << "Transaction insertion error: " << uchar_vector(tx->hash()).getHex() << endl << "  " << description;
+        LOGGER(info) << ss.str() << endl;
+        cout << ss.str() << endl;
     });
 
     synchedVault.subscribeMerkleBlockInsertionError([](std::shared_ptr<MerkleBlock> merkleblock, const std::string& description)
     {
-        cout << "Merkle block insertion error: " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " Height: " << merkleblock->blockheader()->height() << endl << "  " << description << endl;
+        stringstream ss;
+        ss << "Merkle block insertion error: " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " Height: " << merkleblock->blockheader()->height() << endl << "  " << description;
+        LOGGER(info) << ss.str() << endl;
+        cout << ss.str() << endl;
     });
 
-    synchedVault.subscribeTxConfirmationError([](std::shared_ptr<MerkleBlock> merkleblock, bytes_t txhash)
+    synchedVault.subscribeBestHeightChanged([](uint32_t bestheight)
     {
-        cout << "Transaction confirmation error - Merkle block hash: " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " Tx hash: " << uchar_vector(txhash).getHex() << endl;
+        stringstream ss;
+        ss << "Best height: " << bestheight;
+        LOGGER(info) << ss.str() << endl;
+        cout << ss.str() << endl;
     });
 
-    synchedVault.subscribeBestHeightChanged([](uint32_t bestheight) {
-        cout << "Best height: " << bestheight << endl;
-    });
-
-    synchedVault.subscribeSyncHeightChanged([](uint32_t syncheight) {
-        cout << "Sync height: " << syncheight << endl;
+    synchedVault.subscribeSyncHeightChanged([](uint32_t syncheight)
+    {
+        stringstream ss;
+        ss << "Sync height: " << syncheight;
+        LOGGER(info) << ss.str() << endl;
+        cout << ss.str() << endl;
     });
 }
 
@@ -120,15 +141,6 @@ int main(int argc, char* argv[])
     string host = argv[3];
     string port = argc > 4 ? argv[4] : coinParams.default_port();
 
-    cout << endl << "Network Settings" << endl
-         << "-------------------------------------------" << endl
-         << "  network:          " << coinParams.network_name() << endl
-         << "  host:             " << host << endl
-         << "  port:             " << port << endl
-         << "  magic bytes:      " << hex << coinParams.magic_bytes() << endl
-         << "  protocol version: " << dec << coinParams.protocol_version() << endl
-         << endl;
-
     string logfile = config.getDataDir() + "/syncdb.log";    
     INIT_LOGGER(logfile.c_str());
 
@@ -156,12 +168,25 @@ int main(int argc, char* argv[])
         });
         cout << "Done." << endl << endl;
 
+        stringstream ss;
+        ss << endl << "Network Settings" << endl
+           << "-------------------------------------------" << endl
+           << "  network:          " << coinParams.network_name() << endl
+           << "  host:             " << host << endl
+           << "  port:             " << port << endl
+           << "  magic bytes:      " << hex << coinParams.magic_bytes() << endl
+           << "  protocol version: " << dec << coinParams.protocol_version() << endl;
+
+        LOGGER(info) << ss.str() << endl;
+        cout << ss.str() << endl;
+
         cout << "Connecting to " << host << ":" << port << endl;
         LOGGER(info) << "Connecting to " << host << ":" << port << endl;
         synchedVault.startSync(host, port);
     }
     catch (const std::exception& e)
     {
+        LOGGER(error) << "Error: " << e.what() << endl;
         cerr << "Error: " << e.what() << endl;
         synchedVault.stopSync();
         return 1;
