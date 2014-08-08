@@ -147,6 +147,8 @@ private:
     unsigned int m_currentMerkleTxIndex;
     unsigned int m_currentMerkleTxCount;
 
+    void processConfirmations();
+
     // Sync signals
     CoinQSignal<void> notifyStarted;
     CoinQSignal<void> notifyStopped;

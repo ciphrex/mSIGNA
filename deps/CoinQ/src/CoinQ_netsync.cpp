@@ -138,7 +138,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         bytes_t txhash = tx.getHashLittleEndian();
         LOGGER(trace) << "Received transaction: " << uchar_vector(txhash).getHex() << std::endl;
 
-        if (m_bBlocksSynched)
+        if (m_currentMerkleTxHashes.empty())
         {
             notifyNewTx(tx);
             m_processedTxs.insert(txhash);
@@ -149,25 +149,15 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         {
             if (m_bFetchingBlocks)
             {
-                if (m_currentMerkleTxHashes.empty()) throw runtime_error("Should not be receiving unconfirmed transactions while processing blocks.");
-
                 // Notify of confirmations of previously received transactions as well as the current one
-                while (!m_currentMerkleTxHashes.empty())
+                processConfirmations();
+                if (!m_currentMerkleTxHashes.empty() && txhash == m_currentMerkleTxHashes.front())
                 {
-                    if (txhash == m_currentMerkleTxHashes.front())
-                    {
-                        notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex, m_currentMerkleTxCount);
-                    }
-                    else if (m_processedTxs.count(m_currentMerkleTxHashes.front()))
-                    {
-                        notifyTxConfirmed(m_currentMerkleBlock, m_currentMerkleTxHashes.front(), m_currentMerkleTxIndex, m_currentMerkleTxCount);
-                        m_processedTxs.erase(m_currentMerkleTxHashes.front());
-                    }
-                    else break;
-
+                    LOGGER(trace) << "New merkle transaction: " << m_currentMerkleTxIndex << " of " << m_currentMerkleTxCount << endl;
+                    notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex++, m_currentMerkleTxCount);
                     m_currentMerkleTxHashes.pop();
-                    m_currentMerkleTxIndex++;
                 }
+                processConfirmations();
 
                 // Once the queue is empty, signal completion of block sync.
                 // The m_bBlocksSynched flag ensures we won't end up here again until we receive a new block.
@@ -348,7 +338,14 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     m_currentMerkleTxIndex = 0;
                     m_currentMerkleTxCount = txhashes.size();
 
-                    if (m_currentMerkleTxCount == 0) { notifyMerkleBlock(m_currentMerkleBlock); }
+                    if (m_currentMerkleTxCount > 0)
+                    {
+                        processConfirmations();
+                    }
+                    else
+                    {
+                        notifyMerkleBlock(m_currentMerkleBlock);
+                    }
 
                     uint32_t bestHeight = m_blockTree.getBestHeight();
                     LOGGER(trace) << "bestHeight: " << bestHeight << endl;
@@ -700,4 +697,18 @@ void NetworkSync::setBloomFilter(const Coin::BloomFilter& bloomFilter)
     Coin::FilterLoadMessage filterLoad(m_bloomFilter.getNHashFuncs(), m_bloomFilter.getNTweak(), m_bloomFilter.getNFlags(), m_bloomFilter.getFilter());
     m_peer.send(filterLoad);
     LOGGER(trace) << "Sent filter to peer." << std::endl;
+}
+
+void NetworkSync::processConfirmations()
+{
+    LOGGER(trace) << "NetworkSync::processConfirmations()" << endl;
+    while (m_processedTxs.count(m_currentMerkleTxHashes.front()))
+    {
+        LOGGER(trace) << "NetworkSync::processConfirmations() - " << m_currentMerkleTxCount << " of " << m_currentMerkleTxCount << " - m_processedTxs.size(): " << m_processedTxs.size() << endl;
+        notifyTxConfirmed(m_currentMerkleBlock, m_currentMerkleTxHashes.front(), m_currentMerkleTxIndex, m_currentMerkleTxCount);
+        m_processedTxs.erase(m_currentMerkleTxHashes.front());
+
+        m_currentMerkleTxHashes.pop();
+        m_currentMerkleTxIndex++;
+    }
 }
