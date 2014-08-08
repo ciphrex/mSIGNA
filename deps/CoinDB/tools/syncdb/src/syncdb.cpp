@@ -42,7 +42,7 @@ void finish(int sig)
 void subscribeHandlers(SynchedVault& synchedVault)
 {
     synchedVault.subscribeStatusChanged([&](SynchedVault::status_t status) {
-        cout << "Sync status changed to " << SynchedVault::getStatusString(status) << endl;
+        cout << "Sync status: " << SynchedVault::getStatusString(status) << endl;
         if (status == SynchedVault::STOPPED) { g_bShutdown = true; }
     });
 
