@@ -191,8 +191,8 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         } 
     });
 
-	m_networkSync.subscribeMerkleTx([this](const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount)
-	{
+    m_networkSync.subscribeMerkleTx([this](const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount)
+    {
         LOGGER(trace) << "SynchedVault - Received merkle transaction " << cointx.getHashLittleEndian().getHex() << " in block " << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << std::endl;
 
         if (!m_vault) return;
@@ -209,7 +209,26 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
             m_notifyVaultError(e.what());
         } 
 	
-	});
+    });
+
+    m_networkSync.subscribeTxConfirmed([this](const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount)
+    {
+        LOGGER(trace) << "SynchedVault - Received transaction confirmation " << uchar_vector(txhash).getHex() << " in block " << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << std::endl;
+
+        if (!m_vault) return;
+        std::lock_guard<std::mutex> lock(m_vaultMutex);
+        if (!m_vault) return;
+
+        try
+        {
+            m_vault->confirmMerkleTx(chainmerkleblock, txhash, txindex, txcount);
+        }
+        catch (const std::exception& e)
+        {
+            LOGGER(error) << e.what() << std::endl;
+            m_notifyVaultError(e.what());
+        } 
+    });
 
     m_networkSync.subscribeMerkleBlock([this](const ChainMerkleBlock& chainMerkleBlock)
     {
