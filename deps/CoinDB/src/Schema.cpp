@@ -950,7 +950,7 @@ void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uin
 
 void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status, bool conflicting)
 {
-    LOGGER(trace) << "Tx::set - fromCoinCore(coin_tx);" << std::endl;
+    //LOGGER(trace) << "Tx::set - fromCoinCore(coin_tx);" << std::endl;
     fromCoinCore(coin_tx);
 
     timestamp_ = timestamp;
