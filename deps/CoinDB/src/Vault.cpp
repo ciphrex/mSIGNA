@@ -2478,19 +2478,17 @@ std::shared_ptr<Tx> Vault::confirmMerkleTx_unwrapped(const ChainMerkleBlock& cha
         }
     }
 
+    std::shared_ptr<Tx> tx;
     odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
-    if (tx_r.empty())
+    if (!tx_r.empty())
     {
-        signalQueue.push(notifyTxConfirmationError.bind(merkleblock, txhash));
-        return nullptr;
+        tx = tx_r.begin().load();
+        tx->blockheader(merkleblock->blockheader());
+        tx->status(Tx::CONFIRMED);
+        tx->conflicting(false);
+        db_->update(tx);
+        signalQueue.push(notifyTxUpdated.bind(tx));
     }
-
-    std::shared_ptr<Tx> tx(tx_r.begin().load());
-    tx->blockheader(merkleblock->blockheader());
-    tx->status(Tx::CONFIRMED);
-    tx->conflicting(false);
-    db_->update(tx);
-    signalQueue.push(notifyTxUpdated.bind(tx));
 
     if (txindex + 1 == txcount)
     {
