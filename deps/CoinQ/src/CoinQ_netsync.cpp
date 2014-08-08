@@ -438,6 +438,7 @@ void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProof
         std::stringstream status;
         status << "Best Height: " << m_blockTree.getBestHeight() << " / " << "Total Work: " << m_blockTree.getTotalWork().getDec();
         notifyStatus(status.str());
+        notifyAddBestChain(m_blockTree.getHeader(-1));
         //notifyHeadersSynched();
         return;
     }
@@ -451,6 +452,7 @@ void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProof
     m_blockTree.setGenesisBlock(m_coinParams.genesis_block());
     //m_bHeadersSynched = true;
     notifyStatus("Block tree file not found. A new one will be created.");
+    notifyAddBestChain(m_blockTree.getHeader(-1));
     //notifyHeadersSynched();
 }
 
