@@ -10,6 +10,8 @@
 
 #include <stdutils/customerror.h>
 
+#include <string>
+
 namespace CoinQ {
 
 enum ErrorCodes
