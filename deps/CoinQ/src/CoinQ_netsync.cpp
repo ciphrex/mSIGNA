@@ -26,7 +26,6 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_work(m_ioService),
     m_peer(m_ioService),
     m_bConnected(false),
-    m_bFetchingHeaders(false),
     m_bHeadersSynched(false),
     m_bFetchingBlocks(false),
     m_bBlocksSynched(false)
@@ -154,6 +153,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 if (!m_currentMerkleTxHashes.count(txhash)) throw runtime_error("Expecting merkle block transactions, but transaction received is not in merkle block.");
 */
 
+                // Notify of any new merkle transactions, pop any tx hashes in our queue before and up to the received transaction.
                 while (!m_currentMerkleTxHashes.empty())
                 {
                     if (txhash == m_currentMerkleTxHashes.front())
@@ -164,8 +164,10 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     }
                     m_currentMerkleTxIndex++;
                 }
-                        
-                if (m_bBlocksFetched && m_currentMerkleTxIndex == m_currentMerkleTxCount)
+
+                // Once the queue is empty, signal completion of block sync.
+                // The m_bBlocksSynched flag ensures we won't end up here again until we receive a new block.
+                if (m_currentMerkleTxHashes.empty())
                 {
                     m_bBlocksSynched = true;
                     notifyBlocksSynched();
@@ -195,7 +197,6 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
             if (headersMessage.headers.size() > 0)
             {
                 boost::lock_guard<boost::mutex> syncLock(m_syncMutex);
-                m_bFetchingHeaders = true;
                 notifyFetchingHeaders();
                 for (auto& item: headersMessage.headers)
                 {
@@ -244,7 +245,6 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         catch (const std::exception& e)
         {
             LOGGER(error) << "block tree exception: " << e.what() << std::endl;
-            m_bFetchingHeaders = false;
         }
     });
 
@@ -301,15 +301,11 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 m_blockTree.flushToFile(m_blockTreeFile);
                 notifyStatus("Done flushing block chain to file");
                 m_bHeadersSynched = true;
-                m_bBlocksFetched = false;
                 m_bBlocksSynched = false;
-                //if (!m_bFetchingBlocks) { notifyHeadersSynched(); }
             }
             else {
                 m_bHeadersSynched = false;
                 m_bBlocksSynched = false;
-                m_bBlocksFetched = false;
-                //m_bFetchingBlocks = false;
 
                 // Possible reorg
                 LOGGER(error) << "NetworkSync merkle block handler - block rejected: " << hash.getHex() << " - possible reorg." << endl;
@@ -343,8 +339,9 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     if (m_currentMerkleTxCount == 0) { notifyMerkleBlock(m_currentMerkleBlock); }
 
                     uint32_t bestHeight = m_blockTree.getBestHeight();
-                    if (bestHeight > (uint32_t)header.height) // We still need to fetch more blocks
+                    if (bestHeight > (uint32_t)header.height)
                     {
+                        // We still have more blocks to fetch
                         const ChainHeader& nextHeader = m_blockTree.getHeader(header.height + 1);
                         uchar_vector hash = nextHeader.getHashLittleEndian();
                         std::string hashString = hash.getHex();
@@ -363,10 +360,12 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                             notifyConnectionError(e.what());
                         }
                     }
-                    else if (bestHeight == m_lastRequestedBlockHeight)
+                    else //if (bestHeight == m_lastRequestedBlockHeight)
                     {
-                        m_bBlocksFetched = true;
-                        m_lastRequestedBlockHeight++; // The request is not made explicitly - it is implied.
+                        // No more blocks to fetch for now
+                        m_lastRequestedBlockHeight++; // The request is not made explicitly - it is implied. Now we wait...
+
+                        // If filtered block contains none of our transactions, we must signal completion here rather than in tx handler
                         if (m_currentMerkleTxHashes.empty())
                         {
                             m_bBlocksSynched = true;
@@ -486,13 +485,14 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
 {
     if (!m_bConnected) throw std::runtime_error("NetworkSync::syncBlocks() - must connect before synching.");
 
+    if (!m_bHeadersSynched) throw std::runtime_error("NetworkSync::syncBlocks() - headers must be synched before calling.");
+
 /*
     boost::lock_guard<boost::mutex> lock(m_connectionMmutex);
     if (!m_bConnected) throw std::runtime_error("NetworkSync::syncBlocks() - must connect before synching.");
 */
 
     m_bFetchingBlocks = true;
-    m_bBlocksFetched = false;
     m_bBlocksSynched = false;
 
     ChainHeader header;
@@ -629,7 +629,6 @@ void NetworkSync::stop()
         m_bStarted = false;
         m_bHeadersSynched = false;
         m_bBlocksSynched = false;
-        m_bFetchingHeaders = false;
         m_bFetchingBlocks = false;
         while (!m_currentMerkleTxHashes.empty()) { m_currentMerkleTxHashes.pop(); }
         //m_currentMerkleTxHashes.clear();

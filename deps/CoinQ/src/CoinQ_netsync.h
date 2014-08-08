@@ -126,11 +126,9 @@ private:
     std::string m_blockTreeFile;
     CoinQBlockTreeMem m_blockTree;
     bool m_blockTreeLoaded;
-    bool m_bFetchingHeaders;
     bool m_bHeadersSynched;
 
     bool m_bFetchingBlocks;
-    bool m_bBlocksFetched;
     bool m_bBlocksSynched;
 
     uint32_t m_lastRequestedBlockHeight;
