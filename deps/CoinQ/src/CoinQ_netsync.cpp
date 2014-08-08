@@ -556,6 +556,8 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
         nextBlockRequestHeight = header.height;
     }
 
+    m_lastRequestedBlockHeight = (uint32_t)nextBlockRequestHeight;
+
     if (bestHeader.height >= nextBlockRequestHeight)
     {
         std::stringstream status;
@@ -569,7 +571,6 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
         status << "Asking for block " << hash.getHex();
         LOGGER(debug) << status.str() << std::endl;
         notifyStatus(status.str());
-        m_lastRequestedBlockHeight = (uint32_t)nextBlockRequestHeight;
         m_peer.getFilteredBlock(hash);
     }
     else
