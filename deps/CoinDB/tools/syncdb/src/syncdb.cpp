@@ -74,6 +74,14 @@ void subscribeHandlers(SynchedVault& synchedVault)
     {
         cout << "Transaction confirmation error - Merkle block hash: " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " Tx hash: " << uchar_vector(txhash).getHex() << endl;
     });
+
+    synchedVault.subscribeBestHeightChanged([](uint32_t bestheight) {
+        cout << "Best height: " << bestheight << endl;
+    });
+
+    synchedVault.subscribeSyncHeightChanged([](uint32_t syncheight) {
+        cout << "Sync height: " << syncheight << endl;
+    });
 }
 
 int main(int argc, char* argv[])
