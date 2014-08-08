@@ -3375,6 +3375,33 @@ unsigned int Vault::deleteMerkleBlock(uint32_t height)
 
 unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
 {
+    unsigned int count = 0;
+
+    typedef odb::query<ConfirmedTxView> query_t;
+    odb::result<ConfirmedTxView> r(db_->query<ConfirmedTxView>((query_t::BlockHeader::height >= height) + "ORDER BY" + query_t::BlockHeader::height));
+    for (auto& view: r)
+    {
+        std::shared_ptr<Tx> tx(db_->find<Tx>(view.tx_id));
+        if (tx)
+        {
+            tx->blockheader(nullptr);
+            db_->update(tx);
+            signalQueue.push(notifyTxUpdated.bind(tx));
+        }
+
+        std::shared_ptr<MerkleBlock> merkleblock(db_->find<MerkleBlock>(view.merkleblock_id));
+        if (merkleblock) { db_->erase(merkleblock); }
+
+        std::shared_ptr<BlockHeader> blockheader(db_->find<BlockHeader>(view.blockheader_id));
+        if (blockheader)
+        {
+            db_->erase(blockheader);
+            count++;
+        }
+    }
+
+    return count;
+/*
     typedef odb::query<BlockHeader> query_t;
     odb::result<BlockHeader> r(db_->query<BlockHeader>((query_t::height >= height) + "ORDER BY" + query_t::height + "DESC"));
     unsigned int count = 0;
@@ -3402,6 +3429,7 @@ unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
         count++;
     }
     return count;
+*/
 }
 
 unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)
