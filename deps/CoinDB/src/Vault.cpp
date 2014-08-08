@@ -2245,7 +2245,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
 
 std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs)
 {
-    LOGGER(trace) << "Vault::insertMerkleTx(" << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << ", " << cointx.getHashLittleEndian().getHex() << ", " << txindex << ", " << txcount << ", " << (verifysigs ? "true" : "false") << std::endl;
+    LOGGER(trace) << "Vault::insertMerkleTx(" << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << ", " << cointx.getHashLittleEndian().getHex() << ", " << txindex << ", " << txcount << ", " << (verifysigs ? "true" : "false") << ")" << std::endl;
 
     std::shared_ptr<Tx> tx;
     {
@@ -2313,6 +2313,9 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
                 odb::result<BlockHeader> r(db_->query<BlockHeader>(odb::query<BlockHeader>::height >= (unsigned int)chainmerkleblock.height));
                 for (auto& blockheader: r) { db_->erase(blockheader); }
             }
+
+            // TODO: test and use the following instead of the above three code blocks
+            //deleteMerkleBlock_unwrapped((uint32_t)chainmerkleblock.height);
 
             // Instantiate the new merkle block and store
             merkleblock = std::make_shared<MerkleBlock>(chainmerkleblock);
@@ -2383,6 +2386,111 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
         LOGGER(error) << "insertNewTx_unwrapped() threw exception: " << e.what() << std::endl;
         signalQueue.push(notifyMerkleBlockInsertionError.bind(merkleblock, e.what()));
     }
+
+    if (txindex + 1 == txcount)
+    {
+        merkleblock->txsinserted(true);
+        db_->update(merkleblock);
+        signalQueue.push(notifyMerkleBlockInserted.bind(merkleblock));
+    }
+
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::confirmMerkleTx(const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount)
+{
+    LOGGER(trace) << "Vault::confirmMerkleTx(" << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << ", " << uchar_vector(txhash).getHex() << ", " << txindex << ", " << txcount << ")" << std::endl;
+
+    std::shared_ptr<Tx> tx;
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = confirmMerkleTx_unwrapped(chainmerkleblock, txhash, txindex, txcount);
+        t.commit();
+    }
+
+    signalQueue.flush();
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::confirmMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount)
+{
+    bytes_t blockhash = chainmerkleblock.blockHeader.getHashLittleEndian();
+
+    // Instantiate merkleblock
+    std::shared_ptr<MerkleBlock> merkleblock;
+    {
+        odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader.is_not_null() && odb::query<MerkleBlock>::blockheader->hash == blockhash));
+        if (!r.empty())
+        {
+            merkleblock = r.begin().load();
+        }
+        else
+        {
+            // Connect to chain
+            if (txindex != 0) throw MerkleTxBadInsertionOrderException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+
+            odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.blockHeader.prevBlockHash));
+            if (r.empty())
+            {
+                odb::result<BlockCountView> r(db_->query<BlockCountView>());
+                if (!r.empty() && r.begin()->count > 0) throw MerkleTxFailedToConnectException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+            }
+            else
+            {
+                if ((unsigned int)chainmerkleblock.height != r.begin().load()->blockheader()->height() + 1)
+                    throw MerkleTxInvalidHeightException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+            }
+
+            {
+                // Unconfirm any transactions with equal or larger height
+                odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::blockheader->height >= (unsigned int)chainmerkleblock.height));
+                for (odb::result<Tx>::iterator it = r.begin(); it != r.end(); ++it)
+                {
+                    std::shared_ptr<Tx> tx(it.load());
+                    tx->status(Tx::PROPAGATED);
+                    db_->update(tx);
+                    signalQueue.push(notifyTxUpdated.bind(tx));
+                }
+            }
+
+
+            {
+                // Delete any merkleblocks with equal or larger height
+                odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->height >= (unsigned int)chainmerkleblock.height));
+                for (auto& merkleblock: r) { db_->erase(merkleblock); }
+            }
+
+            {
+                // Delete any blockheaders with equal or larger height
+                odb::result<BlockHeader> r(db_->query<BlockHeader>(odb::query<BlockHeader>::height >= (unsigned int)chainmerkleblock.height));
+                for (auto& blockheader: r) { db_->erase(blockheader); }
+            }
+
+            // TODO: test and use the following instead of the above three code blocks
+            //deleteMerkleBlock_unwrapped((uint32_t)chainmerkleblock.height);
+
+            // Instantiate the new merkle block and store
+            merkleblock = std::make_shared<MerkleBlock>(chainmerkleblock);
+            db_->persist(merkleblock->blockheader());
+            db_->persist(merkleblock);
+        }
+    }
+
+    odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
+    if (tx_r.empty())
+    {
+        signalQueue.push(notifyTxConfirmationError.bind(merkleblock, txhash));
+        return nullptr;
+    }
+
+    std::shared_ptr<Tx> tx(tx_r.begin().load());
+    tx->blockheader(merkleblock->blockheader());
+    tx->status(Tx::CONFIRMED);
+    tx->conflicting(false);
+    db_->update(tx);
+    signalQueue.push(notifyTxUpdated.bind(tx));
 
     if (txindex + 1 == txcount)
     {

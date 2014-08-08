@@ -36,6 +36,8 @@ typedef Signals::Signal<std::shared_ptr<MerkleBlock>> MerkleBlockSignal;
 typedef Signals::Signal<std::shared_ptr<Tx>, const std::string& /*description*/> TxErrorSignal;
 typedef Signals::Signal<std::shared_ptr<MerkleBlock>, const std::string& /*description*/> MerkleBlockErrorSignal;
 
+typedef Signals::Signal<std::shared_ptr<MerkleBlock>, bytes_t> TxConfirmationErrorSignal;
+
 class Vault
 {
 public:
@@ -144,6 +146,7 @@ public:
     std::shared_ptr<Tx>                     insertTx(std::shared_ptr<Tx> tx, bool replace_labels = false); // Inserts transaction only if it affects one of our accounts. Returns transaction in vault if change occured. Otherwise returns nullptr.
     std::shared_ptr<Tx>                     insertNewTx(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader = nullptr, bool verifysigs = false);
     std::shared_ptr<Tx>                     insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs = false);
+    std::shared_ptr<Tx>                     confirmMerkleTx(const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount);
     std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
     std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations, bool insert = false); // Pass empty output scripts to generate change outputs.
     void                                    deleteTx(const bytes_t& tx_hash); // Tries both signed and unsigned hashes. Throws TxNotFoundException.
@@ -193,6 +196,9 @@ public:
 
     Signals::Connection subscribeTxInsertionError(TxErrorSignal::Slot slot) { return notifyTxInsertionError.connect(slot); }
     Signals::Connection subscribeMerkleBlockInsertionError(MerkleBlockErrorSignal::Slot slot) { return notifyMerkleBlockInsertionError.connect(slot); }
+
+    Signals::Connection subscribeTxConfirmationError(TxConfirmationErrorSignal::Slot slot) { return notifyTxConfirmationError.connect(slot); }
+
     void clearAllSlots()
     {
         notifyTxInserted.clear();
@@ -201,6 +207,8 @@ public:
 
         notifyTxInsertionError.clear();
         notifyMerkleBlockInsertionError.clear();
+
+        notifyTxConfirmationError.clear();
     }
 
 protected:
@@ -286,6 +294,7 @@ protected:
     std::shared_ptr<Tx>                     insertTx_unwrapped(std::shared_ptr<Tx> tx, bool replace_labels = false);
     std::shared_ptr<Tx>                     insertNewTx_unwrapped(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader = nullptr, bool verifysigs = false);
     std::shared_ptr<Tx>                     insertMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs = false);
+    std::shared_ptr<Tx>                     confirmMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount);
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations);
     void                                    deleteTx_unwrapped(std::shared_ptr<Tx> tx);
@@ -328,6 +337,8 @@ protected:
 
     TxErrorSignal                           notifyTxInsertionError;
     MerkleBlockErrorSignal                  notifyMerkleBlockInsertionError;
+
+    TxConfirmationErrorSignal               notifyTxConfirmationError;
 
 private:
     mutable boost::mutex mutex;
