@@ -148,11 +148,23 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         {
             if (m_bFetchingBlocks)
             {
+/*                
                 if (m_currentMerkleTxHashes.empty()) throw runtime_error("Should not be receiving transactions before blocks when fetching blocks.");
 
                 if (!m_currentMerkleTxHashes.count(txhash)) throw runtime_error("Expecting merkle block transactions, but transaction received is not in merkle block.");
-                m_currentMerkleTxHashes.erase(txhash);
-                notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex++, m_currentMerkleTxCount);
+*/
+
+                while (!m_currentMerkleTxHashes.empty())
+                {
+                    if (txhash == m_currentMerkleTxHashes.front())
+                    {
+                        notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex++, m_currentMerkleTxCount);
+                        m_currentMerkleTxHashes.pop();
+                        break;
+                    }
+                    m_currentMerkleTxIndex++;
+                }
+                        
                 if (m_bBlocksFetched && m_currentMerkleTxIndex == m_currentMerkleTxCount)
                 {
                     m_bBlocksSynched = true;
@@ -289,7 +301,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 m_blockTree.flushToFile(m_blockTreeFile);
                 notifyStatus("Done flushing block chain to file");
                 //m_bHeadersSynched = true;
-                //m_bBlocksFetched = false;
+                m_bBlocksFetched = false;
                 m_bBlocksSynched = false;
                 //if (!m_bFetchingBlocks) { notifyHeadersSynched(); }
             }
@@ -321,7 +333,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     // Set tx hashes
                     m_currentMerkleBlock = ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork);
                     std::vector<uchar_vector> txhashes = tree.getTxHashesLittleEndianVector();
-                    for (auto& txhash: txhashes) { m_currentMerkleTxHashes.insert(txhash); }
+                    for (auto& txhash: txhashes) { m_currentMerkleTxHashes.push(txhash); }
                     m_currentMerkleTxIndex = 0;
                     m_currentMerkleTxCount = txhashes.size();
 
@@ -616,7 +628,8 @@ void NetworkSync::stop()
         m_bBlocksSynched = false;
         m_bFetchingHeaders = false;
         m_bFetchingBlocks = false;
-        m_currentMerkleTxHashes.clear();
+        while (!m_currentMerkleTxHashes.empty()) { m_currentMerkleTxHashes.pop(); }
+        //m_currentMerkleTxHashes.clear();
         m_peer.stop();
     }
 
