@@ -2226,7 +2226,18 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
 
     if (sending_account || receive)
     {
-        for (auto& script:  updated_scripts)        { db_->update(script);                  } 
+        for (auto& script:  updated_scripts)
+        {
+            db_->update(script);
+            try
+            {
+                refillAccountBinPool_unwrapped(script->account_bin());
+            }
+            catch (const KeychainChainCodeLockedException& e)
+            {
+                LOGGER(debug) << "Vault::insertTx_unwrapped - Chain code for keychain " << e.keychain_name() << " is locked so change pool cannot be replenished." << std::endl;
+            }
+        }
 
         tx->updateTotals(); db_->persist(tx);
         for (auto& txin:    tx->txins())            { db_->persist(txin);                   }
