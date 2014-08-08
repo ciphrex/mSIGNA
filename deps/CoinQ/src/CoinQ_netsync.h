@@ -48,7 +48,7 @@ public:
     void setCoinParams(const CoinQ::CoinParams& coinParams);
     const CoinQ::CoinParams& getCoinParams() const { return m_coinParams; }
 
-    void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = true, std::function<void(const CoinQBlockTreeMem&)> callback = nullptr);
+    void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = true, CoinQBlockTreeMem::callback_t callback = nullptr);
     bool headersSynched() const { return m_bHeadersSynched; }
     int getBestHeight();
     const ChainHeader& getBestHeader() const { return m_blockTree.getHeader(-1); }

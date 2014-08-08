@@ -399,14 +399,14 @@ void NetworkSync::setCoinParams(const CoinQ::CoinParams& coinParams)
     m_coinParams = coinParams;    
 }
 
-void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork, std::function<void(const CoinQBlockTreeMem&)> callback)
+void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork, CoinQBlockTreeMem::callback_t callback)
 {
     m_blockTreeFile = blockTreeFile;
 
     try
     {
-        m_blockTree.loadFromFile(blockTreeFile, bCheckProofOfWork,
-            [&](const CoinQBlockTreeMem& blockTree) { if (callback) callback(blockTree); });
+        m_blockTree.loadFromFile(blockTreeFile, bCheckProofOfWork, callback);
+
         //m_bHeadersSynched = true;
         std::stringstream status;
         status << "Best Height: " << m_blockTree.getBestHeight() << " / " << "Total Work: " << m_blockTree.getTotalWork().getDec();
