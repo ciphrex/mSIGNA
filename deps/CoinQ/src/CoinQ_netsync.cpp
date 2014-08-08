@@ -142,7 +142,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         if (m_currentMerkleTxHashes.empty())
         {
             notifyNewTx(tx);
-            m_processedTxs.insert(txhash);
+            m_mempoolTxs.insert(txhash);
             return;
         }
 
@@ -705,11 +705,11 @@ void NetworkSync::processConfirmations()
     LOGGER(trace) << "NetworkSync::processConfirmations()" << endl;
     if (m_currentMerkleTxHashes.empty()) return;
 
-    while (m_processedTxs.count(m_currentMerkleTxHashes.front()))
+    while (m_mempoolTxs.count(m_currentMerkleTxHashes.front()))
     {
-        LOGGER(trace) << "NetworkSync::processConfirmations() - Merkle transaction count: " << m_currentMerkleTxCount << " - Mempool transaction count: " << m_processedTxs.size() << endl;
+        LOGGER(trace) << "NetworkSync::processConfirmations() - Merkle transaction count: " << m_currentMerkleTxCount << " - Mempool transaction count: " << m_mempoolTxs.size() << endl;
         notifyTxConfirmed(m_currentMerkleBlock, m_currentMerkleTxHashes.front(), m_currentMerkleTxIndex, m_currentMerkleTxCount);
-        m_processedTxs.erase(m_currentMerkleTxHashes.front());
+        m_mempoolTxs.erase(m_currentMerkleTxHashes.front());
 
         m_currentMerkleTxHashes.pop();
         m_currentMerkleTxIndex++;

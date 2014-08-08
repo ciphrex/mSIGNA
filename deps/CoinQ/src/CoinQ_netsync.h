@@ -141,7 +141,7 @@ private:
     void initBlockFilter();
 
     // Merkle block state
-    std::set<bytes_t> m_processedTxs;
+    std::set<bytes_t> m_mempoolTxs;
     ChainMerkleBlock m_currentMerkleBlock;
     std::queue<bytes_t> m_currentMerkleTxHashes;
     unsigned int m_currentMerkleTxIndex;
