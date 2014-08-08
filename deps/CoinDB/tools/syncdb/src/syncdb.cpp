@@ -69,6 +69,11 @@ void subscribeHandlers(SynchedVault& synchedVault)
     {
         cout << "Merkle block insertion error: " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " Height: " << merkleblock->blockheader()->height() << endl << "  " << description << endl;
     });
+
+    synchedVault.subscribeTxConfirmationError([](std::shared_ptr<MerkleBlock> merkleblock, bytes_t txhash)
+    {
+        cout << "Transaction confirmation error - Merkle block hash: " << uchar_vector(merkleblock->blockheader()->hash()).getHex() << " Tx hash: " << uchar_vector(txhash).getHex() << endl;
+    });
 }
 
 int main(int argc, char* argv[])
