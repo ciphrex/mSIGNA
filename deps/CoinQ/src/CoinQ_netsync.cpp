@@ -301,11 +301,23 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 // Do nothing but skip over last else.
             }
             else if (m_blockTree.insertHeader(merkleBlock.blockHeader)) {
+                // Flushing block chain to file is a time consuming operation - we need to keep a local queue to store incoming messages
+                // and do the flushing in a separate thread.
                 notifyStatus("Flushing block chain to file...");
                 m_blockTree.flushToFile(m_blockTreeFile);
                 notifyStatus("Done flushing block chain to file");
                 m_bHeadersSynched = true;
                 m_bBlocksSynched = false;
+
+                // Temporary workaround - fetch the block again.
+                try
+                {
+                    m_peer.getFilteredBlock(hash);
+                }
+                catch (const exception& e)
+                {
+                    notifyConnectionError(e.what());
+                }
             }
             else {
                 m_bHeadersSynched = false;
@@ -349,8 +361,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                         // We still have more blocks to fetch
                         m_bBlocksFetched = false;
                         const ChainHeader& nextHeader = m_blockTree.getHeader(header.height + 1);
-                        uchar_vector hash = nextHeader.getHashLittleEndian();
-                        std::string hashString = hash.getHex();
+                        uchar_vector nextHash = nextHeader.getHashLittleEndian();
+                        std::string hashString = nextHash.getHex();
 
                         std::stringstream status;
                         status << "Asking for block " << hashString << " / height: " << nextHeader.height;
@@ -359,7 +371,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                         m_lastRequestedBlockHeight = nextHeader.height;
                         try
                         {
-                            m_peer.getFilteredBlock(hash);
+                            m_peer.getFilteredBlock(nextHash);
                         }
                         catch (const exception& e)
                         {
