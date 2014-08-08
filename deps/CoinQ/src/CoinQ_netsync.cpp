@@ -325,6 +325,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
             }
 
             // TODO: queue received merkleblocks locally so we do not need to refetch from peer and can support downloading out-of-order from multiple peers.
+            LOGGER(trace) << "m_bFetchingBlocks: " << (m_bFetchingBlocks ? "true" : "false") << " - m_bHeadersSynched: " << (m_bHeadersSynched ? "true" : "false") << std::endl;
             if (m_bFetchingBlocks && m_bHeadersSynched)
             {
                 ChainHeader header = m_blockTree.getHeader(hash);
@@ -490,8 +491,9 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
     if (!m_bConnected) throw std::runtime_error("NetworkSync::syncBlocks() - must connect before synching.");
 */
 
-    m_bFetchingBlocks = false;
+    m_bFetchingBlocks = true;
     m_bBlocksFetched = false;
+    m_bBlocksSynched = false;
 
     ChainHeader header;
     bool foundHeader = false;
@@ -530,7 +532,6 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
 
     if (bestHeader.height >= nextBlockRequestHeight)
     {
-        m_bFetchingBlocks = true;
         std::stringstream status;
         status << "Resynching blocks " << nextBlockRequestHeight << " - " << bestHeader.height;
         LOGGER(debug) << status.str() << std::endl;
