@@ -142,7 +142,7 @@ all: lib tools
 
 lib: lib/libCoinDB.a
 
-tools: $(TOOLS) 
+tools: coindb syncdb
 
 lib/libCoinDB.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
@@ -182,14 +182,18 @@ obj/SynchedVault.o: src/SynchedVault.cpp src/SynchedVault.h src/VaultExceptions.
 #
 # coindb command line tool
 #
-tools/coindb/build/coindb$(EXE_EXT): tools/coindb/src/coindb.cpp tools/coindb/src/config.h tools/coindb/src/formatting.h lib/libCoinDB.a
+coindb: lib tools/coindb/build/coindb$(EXE_EXT)
+
+tools/coindb/build/coindb$(EXE_EXT): tools/coindb/src/coindb.cpp tools/coindb/src/formatting.h src/CoinDBConfig.h lib/libCoinDB.a
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS) $(PLATFORM_LIBS)
 
 #
 # syncdb command line tool
 #
-tools/syncdb/build/syncdb$(EXE_EXT): tools/syncdb/src/syncdb.cpp tools/coindb/src/config.h lib/libCoinDB.a
-	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) -Itools/coindb/src $< -o $@ $(LIB_PATH) $(LIBS) $(PLATFORM_LIBS)
+syncdb: lib tools/syncdb/build/syncdb$(EXE_EXT)
+
+tools/syncdb/build/syncdb$(EXE_EXT): tools/syncdb/src/syncdb.cpp src/CoinDBConfig.h lib/libCoinDB.a
+	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS) $(PLATFORM_LIBS)
 
 install: install_lib install_tools
 

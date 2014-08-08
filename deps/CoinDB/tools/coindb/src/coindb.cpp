@@ -7,8 +7,9 @@
 // All Rights Reserved.
 //
 
-#include "config.h"
 #include "formatting.h"
+
+#include <CoinDBConfig.h>
 
 #include <cli.hpp>
 
@@ -30,7 +31,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-const std::string COINDB_VERSION = "v0.4.4";
+const std::string COINDB_VERSION = "v0.4.5";
 
 using namespace std;
 using namespace odb::core;
@@ -1360,7 +1361,12 @@ int main(int argc, char* argv[])
     try 
     {
         CoinDBConfig config;
-        config.init(argc, argv);
+        if (!config.parseParams(argc, argv))
+        {
+            cout << config.getHelpOptions();
+            return 0;
+        }
+
         g_dbuser = config.getDatabaseUser();
         g_dbpasswd = config.getDatabasePassword();
         return shell.exec(argc, argv);
