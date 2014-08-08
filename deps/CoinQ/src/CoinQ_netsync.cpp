@@ -449,6 +449,7 @@ void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProof
     m_blockTree.setGenesisBlock(m_coinParams.genesis_block());
     //m_bHeadersSynched = true;
     notifyStatus("Block tree file not found. A new one will be created.");
+    notifyAddBestChain(m_blockTree.getHeader(-1));
     //notifyHeadersSynched();
 }
 
