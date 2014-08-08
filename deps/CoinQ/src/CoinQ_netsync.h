@@ -37,7 +37,8 @@ typedef ChainMerkleBlock chain_merkle_block_t;
 namespace CoinQ {
     namespace Network {
 
-typedef std::function<void(const ChainMerkleBlock&, const Coin::Transaction&, unsigned int /*txIndex*/, unsigned int /*txCount*/)> merkle_tx_slot_t;
+typedef std::function<void(const ChainMerkleBlock&, const Coin::Transaction&, unsigned int /*txindex*/, unsigned int /*txcount*/)> merkle_tx_slot_t;
+typedef std::function<void(const ChainMerkleBlock&, const bytes_t& /*txhash*/ , unsigned int /*txindex*/, unsigned int /*txcount*/)> tx_confirmed_slot_t;
 
 class NetworkSync
 {
@@ -102,6 +103,7 @@ public:
     // PEER EVENT SUBSCRIPTIONS
     void subscribeNewTx(tx_slot_t slot) { notifyNewTx.connect(slot); }
     void subscribeMerkleTx(merkle_tx_slot_t slot) { notifyMerkleTx.connect(slot); }
+    void subscribeTxConfirmed(tx_confirmed_slot_t slot) { notifyTxConfirmed.connect(slot); }
 
     void subscribeBlock(chain_block_slot_t slot) { notifyBlock.connect(slot); }
     void subscribeMerkleBlock(chain_merkle_block_slot_t slot) { notifyMerkleBlock.connect(slot); }
@@ -139,6 +141,7 @@ private:
     void initBlockFilter();
 
     // Merkle block state
+    std::set<bytes_t> m_processedTxs;
     ChainMerkleBlock m_currentMerkleBlock;
     std::queue<bytes_t> m_currentMerkleTxHashes;
     unsigned int m_currentMerkleTxIndex;
@@ -166,6 +169,7 @@ private:
     // Peer signals
     CoinQSignal<const Coin::Transaction&> notifyNewTx;
     CoinQSignal<const ChainMerkleBlock&, const Coin::Transaction&, unsigned int, unsigned int> notifyMerkleTx;
+    CoinQSignal<const ChainMerkleBlock&, const bytes_t&, unsigned int, unsigned int> notifyTxConfirmed;
 
     CoinQSignal<const ChainBlock&> notifyBlock;
     CoinQSignal<const ChainMerkleBlock&> notifyMerkleBlock;

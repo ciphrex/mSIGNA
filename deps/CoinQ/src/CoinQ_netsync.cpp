@@ -141,6 +141,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         if (m_bBlocksSynched)
         {
             notifyNewTx(tx);
+            m_processedTxs.insert(txhash);
             return;
         }
 
@@ -148,30 +149,32 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         {
             if (m_bFetchingBlocks)
             {
-/*                
-                if (m_currentMerkleTxHashes.empty()) throw runtime_error("Should not be receiving transactions before blocks when fetching blocks.");
+                if (m_currentMerkleTxHashes.empty()) throw runtime_error("Should not be receiving unconfirmed transactions while processing blocks.");
 
-                if (!m_currentMerkleTxHashes.count(txhash)) throw runtime_error("Expecting merkle block transactions, but transaction received is not in merkle block.");
-*/
-
-                // Notify of any new merkle transactions, pop any tx hashes in our queue before and up to the received transaction.
+                // Notify of confirmations of previously received transactions as well as the current one
                 while (!m_currentMerkleTxHashes.empty())
                 {
                     if (txhash == m_currentMerkleTxHashes.front())
                     {
                         notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex, m_currentMerkleTxCount);
-                        m_currentMerkleTxHashes.pop();
-                        m_currentMerkleTxIndex++;
-                        break;
                     }
+                    else if (m_processedTxs.count(m_currentMerkleTxHashes.front()))
+                    {
+                        notifyTxConfirmed(m_currentMerkleBlock, m_currentMerkleTxHashes.front(), m_currentMerkleTxIndex, m_currentMerkleTxCount);
+                        m_processedTxs.erase(m_currentMerkleTxHashes.front());
+                    }
+                    else break;
+
                     m_currentMerkleTxHashes.pop();
                     m_currentMerkleTxIndex++;
                 }
 
                 // Once the queue is empty, signal completion of block sync.
                 // The m_bBlocksSynched flag ensures we won't end up here again until we receive a new block.
-                if (m_currentMerkleTxHashes.empty() && m_bBlocksFetched)
+                if (m_currentMerkleTxHashes.empty())
                 {
+                    m_processedTxs.clear();
+
                     LOGGER(trace) << "Block sync detected from tx handler." << endl;
                     m_bBlocksSynched = true;
                     notifyBlocksSynched();
@@ -301,23 +304,14 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 // Do nothing but skip over last else.
             }
             else if (m_blockTree.insertHeader(merkleBlock.blockHeader)) {
-                // Flushing block chain to file is a time consuming operation - we need to keep a local queue to store incoming messages
+                // TODO: Flushing block chain to file is a time consuming operation - we need to keep a local queue to store incoming messages
                 // and do the flushing in a separate thread.
                 notifyStatus("Flushing block chain to file...");
                 m_blockTree.flushToFile(m_blockTreeFile);
                 notifyStatus("Done flushing block chain to file");
+
                 m_bHeadersSynched = true;
                 m_bBlocksSynched = false;
-
-                // Temporary workaround - fetch the block again.
-                try
-                {
-                    m_peer.getFilteredBlock(hash);
-                }
-                catch (const exception& e)
-                {
-                    notifyConnectionError(e.what());
-                }
             }
             else {
                 m_bHeadersSynched = false;
@@ -340,6 +334,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
             LOGGER(trace) << "m_bFetchingBlocks: " << (m_bFetchingBlocks ? "true" : "false") << " - m_bHeadersSynched: " << (m_bHeadersSynched ? "true" : "false") << std::endl;
             if (m_bFetchingBlocks && m_bHeadersSynched)
             {
+                notifyFetchingBlocks();
+
                 ChainHeader header = m_blockTree.getHeader(hash);
                 LOGGER(trace) << "m_lastRequestedBlockHeight: " << m_lastRequestedBlockHeight << ", header.height: " << header.height << std::endl;
                 if ((uint32_t)header.height == m_lastRequestedBlockHeight)
@@ -387,6 +383,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                         // If filtered block contains none of our transactions, we must signal completion here rather than in tx handler
                         if (m_currentMerkleTxHashes.empty())
                         {
+                            m_processedTxs.clear();
+
                             LOGGER(trace) << "Block sync detected from merkle block handler." << endl;
                             m_bBlocksSynched = true;
                             notifyBlocksSynched();
@@ -394,6 +392,16 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     }
                 }
             }
+
+            // Flush only after processing block
+            /*
+            if (!m_blockTree.flushed())
+            {
+                notifyStatus("Flushing block chain to file...");
+                m_blockTree.flushToFile(m_blockTreeFile);
+                notifyStatus("Done flushing block chain to file");
+            }
+            */
         }
         catch (const exception& e) {
             LOGGER(error) << "NetworkSync - protocol error: " << e.what() << std::endl;
