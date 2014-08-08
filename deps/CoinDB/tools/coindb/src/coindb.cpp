@@ -1039,8 +1039,6 @@ cli::result_t cmd_randombytes(const cli::params_t& params)
 
 int main(int argc, char* argv[])
 {
-    INIT_LOGGER("coindb.log");
-
     stringstream helpMessage;
     helpMessage << "CoinDB by Eric Lombrozo " << COINDB_VERSION << " - " << DBMS;
 
@@ -1369,6 +1367,10 @@ int main(int argc, char* argv[])
 
         g_dbuser = config.getDatabaseUser();
         g_dbpasswd = config.getDatabasePassword();
+        string logfile = config.getDataDir() + "/coindb.log";
+
+        INIT_LOGGER(logfile.c_str());
+
         return shell.exec(argc, argv);
     }
     catch (const std::exception& e)
