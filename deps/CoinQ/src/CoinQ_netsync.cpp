@@ -29,7 +29,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_bHeadersSynched(false),
     m_bFetchingBlocks(false),
     m_bBlocksFetched(false),
-    m_bBlocksSynched(false)
+    m_bBlocksSynched(false),
+    m_lastRequestedBlockHeight(0)
 {
     // Select hash functions
     Coin::CoinBlockHeader::setHashFunc(m_coinParams.block_header_hash_function());
@@ -235,6 +236,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     notifyStatus("Done flushing block chain to file");
                 }
 
+                m_lastRequestedBlockHeight = m_blockTree.getBestHeight() + 1;
                 m_bHeadersSynched = true;
                 notifyHeadersSynched();
             }
@@ -449,7 +451,6 @@ void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProof
     m_blockTree.setGenesisBlock(m_coinParams.genesis_block());
     //m_bHeadersSynched = true;
     notifyStatus("Block tree file not found. A new one will be created.");
-    notifyAddBestChain(m_blockTree.getHeader(-1));
     //notifyHeadersSynched();
 }
 
