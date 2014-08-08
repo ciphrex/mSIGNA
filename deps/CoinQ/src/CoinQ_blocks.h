@@ -2,13 +2,13 @@
 //
 // CoinQ_blocks.h 
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef _COINQ_BLOCKS_H_
-#define _COINQ_BLOCKS_H_
+#pragma once
 
+#include "CoinQ_exceptions.h"
 #include "CoinQ_signals.h"
 #include "CoinQ_slots.h"
 
@@ -183,11 +183,11 @@ public:
     int getConfirmations(const uchar_vector& hash) const;
     void clear() { mHeaderHashMap.clear(); mHeaderHeightMap.clear(); mBestHeight = -1; mTotalWork = 0; pHead = NULL; }
 
-    void loadFromFile(const std::string& filename, bool bCheckProofOfWork = true, std::function<void(const CoinQBlockTreeMem&)> callback = nullptr); 
+    typedef std::function<bool(const CoinQBlockTreeMem&)> callback_t;
+    void loadFromFile(const std::string& filename, bool bCheckProofOfWork = true, callback_t callback = nullptr); 
 
     void flushToFile(const std::string& filename);
 
     bool flushed() const { return bFlushed; }
 };
 
-#endif // _COINQ_BLOCKS_H_

@@ -10,6 +10,8 @@
 
 #include <logger/logger.h>
 
+using namespace CoinQ;
+
 bool CoinQBlockTreeMem::setBestChain(ChainHeader& header)
 {
     if (header.inBestChain) return false;
@@ -254,30 +256,22 @@ int CoinQBlockTreeMem::getConfirmations(const uchar_vector& hash) const
     return mBestHeight - it->second.height + 1;
 }
 
-void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckProofOfWork, std::function<void(const CoinQBlockTreeMem&)> callback)
+void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckProofOfWork, CoinQBlockTreeMem::callback_t callback)
 {
     boost::filesystem::path p(filename);
-    if (!boost::filesystem::exists(p)) {
-        throw std::runtime_error("Blocktree file not found.");
-    }
+    if (!boost::filesystem::exists(p)) throw BlockTreeFileNotFoundException();
 
-    if (!boost::filesystem::is_regular_file(p)) {
-        throw std::runtime_error("Blocktree invalid file type.");
-    }
+    if (!boost::filesystem::is_regular_file(p)) throw BlockTreeInvalidFileTypeException();
 
     const unsigned int RECORD_SIZE = MIN_COIN_BLOCK_HEADER_SIZE + 4;
-    if (boost::filesystem::file_size(p) % RECORD_SIZE != 0) {
-        throw std::runtime_error("Blocktree invalid file length.");
-    }
+    if (boost::filesystem::file_size(p) % RECORD_SIZE != 0) throw BlockTreeInvalidFileLengthException();
 
 #ifndef _WIN32
     std::ifstream fs(p.native(), std::ios::binary);
 #else
     std::ifstream fs(filename, std::ios::binary);
 #endif
-    if (!fs.good()) {
-        throw std::runtime_error("Blocktree error opening file for read.");
-    }
+    if (!fs.good()) throw BlockTreeFailedToOpenFileForReadException();
 
     clear();
     uchar_vector headerBytes;
@@ -289,9 +283,8 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
     char buf[RECORD_SIZE * 64];
     while (fs) {
         fs.read(buf, RECORD_SIZE * 64);
-        if (fs.bad()) {
-            throw std::runtime_error("Blocktree file read failure.");
-        }
+        if (fs.bad()) throw BlockTreeFileReadFailureException();
+            //throw std::runtime_error("Blocktree file read failure.");
 
         unsigned int nbytesread = fs.gcount();
         unsigned int pos = 0;
@@ -299,36 +292,39 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
             headerBytes.assign((unsigned char*)&buf[pos], (unsigned char*)&buf[pos + MIN_COIN_BLOCK_HEADER_SIZE]);
             header.setSerialized(headerBytes);
             hash = header.getHashLittleEndian();
-            if (memcmp(&buf[pos + MIN_COIN_BLOCK_HEADER_SIZE], &hash[0], 4)) {
-                throw std::runtime_error("Blocktree checksum error in file.");
-            }
+            if (memcmp(&buf[pos + MIN_COIN_BLOCK_HEADER_SIZE], &hash[0], 4)) throw BlockTreeChecksumErrorException();
+                //throw std::runtime_error("Blocktree checksum error in file.");
 
             try {
                 if (mBestHeight >= 0) {
                     insertHeader(header, bCheckProofOfWork);
                     if (count % 10000 == 0) {
-                        if (callback) callback(*this);
+                        if (callback && !callback(*this)) throw BlockTreeLoadInterruptedException();
                         LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - header hash: " << header.getHashLittleEndian().getHex() << " height: " << count << std::endl;
                     }
                     count++;
                 }
                 else { 
                     setGenesisBlock(header);
-                    if (callback) callback(*this);
+                    if (callback && !callback(*this)) throw BlockTreeLoadInterruptedException();
                     LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - genesis hash: " << header.getHashLittleEndian().getHex() << std::endl;
                     count++;
                 }
+            }
+            catch (const BlockTreeException& e)
+            {
+                throw e;
             }
             catch (const std::exception& e) {
                 throw std::runtime_error(std::string("Block ") + hash.getHex() + ": " + e.what());
             }
         }
-        if (pos != nbytesread) {
-            throw std::runtime_error("Blocktree unexpected end of file."); // Should never happen since length is checked above.
-        }
+        if (pos != nbytesread) throw BlockTreeUnexpectedEndOfFileException();
+            //throw std::runtime_error("Blocktree unexpected end of file."); // Should never happen since length is checked above.
+        //}
     }
 
-    if (callback) callback(*this);
+    if (callback) callback(*this); // No need to interrupt since we're done.
 }
 
 void CoinQBlockTreeMem::flushToFile(const std::string& filename)
@@ -338,9 +334,7 @@ void CoinQBlockTreeMem::flushToFile(const std::string& filename)
     }
 
     boost::filesystem::path swapfile(filename + ".swp");
-    if (boost::filesystem::exists(swapfile)) {
-        throw std::runtime_error("Swapfile already exists.");
-    }
+    if (boost::filesystem::exists(swapfile)) throw BlockTreeSwapfileAlreadyExistsException();
 
     {
 #ifndef _WIN32
@@ -358,10 +352,10 @@ void CoinQBlockTreeMem::flushToFile(const std::string& filename)
             hash = pHeader->getHashLittleEndian();
 
             fs.write((const char*)&headerBytes[0], MIN_COIN_BLOCK_HEADER_SIZE);
-            if (fs.bad()) throw std::runtime_error("Write failure.");
+            if (fs.bad()) throw BlockTreeFileWriteFailureException();
 
             fs.write((const char*)&hash[0], 4);
-            if (fs.bad()) throw std::runtime_error("Write failure.");
+            if (fs.bad()) throw BlockTreeFileWriteFailureException();
         }
     }
 
