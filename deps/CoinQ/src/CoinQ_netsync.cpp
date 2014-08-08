@@ -28,7 +28,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_bConnected(false),
     m_bHeadersSynched(false),
     m_bFetchingBlocks(false),
-    m_bBlocksFetched(true),
+    m_bBlocksFetched(false),
     m_bBlocksSynched(false)
 {
     // Select hash functions
@@ -161,7 +161,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
 
                 // Once the queue is empty, signal completion of block sync.
                 // The m_bBlocksSynched flag ensures we won't end up here again until we receive a new block.
-                if (m_currentMerkleTxHashes.empty())
+                if (m_currentMerkleTxHashes.empty() && m_bBlocksFetched)
                 {
                     m_processedTxs.clear();
 
