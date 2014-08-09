@@ -1069,7 +1069,7 @@ public:
     unsigned long id() const { return id_; }
     uint32_t version() const { return version_; }
 
-	void hash(const bytes_t& hash) { hash_ = hash; }
+    void hash(const bytes_t& hash) { hash_ = hash; }
     const bytes_t& hash() const { return status_ == UNSIGNED ? unsigned_hash_ : hash_; }
     const bytes_t& signed_hash() const { return hash_; }
     const bytes_t& unsigned_hash() const { return unsigned_hash_; }
@@ -1082,7 +1082,7 @@ public:
     uint32_t timestamp() const { return timestamp_; }
 
     bool updateStatus(status_t status = NO_STATUS); // Will keep the status it already had if it didn't change and no parameter is passed. Returns true iff status changed.
-	void status(status_t status) { status_ = status; }
+    void status(status_t status) { status_ = status; }
     status_t status() const { return status_; }
 
     void conflicting(bool conflicting) { conflicting_ = conflicting; }
