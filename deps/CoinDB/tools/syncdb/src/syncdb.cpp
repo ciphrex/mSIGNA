@@ -166,6 +166,14 @@ int main(int argc, char* argv[])
             cout << "  " << blockTree.getBestHash().getHex() << " height: " << blockTree.getBestHeight() << endl;
             return !g_bShutdown;
         });
+
+        if (g_bShutdown)
+        {
+            LOGGER(info) << "Interrupted." << endl;
+            cout << "Interrupted." << endl;
+            return 0;
+        } 
+
         cout << "Done." << endl << endl;
 
         stringstream ss;
