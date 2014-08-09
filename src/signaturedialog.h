@@ -35,6 +35,7 @@ public:
 
 public slots:
     void updateTx();
+    void updateKeychains();
 
 signals:
     void txUpdated();

@@ -25,7 +25,7 @@ void SignatureView::setModel(SignatureModel* model)
     m_model = model;
 }
 
-void SignatureView::update()
+void SignatureView::updateColumns()
 {
     resizeColumnToContents(0);
     resizeColumnToContents(1);

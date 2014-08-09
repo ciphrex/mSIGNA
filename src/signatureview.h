@@ -29,7 +29,7 @@ public:
     void setMenu(QMenu* menu) { m_menu = menu; }
 
 public slots:
-    void update();
+    void updateColumns();
 
 protected:
     void contextMenuEvent(QContextMenuEvent* event);
