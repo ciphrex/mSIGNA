@@ -141,7 +141,7 @@ void AccountModel::importAccount(const QString& /*name*/, const QString& filePat
     update();
 }
 
-void AccountModel::deleteAccount(const QString& name)
+void AccountModel::deleteAccount(const QString& /*name*/)
 {
     CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
@@ -290,7 +290,7 @@ Coin::Transaction AccountModel::createTx(const QString& accountName, const std::
     return tx->toCoinCore();
 }
 
-bytes_t AccountModel::signRawTx(const bytes_t& rawTx)
+bytes_t AccountModel::signRawTx(const bytes_t& /*rawTx*/)
 {
     CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
@@ -327,7 +327,7 @@ std::vector<bytes_t> AccountModel::getLocatorHashes() const
     return vault->getLocatorHashes();
 }
 
-bool AccountModel::insertBlock(const ChainBlock& block)
+bool AccountModel::insertBlock(const ChainBlock& /*block*/)
 {
     CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
