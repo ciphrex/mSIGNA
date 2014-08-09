@@ -234,6 +234,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     notifyStatus("Done flushing block chain to file");
                 }
 
+                notifyBlockTreeChanged();
                 m_lastRequestedBlockHeight = m_blockTree.getBestHeight() + 1;
                 m_bHeadersSynched = true;
                 notifyHeadersSynched();
@@ -297,6 +298,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 notifyStatus("Flushing block chain to file...");
                 m_blockTree.flushToFile(m_blockTreeFile);
                 notifyStatus("Done flushing block chain to file");
+                notifyBlockTreeChanged();
 
                 m_bHeadersSynched = true;
                 m_bBlocksSynched = false;
