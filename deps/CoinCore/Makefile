@@ -25,7 +25,7 @@ endif
 
 ifeq ($(OS), linux)
     ifndef SYSROOT
-        ifeq ($(USER), root)
+        ifeq ($(shell whoami), root)
             SYSROOT = /usr/local
         else
             SYSROOT = $(LOCAL_SYSROOT)
@@ -55,7 +55,7 @@ else ifeq ($(OS), mingw64)
 
 else ifeq ($(OS), osx)
     ifndef SYSROOT
-        ifeq ($(USER), root)
+        ifeq ($(shell whoami), root)
             SYSROOT = /usr/local
         else
             SYSROOT = $(LOCAL_SYSROOT)
