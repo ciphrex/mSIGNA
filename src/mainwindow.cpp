@@ -147,7 +147,7 @@ MainWindow::MainWindow() :
     connect(this, SIGNAL(signal_error(const QString&)), this, SLOT(showError(const QString&)));
 
     synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
-    synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
+    synchedVault.subscribeTxUpdated([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
     synchedVault.subscribeMerkleBlockInserted([this](std::shared_ptr<CoinDB::MerkleBlock> /*merkleblock*/) { emit signal_newBlock(); });
 
     connect(this, SIGNAL(signal_newTx()), this, SLOT(newTx()));
