@@ -430,12 +430,10 @@ void TxActions::createActions()
 void TxActions::createMenus()
 {
     menu = new QMenu();
-    menu->addAction(searchTxAction);
-    menu->addSeparator();
-    menu->addAction(signaturesAction);
-    //menu->addAction(signTxAction);
     menu->addAction(sendTxAction);
+    menu->addAction(signaturesAction);
     menu->addSeparator();
+    //menu->addAction(signTxAction);
     menu->addAction(exportTxToFileAction);
     menu->addAction(importTxFromFileAction);
     menu->addSeparator();
@@ -445,6 +443,8 @@ void TxActions::createMenus()
     menu->addAction(saveRawTxToFileAction);
     menu->addAction(insertRawTxFromFileAction);
     menu->addAction(viewTxOnWebAction);
+    menu->addSeparator();
+    menu->addAction(searchTxAction);
     menu->addSeparator();
     menu->addAction(deleteTxAction);
 }
