@@ -65,6 +65,7 @@ void SignatureDialog::updateKeychains()
 {
     m_model->updateAll();
     m_view->updateColumns();
+    emit keychainsUpdated();
 }
 
 void SignatureDialog::updateCaption()

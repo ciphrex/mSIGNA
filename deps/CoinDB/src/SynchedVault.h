@@ -75,6 +75,8 @@ public:
     Signals::Connection subscribeVaultOpened(VaultSignal::Slot slot) { return m_notifyVaultOpened.connect(slot); }
     Signals::Connection subscribeVaultClosed(VoidSignal::Slot slot) { return m_notifyVaultClosed.connect(slot); }
     Signals::Connection subscribeVaultError(ErrorSignal::Slot slot) { return m_notifyVaultError.connect(slot); }
+    Signals::Connection subscribeKeychainUnlocked(KeychainUnlockedSignal::Slot slot) { return m_notifyKeychainUnlocked.connect(slot); }
+    Signals::Connection subscribeKeychainLocked(KeychainLockedSignal::Slot slot) { return m_notifyKeychainLocked.connect(slot); }
 
     // Sync state events
     Signals::Connection subscribeStatusChanged(StatusSignal::Slot slot) { return m_notifyStatusChanged.connect(slot); }
@@ -129,6 +131,8 @@ private:
     VaultSignal                 m_notifyVaultOpened;
     VoidSignal                  m_notifyVaultClosed;
     ErrorSignal                 m_notifyVaultError;
+    KeychainUnlockedSignal      m_notifyKeychainUnlocked;
+    KeychainLockedSignal        m_notifyKeychainLocked;
 
     // Sync state events
     StatusSignal                m_notifyStatusChanged;

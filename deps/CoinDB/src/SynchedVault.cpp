@@ -309,6 +309,9 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
         }
 
         updateSyncHeight(m_vault->getBestHeight());
+
+        m_vault->subscribeKeychainUnlocked([this](const std::string& keychainName) { m_notifyKeychainUnlocked(keychainName); });
+        m_vault->subscribeKeychainLocked([this](const std::string& keychainName) { m_notifyKeychainLocked(keychainName); });
         m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
         m_vault->subscribeTxUpdated([this](std::shared_ptr<Tx> tx) { m_notifyTxUpdated(tx); });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
@@ -350,6 +353,8 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
 
         updateSyncHeight(m_vault->getBestHeight());
 
+        m_vault->subscribeKeychainUnlocked([this](const std::string& keychainName) { m_notifyKeychainUnlocked(keychainName); });
+        m_vault->subscribeKeychainLocked([this](const std::string& keychainName) { m_notifyKeychainLocked(keychainName); });
         m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
         m_vault->subscribeTxUpdated([this](std::shared_ptr<Tx> tx) { m_notifyTxUpdated(tx); });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)

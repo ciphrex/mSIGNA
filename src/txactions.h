@@ -20,6 +20,7 @@ class QString;
 class TxModel;
 class TxView;
 class AccountModel;
+class KeychainModel;
 
 namespace CoinDB
 {
@@ -31,7 +32,7 @@ class TxActions : public QObject
     Q_OBJECT
 
 public:
-    TxActions(TxModel* txModel, TxView* txView, AccountModel* accountModel, CoinDB::SynchedVault* synchedVault = nullptr); // model and view must be valid, non-null.
+    TxActions(TxModel* txModel, TxView* txView, AccountModel* accountModel, KeychainModel* keychainModel, CoinDB::SynchedVault* synchedVault = nullptr); // model and view must be valid, non-null.
 
     void setNetworkSync(CoinDB::SynchedVault* synchedVault) { m_synchedVault = synchedVault; }
 
@@ -66,6 +67,8 @@ private:
     TxView* m_txView;
 
     AccountModel* m_accountModel;
+
+    KeychainModel* m_keychainModel;
 
     CoinDB::SynchedVault* m_synchedVault;
 

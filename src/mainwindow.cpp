@@ -101,6 +101,9 @@ MainWindow::MainWindow() :
     connect(keychainSelectionModel, &QItemSelectionModel::selectionChanged,
             this, &MainWindow::updateSelectedKeychains);
 
+    //synchedVault.subscribeKeychainUnlocked([this](const std::string& /*keychain_name*/) { keychainModel->update(); });
+    //synchedVault.subscribeKeychainLocked([this](const std::string& /*keychain_name*/) { keychainModel->update(); });
+
     // Account tab page
     accountModel = new AccountModel(synchedVault);
     accountView = new AccountView();
@@ -168,7 +171,7 @@ MainWindow::MainWindow() :
 
     txView = new TxView();
     txView->setModel(txModel);
-    txActions = new TxActions(txModel, txView, accountModel, &synchedVault);
+    txActions = new TxActions(txModel, txView, accountModel, keychainModel, &synchedVault);
     connect(txActions, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
 
     txView->setMenu(txActions->getMenu());
@@ -460,7 +463,7 @@ void MainWindow::openVault(QString fileName)
 
     try
     {
-        synchedVault.openVault(fileName.toStdString(), false);    
+        synchedVault.openVault(fileName.toStdString(), false);
         updateVaultStatus(fileName);
         updateStatusMessage(tr("Opened ") + fileName);
         //if (synchedVault.isConnected()) { synchedVault.syncBlocks(); }
