@@ -2147,6 +2147,18 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
         if (!signer.isSigned()) throw TxNotSignedException(cointx.getHashLittleEndian());
     }
 
+    // If we already have it but it is unsent update to propagated
+    bytes_t txhash = cointx.getHashLittleEndian();
+    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
+    if (!r.empty())
+    {
+        std::shared_ptr<Tx> tx(r.begin().load());
+        tx->status(Tx::PROPAGATED);
+        db_->update(tx);
+        signalQueue.push(notifyTxUpdated.bind(tx));
+        return tx; 
+    }
+
     std::shared_ptr<Tx> tx(new Tx());
     tx->set(cointx, time(NULL), Tx::PROPAGATED);
     tx->blockheader(blockheader);
