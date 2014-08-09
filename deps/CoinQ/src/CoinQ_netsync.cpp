@@ -288,8 +288,6 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
             Coin::PartialMerkleTree tree(merkleBlock.nTxs, merkleBlock.hashes, merkleBlock.flags, merkleBlock.blockHeader.merkleRoot);
             LOGGER(trace) << "Merkle Tree:" << std::endl << tree.toIndentedString() << std::endl;
 
-            //if (!m_currentMerkleTxHashes.empty()) throw std::runtime_error("Block was received before getting transactions from last block.");
-
             if (m_blockTree.hasHeader(hash)) {
                 // Do nothing but skip over last else.
             }
@@ -333,6 +331,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     // Set tx hashes
                     m_currentMerkleBlock = ChainMerkleBlock(merkleBlock, true, header.height, header.chainWork);
                     std::vector<uchar_vector> txhashes = tree.getTxHashesLittleEndianVector();
+
                     while (!m_currentMerkleTxHashes.empty()) { m_currentMerkleTxHashes.pop(); }
                     for (auto& txhash: txhashes) { m_currentMerkleTxHashes.push(txhash); }
                     m_currentMerkleTxIndex = 0;
@@ -387,16 +386,6 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     }
                 }
             }
-
-            // Flush only after processing block
-            /*
-            if (!m_blockTree.flushed())
-            {
-                notifyStatus("Flushing block chain to file...");
-                m_blockTree.flushToFile(m_blockTreeFile);
-                notifyStatus("Done flushing block chain to file");
-            }
-            */
         }
         catch (const exception& e) {
             LOGGER(error) << "NetworkSync - protocol error: " << e.what() << std::endl;
@@ -649,7 +638,7 @@ void NetworkSync::stop()
 {
     {
         if (!m_bStarted) return;
-        boost::lock_guard<boost::mutex> lock(m_startMutex);
+        boost::lock_guard<boost::mutex> startLock(m_startMutex);
         if (!m_bStarted) return;
 
         m_bConnected = false;
@@ -657,9 +646,10 @@ void NetworkSync::stop()
         m_bHeadersSynched = false;
         m_bBlocksSynched = false;
         m_bFetchingBlocks = false;
-        while (!m_currentMerkleTxHashes.empty()) { m_currentMerkleTxHashes.pop(); }
-        //m_currentMerkleTxHashes.clear();
+
         m_peer.stop();
+
+        while (!m_currentMerkleTxHashes.empty()) { m_currentMerkleTxHashes.pop(); }
     }
 
     notifyStopped();
