@@ -30,6 +30,9 @@
 namespace CoinDB
 {
 
+typedef Signals::Signal<const std::string& /*keychain_name*/> KeychainUnlockedSignal;
+typedef Signals::Signal<const std::string& /*keychain_name*/> KeychainLockedSignal;
+
 typedef Signals::Signal<std::shared_ptr<Tx>> TxSignal;
 typedef Signals::Signal<std::shared_ptr<MerkleBlock>> MerkleBlockSignal;
 
@@ -190,6 +193,9 @@ public:
     ////////////////////////
     // SLOT SUBSCRIPTIONS //
     ////////////////////////
+    Signals::Connection subscribeKeychainUnlocked(KeychainUnlockedSignal::Slot slot) { return notifyKeychainUnlocked.connect(slot); }
+    Signals::Connection subscribeKeychainLocked(KeychainLockedSignal::Slot slot) { return notifyKeychainLocked.connect(slot); }
+
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return notifyTxInserted.connect(slot); }
     Signals::Connection subscribeTxUpdated(TxSignal::Slot slot) { return notifyTxUpdated.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return notifyMerkleBlockInserted.connect(slot); }
@@ -201,6 +207,9 @@ public:
 
     void clearAllSlots()
     {
+        notifyKeychainUnlocked.clear();
+        notifyKeychainLocked.clear();
+
         notifyTxInserted.clear();
         notifyTxUpdated.clear();
         notifyMerkleBlockInserted.clear();
@@ -330,6 +339,9 @@ protected:
     // SIGNALS //
     /////////////
     Signals::SignalQueue                    signalQueue;
+
+    KeychainUnlockedSignal                  notifyKeychainUnlocked;
+    KeychainLockedSignal                    notifyKeychainLocked;
 
     TxSignal                                notifyTxInserted;
     TxSignal                                notifyTxUpdated;

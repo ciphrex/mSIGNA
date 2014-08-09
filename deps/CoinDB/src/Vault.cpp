@@ -773,6 +773,10 @@ void Vault::lockAllKeychains()
 
     boost::lock_guard<boost::mutex> lock(mutex);
     mapPrivateKeyUnlock.clear();
+    for (auto& item: mapPrivateKeyUnlock)
+    {
+        notifyKeychainLocked(item.first);
+    }
 }
 
 void Vault::lockKeychain(const std::string& keychain_name)
@@ -781,6 +785,7 @@ void Vault::lockKeychain(const std::string& keychain_name)
 
     boost::lock_guard<boost::mutex> lock(mutex);
     mapPrivateKeyUnlock.erase(keychain_name);
+    notifyKeychainLocked(keychain_name);
 }
 
 void Vault::unlockKeychain(const std::string& keychain_name, const secure_bytes_t& unlock_key)
@@ -798,6 +803,7 @@ void Vault::unlockKeychain(const std::string& keychain_name, const secure_bytes_
 
     boost::lock_guard<boost::mutex> lock(mutex);
     mapPrivateKeyUnlock[keychain_name] = unlock_key;
+    notifyKeychainUnlocked(keychain_name);
 }
 
 void Vault::unlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain, const secure_bytes_t& overrideChainCodeUnlockKey) const
