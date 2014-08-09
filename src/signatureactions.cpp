@@ -64,6 +64,7 @@ void SignatureActions::addSignature()
         if (vault->isKeychainPrivateKeyLocked(m_currentKeychain.toStdString()))
         {
             QMessageBox::critical(nullptr, tr("Error"), tr("Keychain is locked."));
+            return;
         }
 
         std::vector<std::string> keychainNames;
@@ -76,8 +77,7 @@ void SignatureActions::addSignature()
             return;
         }
 
-        m_dialog.getModel()->update();
-        emit m_dialog.txUpdated();
+        m_dialog.updateTx();
     }
     catch (const std::exception& e)
     {

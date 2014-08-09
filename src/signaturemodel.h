@@ -33,6 +33,9 @@ public:
 
     Qt::ItemFlags flags(const QModelIndex& /*index*/) const;
 
+signals:
+    void txUpdated();
+
 private:
     void initColumns();
 

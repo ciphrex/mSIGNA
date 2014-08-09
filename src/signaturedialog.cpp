@@ -37,10 +37,10 @@ SignatureDialog::SignatureDialog(CoinDB::SynchedVault& synchedVault, const bytes
 
     if (m_actions) { m_view->setMenu(m_actions->getMenu()); }
 
-    QString sigsNeededCaption = tr("Additional signatures required: ") + QString::number(m_model->getSigsNeeded());
-    m_sigsNeededLabel = new QLabel(sigsNeededCaption);
+    m_sigsNeededLabel = new QLabel();
+    updateCaption();
 
-    QVBoxLayout* mainLayout = new QVBoxLayout();
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(m_sigsNeededLabel);
     mainLayout->addWidget(m_view);
     setLayout(mainLayout);
@@ -54,3 +54,27 @@ SignatureDialog::~SignatureDialog()
     delete m_actions;
 }
 
+void SignatureDialog::updateTx()
+{
+    m_model->update();
+    m_view->update();
+    updateCaption();
+    emit txUpdated();
+}
+
+void SignatureDialog::updateCaption()
+{
+    unsigned int sigsNeeded = m_model->getSigsNeeded();
+
+    QString caption;
+    if (sigsNeeded == 0)
+    {
+        caption = tr("Transaction is signed.");
+    }
+    else
+    {
+        caption = tr("Additional signatures required: ") + QString::number(sigsNeeded);
+    }
+
+    m_sigsNeededLabel->setText(caption);
+}

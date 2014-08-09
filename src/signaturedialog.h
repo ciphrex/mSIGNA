@@ -33,6 +33,9 @@ public:
     SignatureModel* getModel() const { return m_model; }
     SignatureView* getView() const { return m_view; }
 
+public slots:
+    void updateTx();
+
 signals:
     void txUpdated();
 
@@ -44,5 +47,7 @@ private:
     SignatureActions* m_actions;
 
     QLabel* m_sigsNeededLabel;
+
+    void updateCaption();
 };
 
