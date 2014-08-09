@@ -56,10 +56,10 @@ void subscribeHandlers(SynchedVault& synchedVault)
         cout << ss.str() << endl;
     });
 
-    synchedVault.subscribeTxStatusChanged([](std::shared_ptr<Tx> tx)
+    synchedVault.subscribeTxUpdated([](std::shared_ptr<Tx> tx)
     {
         stringstream ss;
-        ss << "Transaction status changed: " << uchar_vector(tx->hash()).getHex() << " New status: " << Tx::getStatusString(tx->status());
+        ss << "Transaction updated: " << uchar_vector(tx->hash()).getHex() << " Status: " << Tx::getStatusString(tx->status());
         LOGGER(info) << ss.str() << endl;
         cout << ss.str() << endl;
     });

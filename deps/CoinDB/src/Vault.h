@@ -191,7 +191,7 @@ public:
     // SLOT SUBSCRIPTIONS //
     ////////////////////////
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return notifyTxInserted.connect(slot); }
-    Signals::Connection subscribeTxStatusChanged(TxSignal::Slot slot) { return notifyTxUpdated.connect(slot); }
+    Signals::Connection subscribeTxUpdated(TxSignal::Slot slot) { return notifyTxUpdated.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return notifyMerkleBlockInserted.connect(slot); }
 
     Signals::Connection subscribeTxInsertionError(TxErrorSignal::Slot slot) { return notifyTxInsertionError.connect(slot); }

@@ -310,7 +310,7 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
 
         updateSyncHeight(m_vault->getBestHeight());
         m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
-        m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
+        m_vault->subscribeTxUpdated([this](std::shared_ptr<Tx> tx) { m_notifyTxUpdated(tx); });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
         {
             updateSyncHeight(merkleblock->blockheader()->height());
@@ -351,7 +351,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         updateSyncHeight(m_vault->getBestHeight());
 
         m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
-        m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
+        m_vault->subscribeTxUpdated([this](std::shared_ptr<Tx> tx) { m_notifyTxUpdated(tx); });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
         {
             updateSyncHeight(merkleblock->blockheader()->height());
@@ -529,7 +529,7 @@ void SynchedVault::clearAllSlots()
     m_notifyConnectionError.clear();
 
     m_notifyTxInserted.clear();
-    m_notifyTxStatusChanged.clear();
+    m_notifyTxUpdated.clear();
     m_notifyMerkleBlockInserted.clear();
     m_notifyTxInsertionError.clear();
     m_notifyMerkleBlockInsertionError.clear();
