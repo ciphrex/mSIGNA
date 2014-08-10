@@ -306,12 +306,13 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                     notifyStatus("Flushing block chain to file...");
                     m_blockTree.flushToFile(m_blockTreeFile);
                     notifyStatus("Done flushing block chain to file");
-                    notifyBlockTreeChanged();
     */
+
                     m_fileFlushCond.notify_one();
 
                     m_bHeadersSynched = true;
                     m_bBlocksSynched = false;
+                    notifyBlockTreeChanged();
                 }
                 else
                 {
