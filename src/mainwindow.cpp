@@ -913,7 +913,7 @@ void MainWindow::newAccount()
     try {
         NewAccountDialog dlg(keychainNames, this);
         if (dlg.exec()) {
-            accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames());
+            accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames(), dlg.getCreationTime());
             accountView->update();
             tabWidget->setCurrentWidget(accountView);
             synchedVault.updateBloomFilter();

@@ -95,7 +95,7 @@ CoinDB::Vault* AccountModel::getVault() const
 } 
 
 
-void AccountModel::newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames)
+void AccountModel::newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch)
 {
     CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
@@ -105,7 +105,8 @@ void AccountModel::newAccount(const QString& name, unsigned int minsigs, const Q
     std::vector<std::string> keychain_names;
     for (auto& name: keychainNames) { keychain_names.push_back(name.toStdString()); }
 
-    vault->newAccount(name.toStdString(), minsigs, keychain_names);
+    uint64_t secsSinceEpoch = (uint64_t)msecsSinceEpoch / 1000;
+    vault->newAccount(name.toStdString(), minsigs, keychain_names, 25, secsSinceEpoch);
     update();
 }
 

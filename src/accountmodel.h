@@ -13,6 +13,7 @@
 #include <QStandardItemModel>
 
 #include <QPair>
+#include <QDateTime>
 
 #include <CoinQ/CoinQ_typedefs.h>
 
@@ -49,7 +50,7 @@ public:
     bool isOpen() const { return m_synchedVault.isVaultOpen(); }
 
     // Account operations
-    void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames);
+    void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch = QDateTime::currentDateTime().toMSecsSinceEpoch());
     bool accountExists(const QString& name) const;
     void exportAccount(const QString& name, const QString& filePath, bool shared) const;
     void importAccount(const QString& name, const QString& filePath);
