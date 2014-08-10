@@ -369,8 +369,8 @@ QVariant TxModel::data(const QModelIndex& index, int role) const
         int txtype = typeItem->data(Qt::UserRole).toInt();
         switch (txtype)
         {
-        case SEND:      return QBrush(QColor(255, 175, 175));
-        case RECEIVE:   return QBrush(QColor(175, 255, 175));
+        case SEND:      return QBrush(QColor(255, 200, 200));
+        case RECEIVE:   return QBrush(QColor(200, 255, 200));
         } 
     }
  
