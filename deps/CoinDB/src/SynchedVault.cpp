@@ -383,9 +383,9 @@ void SynchedVault::closeVault()
         m_bInsertMerkleBlocks = false;
         m_networkSync.stopSyncBlocks();
         delete m_vault;
+        m_vault = nullptr;
     }
 
-    m_vault = nullptr;
     m_notifyVaultClosed();
     updateSyncHeight(0);
     if (m_networkSync.connected() && m_networkSync.headersSynched()) { updateStatus(SYNCHED); }
