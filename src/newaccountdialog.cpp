@@ -49,14 +49,14 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& keychainNames, QWidget*
     nameLayout->addWidget(nameLabel);
     nameLayout->addWidget(nameEdit);
 
-    // Key Chain Names
+    // Keychain Names
     minSigComboBox = new QComboBox();
     minSigLineEdit = new QLineEdit();
     minSigLineEdit->setAlignment(Qt::AlignRight);
     minSigComboBox->setLineEdit(minSigLineEdit);
 
     QLabel* keychainLabel = new QLabel();
-    keychainLabel->setText(tr("Key Chains:"));
+    keychainLabel->setText(tr("Keychains:"));
 
     QString keychainText;
     for (int i = 0; i < keychainNames.size(); i++) {
