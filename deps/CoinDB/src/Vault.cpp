@@ -580,6 +580,23 @@ bool Vault::keychainExists_unwrapped(const bytes_t& keychain_hash) const
     return !r.empty();
 }
 
+bool Vault::isKeychainPrivate(const std::string& keychain_name) const
+{
+    LOGGER(trace) << "Vault::isKeychainPrivate(" << keychain_name << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::transaction t(db_->begin());
+    return isKeychainPrivate_unwrapped(keychain_name);
+}
+
+bool Vault::isKeychainPrivate_unwrapped(const std::string& keychain_name) const
+{
+    std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
+    return keychain->isPrivate();    
+}
+
 std::shared_ptr<Keychain> Vault::newKeychain(const std::string& keychain_name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey, const bytes_t& salt)
 {
     LOGGER(trace) << "Vault::newKeychain(" << keychain_name << ", ...)" << std::endl;
@@ -2896,7 +2913,7 @@ SignatureInfo Vault::getSignatureInfo_unwrapped(std::shared_ptr<Tx> tx) const
         for (auto& keychain: key_r)
         {
             std::shared_ptr<Keychain> root_keychain(keychain.root_keychain());
-            signingKeychainSet.insert(SigningKeychain(root_keychain->name(), root_keychain->hash(), false));
+            signingKeychainSet.insert(SigningKeychain(root_keychain->name(), root_keychain->hash(), false, root_keychain->isPrivate()));
         }
     }
 
@@ -2905,7 +2922,7 @@ SignatureInfo Vault::getSignatureInfo_unwrapped(std::shared_ptr<Tx> tx) const
         for (auto& keychain: key_r)
         {
             std::shared_ptr<Keychain> root_keychain(keychain.root_keychain());
-            signingKeychainSet.insert(SigningKeychain(root_keychain->name(), root_keychain->hash(), true));
+            signingKeychainSet.insert(SigningKeychain(root_keychain->name(), root_keychain->hash(), true, root_keychain->isPrivate()));
         }
     }
 

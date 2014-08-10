@@ -89,6 +89,7 @@ public:
     std::shared_ptr<Keychain>               importKeychain(const std::string& filepath, bool& importprivkeys, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
     bool                                    keychainExists(const std::string& keychain_name) const;
     bool                                    keychainExists(const bytes_t& keychain_hash) const;
+    bool                                    isKeychainPrivate(const std::string& keychain_name) const;
     std::shared_ptr<Keychain>               newKeychain(const std::string& keychain_name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
     //void eraseKeychain(const std::string& keychain_name) const;
     void                                    renameKeychain(const std::string& old_name, const std::string& new_name);
@@ -245,6 +246,7 @@ protected:
     /////////////////////////
     bool                                    keychainExists_unwrapped(const std::string& keychain_name) const;
     bool                                    keychainExists_unwrapped(const bytes_t& keychain_hash) const;
+    bool                                    isKeychainPrivate_unwrapped(const std::string& keychain_name) const;
     std::shared_ptr<Keychain>               getKeychain_unwrapped(const std::string& keychain_name) const;
     void                                    persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
     void                                    exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;

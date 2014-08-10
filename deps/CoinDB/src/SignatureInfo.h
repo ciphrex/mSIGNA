@@ -19,17 +19,19 @@ namespace CoinDB
 class SigningKeychain
 {
 public:
-    SigningKeychain(const std::string& name, const bytes_t& hash, bool hasSigned) :
-        name_(name), hash_(hash), hasSigned_(hasSigned) { }
+    SigningKeychain(const std::string& name, const bytes_t& hash, bool hasSigned, bool isPrivate = false) :
+        name_(name), hash_(hash), hasSigned_(hasSigned), isPrivate_(isPrivate) { }
 
     const std::string&  name() const        { return name_; }
     const bytes_t&      hash() const        { return hash_; }
     bool                hasSigned() const   { return hasSigned_; }
+    bool                isPrivate() const   { return isPrivate_; }
 
 private:
     std::string name_;
     bytes_t     hash_;
     bool        hasSigned_;
+    bool        isPrivate_;
 };
 
 struct SigningKeychainCompare
