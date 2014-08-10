@@ -109,6 +109,7 @@ MainWindow::MainWindow() :
     accountView = new AccountView();
     accountView->setModel(accountModel);
     accountView->setMenu(accountMenu);
+    accountView->updateColumns();
 
 /*
     qRegisterMetaType<bytes_t>("bytes_t");
@@ -194,7 +195,7 @@ MainWindow::MainWindow() :
         keychainView->update();
 
         accountModel->update();
-        accountView->update();
+        accountView->updateColumns();
 
         txModel->setVault(vault);
         txModel->update();
@@ -233,7 +234,7 @@ MainWindow::MainWindow() :
 
     connect(this, &MainWindow::signal_currencyUnitChanged, [this]() {
         accountModel->update();
-        accountView->update();
+        accountView->updateColumns();
         txModel->update();
         txView->update();
     });
@@ -837,7 +838,7 @@ void MainWindow::refreshAccounts()
 
     QString prevSelectedAccount = selectedAccount;
     accountModel->update();
-    //accountView->update();
+    //accountView->updateColumns();
 
     if (prevSelectedAccount != selectedAccount)
     {
@@ -888,6 +889,7 @@ void MainWindow::quickNewAccount()
 
             accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames, dlg.getCreationTime());
             accountModel->update();
+            accountView->updateColumns();
             keychainModel->update();
             keychainView->update();
             tabWidget->setCurrentWidget(accountView);
@@ -914,7 +916,7 @@ void MainWindow::newAccount()
         NewAccountDialog dlg(keychainNames, this);
         if (dlg.exec()) {
             accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames(), dlg.getCreationTime());
-            accountView->update();
+            accountView->updateColumns();
             tabWidget->setCurrentWidget(accountView);
             synchedVault.updateBloomFilter();
             //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
@@ -964,7 +966,7 @@ void MainWindow::importAccount(QString fileName)
         updateStatusMessage(tr("Importing account..."));
         accountModel->importAccount(name, fileName);
         accountModel->update();
-        accountView->update();
+        accountView->updateColumns();
         keychainModel->update();
         keychainView->update();
         selectAccount(name);
@@ -1067,7 +1069,7 @@ void MainWindow::deleteAccount()
     if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"), tr("Are you sure you want to delete account ") + accountName + "?")) {
         try {
             accountModel->deleteAccount(accountName);
-            accountView->update();
+            accountView->updateColumns();
             synchedVault.updateBloomFilter();
             //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         }
@@ -1173,7 +1175,7 @@ void MainWindow::insertRawTx()
     try {
         RawTxDialog dlg(tr("Add Raw Transaction:"));
         if (dlg.exec() && accountModel->insertRawTx(dlg.getRawTx())) {
-            accountView->update();
+            accountView->updateColumns();
             txModel->update();
             txView->update();
             tabWidget->setCurrentWidget(txView);

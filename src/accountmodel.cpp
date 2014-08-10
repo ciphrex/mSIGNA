@@ -41,8 +41,10 @@ AccountModel::AccountModel(CoinDB::SynchedVault& synchedVault)
 
 void AccountModel::setColumns()
 {
+    QDateTime dateTime(QDateTime::currentDateTime());
+
     QStringList columns;
-    columns << tr("Account") << tr("Policy") << (tr("Balance") + " (" + currencySymbol + ")") << "";
+    columns << tr("Account") << tr("Policy") << (tr("Balance") + " (" + currencySymbol + ")") << (tr("Confirmed") + " (" + currencySymbol + ")") << (tr("Pending") + " (" + currencySymbol + ")") << (tr("Creation Time") + " (" + dateTime.timeZoneAbbreviation() + ")");// << "";
     setHorizontalHeaderLabels(columns);
 }
 /*
@@ -74,13 +76,27 @@ void AccountModel::update()
         QString accountName = QString::fromStdString(account.name());
         QString policy = QString::number(account.minsigs()) + tr(" of ") + QString::fromStdString(stdutils::delimited_list(account.keychain_names(), ", "));
         //QString balance = QString::number(vault->getAccountBalance(account.name(), 0)/(1.0 * currency_divisor), 'g', 8);
-        QString balance = getFormattedCurrencyAmount(vault->getAccountBalance(account.name(), 0));
+
+        uint64_t balance = vault->getAccountBalance(account.name(), 0);
+        uint64_t confirmed = vault->getAccountBalance(account.name(), 1);
+        uint64_t pending = balance - confirmed;
+        QString totalBalance = getFormattedCurrencyAmount(balance);
+        QString confirmedBalance = getFormattedCurrencyAmount(confirmed);
+        QString pendingBalance = getFormattedCurrencyAmount(pending);
+
+        QDateTime dateTime;
+        dateTime.setTime_t(account.time_created());
+        QString creationTime = dateTime.toString("yyyy-MM-dd hh:mm:ss");
+
         accountNames << accountName;
 
         QList<QStandardItem*> row;
         row.append(new QStandardItem(accountName));
         row.append(new QStandardItem(policy));
-        row.append(new QStandardItem(balance));
+        row.append(new QStandardItem(totalBalance));
+        row.append(new QStandardItem(confirmedBalance));
+        row.append(new QStandardItem(pendingBalance));
+        row.append(new QStandardItem(creationTime));
         appendRow(row);
 
     }
@@ -393,11 +409,36 @@ bool AccountModel::deleteMerkleBlock(const bytes_t& hash)
 
 QVariant AccountModel::data(const QModelIndex& index, int role) const
 {
-    if (role == Qt::TextAlignmentRole && index.column() >= 2) {
+    if (role == Qt::TextAlignmentRole)
+    {
         // Right-align numeric fields
-        return Qt::AlignRight;
+        if (index.column() >= 2 && index.column() <= 4) return Qt::AlignRight;
     }
-    
+
+    // The following is not working
+/*
+    else if (role == Qt::ForegroundRole)
+    {
+        QVariant value;
+        switch (index.column())
+        {
+        case 3:
+            value.setValue(QColor(Qt::darkGray));
+            return value;
+
+        case 4:
+            value.setValue((Qt::green));
+            return value;
+        }
+    }
+    else if (role == Qt::BackgroundRole)
+    {
+        QVariant value;
+        value.setValue(QColor(Qt::cyan));
+        return value;
+    }
+*/
+  
     return QStandardItemModel::data(index, role);
 }
 
