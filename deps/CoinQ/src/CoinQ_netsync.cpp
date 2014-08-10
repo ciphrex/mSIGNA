@@ -21,7 +21,9 @@ using namespace std;
 
 NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_coinParams(coinParams),
-    m_bStarted(false),
+    m_bPeerStarted(false),
+    m_bFlushingToFile(false),
+    m_fileFlushThread(nullptr),
     m_ioServiceThread(nullptr),
     m_work(m_ioService),
     m_peer(m_ioService),
@@ -198,10 +200,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
                 {
                     try
                     {
-                        if (m_blockTree.insertHeader(item))
-                        {
-                            m_bHeadersSynched = false;
-                        }
+                        boost::unique_lock<boost::mutex> fileFlushLock(m_fileFlushMutex);
+                        if (m_blockTree.insertHeader(item)) { m_bHeadersSynched = false; }
                     }
                     catch (const std::exception& e)
                     {
@@ -227,12 +227,15 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
             }
             else
             {
+                m_fileFlushCond.notify_one();
+/*
                 if (!m_blockTree.flushed())
                 {
                     notifyStatus("Flushing block chain to file...");
                     m_blockTree.flushToFile(m_blockTreeFile);
                     notifyStatus("Done flushing block chain to file");
                 }
+*/
 
                 notifyBlockTreeChanged();
                 m_lastRequestedBlockHeight = m_blockTree.getBestHeight() + 1;
@@ -284,40 +287,50 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         uchar_vector hash = merkleBlock.blockHeader.getHashLittleEndian();
         LOGGER(trace) << "Received merkle block: " << hash.getHex() << std::endl;
 
-        try {
+        try
+        {
             // Constructing the partial tree will validate the merkle root - throws exception if invalid.
             Coin::PartialMerkleTree tree(merkleBlock.nTxs, merkleBlock.hashes, merkleBlock.flags, merkleBlock.blockHeader.merkleRoot);
             LOGGER(trace) << "Merkle Tree:" << std::endl << tree.toIndentedString() << std::endl;
 
-            if (m_blockTree.hasHeader(hash)) {
-                // Do nothing but skip over last else.
-            }
-            else if (m_blockTree.insertHeader(merkleBlock.blockHeader)) {
-                // TODO: Flushing block chain to file is a time consuming operation - we need to keep a local queue to store incoming messages
-                // and do the flushing in a separate thread.
-                notifyStatus("Flushing block chain to file...");
-                m_blockTree.flushToFile(m_blockTreeFile);
-                notifyStatus("Done flushing block chain to file");
-                notifyBlockTreeChanged();
+            if (!m_blockTree.hasHeader(hash))
+            {
+                boost::unique_lock<boost::mutex> lock(m_fileFlushMutex);
+                bool bHeaderInserted = m_blockTree.insertHeader(merkleBlock.blockHeader);
+                lock.unlock(); 
 
-                m_bHeadersSynched = true;
-                m_bBlocksSynched = false;
-            }
-            else {
-                m_bHeadersSynched = false;
-                m_bBlocksSynched = false;
-
-                // Possible reorg
-                LOGGER(error) << "NetworkSync merkle block handler - block rejected: " << hash.getHex() << " - possible reorg." << endl;
-                try
+                if (bHeaderInserted)
                 {
-                    m_peer.getHeaders(m_blockTree.getLocatorHashes(-1));
+                    // TODO: Flushing block chain to file is a time consuming operation - we need to keep a local queue to store incoming messages
+                    // and do the flushing in a separate thread.
+    /*
+                    notifyStatus("Flushing block chain to file...");
+                    m_blockTree.flushToFile(m_blockTreeFile);
+                    notifyStatus("Done flushing block chain to file");
+                    notifyBlockTreeChanged();
+    */
+                    m_fileFlushCond.notify_one();
+
+                    m_bHeadersSynched = true;
+                    m_bBlocksSynched = false;
                 }
-                catch (const exception& e) {
-                    LOGGER(error) << "Block tree error: " << e.what() << endl;
-                    notifyBlockTreeError(e.what());
+                else
+                {
+                    m_bHeadersSynched = false;
+                    m_bBlocksSynched = false;
+
+                    // Possible reorg
+                    LOGGER(error) << "NetworkSync merkle block handler - block rejected: " << hash.getHex() << " - possible reorg." << endl;
+                    try
+                    {
+                        m_peer.getHeaders(m_blockTree.getLocatorHashes(-1));
+                    }
+                    catch (const exception& e) {
+                        LOGGER(error) << "Block tree error: " << e.what() << endl;
+                        notifyBlockTreeError(e.what());
+                    }
+                    return;
                 }
-                return;
             }
 
             // TODO: queue received merkleblocks locally so we do not need to refetch from peer and can support downloading out-of-order from multiple peers.
@@ -402,31 +415,33 @@ NetworkSync::~NetworkSync()
     m_ioService.stop();
     m_ioServiceThread->join();
     delete m_ioServiceThread;
+
+    m_fileFlushThread->join();
+    delete m_fileFlushThread; 
 }
 
 void NetworkSync::setCoinParams(const CoinQ::CoinParams& coinParams)
 {
-    if (m_bStarted) throw std::runtime_error("NetworkSync::setCoinParams() - must be stopped to set coin parameters.");
-    boost::lock_guard<boost::mutex> lock(m_startMutex);
-    if (m_bStarted) throw std::runtime_error("NetworkSync::setCoinParams() - must be stopped to set coin parameters.");
+    if (m_bPeerStarted) throw std::runtime_error("NetworkSync::setCoinParams() - must be stopped to set coin parameters.");
+    boost::lock_guard<boost::mutex> lock(m_peerStartMutex);
+    if (m_bPeerStarted) throw std::runtime_error("NetworkSync::setCoinParams() - must be stopped to set coin parameters.");
 
     m_coinParams = coinParams;    
 }
 
 void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork, CoinQBlockTreeMem::callback_t callback)
 {
+    stopFileFlushThread();
     m_blockTreeFile = blockTreeFile;
 
     try
     {
         m_blockTree.loadFromFile(blockTreeFile, bCheckProofOfWork, callback);
 
-        //m_bHeadersSynched = true;
         std::stringstream status;
         status << "Best Height: " << m_blockTree.getBestHeight() << " / " << "Total Work: " << m_blockTree.getTotalWork().getDec();
         notifyStatus(status.str());
         notifyAddBestChain(m_blockTree.getHeader(-1));
-        //notifyHeadersSynched();
         return;
     }
     catch (const std::exception& e)
@@ -437,10 +452,8 @@ void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProof
 
     m_blockTree.clear();
     m_blockTree.setGenesisBlock(m_coinParams.genesis_block());
-    //m_bHeadersSynched = true;
     notifyStatus("Block tree file not found. A new one will be created.");
     notifyAddBestChain(m_blockTree.getHeader(-1));
-    //notifyHeadersSynched();
 }
 
 /*
@@ -616,12 +629,14 @@ void NetworkSync::start(const std::string& host, const std::string& port)
 {
     LOGGER(trace) << "NetworkSync::start(" << host << ", " << port << ")" << std::endl;
     {
-        if (m_bStarted) throw std::runtime_error("NetworkSync::start() - already started.");
-        boost::lock_guard<boost::mutex> lock(m_startMutex);
-        if (m_bStarted) throw std::runtime_error("NetworkSync::start() - already started.");
+        if (m_bPeerStarted) throw std::runtime_error("NetworkSync::start() - already started.");
+        boost::lock_guard<boost::mutex> lock(m_peerStartMutex);
+        if (m_bPeerStarted) throw std::runtime_error("NetworkSync::start() - already started.");
+
+        startFileFlushThread();
 
         std::string port_ = port.empty() ? m_coinParams.default_port() : port;
-        m_bStarted = true;
+        m_bPeerStarted = true;
         m_peer.set(host, port_, m_coinParams.magic_bytes(), m_coinParams.protocol_version(), "Wallet v0.1", 0, false);
         m_peer.start();
     }
@@ -639,12 +654,12 @@ void NetworkSync::start(const std::string& host, int port)
 void NetworkSync::stop()
 {
     {
-        if (!m_bStarted) return;
-        boost::lock_guard<boost::mutex> startLock(m_startMutex);
-        if (!m_bStarted) return;
+        if (!m_bPeerStarted) return;
+        boost::lock_guard<boost::mutex> startLock(m_peerStartMutex);
+        if (!m_bPeerStarted) return;
 
         m_bConnected = false;
-        m_bStarted = false;
+        m_bPeerStarted = false;
         m_bHeadersSynched = false;
         m_bBlocksSynched = false;
         m_bFetchingBlocks = false;
@@ -654,6 +669,7 @@ void NetworkSync::stop()
         while (!m_currentMerkleTxHashes.empty()) { m_currentMerkleTxHashes.pop(); }
     }
 
+    stopFileFlushThread();
     notifyStopped();
 }
 
@@ -690,6 +706,48 @@ void NetworkSync::setBloomFilter(const Coin::BloomFilter& bloomFilter)
     Coin::FilterLoadMessage filterLoad(m_bloomFilter.getNHashFuncs(), m_bloomFilter.getNTweak(), m_bloomFilter.getNFlags(), m_bloomFilter.getFilter());
     m_peer.send(filterLoad);
     LOGGER(trace) << "Sent filter to peer." << std::endl;
+}
+
+void NetworkSync::startFileFlushThread()
+{
+    stopFileFlushThread();
+
+    LOGGER(trace) << "Starting file flushing thread..." << endl;
+    {
+        boost::lock_guard<boost::mutex> lock(m_fileFlushMutex);
+        m_bFlushingToFile = true;
+        m_fileFlushThread = new boost::thread(&NetworkSync::fileFlushLoop, this);
+    }
+    LOGGER(trace) << "File flushing thread started." << endl;
+}
+
+void NetworkSync::stopFileFlushThread()
+{
+    if (!m_bFlushingToFile) return;
+    boost::unique_lock<boost::mutex> lock(m_fileFlushMutex);
+    if (!m_bFlushingToFile) return;
+
+    LOGGER(trace) << "Stopping file flushing thread..." << endl;
+    m_bFlushingToFile = false;
+    lock.unlock();
+    m_fileFlushCond.notify_all();
+    m_fileFlushThread->join();
+    delete m_fileFlushThread;
+    LOGGER(trace) << "File flushing thread stopped." << endl;
+}
+
+void NetworkSync::fileFlushLoop()
+{
+    while (true)
+    {
+        boost::unique_lock<boost::mutex> lock(m_fileFlushMutex);
+        while (m_bFlushingToFile && m_blockTree.flushed()) { m_fileFlushCond.wait(lock); }
+        if (!m_bFlushingToFile) break;
+
+        LOGGER(trace) << "Starting blocktree file flush..." << endl;
+        m_blockTree.flushToFile(m_blockTreeFile);
+        LOGGER(trace) << "Finished flushing blocktree file." << endl;
+    }
 }
 
 void NetworkSync::processConfirmations()

@@ -60,7 +60,7 @@ public:
 /*
     void start();
     void stop();
-    bool isStarted() const { return m_bStarted; }
+    bool isStarted() const { return m_bPeerStarted; }
 */
     void start(const std::string& host, const std::string& port = "");
     void start(const std::string& host, int port);
@@ -114,8 +114,17 @@ public:
 private:
     CoinQ::CoinParams m_coinParams;
 
-    mutable boost::mutex m_startMutex;
-    bool m_bStarted;
+    mutable boost::mutex m_peerStartMutex;
+    bool m_bPeerStarted;
+
+    bool m_bFlushingToFile;
+    boost::mutex m_fileFlushMutex;
+    boost::condition_variable m_fileFlushCond;
+    boost::thread* m_fileFlushThread;
+    void startFileFlushThread();
+    void stopFileFlushThread();
+    void fileFlushLoop();
+
     CoinQ::io_service_t m_ioService;
     boost::thread* m_ioServiceThread;
     CoinQ::io_service_t::work m_work;
