@@ -81,8 +81,34 @@ void SignatureModel::updateAll()
     }
 }
 
+int SignatureModel::getKeychainState(int row) const
+{
+    if (row < 0 || row > rowCount()) throw std::runtime_error("Invalid row.");
+
+    QStandardItem* stateItem = item(row, 1);
+    return stateItem->data(Qt::UserRole).toInt();
+}
+
+bool SignatureModel::getKeychainHasSigned(int row) const
+{
+    if (row < 0 || row > rowCount()) throw std::runtime_error("Invalid row.");
+
+    QStandardItem* hasSignedItem = item(row, 3);
+    return hasSignedItem->data(Qt::UserRole).toBool();
+}
+
 Qt::ItemFlags SignatureModel::flags(const QModelIndex& /*index*/) const
 {
     return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+}
+
+QVariant SignatureModel::data(const QModelIndex& index, int role) const
+{
+    if (role == Qt::BackgroundRole)
+    {
+        if (getKeychainHasSigned(index.row())) return QBrush(QColor(200, 255, 200));
+    }
+
+    return QStandardItemModel::data(index, role);
 }
 

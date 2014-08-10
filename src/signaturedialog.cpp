@@ -37,14 +37,17 @@ SignatureDialog::SignatureDialog(CoinDB::SynchedVault& synchedVault, const bytes
 
     if (m_actions) { m_view->setMenu(m_actions->getMenu()); }
 
+    QLabel* hashLabel = new QLabel(tr("Hash: ") + QString::fromStdString(uchar_vector(txHash).getHex()));
+
     m_sigsNeededLabel = new QLabel();
     updateCaption();
 
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    mainLayout->addWidget(hashLabel);
     mainLayout->addWidget(m_sigsNeededLabel);
     mainLayout->addWidget(m_view);
     setLayout(mainLayout);
-    setWindowTitle(QString::fromStdString(uchar_vector(txHash).getHex()));
+    setWindowTitle(tr("Transaction Signatures"));
 }
 
 SignatureDialog::~SignatureDialog()

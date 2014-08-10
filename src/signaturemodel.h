@@ -33,7 +33,12 @@ public:
 
     unsigned int getSigsNeeded() const { return m_sigsNeeded; }
 
-    Qt::ItemFlags flags(const QModelIndex& /*index*/) const;
+    int getKeychainState(int row) const;
+    bool getKeychainHasSigned(int row) const;
+
+    Qt::ItemFlags flags(const QModelIndex& index) const;
+
+    QVariant data(const QModelIndex& index, int role) const;
 
 signals:
     void txUpdated();

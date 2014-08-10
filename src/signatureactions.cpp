@@ -54,32 +54,26 @@ void SignatureActions::refreshCurrentKeychain()
         QStandardItem* keychainNameItem = m_dialog.getModel()->item(m_currentRow, 0);
         m_currentKeychain = keychainNameItem->text();
 
-        if (!m_synchedVault.isVaultOpen())
+        if (m_synchedVault.isVaultOpen())
         {
-            addSignatureAction->setEnabled(false);
-            unlockKeychainAction->setEnabled(false);
-            lockKeychainAction->setEnabled(false);
-        }
-        else
-        {
+            int keychainState = m_dialog.getModel()->getKeychainState(m_currentRow);
+            bool hasSigned = m_dialog.getModel()->getKeychainHasSigned(m_currentRow);
+            int sigsNeeded = m_dialog.getModel()->getSigsNeeded();
 
-            QStandardItem* typeItem = m_dialog.getModel()->item(m_currentRow, 2);
-
-            bool isLocked = m_synchedVault.getVault()->isKeychainPrivateKeyLocked(m_currentKeychain.toStdString());
-            bool canSign = !isLocked && m_dialog.getModel()->getSigsNeeded() > 0 && typeItem->text() == tr("No");
-
-            addSignatureAction->setEnabled(canSign);
-            unlockKeychainAction->setEnabled(isLocked);
-            lockKeychainAction->setEnabled(!isLocked);
+            addSignatureAction->setEnabled(keychainState == SignatureModel::UNLOCKED && !hasSigned && sigsNeeded > 0);
+            unlockKeychainAction->setEnabled(keychainState == SignatureModel::LOCKED);
+            lockKeychainAction->setEnabled(keychainState == SignatureModel::UNLOCKED);
+            return;
         }
     }
     else
     {
         m_currentKeychain = "";
-        addSignatureAction->setEnabled(false);
-        unlockKeychainAction->setEnabled(false);
-        lockKeychainAction->setEnabled(false);
     }
+
+    addSignatureAction->setEnabled(false);
+    unlockKeychainAction->setEnabled(false);
+    lockKeychainAction->setEnabled(false);
 }
 
 void SignatureActions::addSignature()
