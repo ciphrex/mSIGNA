@@ -243,16 +243,20 @@ void TxModel::update()
 
 bytes_t TxModel::getTxHash(int row) const
 {
-    LOGGER(trace) << "TxModel::getTxHash(" << row << ")" << std::endl;
-
-    if (row == -1 || row >= rowCount()) {
-        throw std::runtime_error(tr("Invalid row.").toStdString());
-    }
+    if (row == -1 || row >= rowCount()) throw std::runtime_error(tr("Invalid row.").toStdString());
 
     QStandardItem* txHashItem = item(row, 8);
     uchar_vector txhash;
     txhash.setHex(txHashItem->text().toStdString());
     return txhash;
+}
+
+int TxModel::getTxType(int row) const
+{
+    if (row == -1 || row >= rowCount()) throw std::runtime_error(tr("Invalid row.").toStdString());
+
+    QStandardItem* typeItem = item(row, 2);
+    return typeItem->data(Qt::UserRole).toInt();
 }
 
 void TxModel::signTx(int row)
@@ -365,9 +369,7 @@ QVariant TxModel::data(const QModelIndex& index, int role) const
     }
     else if (role == Qt::BackgroundRole)
     {
-        QStandardItem* typeItem = item(index.row(), 2);
-        int txtype = typeItem->data(Qt::UserRole).toInt();
-        switch (txtype)
+        switch (getTxType(index.row()))
         {
         case SEND:      return QBrush(QColor(255, 200, 200));
         case RECEIVE:   return QBrush(QColor(200, 255, 200));

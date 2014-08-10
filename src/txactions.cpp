@@ -190,10 +190,25 @@ void TxActions::sendTx()
 void TxActions::exportTxToFile()
 {
     try {
-        if (!m_accountModel || !m_accountModel->isOpen()) throw std::runtime_error("You must create a vault or open an existing vault before exporting transactions.");
+        if (!m_synchedVault || !m_synchedVault->isVaultOpen()) throw std::runtime_error("You must create a vault or open an existing vault before exporting transactions.");
 
         std::shared_ptr<CoinDB::Tx> tx = m_txModel->getTx(currentRow);
-        QString fileName = QString::fromStdString(uchar_vector(tx->hash()).getHex()) + ".tx";
+        QString fileName;
+        if (m_txModel->getTxType(currentRow) == TxModel::SEND)
+        {
+            fileName = QString::fromStdString(uchar_vector(tx->hash()).getHex()).left(16);
+            CoinDB::SignatureInfo signatureInfo = m_synchedVault->getVault()->getSignatureInfo(tx->hash());
+            for (auto& keychain: signatureInfo.signingKeychains())
+            {
+                fileName += keychain.hasSigned() ? "+" : "-";
+                fileName += QString::fromStdString(keychain.name());
+            }
+        }
+        else
+        {
+            fileName = QString::fromStdString(uchar_vector(tx->hash()).getHex());
+        }
+        fileName += ".tx";        
         fileName = QFileDialog::getSaveFileName(
             nullptr,
             tr("Export Transaction"),
