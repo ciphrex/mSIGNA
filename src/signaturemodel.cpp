@@ -26,7 +26,7 @@ SignatureModel::SignatureModel(CoinDB::SynchedVault& synchedVault, const bytes_t
 void SignatureModel::initColumns()
 {
     QStringList columns;
-    columns << tr("Keychain Name") << tr("Unlocked") << tr("Keychain Hash") << "";
+    columns << tr("Keychain Name") << tr("State") << tr("Keychain Hash") << "";
     setHorizontalHeaderLabels(columns);
 }
 
@@ -39,18 +39,44 @@ void SignatureModel::updateAll()
     CoinDB::Vault* vault = m_synchedVault.getVault();
     SignatureInfo signatureInfo = vault->getSignatureInfo(m_txHash);
     m_sigsNeeded = signatureInfo.sigsNeeded();
-    for (auto& signingKeychain: signatureInfo.signingKeychains())
+    for (auto& keychain: signatureInfo.signingKeychains())
     {
         QList<QStandardItem*> row;
-        QString keychainName = QString::fromStdString(signingKeychain.name());
-        QString keychainUnlocked = vault->isKeychainPrivateKeyLocked(signingKeychain.name()) ? tr("No") : tr("Yes");
-        QString keychainHash = QString::fromStdString(uchar_vector(signingKeychain.hash()).getHex());
-        QString keychainSigned = signingKeychain.hasSigned() ? tr("Signed") : tr("");
 
-        row.append(new QStandardItem(keychainName));
-        row.append(new QStandardItem(keychainUnlocked));
-        row.append(new QStandardItem(keychainHash));
-        row.append(new QStandardItem(keychainSigned));
+        // Keychain name
+        QString name = QString::fromStdString(keychain.name());
+        QStandardItem* nameItem = new QStandardItem(name);
+        row.append(nameItem);
+
+        // Keychain state
+        int state;
+        QString stateStr;
+        if (vault->isKeychainPrivate(keychain.name()))
+        {
+            bool isLocked = vault->isKeychainPrivateKeyLocked(keychain.name());
+            state = isLocked ? LOCKED : UNLOCKED;
+            stateStr = isLocked ? tr("Locked") : tr("Unlocked");
+        }
+        else
+        {
+            state = PUBLIC;
+            stateStr = tr("Public");
+        }
+        QStandardItem* stateItem = new QStandardItem(stateStr);
+        stateItem->setData(state, Qt::UserRole);
+        row.append(stateItem);
+
+        // Keychain hash
+        QString hashStr = QString::fromStdString(uchar_vector(keychain.hash()).getHex());
+        row.append(new QStandardItem(hashStr));
+
+        // Has signed
+        bool hasSigned = keychain.hasSigned();
+        QString hasSignedStr = hasSigned ? tr("Signed") : tr("");
+        QStandardItem* hasSignedItem = new QStandardItem(hasSignedStr);
+        hasSignedItem->setData(hasSigned, Qt::UserRole);
+        row.append(hasSignedItem);
+
         appendRow(row);
     }
 }

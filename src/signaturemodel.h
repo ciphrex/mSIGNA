@@ -21,6 +21,8 @@ class SignatureModel : public QStandardItemModel
     Q_OBJECT
 
 public:
+    enum { PUBLIC, LOCKED, UNLOCKED };
+
     SignatureModel(QObject* parent = nullptr);
     SignatureModel(CoinDB::SynchedVault& synchedVault, const bytes_t& txHash, QObject* parent = nullptr);
 
