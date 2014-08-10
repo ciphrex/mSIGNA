@@ -359,12 +359,22 @@ void TxModel::deleteTx(int row)
 QVariant TxModel::data(const QModelIndex& index, int role) const
 {
     // Right-align numeric fields
-    if (role == Qt::TextAlignmentRole && index.column() >= 3 && index.column() <= 6) {
+    if (role == Qt::TextAlignmentRole && index.column() >= 3 && index.column() <= 6)
+    {
         return Qt::AlignRight;
     }
-    else {
-        return QStandardItemModel::data(index, role);
+    else if (role == Qt::BackgroundRole)
+    {
+        QStandardItem* typeItem = item(index.row(), 2);
+        int txtype = typeItem->data(Qt::UserRole).toInt();
+        switch (txtype)
+        {
+        case SEND:      return QBrush(QColor(255, 175, 175));
+        case RECEIVE:   return QBrush(QColor(175, 255, 175));
+        } 
     }
+ 
+    return QStandardItemModel::data(index, role);
 }
 
 bool TxModel::setData(const QModelIndex& index, const QVariant& value, int role)
