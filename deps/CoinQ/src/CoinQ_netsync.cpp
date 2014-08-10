@@ -626,9 +626,13 @@ void NetworkSync::start(const std::string& host, const std::string& port)
         startIOServiceThread();
 
         m_bStarted = true;
+
         std::string port_ = port.empty() ? m_coinParams.default_port() : port;
         m_peer.set(host, port_, m_coinParams.magic_bytes(), m_coinParams.protocol_version(), "Wallet v0.1", 0, false);
+
+        LOGGER(trace) << "Starting peer " << host << ":" << port_ << "..." << endl;
         m_peer.start();
+        LOGGER(trace) << "Peer started." << endl;
     }
 
     notifyStarted();
@@ -705,7 +709,7 @@ void NetworkSync::startIOServiceThread()
     if (m_bIOServiceStarted) throw std::runtime_error("NetworkSync - io service already started.");
 
     LOGGER(trace) << "Starting IO service thread..." << endl;
-    m_bIOServiceStarted = true;    
+    m_bIOServiceStarted = true;
     m_ioServiceThread = new boost::thread(boost::bind(&CoinQ::io_service_t::run, &m_ioService));
     LOGGER(trace) << "IO service thread started." << endl;
 }
@@ -720,6 +724,7 @@ void NetworkSync::stopIOServiceThread()
     m_ioService.stop();
     m_ioServiceThread->join();
     delete m_ioServiceThread;
+    m_ioService.reset();
     m_bIOServiceStarted = false;
     LOGGER(trace) << "IO service thread stopped." << endl; 
 }
