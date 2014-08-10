@@ -202,6 +202,8 @@ int main(int argc, char* argv[])
 
     while (!g_bShutdown) { std::this_thread::sleep_for(std::chrono::microseconds(200)); }
 
+    synchedVault.stopSync();
+
     return 0;
 
 }
