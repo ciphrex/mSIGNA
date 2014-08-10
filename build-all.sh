@@ -142,9 +142,9 @@ then
     exit
 fi
 
-cd ../WebSocketClient
-make libs OS=$OS $OPTIONS
-SYSROOT=../../sysroot make install
+#cd ../WebSocketClient
+#make libs OS=$OS $OPTIONS
+#SYSROOT=../../sysroot make install
 
 cd $CURRENT_DIR
 ${QMAKE_PATH}qmake $SPEC CONFIG+=$BUILD_TYPE && make $OPTIONS
