@@ -89,6 +89,26 @@ void TxModel::setAccount(const QString& accountName)
     update();
 }
 
+class SortableRow
+{
+public:
+    SortableRow(const QList<QStandardItem*>& row, uint32_t nConfirmations, int64_t value, uint32_t txindex) :
+        row_(row), nConfirmations_(nConfirmations), value_(value), txindex_(txindex) { }
+
+    QList<QStandardItem*>& row() { return row_; }
+
+    uint32_t nConfirmations() const { return nConfirmations_; }
+    int64_t value() const { return value_; }
+    uint32_t txindex() const { return txindex_; }
+
+private:
+    QList<QStandardItem*> row_;
+
+    uint32_t nConfirmations_;
+    int64_t value_;
+    uint32_t txindex_;
+};
+
 void TxModel::update()
 {
     QString newCurrencySymbol = getCurrencySymbol();
@@ -106,10 +126,7 @@ void TxModel::update()
 
     std::vector<TxOutView> txoutviews = vault->getTxOutViews(accountName.toStdString(), "", TxOut::ROLE_BOTH, TxOut::BOTH, Tx::ALL, true);
     bytes_t last_txhash;
-    typedef std::pair<unsigned long, uint32_t> sorting_info_t;
-    typedef std::pair<QList<QStandardItem*>, int64_t> value_row_t; // used to associate output values with rows for computing balance
-    typedef std::pair<sorting_info_t, value_row_t> sortable_row_t;
-    QList<sortable_row_t> rows;
+    QList<SortableRow> rows;
     for (auto& item: txoutviews) {
         QList<QStandardItem*> row;
 
@@ -118,7 +135,6 @@ void TxModel::update()
         QString time = utc.toLocalTime().toString();
 
         QString description = QString::fromStdString(item.role_label());
-        if (description.isEmpty()) description = "Not available";
 
         // The type stuff is just to test the new db schema. It's all wrong, we're not going to use TxOutViews for this.
         TxType txType;
@@ -186,6 +202,7 @@ void TxModel::update()
         }
         QStandardItem* confirmationsItem = new QStandardItem(confirmations);
         confirmationsItem->setData(item.tx_status, Qt::UserRole);
+        confirmationsItem->setData((int)nConfirmations, Qt::UserRole + 1);
 
         QString address = QString::fromStdString(getAddressForTxOutScript(item.script, base58_versions));
         QString hash = QString::fromStdString(uchar_vector(this_txhash).getHex());
@@ -208,37 +225,33 @@ void TxModel::update()
         hashItem->setData(item.tx_index, Qt::UserRole);
         row.append(hashItem);
 
-        rows.append(std::make_pair(std::make_pair(item.tx_id, nConfirmations), std::make_pair(row, value)));
+        rows.append(SortableRow(row, nConfirmations, value, item.tx_index));
     }
 
-    qSort(rows.begin(), rows.end(), [](const sortable_row_t& a, const sortable_row_t& b) {
-        sorting_info_t a_info = a.first;
-        sorting_info_t b_info = b.first;
-
+    qSort(rows.begin(), rows.end(), [](const SortableRow& a, const SortableRow& b) {
         // if confirmation counts are equal
-        if (a_info.second == b_info.second) {
+        if (a.nConfirmations() == b.nConfirmations()) {
             // if one value is positive and the other is negative, sort so that running balance remains positive
-            if (a.second.second < 0 && b.second.second > 0) return true;
-            if (a.second.second > 0 && b.second.second < 0) return false;
+            if (a.value() < 0 && b.value() > 0) return true;
+            if (a.value() > 0 && b.value() < 0) return false;
 
-            // otherwise sort by descending index
-            return (a_info.first > b_info.first);
+            // otherwise sort by descending tx index
+            return (a.txindex() > b.txindex());
         }
 
         // otherwise sort by ascending confirmation count
-        return (a_info.second < b_info.second);
+        return (a.nConfirmations() < b.nConfirmations());
     });
 
     // iterate in reverse order to compute running balance
     int64_t balance = 0;
     for (int i = rows.size() - 1; i >= 0; i--) {
-        balance += rows[i].second.second;
-        //(rows[i].second.first)[5]->setText(QString::number(balance/(1.0 * currency_divisor), 'g', 8));
-        (rows[i].second.first)[5]->setText(getFormattedCurrencyAmount(balance));
+        balance += rows[i].value();
+        (rows[i].row())[5]->setText(getFormattedCurrencyAmount(balance));
     }
 
     // iterate in forward order to display
-    for (auto& row: rows) appendRow(row.second.first);
+    for (auto& row: rows) appendRow(row.row());
 }
 
 bytes_t TxModel::getTxHash(int row) const
@@ -251,7 +264,23 @@ bytes_t TxModel::getTxHash(int row) const
     return txhash;
 }
 
-int TxModel::getTxType(int row) const
+int TxModel::getTxStatus(int row) const
+{
+    if (row == -1 || row >= rowCount()) throw std::runtime_error(tr("Invalid row.").toStdString());
+
+    QStandardItem* confirmationsItem = item(row, 6);
+    return confirmationsItem->data(Qt::UserRole).toInt();
+}
+
+int TxModel::getTxConfirmations(int row) const
+{
+    if (row == -1 || row >= rowCount()) throw std::runtime_error(tr("Invalid row.").toStdString());
+
+    QStandardItem* confirmationsItem = item(row, 6);
+    return confirmationsItem->data(Qt::UserRole + 1).toInt();
+}
+
+int TxModel::getTxOutType(int row) const
 {
     if (row == -1 || row >= rowCount()) throw std::runtime_error(tr("Invalid row.").toStdString());
 
@@ -369,11 +398,72 @@ QVariant TxModel::data(const QModelIndex& index, int role) const
     }
     else if (role == Qt::BackgroundRole)
     {
-        switch (getTxType(index.row()))
+        QBrush brush;
+
+        int txStatus = getTxStatus(index.row());
+        int txOutType = getTxOutType(index.row());
+
+        if (txStatus == Tx::UNSIGNED && txOutType == SEND)
         {
-        case SEND:      return QBrush(QColor(255, 200, 200));
-        case RECEIVE:   return QBrush(QColor(200, 255, 200));
-        } 
+            return QBrush(QColor(255, 200, 100), Qt::SolidPattern); // light orange
+        }
+        else
+        {
+            QBrush brush;
+
+            switch (txOutType)
+            {
+            case RECEIVE:
+                brush.setColor(QColor(200, 255, 200)); // light green
+                break;
+
+            case SEND:
+                brush.setColor(QColor(255, 200, 200)); // light red
+                break;
+            }
+
+
+            if (txStatus >= Tx::CONFIRMED)
+            {
+                switch (getTxConfirmations(index.row()))
+                {
+                case 0:
+                    brush.setStyle(Qt::Dense6Pattern); // this should never happen - case 0 is unconfirmed. Just here to be safe.
+                    break;
+                case 1:
+                    brush.setStyle(Qt::Dense5Pattern);
+                    break;
+                case 2:
+                    brush.setStyle(Qt::Dense4Pattern);
+                    break;
+                case 3:
+                    brush.setStyle(Qt::Dense3Pattern);
+                    break;
+                case 4:
+                    brush.setStyle(Qt::Dense2Pattern);
+                    break;
+                case 5:
+                    brush.setStyle(Qt::Dense1Pattern);
+                    break;
+                default:
+                    brush.setStyle(Qt::SolidPattern);
+                }
+            }
+            else if (txStatus == Tx::PROPAGATED)
+            {
+                brush.setStyle(Qt::Dense6Pattern);
+            } 
+            else if (txStatus == Tx::UNSENT)
+            {
+                brush.setStyle(Qt::Dense7Pattern);
+            }
+            else
+            {
+                brush.setStyle(Qt::NoBrush);
+            }
+
+            return brush;
+        }
     }
  
     return QStandardItemModel::data(index, role);

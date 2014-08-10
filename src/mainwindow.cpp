@@ -1257,6 +1257,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
             if (!tx) throw std::runtime_error("Error creating transaction.");
 
             saved = true;
+            newTx();            
             if (sign)
             {
                 std::vector<std::string> keychains;

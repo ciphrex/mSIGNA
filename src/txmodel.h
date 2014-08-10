@@ -35,7 +35,9 @@ public:
     void update();
 
     bytes_t getTxHash(int row) const;
-    int getTxType(int row) const;
+    int getTxStatus(int row) const;
+    int getTxConfirmations(int row) const;
+    int getTxOutType(int row) const;
 
     void signTx(int row);
     void sendTx(int row, CoinDB::SynchedVault* synchedVault);

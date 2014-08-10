@@ -194,7 +194,7 @@ void TxActions::exportTxToFile()
 
         std::shared_ptr<CoinDB::Tx> tx = m_txModel->getTx(currentRow);
         QString fileName;
-        if (m_txModel->getTxType(currentRow) == TxModel::SEND)
+        if (m_txModel->getTxOutType(currentRow) == TxModel::SEND)
         {
             fileName = QString::fromStdString(uchar_vector(tx->hash()).getHex()).left(16);
             CoinDB::SignatureInfo signatureInfo = m_synchedVault->getVault()->getSignatureInfo(tx->hash());
