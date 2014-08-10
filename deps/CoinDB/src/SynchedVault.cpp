@@ -413,6 +413,7 @@ void SynchedVault::stopSync()
     m_networkSync.stop();
 }
 
+//TODO: get rid of m_bInsertMerkleBlocks
 void SynchedVault::suspendBlockUpdates()
 {
     LOGGER(trace) << "SynchedVault::suspendBlockUpdates()" << std::endl;
