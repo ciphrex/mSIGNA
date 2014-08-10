@@ -1431,11 +1431,14 @@ void MainWindow::startNetworkSync()
 void MainWindow::stopNetworkSync()
 {
     disconnectAction->setEnabled(false);
-    try {
+    try
+    {
         updateStatusMessage(tr("Disconnecting..."));
         synchedVault.stopSync();
     }
-    catch (const exception& e) {
+    catch (const exception& e)
+    {
+        networkStopped();
         LOGGER(debug) << "MainWindow::stopNetworkSync - " << e.what() << std::endl;
         showError(e.what());
     }
