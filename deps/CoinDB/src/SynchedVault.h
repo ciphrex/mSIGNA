@@ -37,7 +37,7 @@ public:
     SynchedVault(const CoinQ::CoinParams& coinParams = CoinQ::getBitcoinParams());
     ~SynchedVault();
 
-    void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = false, std::function<void(const CoinQBlockTreeMem&)> callback = nullptr);
+    void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = false, CoinQBlockTreeMem::callback_t callback = nullptr);
     bool areHeadersLoaded() const { return m_bBlockTreeLoaded; }
 
     void openVault(const std::string& dbname, bool bCreate = false);
@@ -52,6 +52,8 @@ public:
     bool isConnected() const { return m_networkSync.connected(); }
     void suspendBlockUpdates();
     void syncBlocks();
+
+    void setFilterParams(double falsePositiveRate, uint32_t nTweak, uint8_t nFlags);
     void updateBloomFilter();
 
     status_t getStatus() const { return m_status; }
@@ -73,6 +75,8 @@ public:
     Signals::Connection subscribeVaultOpened(VaultSignal::Slot slot) { return m_notifyVaultOpened.connect(slot); }
     Signals::Connection subscribeVaultClosed(VoidSignal::Slot slot) { return m_notifyVaultClosed.connect(slot); }
     Signals::Connection subscribeVaultError(ErrorSignal::Slot slot) { return m_notifyVaultError.connect(slot); }
+    Signals::Connection subscribeKeychainUnlocked(KeychainUnlockedSignal::Slot slot) { return m_notifyKeychainUnlocked.connect(slot); }
+    Signals::Connection subscribeKeychainLocked(KeychainLockedSignal::Slot slot) { return m_notifyKeychainLocked.connect(slot); }
 
     // Sync state events
     Signals::Connection subscribeStatusChanged(StatusSignal::Slot slot) { return m_notifyStatusChanged.connect(slot); }
@@ -82,8 +86,11 @@ public:
 
     // P2P network state events
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
-    Signals::Connection subscribeTxStatusChanged(TxSignal::Slot slot) { return m_notifyTxStatusChanged.connect(slot); }
+    Signals::Connection subscribeTxUpdated(TxSignal::Slot slot) { return m_notifyTxUpdated.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return m_notifyMerkleBlockInserted.connect(slot); }
+    Signals::Connection subscribeTxInsertionError(TxErrorSignal::Slot slot) { return m_notifyTxInsertionError.connect(slot); }
+    Signals::Connection subscribeMerkleBlockInsertionError(MerkleBlockErrorSignal::Slot slot) { return m_notifyMerkleBlockInsertionError.connect(slot); }
+    Signals::Connection subscribeTxConfirmationError(TxConfirmationErrorSignal::Slot slot) { return m_notifyTxConfirmationError.connect(slot); }
     Signals::Connection subscribeProtocolError(ErrorSignal::Slot slot) { return m_notifyProtocolError.connect(slot); }
 
     void clearAllSlots();
@@ -105,12 +112,18 @@ private:
     uint32_t                    m_syncHeight;
     void                        updateSyncHeight(uint32_t syncHeight);
 
+    // Bloom filter parameters
+    double                      m_filterFalsePositiveRate;
+    uint32_t                    m_filterTweak;
+    uint8_t                     m_filterFlags;
+
     CoinQ::Network::NetworkSync m_networkSync;
     std::string                 m_blockTreeFile;
     bool                        m_bBlockTreeLoaded;
     bool                        m_bConnected;
     bool                        m_bSynching;
     bool                        m_bBlockTreeSynched;
+    bool                        m_bGotMempool;
 
     bool                        m_bInsertMerkleBlocks;
 
@@ -118,6 +131,8 @@ private:
     VaultSignal                 m_notifyVaultOpened;
     VoidSignal                  m_notifyVaultClosed;
     ErrorSignal                 m_notifyVaultError;
+    KeychainUnlockedSignal      m_notifyKeychainUnlocked;
+    KeychainLockedSignal        m_notifyKeychainLocked;
 
     // Sync state events
     StatusSignal                m_notifyStatusChanged;
@@ -127,8 +142,11 @@ private:
 
     // P2P network state events
     TxSignal                    m_notifyTxInserted;
-    TxSignal                    m_notifyTxStatusChanged;
+    TxSignal                    m_notifyTxUpdated;
     MerkleBlockSignal           m_notifyMerkleBlockInserted;
+    TxErrorSignal               m_notifyTxInsertionError;
+    MerkleBlockErrorSignal      m_notifyMerkleBlockInsertionError;
+    TxConfirmationErrorSignal   m_notifyTxConfirmationError;
     ErrorSignal                 m_notifyProtocolError;
 };
 

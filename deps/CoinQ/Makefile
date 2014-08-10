@@ -7,10 +7,6 @@ endif
 
 LOCAL_SYSROOT = ../../sysroot
 
-ifndef SYSROOT
-    SYSROOT = /usr/local
-endif
-
 INCLUDE_PATH += \
     -Isrc
 
@@ -28,6 +24,14 @@ ifndef OS
 endif
 
 ifeq ($(OS), linux)
+    ifndef SYSROOT
+        ifeq ($(shell whoami), root)
+            SYSROOT = /usr/local
+        else
+            SYSROOT = $(LOCAL_SYSROOT)
+        endif
+    endif
+
     CXX = g++
     CC = gcc
     CXX_FLAGS += -Wno-unknown-pragmas -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
@@ -35,11 +39,14 @@ ifeq ($(OS), linux)
     ARCHIVER = ar
 
 else ifeq ($(OS), mingw64)
+    ifndef SYSROOT
+        SYSROOT = /usr/x86_64-w64-mingw32
+    endif
+
     CXX =  x86_64-w64-mingw32-g++
     CC =  x86_64-w64-mingw32-gcc
     CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
 
-    MINGW64_ROOT = /usr/x86_64-w64-mingw32
 
     INCLUDE_PATH += -I$(MINGW64_ROOT)/include
 
@@ -48,6 +55,14 @@ else ifeq ($(OS), mingw64)
     EXE_EXT = .exe
 
 else ifeq ($(OS), osx)
+    ifndef SYSROOT
+        ifeq ($(shell whoami), root)
+            SYSROOT = /usr/local
+        else
+            SYSROOT = $(LOCAL_SYSROOT)
+        endif
+    endif
+
     CXX = clang++
     CC = clang
     CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7

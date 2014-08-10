@@ -39,41 +39,45 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_status(STOPPED),
     m_bestHeight(0),
     m_syncHeight(0),
+    m_filterFalsePositiveRate(0.001),
+    m_filterTweak(0),
+    m_filterFlags(0),
     m_networkSync(coinParams),
     m_bBlockTreeLoaded(false),
     m_bConnected(false),
     m_bSynching(false),
     m_bBlockTreeSynched(false),
+    m_bGotMempool(false),
     m_bInsertMerkleBlocks(false)
 {
     LOGGER(trace) << "SynchedVault::SynchedVault()" << std::endl;
 
     m_networkSync.subscribeStatus([this](const std::string& message)
     {
-        LOGGER(trace) << "P2P network status: " << message << std::endl;
+        LOGGER(trace) << "SynchedVault - Status: " << message << std::endl;
     });
 
     m_networkSync.subscribeProtocolError([this](const std::string& error)
     {
-        LOGGER(trace) << "P2P protocol error: " << error << std::endl;
+        LOGGER(trace) << "SynchedVault - Protocol error: " << error << std::endl;
         m_notifyProtocolError(error);
     });
 
     m_networkSync.subscribeConnectionError([this](const std::string& error)
     {
-        LOGGER(trace) << "P2P connection error: " << error << std::endl;
+        LOGGER(trace) << "SynchedVault - Connection error: " << error << std::endl;
         m_notifyConnectionError(error);
     });
 
     m_networkSync.subscribeOpen([this]()
     {
-        LOGGER(trace) << "P2P network connection opened." << std::endl;
+        LOGGER(trace) << "SynchedVault - connection opened." << std::endl;
         m_bConnected = true;
     });
 
     m_networkSync.subscribeClose([this]()
     {
-        LOGGER(trace) << "P2P network connection closed." << std::endl;
+        LOGGER(trace) << "SynchedVault - connection closed." << std::endl;
         m_bConnected = false;
         m_bSynching = false;
         updateStatus(STOPPED);
@@ -81,102 +85,87 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeStarted([this]()
     {
-/*
-        LOGGER(trace) << "P2P network sync started." << std::endl;
-        m_bSynching = true;
-        updateStatus(STARTING);
-*/
-        //TODO: notify clients
+        LOGGER(trace) << "SynchedVault - Sync started." << std::endl;
     });
 
     m_networkSync.subscribeStopped([this]()
     {
-/*
-        LOGGER(trace) << "P2P network sync stopped." << std::endl;
-        m_bSynching = false;
-        updateStatus(STOPPED);
-*/
-        //TODO: notify clients
+        LOGGER(trace) << "SynchedVault - Sync stopped." << std::endl;
     });
 
     m_networkSync.subscribeTimeout([this]()
     {
-        LOGGER(trace) << "P2P network sync timeout." << std::endl;
+        LOGGER(trace) << "SynchedVault - Sync timeout." << std::endl;
         m_notifyConnectionError("Network timed out.");
     });
 
     m_networkSync.subscribeFetchingHeaders([this]()
     {
-        LOGGER(trace) << "P2P fetching headers." << std::endl;
+        LOGGER(trace) << "SynchedVault - Fetching headers." << std::endl;
         updateStatus(FETCHING_HEADERS);
     });
 
     m_networkSync.subscribeHeadersSynched([this]()
     {
-        LOGGER(trace) << "P2P headers sync complete." << std::endl;
+        LOGGER(trace) << "SynchedVault - Headers sync complete." << std::endl;
         m_bBlockTreeSynched = true;
         updateBestHeight(m_networkSync.getBestHeight());
 
-        try
+        if (!m_networkSync.connected())
         {
-            if (m_vault)
+            updateStatus(STOPPED);
+        }
+        else if (!m_vault)
+        {
+            updateStatus(SYNCHED);
+        }
+        else
+        {
+            try
             {
-                LOGGER(trace) << "Attempting to sync blocks." << std::endl;
                 syncBlocks();
             }
-            else if (m_networkSync.connected())
+            catch (const std::exception& e)
             {
-                m_networkSync.stopSyncBlocks();
-                updateStatus(SYNCHED);
+                LOGGER(error) << e.what() << std::endl;
             }
-        }
-        catch (const std::exception& e)
-        {
-            LOGGER(error) << e.what() << std::endl;
         }
     });
 
     m_networkSync.subscribeFetchingBlocks([this]()
     {
-        LOGGER(trace) << "P2P fetching blocks." << std::endl;
+        LOGGER(trace) << "SynchedVault - Fetching blocks." << std::endl;
         
-        if (m_vault)
-        {        
-            updateStatus(FETCHING_BLOCKS);
-        }
-        else if (m_networkSync.connected())
-        {
-            m_networkSync.stopSyncBlocks();
-            updateStatus(SYNCHED);
-        }
+        if (m_vault) { updateStatus(FETCHING_BLOCKS); }
     });
 
     m_networkSync.subscribeBlocksSynched([this]()
     {
-        LOGGER(trace) << "Block sync complete." << std::endl;
+        LOGGER(trace) << "SynchedVault - Block sync complete." << std::endl;
 
+        if (m_networkSync.connected())
         {
-            std::lock_guard<std::mutex> lock(m_vaultMutex);
-            if (m_vault && m_networkSync.connected())
+            updateStatus(SYNCHED);
+
+            if (m_vault && !m_bGotMempool)
             {
-                LOGGER(info) << "Fetching mempool." << std::endl;
+                LOGGER(info) << "SynchedVault - Fetching mempool." << std::endl;
                 m_networkSync.getMempool();
+                m_bGotMempool = true;
             }
         }
-
-        if (m_networkSync.connected()) { updateStatus(SYNCHED); }
     });
 
     m_networkSync.subscribeAddBestChain([this](const chain_header_t& header)
     {
-        LOGGER(trace) << "P2P network added best chain. New best height: " << header.height << std::endl;
+        LOGGER(trace) << "SynchedVault - Added best chain. New best height: " << header.height << std::endl;
 
         updateBestHeight(header.height);
     });
 
     m_networkSync.subscribeRemoveBestChain([this](const chain_header_t& header)
     {
-        LOGGER(trace) << "P2P network removed best chain." << std::endl;
+        LOGGER(trace) << "SynchedVault - removed best chain." << std::endl;
         int diff = m_bestHeight - m_networkSync.getBestHeight();
         if (diff >= 0)
         {
@@ -185,9 +174,9 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         }
     });
 
-    m_networkSync.subscribeTx([this](const Coin::Transaction& coinTx)
+    m_networkSync.subscribeNewTx([this](const Coin::Transaction& cointx)
     {
-        LOGGER(trace) << "P2P network received transaction " << coinTx.getHashLittleEndian().getHex() << std::endl;
+        LOGGER(trace) << "SynchedVault - Received new transaction " << cointx.getHashLittleEndian().getHex() << std::endl;
 
         if (!m_vault) return;
         std::lock_guard<std::mutex> lock(m_vaultMutex);
@@ -195,9 +184,46 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
         try
         {
-            std::shared_ptr<Tx> tx(new Tx());
-            tx->set(coinTx);
-            m_vault->insertTx(tx);
+            m_vault->insertNewTx(cointx);
+        }
+        catch (const std::exception& e)
+        {
+            LOGGER(error) << e.what() << std::endl;
+            m_notifyVaultError(e.what());
+        } 
+    });
+
+    m_networkSync.subscribeMerkleTx([this](const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount)
+    {
+        LOGGER(trace) << "SynchedVault - Received merkle transaction " << cointx.getHashLittleEndian().getHex() << " in block " << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << std::endl;
+
+        if (!m_vault) return;
+        std::lock_guard<std::mutex> lock(m_vaultMutex);
+        if (!m_vault) return;
+
+        try
+        {
+            m_vault->insertMerkleTx(chainmerkleblock, cointx, txindex, txcount);
+        }
+        catch (const std::exception& e)
+        {
+            LOGGER(error) << e.what() << std::endl;
+            m_notifyVaultError(e.what());
+        } 
+	
+    });
+
+    m_networkSync.subscribeTxConfirmed([this](const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount)
+    {
+        LOGGER(trace) << "SynchedVault - Received transaction confirmation " << uchar_vector(txhash).getHex() << " in block " << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << std::endl;
+
+        if (!m_vault) return;
+        std::lock_guard<std::mutex> lock(m_vaultMutex);
+        if (!m_vault) return;
+
+        try
+        {
+            m_vault->confirmMerkleTx(chainmerkleblock, txhash, txindex, txcount);
         }
         catch (const std::exception& e)
         {
@@ -208,7 +234,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeMerkleBlock([this](const ChainMerkleBlock& chainMerkleBlock)
     {
-        LOGGER(trace) << "P2P network received merkle block " << chainMerkleBlock.blockHeader.getHashLittleEndian().getHex() << " height: " << chainMerkleBlock.height << std::endl;
+        LOGGER(trace) << "SynchedVault - received merkle block " << chainMerkleBlock.blockHeader.getHashLittleEndian().getHex() << " height: " << chainMerkleBlock.height << std::endl;
 
         if (!m_vault) return;
         if (!m_bInsertMerkleBlocks) return;
@@ -219,6 +245,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         try
         {
             std::shared_ptr<MerkleBlock> merkleblock(new MerkleBlock(chainMerkleBlock));
+			merkleblock->txsinserted(true);
             m_vault->insertMerkleBlock(merkleblock);
         }
         catch (const std::exception& e)
@@ -230,7 +257,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeBlockTreeChanged([this]()
     {
-        LOGGER(trace) << "P2P network block tree changed." << std::endl;
+        LOGGER(trace) << "SynchedVault - block tree changed." << std::endl;
 
         m_bBlockTreeSynched = false;
         updateBestHeight(m_networkSync.getBestHeight());
@@ -246,7 +273,7 @@ SynchedVault::~SynchedVault()
 }
 
 // Block tree operations
-void SynchedVault::loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork, std::function<void(const CoinQBlockTreeMem&)> callback)
+void SynchedVault::loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork, CoinQBlockTreeMem::callback_t callback)
 {
     LOGGER(trace) << "SynchedVault::loadHeaders(" << blockTreeFile << ", " << (bCheckProofOfWork ? "true" : "false") << ")" << std::endl;
 
@@ -282,13 +309,19 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
         }
 
         updateSyncHeight(m_vault->getBestHeight());
+
+        m_vault->subscribeKeychainUnlocked([this](const std::string& keychainName) { m_notifyKeychainUnlocked(keychainName); });
+        m_vault->subscribeKeychainLocked([this](const std::string& keychainName) { m_notifyKeychainLocked(keychainName); });
         m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
-        m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
+        m_vault->subscribeTxUpdated([this](std::shared_ptr<Tx> tx) { m_notifyTxUpdated(tx); });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
         {
             updateSyncHeight(merkleblock->blockheader()->height());
             m_notifyMerkleBlockInserted(merkleblock);
         });
+        m_vault->subscribeTxInsertionError([this](std::shared_ptr<Tx> tx, std::string description) { m_notifyTxInsertionError(tx, description); });
+        m_vault->subscribeMerkleBlockInsertionError([this](std::shared_ptr<MerkleBlock> merkleblock, std::string description) { m_notifyMerkleBlockInsertionError(merkleblock, description); });
+        m_vault->subscribeTxConfirmationError([this](std::shared_ptr<MerkleBlock> merkleblock, bytes_t txhash) { m_notifyTxConfirmationError(merkleblock, txhash); });
     }
 
     m_notifyVaultOpened(m_vault);
@@ -320,13 +353,18 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
 
         updateSyncHeight(m_vault->getBestHeight());
 
+        m_vault->subscribeKeychainUnlocked([this](const std::string& keychainName) { m_notifyKeychainUnlocked(keychainName); });
+        m_vault->subscribeKeychainLocked([this](const std::string& keychainName) { m_notifyKeychainLocked(keychainName); });
         m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
-        m_vault->subscribeTxStatusChanged([this](std::shared_ptr<Tx> tx) { m_notifyTxStatusChanged(tx); });
+        m_vault->subscribeTxUpdated([this](std::shared_ptr<Tx> tx) { m_notifyTxUpdated(tx); });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
         {
             updateSyncHeight(merkleblock->blockheader()->height());
             m_notifyMerkleBlockInserted(merkleblock);
         });
+        m_vault->subscribeTxInsertionError([this](std::shared_ptr<Tx> tx, std::string description) { m_notifyTxInsertionError(tx, description); });
+        m_vault->subscribeMerkleBlockInsertionError([this](std::shared_ptr<MerkleBlock> merkleblock, std::string description) { m_notifyMerkleBlockInsertionError(merkleblock, description); });
+        m_vault->subscribeTxConfirmationError([this](std::shared_ptr<MerkleBlock> merkleblock, bytes_t txhash) { m_notifyTxConfirmationError(merkleblock, txhash); });
     }
 
     m_notifyVaultOpened(m_vault);
@@ -345,9 +383,9 @@ void SynchedVault::closeVault()
         m_bInsertMerkleBlocks = false;
         m_networkSync.stopSyncBlocks();
         delete m_vault;
+        m_vault = nullptr;
     }
 
-    m_vault = nullptr;
     m_notifyVaultClosed();
     updateSyncHeight(0);
     if (m_networkSync.connected() && m_networkSync.headersSynched()) { updateStatus(SYNCHED); }
@@ -375,6 +413,7 @@ void SynchedVault::stopSync()
     m_networkSync.stop();
 }
 
+//TODO: get rid of m_bInsertMerkleBlocks
 void SynchedVault::suspendBlockUpdates()
 {
     LOGGER(trace) << "SynchedVault::suspendBlockUpdates()" << std::endl;
@@ -390,11 +429,10 @@ void SynchedVault::syncBlocks()
     LOGGER(trace) << "SynchedVault::syncBlocks()" << std::endl;
 
     if (!m_bConnected) throw std::runtime_error("Not connected.");
-    {
-        if (!m_vault) throw std::runtime_error("No vault is open.");
-        std::lock_guard<std::mutex> lock(m_vaultMutex);
-        if (!m_vault) throw std::runtime_error("No vault is open.");
-    }
+
+    if (!m_vault) throw std::runtime_error("No vault is open.");
+    std::lock_guard<std::mutex> lock(m_vaultMutex);
+    if (!m_vault) throw std::runtime_error("No vault is open.");
 
     uint32_t startTime = m_vault->getMaxFirstBlockTimestamp();
     if (startTime == 0)
@@ -403,11 +441,19 @@ void SynchedVault::syncBlocks()
         return;
     }
 
-    updateBloomFilter();
+    m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
 
     std::vector<bytes_t> locatorHashes = m_vault->getLocatorHashes();
+    m_bGotMempool = false;
     m_bInsertMerkleBlocks = true;
     m_networkSync.syncBlocks(locatorHashes, startTime);
+}
+
+void SynchedVault::setFilterParams(double falsePositiveRate, uint32_t nTweak, uint8_t nFlags)
+{
+    m_filterFalsePositiveRate = falsePositiveRate;
+    m_filterTweak = nTweak;
+    m_filterFlags = nFlags;
 }
 
 void SynchedVault::updateBloomFilter()
@@ -489,8 +535,10 @@ void SynchedVault::clearAllSlots()
     m_notifyConnectionError.clear();
 
     m_notifyTxInserted.clear();
-    m_notifyTxStatusChanged.clear();
+    m_notifyTxUpdated.clear();
     m_notifyMerkleBlockInserted.clear();
+    m_notifyTxInsertionError.clear();
+    m_notifyMerkleBlockInsertionError.clear();
     m_notifyProtocolError.clear();
 }
 

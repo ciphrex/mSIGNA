@@ -297,6 +297,26 @@ Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint
     return filter;
 }
 
+hashvector_t Vault::getIncompleteBlockHashes() const
+{
+    LOGGER(trace) << "Vault::getIncompleteBlockHashes()" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    return getIncompleteBlockHashes_unwrapped();
+}
+
+hashvector_t Vault::getIncompleteBlockHashes_unwrapped() const
+{
+    hashvector_t hashes;
+    odb::result<MerkleBlock> r(db_->query<MerkleBlock>((odb::query<MerkleBlock>::txsinserted == false) + "ORDER BY" + odb::query<MerkleBlock>::blockheader->height));
+    for (auto& merkleblock: r) { hashes.push_back(merkleblock.blockheader()->hash()); }
+    return hashes;
+}
+
 void Vault::exportVault(const std::string& filepath, bool exportprivkeys, const secure_bytes_t& exportChainCodeUnlockKey) const
 {
     LOGGER(trace) << "Vault::exportVault(" << filepath << ", " << (exportprivkeys ? "true" : "false") << ", ...)" << std::endl;
@@ -753,6 +773,10 @@ void Vault::lockAllKeychains()
 
     boost::lock_guard<boost::mutex> lock(mutex);
     mapPrivateKeyUnlock.clear();
+    for (auto& item: mapPrivateKeyUnlock)
+    {
+        notifyKeychainLocked(item.first);
+    }
 }
 
 void Vault::lockKeychain(const std::string& keychain_name)
@@ -761,6 +785,7 @@ void Vault::lockKeychain(const std::string& keychain_name)
 
     boost::lock_guard<boost::mutex> lock(mutex);
     mapPrivateKeyUnlock.erase(keychain_name);
+    notifyKeychainLocked(keychain_name);
 }
 
 void Vault::unlockKeychain(const std::string& keychain_name, const secure_bytes_t& unlock_key)
@@ -778,6 +803,7 @@ void Vault::unlockKeychain(const std::string& keychain_name, const secure_bytes_
 
     boost::lock_guard<boost::mutex> lock(mutex);
     mapPrivateKeyUnlock[keychain_name] = unlock_key;
+    notifyKeychainUnlocked(keychain_name);
 }
 
 void Vault::unlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain, const secure_bytes_t& overrideChainCodeUnlockKey) const
@@ -1755,7 +1781,7 @@ std::vector<TxView> Vault::getTxViews(int tx_status_flags, unsigned long start, 
 
 std::shared_ptr<Tx> Vault::insertTx(std::shared_ptr<Tx> tx, bool replace_labels)
 {
-    LOGGER(trace) << "Vault::insertTx(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << "replace_labels: " << (replace_labels ? "true" : "false") << std::endl;
+    LOGGER(trace) << "Vault::insertTx(...) - hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << ", replace_labels: " << (replace_labels ? "true" : "false") << std::endl;
 
     {
         boost::lock_guard<boost::mutex> lock(mutex);
@@ -1902,7 +1928,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool repla
 
         if (!updated) return nullptr;
 
-        signalQueue.push(notifyTxStatusChanged.bind(stored_tx));
+        signalQueue.push(notifyTxUpdated.bind(stored_tx));
         return stored_tx;
     }
 
@@ -2064,8 +2090,8 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool repla
             {
                 conflicting_tx->conflicting(true);
                 db_->update(conflicting_tx);
-                signalQueue.push(notifyTxStatusChanged.bind(conflicting_tx));
-                //notifyTxStatusChanged(conflicting_tx);
+                signalQueue.push(notifyTxUpdated.bind(conflicting_tx));
+                //notifyTxUpdated(conflicting_tx);
             }
         }
     }
@@ -2093,6 +2119,423 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool repla
 
     LOGGER(debug) << "Vault::insertTx_unwrapped - transaction not inserted." << std::endl;
     return nullptr; 
+}
+
+std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader, bool verifysigs, bool isCoinbase)
+{
+    std::stringstream ss;
+    ss << "Vault::insertNewTx(" << cointx.getHashLittleEndian().getHex() << ", ";
+    if (blockheader)    { ss << uchar_vector(blockheader->hash()).getHex(); }
+    else                { ss << "null"; }
+    ss << ", " << (verifysigs ? "true" : "false") << ")";
+    LOGGER(trace) << ss.str() << std::endl;
+
+    std::shared_ptr<Tx> tx;
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = insertNewTx_unwrapped(cointx, blockheader, verifysigs, isCoinbase);
+        t.commit();
+    }
+
+    signalQueue.flush();
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader, bool verifysigs, bool isCoinbase)
+{
+    using namespace CoinQ::Script;
+
+    if (verifysigs)
+    {
+        Signer signer(cointx);
+        if (!signer.isSigned()) throw TxNotSignedException(cointx.getHashLittleEndian());
+    }
+
+    // If we already have it but it is unsent update to propagated
+    bytes_t txhash = cointx.getHashLittleEndian();
+    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
+    if (!r.empty())
+    {
+        std::shared_ptr<Tx> tx(r.begin().load());
+        if (tx->status() < Tx::PROPAGATED)
+        {
+            tx->status(Tx::PROPAGATED);
+            db_->update(tx);
+            signalQueue.push(notifyTxUpdated.bind(tx));
+            return tx; 
+        }
+        return nullptr;
+    }
+
+    std::shared_ptr<Tx> tx(new Tx());
+    tx->set(cointx, time(NULL), Tx::PROPAGATED);
+    tx->blockheader(blockheader);
+
+    std::set<std::shared_ptr<SigningScript>>    updated_scripts;
+    std::set<std::shared_ptr<TxIn>>             updated_txins;
+    std::set<std::shared_ptr<TxOut>>            updated_txouts;
+    std::set<std::shared_ptr<Tx>>               updated_txs;
+
+    std::shared_ptr<Account> sending_account;
+
+    if (!isCoinbase)
+    {
+        for (auto& txin: tx->txins())
+        {
+            bytes_t unsigned_script;
+            try
+            {
+                unsigned_script = txin->unsigned_script();
+            }
+            catch (const std::exception& e)
+            {
+                LOGGER(error) << "Vault::insertNewTx_unwrapped() - unrecognized input script type: " << e.what() << std::endl;
+                signalQueue.push(notifyTxInsertionError.bind(tx, "Unrecognized input script type."));
+                continue;
+            }
+
+            odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txinscript == unsigned_script));
+            if (!r.empty())
+            {
+                // TODO: support sending from multiple accounts in one transaction
+                std::shared_ptr<SigningScript> signingscript(r.begin().load());
+                signingscript->markUsed();
+                updated_scripts.insert(signingscript);
+
+                sending_account = signingscript->account();
+
+                // Search for outpoint it spends
+                odb::result<TxOut> txout_r(db_->query<TxOut>(odb::query<TxOut>::tx->hash == txin->outhash() && odb::query<TxOut>::txindex == txin->outindex()));
+                if (!txout_r.empty())
+                {
+                    std::shared_ptr<TxOut> txout(txout_r.begin().load());
+                    // if (txout->script() != signingscript->txoutscript()) throw TxInvalidOutpointException();
+                    txin->outpoint(txout);
+
+                    txout->spent(txin);
+                    updated_txouts.insert(txout);
+                }
+            }
+        }
+    }
+
+    bool receive = false;
+    for (auto& txout: tx->txouts())
+    {
+        txout->sending_account(sending_account);
+
+        odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == txout->script()));
+        if (!r.empty())
+        {
+            receive = true;
+
+            std::shared_ptr<SigningScript> signingscript(r.begin().load());
+            signingscript->markUsed();
+            updated_scripts.insert(signingscript);
+
+            txout->signingscript(signingscript);
+
+            // Search for an input that claims it (to support out-of-order insertion)
+            odb::result<TxIn> txin_r(db_->query<TxIn>(odb::query<TxIn>::outhash == tx->hash() && odb::query<TxIn>::outindex == txout->txindex()));
+            if (!txin_r.empty())
+            {
+                std::shared_ptr<TxIn> txin(txin_r.begin().load());
+                txout->spent(txin);
+
+                txin->outpoint(txout);
+                updated_txins.insert(txin);
+                updated_txs.insert(txin->tx());
+            }
+        }
+    }
+
+    if (sending_account || receive)
+    {
+        for (auto& script:  updated_scripts)
+        {
+            db_->update(script);
+            try
+            {
+                refillAccountBinPool_unwrapped(script->account_bin());
+            }
+            catch (const KeychainChainCodeLockedException& e)
+            {
+                LOGGER(debug) << "Vault::insertTx_unwrapped - Chain code for keychain " << e.keychain_name() << " is locked so change pool cannot be replenished." << std::endl;
+            }
+        }
+
+        tx->updateTotals(); db_->persist(tx);
+        for (auto& txin:    tx->txins())            { db_->persist(txin);                   }
+        for (auto& txout:   tx->txouts())           { db_->persist(txout);                  }
+
+        for (auto& txin:    updated_txins)          { db_->update(txin);                    }
+        for (auto& txout:   updated_txouts)         { db_->update(txout);                   }
+        for (auto& tx:      updated_txs)            { tx->updateTotals(); db_->update(tx);  }
+
+        signalQueue.push(notifyTxInserted.bind(tx));
+        return tx;
+    }
+
+    return nullptr;
+}
+
+std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs, bool isCoinbase)
+{
+    LOGGER(trace) << "Vault::insertMerkleTx(" << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << ", " << cointx.getHashLittleEndian().getHex() << ", " << txindex << ", " << txcount << ", " << (verifysigs ? "true" : "false") << ")" << std::endl;
+
+    std::shared_ptr<Tx> tx;
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = insertMerkleTx_unwrapped(chainmerkleblock, cointx, txindex, txcount, verifysigs, isCoinbase);
+        t.commit();
+    }
+
+    signalQueue.flush();
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs, bool isCoinbase)
+{
+    bytes_t blockhash = chainmerkleblock.blockHeader.getHashLittleEndian();
+    bytes_t txhash = cointx.getHashLittleEndian();
+
+    // Instantiate merkleblock
+    std::shared_ptr<MerkleBlock> merkleblock;
+    {
+        odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader.is_not_null() && odb::query<MerkleBlock>::blockheader->hash == blockhash));
+        if (!r.empty())
+        {
+            merkleblock = r.begin().load();
+        }
+        else
+        {
+            // Connect to chain
+            if (txindex != 0) throw MerkleTxBadInsertionOrderException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+
+            odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.blockHeader.prevBlockHash));
+            if (r.empty())
+            {
+                odb::result<BlockCountView> r(db_->query<BlockCountView>());
+                if (!r.empty() && r.begin()->count > 0) throw MerkleTxFailedToConnectException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+            }
+            else
+            {
+                if ((unsigned int)chainmerkleblock.height != r.begin().load()->blockheader()->height() + 1)
+                    throw MerkleTxInvalidHeightException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+            }
+
+            {
+                // Unconfirm any transactions with equal or larger height
+                odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::blockheader->height >= (unsigned int)chainmerkleblock.height));
+                for (odb::result<Tx>::iterator it = r.begin(); it != r.end(); ++it)
+                {
+                    std::shared_ptr<Tx> tx(it.load());
+                    tx->status(Tx::PROPAGATED);
+                    db_->update(tx);
+                    signalQueue.push(notifyTxUpdated.bind(tx));
+                }
+            }
+
+            {
+                // Delete any merkleblocks with equal or larger height
+                odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->height >= (unsigned int)chainmerkleblock.height));
+                for (auto& merkleblock: r) { db_->erase(merkleblock); }
+            }
+
+            {
+                // Delete any blockheaders with equal or larger height
+                odb::result<BlockHeader> r(db_->query<BlockHeader>(odb::query<BlockHeader>::height >= (unsigned int)chainmerkleblock.height));
+                for (auto& blockheader: r) { db_->erase(blockheader); }
+            }
+
+            // TODO: test and use the following instead of the above three code blocks
+            //deleteMerkleBlock_unwrapped((uint32_t)chainmerkleblock.height);
+
+            // Instantiate the new merkle block and store
+            merkleblock = std::make_shared<MerkleBlock>(chainmerkleblock);
+            db_->persist(merkleblock->blockheader());
+            db_->persist(merkleblock);
+        }
+    }
+
+    // If we already have the transaction, just update it.
+    {
+        odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
+        if (!r.empty())
+        {
+            std::shared_ptr<Tx> tx(r.begin().load());
+            tx->blockheader(merkleblock->blockheader());
+            tx->status(Tx::CONFIRMED);
+            tx->conflicting(false);
+            db_->update(tx);
+            signalQueue.push(notifyTxUpdated.bind(tx));
+            return tx;
+        }
+        else
+        {
+            Coin::Transaction cointxcopy(cointx);
+            cointxcopy.clearScriptSigs();
+            bytes_t txunsignedhash = cointxcopy.getHashLittleEndian();
+            odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::unsigned_hash == txunsignedhash));
+            if (!r.empty())
+            {
+                // We have an unsigned version of the transaction
+                std::shared_ptr<Tx> tx(r.begin().load());
+
+                // Sanity check - the following condition should never be true, but using out-of-bounds indices will crash the program
+                if (tx->txins().size() != cointx.inputs.size())
+                    throw MerkleTxMismatchException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+
+                // Replace stored tx inputs with new ones since this transaction is signed
+                txins_t::size_type i = 0;
+                for (auto& txin: tx->txins())
+                {
+                    txin->fromCoinCore(cointx.inputs[i++]);
+                    db_->update(txin);
+                }
+
+                // Another sanity check - compare hashes
+                if (tx->toCoinCore().getHashLittleEndian() != txhash)
+                    throw MerkleTxMismatchException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+
+                tx->blockheader(merkleblock->blockheader());
+                tx->hash(txhash);
+                tx->status(Tx::CONFIRMED);
+                tx->conflicting(false);
+                db_->update(tx);
+                signalQueue.push(notifyTxUpdated.bind(tx));
+                return tx;
+            }
+        } 
+    }
+
+    // We've never seen this transaction before - treat it as a new transaction
+    std::shared_ptr<Tx> tx;
+    try
+    {
+        tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader(), verifysigs, isCoinbase);
+    }
+    catch (const std::runtime_error& e)
+    {
+        LOGGER(error) << "insertNewTx_unwrapped() threw exception: " << e.what() << std::endl;
+        signalQueue.push(notifyMerkleBlockInsertionError.bind(merkleblock, e.what()));
+    }
+
+    if (txindex + 1 == txcount)
+    {
+        merkleblock->txsinserted(true);
+        db_->update(merkleblock);
+        signalQueue.push(notifyMerkleBlockInserted.bind(merkleblock));
+    }
+
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::confirmMerkleTx(const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount)
+{
+    LOGGER(trace) << "Vault::confirmMerkleTx(" << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << ", " << uchar_vector(txhash).getHex() << ", " << txindex << ", " << txcount << ")" << std::endl;
+
+    std::shared_ptr<Tx> tx;
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = confirmMerkleTx_unwrapped(chainmerkleblock, txhash, txindex, txcount);
+        t.commit();
+    }
+
+    signalQueue.flush();
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::confirmMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount)
+{
+    bytes_t blockhash = chainmerkleblock.blockHeader.getHashLittleEndian();
+
+    // Instantiate merkleblock
+    std::shared_ptr<MerkleBlock> merkleblock;
+    {
+        odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader.is_not_null() && odb::query<MerkleBlock>::blockheader->hash == blockhash));
+        if (!r.empty())
+        {
+            merkleblock = r.begin().load();
+        }
+        else
+        {
+            // Connect to chain
+            if (txindex != 0) throw MerkleTxBadInsertionOrderException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+
+            odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.blockHeader.prevBlockHash));
+            if (r.empty())
+            {
+                odb::result<BlockCountView> r(db_->query<BlockCountView>());
+                if (!r.empty() && r.begin()->count > 0) throw MerkleTxFailedToConnectException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+            }
+            else
+            {
+                if ((unsigned int)chainmerkleblock.height != r.begin().load()->blockheader()->height() + 1)
+                    throw MerkleTxInvalidHeightException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+            }
+
+            {
+                // Unconfirm any transactions with equal or larger height
+                odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::blockheader->height >= (unsigned int)chainmerkleblock.height));
+                for (odb::result<Tx>::iterator it = r.begin(); it != r.end(); ++it)
+                {
+                    std::shared_ptr<Tx> tx(it.load());
+                    tx->status(Tx::PROPAGATED);
+                    db_->update(tx);
+                    signalQueue.push(notifyTxUpdated.bind(tx));
+                }
+            }
+
+
+            {
+                // Delete any merkleblocks with equal or larger height
+                odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->height >= (unsigned int)chainmerkleblock.height));
+                for (auto& merkleblock: r) { db_->erase(merkleblock); }
+            }
+
+            {
+                // Delete any blockheaders with equal or larger height
+                odb::result<BlockHeader> r(db_->query<BlockHeader>(odb::query<BlockHeader>::height >= (unsigned int)chainmerkleblock.height));
+                for (auto& blockheader: r) { db_->erase(blockheader); }
+            }
+
+            // TODO: test and use the following instead of the above three code blocks
+            //deleteMerkleBlock_unwrapped((uint32_t)chainmerkleblock.height);
+
+            // Instantiate the new merkle block and store
+            merkleblock = std::make_shared<MerkleBlock>(chainmerkleblock);
+            db_->persist(merkleblock->blockheader());
+            db_->persist(merkleblock);
+        }
+    }
+
+    std::shared_ptr<Tx> tx;
+    odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
+    if (!tx_r.empty())
+    {
+        tx = tx_r.begin().load();
+        tx->blockheader(merkleblock->blockheader());
+        tx->status(Tx::CONFIRMED);
+        tx->conflicting(false);
+        db_->update(tx);
+        signalQueue.push(notifyTxUpdated.bind(tx));
+    }
+
+    if (txindex + 1 == txcount)
+    {
+        merkleblock->txsinserted(true);
+        db_->update(merkleblock);
+        signalQueue.push(notifyMerkleBlockInserted.bind(merkleblock));
+    }
+
+    return tx;
 }
 
 std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts, bool insert)
@@ -3025,9 +3468,9 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
     db_->persist(new_blockheader);
     db_->persist(merkleblock);
     signalQueue.push(notifyMerkleBlockInserted.bind(merkleblock));
-    //notifyMerkleBlockInserted(merkleblock);
 
     // Confirm transactions
+    bool confirmations_updated = false;
     const auto& hashes = merkleblock->hashes();
     odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::hash.in_range(hashes.begin(), hashes.end())));
     for (auto& tx: tx_r)
@@ -3040,8 +3483,13 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
         LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - confirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
         tx.blockheader(new_blockheader);
         db_->update(tx);
-        signalQueue.push(notifyTxStatusChanged.bind(std::make_shared<Tx>(tx)));
-        //notifyTxStatusChanged(std::make_shared<Tx>(tx));
+        confirmations_updated = true;
+        signalQueue.push(notifyTxUpdated.bind(std::make_shared<Tx>(tx)));
+    }
+
+    if (confirmations_updated)
+    {
+        db_->update(merkleblock);
     }
 
     return merkleblock;     
@@ -3071,6 +3519,33 @@ unsigned int Vault::deleteMerkleBlock(uint32_t height)
 
 unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
 {
+    unsigned int count = 0;
+
+    typedef odb::query<ConfirmedTxView> query_t;
+    odb::result<ConfirmedTxView> r(db_->query<ConfirmedTxView>((query_t::BlockHeader::height >= height) + "ORDER BY" + query_t::BlockHeader::height));
+    for (auto& view: r)
+    {
+        std::shared_ptr<Tx> tx(db_->find<Tx>(view.tx_id));
+        if (tx)
+        {
+            tx->blockheader(nullptr);
+            db_->update(tx);
+            signalQueue.push(notifyTxUpdated.bind(tx));
+        }
+
+        std::shared_ptr<MerkleBlock> merkleblock(db_->find<MerkleBlock>(view.merkleblock_id));
+        if (merkleblock) { db_->erase(merkleblock); }
+
+        std::shared_ptr<BlockHeader> blockheader(db_->find<BlockHeader>(view.blockheader_id));
+        if (blockheader)
+        {
+            db_->erase(blockheader);
+            count++;
+        }
+    }
+
+    return count;
+/*
     typedef odb::query<BlockHeader> query_t;
     odb::result<BlockHeader> r(db_->query<BlockHeader>((query_t::height >= height) + "ORDER BY" + query_t::height + "DESC"));
     unsigned int count = 0;
@@ -3085,8 +3560,8 @@ unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
             LOGGER(debug) << "Vault::deleteMerkleBlock_unwrapped - unconfirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
             tx.blockheader(nullptr);
             db_->update(tx);
-            signalQueue.push(notifyTxStatusChanged.bind(std::make_shared<Tx>(tx)));
-            //notifyTxStatusChanged(std::make_shared<Tx>(tx));
+            signalQueue.push(notifyTxUpdated.bind(std::make_shared<Tx>(tx)));
+            //notifyTxUpdated(std::make_shared<Tx>(tx));
         }
 
         // Delete merkle block
@@ -3098,6 +3573,7 @@ unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
         count++;
     }
     return count;
+*/
 }
 
 unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)
@@ -3115,13 +3591,15 @@ unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)
 
         std::shared_ptr<Tx> tx(db_->load<Tx>(view.tx_id));
         std::shared_ptr<BlockHeader> blockheader(db_->load<BlockHeader>(view.blockheader_id));
+        std::shared_ptr<MerkleBlock> merkleblock(db_->load<MerkleBlock>(view.merkleblock_id));
+
         tx->blockheader(blockheader);
         db_->update(tx);
-        signalQueue.push(notifyTxStatusChanged.bind(tx));
-        //notifyTxStatusChanged(tx);
+        signalQueue.push(notifyTxUpdated.bind(tx));
         count++;
         LOGGER(debug) << "Vault::updateConfirmations_unwrapped - transaction " << uchar_vector(tx->hash()).getHex() << " confirmed in block " << uchar_vector(tx->blockheader()->hash()).getHex() << " height: " << tx->blockheader()->height() << std::endl;
     }
+
     return count;
 }
 

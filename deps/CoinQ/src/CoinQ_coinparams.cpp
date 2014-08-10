@@ -41,17 +41,12 @@ const CoinParams& NetworkSelector::getCoinParams(const std::string& network_name
     if (network_name.empty())   { lower_network_name = selected_;    }
     else                        { lower_network_name = network_name; }
 
-    if (lower_network_name.empty()) throw runtime_error("NetworkSelector::getCoinParams() - no network selected.");
+    if (lower_network_name.empty()) throw NetworkSelectorNoNetworkSelectedException();
 
     transform(lower_network_name.begin(), lower_network_name.end(), lower_network_name.begin(), ::tolower);
 
     const auto& it = network_map_.find(lower_network_name);
-    if (it == network_map_.end())
-    {
-        stringstream err;
-        err << "NetworkSelector::getCoinParams() - network \"" << lower_network_name << "\" not recognized.";
-        throw runtime_error(err.str());
-    }
+    if (it == network_map_.end()) throw NetworkSelectorNetworkNotRecognizedException(lower_network_name);
 
     return it->second;
 }
@@ -60,12 +55,7 @@ void NetworkSelector::select(const std::string& network_name)
 {
     string lower_network_name(network_name);
     transform(lower_network_name.begin(), lower_network_name.end(), lower_network_name.begin(), ::tolower);
-    if (!network_map_.count(lower_network_name))
-    {
-        stringstream err;
-        err << "NetworkSelector::select() - network \"" << lower_network_name << "\" not recognized.";
-        throw runtime_error(err.str());
-    }
+    if (!network_map_.count(lower_network_name)) throw NetworkSelectorNetworkNotRecognizedException(lower_network_name);
 
     selected_ = lower_network_name;
 }

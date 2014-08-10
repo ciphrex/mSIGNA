@@ -55,7 +55,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 10
-#define SCHEMA_VERSION      10
+#define SCHEMA_VERSION      11
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -619,6 +619,8 @@ public:
     void status(status_t status);
     status_t status() const { return status_; }
 
+	void markUsed();
+
     const bytes_t& txinscript() const { return txinscript_; }
     const bytes_t& txoutscript() const { return txoutscript_; }
 
@@ -748,12 +750,12 @@ private:
 class MerkleBlock
 {
 public:
-    MerkleBlock() { }
+    MerkleBlock() : txsinserted_(false) { }
 
     MerkleBlock(const std::shared_ptr<BlockHeader>& blockheader, uint32_t txcount, const std::vector<bytes_t>& hashes, const bytes_t& flags)
-        : blockheader_(blockheader), txcount_(txcount), hashes_(hashes), flags_(flags) { }
+        : blockheader_(blockheader), txcount_(txcount), hashes_(hashes), flags_(flags), txsinserted_(false) { }
 
-    MerkleBlock(const ChainMerkleBlock& merkleblock) { fromCoinCore(merkleblock, merkleblock.height); }
+    MerkleBlock(const ChainMerkleBlock& merkleblock) : txsinserted_(false) { fromCoinCore(merkleblock, merkleblock.height); }
 
     void fromCoinCore(const Coin::MerkleBlock& merkleblock, uint32_t height = 0xffffffff);
     Coin::MerkleBlock toCoinCore() const;
@@ -773,6 +775,9 @@ public:
     void flags(const bytes_t& flags) { flags_ = flags; }
     const bytes_t& flags() const { return flags_; }
 
+    void txsinserted(bool txsinserted) { txsinserted_ = txsinserted; }
+    bool txsinserted() const { return txsinserted_; }
+
     std::string toJson() const;
 
 private:
@@ -791,6 +796,8 @@ private:
     std::vector<bytes_t> hashes_;
 
     bytes_t flags_;
+
+    bool txsinserted_;
 
     friend class boost::serialization::access;
     template<class Archive>
@@ -839,6 +846,7 @@ public:
     TxIn(const Coin::TxIn& coin_txin);
     TxIn(const bytes_t& raw);
 
+	void fromCoinCore(const Coin::TxIn& coin_txin);
     Coin::TxIn toCoinCore() const;
 
     unsigned long id() const { return id_; }
@@ -847,6 +855,7 @@ public:
 
     void script(const bytes_t& script) { script_ = script; }
     const bytes_t& script() const { return script_; }
+    bytes_t unsigned_script() const; // throws exception if script type is not recognized
 
     uint32_t sequence() const { return sequence_; }
     bytes_t raw() const;
@@ -1059,6 +1068,8 @@ public:
 
     unsigned long id() const { return id_; }
     uint32_t version() const { return version_; }
+
+    void hash(const bytes_t& hash) { hash_ = hash; }
     const bytes_t& hash() const { return status_ == UNSIGNED ? unsigned_hash_ : hash_; }
     const bytes_t& signed_hash() const { return hash_; }
     const bytes_t& unsigned_hash() const { return unsigned_hash_; }
@@ -1071,6 +1082,7 @@ public:
     uint32_t timestamp() const { return timestamp_; }
 
     bool updateStatus(status_t status = NO_STATUS); // Will keep the status it already had if it didn't change and no parameter is passed. Returns true iff status changed.
+    void status(status_t status) { status_ = status; }
     status_t status() const { return status_; }
 
     void conflicting(bool conflicting) { conflicting_ = conflicting; }
@@ -1582,7 +1594,9 @@ struct BalanceView
 };
 
 #pragma db view \
-    object(BlockHeader)
+	object(MerkleBlock) \
+    object(BlockHeader: MerkleBlock::blockheader_) \
+	query(MerkleBlock::txsinserted_ == true)
 struct BestHeightView
 {
     #pragma db column("max(" + BlockHeader::height_ + ")")
@@ -1645,6 +1659,14 @@ struct ConfirmedTxView
 
     #pragma db column(BlockHeader::height_)
     uint32_t block_height;
+};
+
+#pragma db view \
+    object(MerkleBlock) query(MerkleBlock::txsinserted_ == false)
+struct IncompleteBlockCountView
+{
+    #pragma db column("count(" + MerkleBlock::id_ + ")")
+    unsigned long count;
 };
 
 }

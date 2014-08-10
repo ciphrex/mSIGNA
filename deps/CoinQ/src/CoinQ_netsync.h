@@ -24,7 +24,10 @@
 #include "CoinQ_typedefs.h"
 #include "CoinQ_coinparams.h"
 
+#include <CoinCore/typedefs.h>
 #include <CoinCore/BloomFilter.h>
+
+#include <queue>
 
 typedef Coin::Transaction coin_tx_t;
 typedef ChainHeader chain_header_t;
@@ -33,6 +36,9 @@ typedef ChainMerkleBlock chain_merkle_block_t;
 
 namespace CoinQ {
     namespace Network {
+
+typedef std::function<void(const ChainMerkleBlock&, const Coin::Transaction&, unsigned int /*txindex*/, unsigned int /*txcount*/)> merkle_tx_slot_t;
+typedef std::function<void(const ChainMerkleBlock&, const bytes_t& /*txhash*/ , unsigned int /*txindex*/, unsigned int /*txcount*/)> tx_confirmed_slot_t;
 
 class NetworkSync
 {
@@ -43,14 +49,18 @@ public:
     void setCoinParams(const CoinQ::CoinParams& coinParams);
     const CoinQ::CoinParams& getCoinParams() const { return m_coinParams; }
 
-    void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = true, std::function<void(const CoinQBlockTreeMem&)> callback = nullptr);
+    void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = true, CoinQBlockTreeMem::callback_t callback = nullptr);
     bool headersSynched() const { return m_bHeadersSynched; }
     int getBestHeight();
+    const ChainHeader& getBestHeader() const { return m_blockTree.getHeader(-1); }
+    const ChainHeader& getHeader(const bytes_t& hash) const { return m_blockTree.getHeader(hash); }
+    const ChainHeader& getHeader(int height) const { return m_blockTree.getHeader(height); }
+    const ChainHeader& getHeaderBefore(uint32_t timestamp) const { return m_blockTree.getHeaderBefore(timestamp); }
 
 /*
     void start();
     void stop();
-    bool isStarted() const { return m_bStarted; }
+    bool isStarted() const { return m_bPeerStarted; }
 */
     void start(const std::string& host, const std::string& port = "");
     void start(const std::string& host, int port);
@@ -66,8 +76,10 @@ public:
 
     // MESSAGES TO PEER
     void sendTx(Coin::Transaction& tx);
-    void getTx(uchar_vector& hash);
+    void getTx(const bytes_t& hash);
+    void getTxs(const hashvector_t& hashes);
     void getMempool();
+    void getFilteredBlock(const bytes_t& hash);
 
     // SYNC EVENT SUBSCRIPTIONS
     void subscribeStarted(void_slot_t slot) { notifyStarted.connect(slot); }
@@ -89,7 +101,10 @@ public:
     void subscribeStatus(string_slot_t slot) { notifyStatus.connect(slot); }
 
     // PEER EVENT SUBSCRIPTIONS
-    void subscribeTx(tx_slot_t slot) { notifyTx.connect(slot); }
+    void subscribeNewTx(tx_slot_t slot) { notifyNewTx.connect(slot); }
+    void subscribeMerkleTx(merkle_tx_slot_t slot) { notifyMerkleTx.connect(slot); }
+    void subscribeTxConfirmed(tx_confirmed_slot_t slot) { notifyTxConfirmed.connect(slot); }
+
     void subscribeBlock(chain_block_slot_t slot) { notifyBlock.connect(slot); }
     void subscribeMerkleBlock(chain_merkle_block_slot_t slot) { notifyMerkleBlock.connect(slot); }
     void subscribeAddBestChain(chain_header_slot_t slot) { notifyAddBestChain.connect(slot); }
@@ -99,24 +114,36 @@ public:
 private:
     CoinQ::CoinParams m_coinParams;
 
-    mutable boost::mutex m_startMutex;
     bool m_bStarted;
+    boost::mutex m_startMutex;
+
+    bool m_bIOServiceStarted;
+    boost::mutex m_ioServiceMutex;
+    void startIOServiceThread();
+    void stopIOServiceThread();
     CoinQ::io_service_t m_ioService;
     boost::thread* m_ioServiceThread;
     CoinQ::io_service_t::work m_work;
+
+    bool m_bConnected;
     CoinQ::Peer m_peer;
 
-    mutable boost::mutex m_connectionMutex;
-    bool m_bConnected;
+    bool m_bFlushingToFile;
+    boost::mutex m_fileFlushMutex;
+    boost::condition_variable m_fileFlushCond;
+    boost::thread* m_fileFlushThread;
+    void startFileFlushThread();
+    void stopFileFlushThread();
+    void fileFlushLoop();
 
     mutable boost::mutex m_syncMutex;
     std::string m_blockTreeFile;
     CoinQBlockTreeMem m_blockTree;
     bool m_blockTreeLoaded;
-    bool m_bFetchingHeaders;
     bool m_bHeadersSynched;
 
     bool m_bFetchingBlocks;
+    bool m_bBlocksFetched;
     bool m_bBlocksSynched;
 
     uint32_t m_lastRequestedBlockHeight;
@@ -124,6 +151,15 @@ private:
     Coin::BloomFilter m_bloomFilter;
 
     void initBlockFilter();
+
+    // Merkle block state
+    std::set<bytes_t> m_mempoolTxs;
+    ChainMerkleBlock m_currentMerkleBlock;
+    std::queue<bytes_t> m_currentMerkleTxHashes;
+    unsigned int m_currentMerkleTxIndex;
+    unsigned int m_currentMerkleTxCount;
+
+    void processConfirmations();
 
     // Sync signals
     CoinQSignal<void> notifyStarted;
@@ -145,7 +181,10 @@ private:
     CoinQSignal<const std::string&> notifyStatus;
 
     // Peer signals
-    CoinQSignal<const Coin::Transaction&> notifyTx;
+    CoinQSignal<const Coin::Transaction&> notifyNewTx;
+    CoinQSignal<const ChainMerkleBlock&, const Coin::Transaction&, unsigned int, unsigned int> notifyMerkleTx;
+    CoinQSignal<const ChainMerkleBlock&, const bytes_t&, unsigned int, unsigned int> notifyTxConfirmed;
+
     CoinQSignal<const ChainBlock&> notifyBlock;
     CoinQSignal<const ChainMerkleBlock&> notifyMerkleBlock;
     CoinQSignal<const ChainHeader&> notifyAddBestChain;

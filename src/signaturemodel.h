@@ -27,11 +27,14 @@ public:
     void setTxHash(const bytes_t& txHash);
     const bytes_t getTxHash() const { return m_txHash; }
 
-    void update();
+    void updateAll();
 
     unsigned int getSigsNeeded() const { return m_sigsNeeded; }
 
     Qt::ItemFlags flags(const QModelIndex& /*index*/) const;
+
+signals:
+    void txUpdated();
 
 private:
     void initColumns();

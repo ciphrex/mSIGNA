@@ -52,7 +52,11 @@ endif
 
 ifeq ($(OS), linux)
     ifndef SYSROOT
-        SYSROOT = /usr/local
+        ifeq ($(shell whoami), root)
+            SYSROOT = /usr/local
+        else
+            SYSROOT = $(LOCAL_SYSROOT)
+        endif
     endif
 
     CXX = g++
@@ -90,7 +94,11 @@ else ifeq ($(OS), mingw64)
 
 else ifeq ($(OS), osx)
     ifndef SYSROOT
-        SYSROOT = /usr/local
+        ifeq ($(shell whoami), root)
+            SYSROOT = /usr/local
+        else
+            SYSROOT = $(LOCAL_SYSROOT)
+        endif
     endif
 
     CXX = clang++
@@ -135,18 +143,14 @@ OBJS = \
     obj/SynchedVault.o
 
 TOOLS = \
-    tools/build/coindb$(EXE_EXT)
+    tools/coindb/build/coindb$(EXE_EXT) \
+    tools/syncdb/build/syncdb$(EXE_EXT)
 
-TESTS = \
-    tests/build/SynchedVaultTest$(EXE_EXT)
-
-all: lib tools tests
+all: lib tools
 
 lib: lib/libCoinDB.a
 
-tools: $(TOOLS) 
-
-tests: $(TESTS)
+tools: coindb syncdb
 
 lib/libCoinDB.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
@@ -186,13 +190,17 @@ obj/SynchedVault.o: src/SynchedVault.cpp src/SynchedVault.h src/VaultExceptions.
 #
 # coindb command line tool
 #
-tools/build/coindb$(EXE_EXT): tools/src/coindb.cpp tools/src/formatting.h lib/libCoinDB.a
+coindb: lib tools/coindb/build/coindb$(EXE_EXT)
+
+tools/coindb/build/coindb$(EXE_EXT): tools/coindb/src/coindb.cpp tools/coindb/src/formatting.h src/CoinDBConfig.h lib/libCoinDB.a
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS) $(PLATFORM_LIBS)
 
 #
-# SynchedVault unit test
+# syncdb command line tool
 #
-tests/build/SynchedVaultTest$(EXE_EXT): tests/src/SynchedVaultTest.cpp lib/libCoinDB.a
+syncdb: lib tools/syncdb/build/syncdb$(EXE_EXT)
+
+tools/syncdb/build/syncdb$(EXE_EXT): tools/syncdb/src/syncdb.cpp src/CoinDBConfig.h lib/libCoinDB.a
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS) $(PLATFORM_LIBS)
 
 install: install_lib install_tools
@@ -215,6 +223,14 @@ remove_lib:
 
 remove_tools:
 	-rm $(SYSROOT)/bin/coindb$(EXE_EXT)
+	-rm $(SYSROOT)/bin/syncdb$(EXE_EXT)
 
-clean:
-	-rm -f obj/*.o odb/*-odb*.* lib/*.a tools/build/*
+clean: clean_lib
+
+clean_all: clean_lib clean_tools
+
+clean_lib:
+	-rm -f obj/*.o odb/*-odb*.* lib/*.a
+
+clean_tools:
+	-rm -f $(TOOLS)

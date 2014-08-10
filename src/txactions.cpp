@@ -13,6 +13,7 @@
 #include "txmodel.h"
 #include "txview.h"
 #include "accountmodel.h"
+#include "keychainmodel.h"
 
 #include "rawtxdialog.h"
 #include "txsearchdialog.h"
@@ -35,8 +36,8 @@
 
 #include <fstream>
 
-TxActions::TxActions(TxModel* txModel, TxView* txView, AccountModel* accountModel, CoinDB::SynchedVault* synchedVault)
-    : m_txModel(txModel), m_txView(txView), m_accountModel(accountModel), m_synchedVault(synchedVault), currentRow(-1)
+TxActions::TxActions(TxModel* txModel, TxView* txView, AccountModel* accountModel, KeychainModel* keychainModel, CoinDB::SynchedVault* synchedVault)
+    : m_txModel(txModel), m_txView(txView), m_accountModel(accountModel), m_keychainModel(keychainModel), m_synchedVault(synchedVault), currentRow(-1)
 {
     createActions();
     createMenus();
@@ -148,6 +149,12 @@ void TxActions::showSignatureDialog()
         {
             connect(&dlg, &SignatureDialog::txUpdated, [this]() { m_txModel->update(); });
         }
+
+        if (m_keychainModel)
+        {
+            connect(&dlg, &SignatureDialog::keychainsUpdated, [this]() { m_keychainModel->update(); });
+        }
+
         dlg.exec();
     }
     catch (const std::exception& e)
@@ -430,12 +437,10 @@ void TxActions::createActions()
 void TxActions::createMenus()
 {
     menu = new QMenu();
-    menu->addAction(searchTxAction);
-    menu->addSeparator();
-    menu->addAction(signaturesAction);
-    //menu->addAction(signTxAction);
     menu->addAction(sendTxAction);
+    menu->addAction(signaturesAction);
     menu->addSeparator();
+    //menu->addAction(signTxAction);
     menu->addAction(exportTxToFileAction);
     menu->addAction(importTxFromFileAction);
     menu->addSeparator();
@@ -445,6 +450,8 @@ void TxActions::createMenus()
     menu->addAction(saveRawTxToFileAction);
     menu->addAction(insertRawTxFromFileAction);
     menu->addAction(viewTxOnWebAction);
+    menu->addSeparator();
+    menu->addAction(searchTxAction);
     menu->addSeparator();
     menu->addAction(deleteTxAction);
 }

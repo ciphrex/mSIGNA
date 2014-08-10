@@ -101,11 +101,15 @@ MainWindow::MainWindow() :
     connect(keychainSelectionModel, &QItemSelectionModel::selectionChanged,
             this, &MainWindow::updateSelectedKeychains);
 
+    //synchedVault.subscribeKeychainUnlocked([this](const std::string& /*keychain_name*/) { keychainModel->update(); });
+    //synchedVault.subscribeKeychainLocked([this](const std::string& /*keychain_name*/) { keychainModel->update(); });
+
     // Account tab page
     accountModel = new AccountModel(synchedVault);
     accountView = new AccountView();
     accountView->setModel(accountModel);
     accountView->setMenu(accountMenu);
+    accountView->updateColumns();
 
 /*
     qRegisterMetaType<bytes_t>("bytes_t");
@@ -147,7 +151,7 @@ MainWindow::MainWindow() :
     connect(this, SIGNAL(signal_error(const QString&)), this, SLOT(showError(const QString&)));
 
     synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
-    synchedVault.subscribeTxStatusChanged([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
+    synchedVault.subscribeTxUpdated([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
     synchedVault.subscribeMerkleBlockInserted([this](std::shared_ptr<CoinDB::MerkleBlock> /*merkleblock*/) { emit signal_newBlock(); });
 
     connect(this, SIGNAL(signal_newTx()), this, SLOT(newTx()));
@@ -168,7 +172,7 @@ MainWindow::MainWindow() :
 
     txView = new TxView();
     txView->setModel(txModel);
-    txActions = new TxActions(txModel, txView, accountModel, &synchedVault);
+    txActions = new TxActions(txModel, txView, accountModel, keychainModel, &synchedVault);
     connect(txActions, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
 
     txView->setMenu(txActions->getMenu());
@@ -191,7 +195,7 @@ MainWindow::MainWindow() :
         keychainView->update();
 
         accountModel->update();
-        accountView->update();
+        accountView->updateColumns();
 
         txModel->setVault(vault);
         txModel->update();
@@ -230,7 +234,7 @@ MainWindow::MainWindow() :
 
     connect(this, &MainWindow::signal_currencyUnitChanged, [this]() {
         accountModel->update();
-        accountView->update();
+        accountView->updateColumns();
         txModel->update();
         txView->update();
     });
@@ -245,6 +249,7 @@ void MainWindow::loadHeaders()
             std::stringstream progress;
             progress << "Height: " << blockTree.getBestHeight() << " / " << "Total Work: " << blockTree.getTotalWork().getDec();
             emit headersLoadProgress(QString::fromStdString(progress.str()));
+            return true;
         });
     emit updateBestHeight(synchedVault.getBestHeight());
 }
@@ -459,7 +464,7 @@ void MainWindow::openVault(QString fileName)
 
     try
     {
-        synchedVault.openVault(fileName.toStdString(), false);    
+        synchedVault.openVault(fileName.toStdString(), false);
         updateVaultStatus(fileName);
         updateStatusMessage(tr("Opened ") + fileName);
         //if (synchedVault.isConnected()) { synchedVault.syncBlocks(); }
@@ -833,7 +838,7 @@ void MainWindow::refreshAccounts()
 
     QString prevSelectedAccount = selectedAccount;
     accountModel->update();
-    //accountView->update();
+    //accountView->updateColumns();
 
     if (prevSelectedAccount != selectedAccount)
     {
@@ -882,8 +887,9 @@ void MainWindow::quickNewAccount()
                 synchedVault.getVault()->newKeychain(keychainName.toStdString(), entropy);
             }
 
-            accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames);
+            accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames, dlg.getCreationTime());
             accountModel->update();
+            accountView->updateColumns();
             keychainModel->update();
             keychainView->update();
             tabWidget->setCurrentWidget(accountView);
@@ -909,8 +915,8 @@ void MainWindow::newAccount()
     try {
         NewAccountDialog dlg(keychainNames, this);
         if (dlg.exec()) {
-            accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames());
-            accountView->update();
+            accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames(), dlg.getCreationTime());
+            accountView->updateColumns();
             tabWidget->setCurrentWidget(accountView);
             synchedVault.updateBloomFilter();
             //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
@@ -960,7 +966,7 @@ void MainWindow::importAccount(QString fileName)
         updateStatusMessage(tr("Importing account..."));
         accountModel->importAccount(name, fileName);
         accountModel->update();
-        accountView->update();
+        accountView->updateColumns();
         keychainModel->update();
         keychainView->update();
         selectAccount(name);
@@ -1063,7 +1069,7 @@ void MainWindow::deleteAccount()
     if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"), tr("Are you sure you want to delete account ") + accountName + "?")) {
         try {
             accountModel->deleteAccount(accountName);
-            accountView->update();
+            accountView->updateColumns();
             synchedVault.updateBloomFilter();
             //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         }
@@ -1169,7 +1175,7 @@ void MainWindow::insertRawTx()
     try {
         RawTxDialog dlg(tr("Add Raw Transaction:"));
         if (dlg.exec() && accountModel->insertRawTx(dlg.getRawTx())) {
-            accountView->update();
+            accountView->updateColumns();
             txModel->update();
             txView->update();
             tabWidget->setCurrentWidget(txView);

@@ -10,12 +10,15 @@
 
 #include "newaccountdialog.h"
 
+#include <QtAlgorithms>
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLineEdit>
 #include <QComboBox>
 #include <QLabel>
+#include <QDateTimeEdit>
+#include <QCalendarWidget>
 
 #include <stdexcept>
 
@@ -27,6 +30,7 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& keychainNames, QWidget*
     }
 
     this->keychainNames = keychainNames;
+    qSort(this->keychainNames.begin(), this->keychainNames.end());
 
     // Buttons
     QDialogButtonBox* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok
@@ -47,6 +51,9 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& keychainNames, QWidget*
 
     // Key Chain Names
     minSigComboBox = new QComboBox();
+    minSigLineEdit = new QLineEdit();
+    minSigLineEdit->setAlignment(Qt::AlignRight);
+    minSigComboBox->setLineEdit(minSigLineEdit);
 
     QLabel* keychainLabel = new QLabel();
     keychainLabel->setText(tr("Key Chains:"));
@@ -75,14 +82,34 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& keychainNames, QWidget*
     minSigLayout->addWidget(minSigLabel);
     minSigLayout->addWidget(minSigComboBox);
 
+    // Creation Time
+    QDateTime localDateTime = QDateTime::currentDateTime();
+    QLabel* creationTimeLabel = new QLabel(tr("Creation Time ") + "(" + localDateTime.timeZoneAbbreviation() + "):");
+    creationTimeEdit = new QDateTimeEdit(QDateTime::currentDateTime());
+    creationTimeEdit->setDisplayFormat("yyyy.MM.dd hh:mm:ss");
+    creationTimeEdit->setCalendarPopup(true);
+    calendarWidget = new QCalendarWidget(this);
+    creationTimeEdit->setCalendarWidget(calendarWidget);
+
+    QHBoxLayout* creationTimeLayout = new QHBoxLayout();
+    creationTimeLayout->setSizeConstraint(QLayout::SetNoConstraint);
+    creationTimeLayout->addWidget(creationTimeLabel);
+    creationTimeLayout->addWidget(creationTimeEdit);
+
     // Main Layout 
     QVBoxLayout *mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
     mainLayout->addLayout(nameLayout);
     mainLayout->addLayout(keychainLayout);
     mainLayout->addLayout(minSigLayout);
+    mainLayout->addLayout(creationTimeLayout);
     mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
+}
+
+NewAccountDialog::~NewAccountDialog()
+{
+    delete calendarWidget;
 }
 
 QString NewAccountDialog::getName() const
@@ -94,3 +121,9 @@ int NewAccountDialog::getMinSigs() const
 {
     return minSigComboBox->currentIndex() + 1;
 }
+
+qint64 NewAccountDialog::getCreationTime() const
+{
+    return creationTimeEdit->dateTime().toMSecsSinceEpoch();
+}
+

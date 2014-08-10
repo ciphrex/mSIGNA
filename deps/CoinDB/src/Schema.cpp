@@ -13,6 +13,7 @@
 
 #include <CoinCore/hash.h>
 #include <CoinCore/CoinNodeData.h>
+#include <CoinCore/MerkleTree.h>
 #include <CoinCore/hdkeys.h>
 #include <CoinCore/aes.h>
 
@@ -596,6 +597,20 @@ void SigningScript::status(status_t status)
     if (status > UNUSED) account_bin_->markSigningScriptIssued(index_);
 }
 
+void SigningScript::markUsed()
+{
+	if (account_bin_->index() == AccountBin::CHANGE_INDEX)
+	{
+		status_ = CHANGE;
+	}
+	else
+	{
+		status_ = USED;
+	}
+
+	account_bin_->markSigningScriptIssued(index_);
+}
+
 
 /*
  * class BlockHeader
@@ -691,15 +706,17 @@ std::string MerkleBlock::toJson() const
 
 TxIn::TxIn(const Coin::TxIn& coin_txin)
 {
-    outhash_ = coin_txin.getOutpointHash();
-    outindex_ = coin_txin.getOutpointIndex();
-    script_ = coin_txin.scriptSig;
-    sequence_ = coin_txin.sequence;
+	fromCoinCore(coin_txin);
 }
 
 TxIn::TxIn(const bytes_t& raw)
 {
     Coin::TxIn coin_txin(raw);
+	fromCoinCore(coin_txin);
+}
+
+void TxIn::fromCoinCore(const Coin::TxIn& coin_txin)
+{
     outhash_ = coin_txin.getOutpointHash();
     outindex_ = coin_txin.getOutpointIndex();
     script_ = coin_txin.scriptSig;
@@ -713,6 +730,15 @@ Coin::TxIn TxIn::toCoinCore() const
     coin_txin.scriptSig = script_;
     coin_txin.sequence = sequence_;
     return coin_txin;
+}
+
+bytes_t TxIn::unsigned_script() const
+{
+    using namespace CoinQ::Script;
+
+    Script script(script_);
+    script.clearSigs();
+    return script.txinscript(Script::EDIT);
 }
 
 bytes_t TxIn::raw() const
@@ -924,7 +950,7 @@ void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uin
 
 void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status, bool conflicting)
 {
-    LOGGER(trace) << "Tx::set - fromCoinCore(coin_tx);" << std::endl;
+    //LOGGER(trace) << "Tx::set - fromCoinCore(coin_tx);" << std::endl;
     fromCoinCore(coin_tx);
 
     timestamp_ = timestamp;

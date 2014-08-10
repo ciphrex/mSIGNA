@@ -413,6 +413,11 @@ public:
         this->itemType = item.itemType;
         memcpy(this->hash, item.hash, 32);
     }
+    InventoryItem(uint32_t itemType, const unsigned char* hash)
+    {
+        this->itemType = itemType;
+        memcpy(this->hash, hash, 32);
+    }
     InventoryItem(uint32_t itemType, const uchar_vector& hashBytes)
     {
         this->itemType = itemType;

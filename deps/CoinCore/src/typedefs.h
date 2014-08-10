@@ -26,9 +26,13 @@
 #define __TYPEDEFS_H___
 
 #include <vector>
+#include <set>
 
 typedef std::vector<unsigned char> bytes_t;
 typedef std::vector<unsigned char> secure_bytes_t;
+
+typedef std::vector<bytes_t> hashvector_t;
+typedef std::set<bytes_t> hashset_t;
 
 // TODO: use custom allocator for secure_bytes_t
 

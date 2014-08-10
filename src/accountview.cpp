@@ -22,15 +22,14 @@ AccountView::AccountView(QWidget* parent)
 {
 }
 
-void AccountView::update()
+void AccountView::updateColumns()
 {
-    resizeColumnToContents(0);
-    resizeColumnToContents(1);
-    resizeColumnToContents(2);
-    resizeColumnToContents(3);
+    if (!model()) return;
+    for (int i = 0; i < model()->columnCount(); i++) { resizeColumnToContents(i); }
 }
 
 void AccountView::contextMenuEvent(QContextMenuEvent* event)
 {
     if (menu) menu->exec(event->globalPos());
 }
+

@@ -26,31 +26,60 @@
 #include <logger/logger.h>
 
 SignatureActions::SignatureActions(CoinDB::SynchedVault& synchedVault, SignatureDialog& dialog)
-    : m_synchedVault(synchedVault), m_dialog(dialog)
+    : m_synchedVault(synchedVault), m_dialog(dialog), m_currentRow(-1)
 {
     createActions();
     createMenus();
     connect(m_dialog.getView()->selectionModel(), &QItemSelectionModel::currentChanged, this, &SignatureActions::updateCurrentKeychain);
 }
 
+SignatureActions::~SignatureActions()
+{
+    delete addSignatureAction;
+    delete unlockKeychainAction;
+    delete lockKeychainAction;
+    delete menu;
+}
+
 void SignatureActions::updateCurrentKeychain(const QModelIndex& current, const QModelIndex& /*previous*/)
 {
-    int currentRow = current.row();
-    if (currentRow != -1)
+    m_currentRow = current.row();
+    refreshCurrentKeychain();
+}
+
+void SignatureActions::refreshCurrentKeychain()
+{
+    if (m_currentRow != -1)
     {
-        QStandardItem* keychainNameItem = m_dialog.getModel()->item(currentRow, 0);
+        QStandardItem* keychainNameItem = m_dialog.getModel()->item(m_currentRow, 0);
         m_currentKeychain = keychainNameItem->text();
 
-        QStandardItem* typeItem = m_dialog.getModel()->item(currentRow, 2);
-        addSignatureAction->setEnabled(m_dialog.getModel()->getSigsNeeded() > 0 && typeItem->text() == tr("No")
-            && m_synchedVault.isVaultOpen() && !m_synchedVault.getVault()->isKeychainPrivateKeyLocked(m_currentKeychain.toStdString()));
+        if (!m_synchedVault.isVaultOpen())
+        {
+            addSignatureAction->setEnabled(false);
+            unlockKeychainAction->setEnabled(false);
+            lockKeychainAction->setEnabled(false);
+        }
+        else
+        {
+
+            QStandardItem* typeItem = m_dialog.getModel()->item(m_currentRow, 2);
+
+            bool isLocked = m_synchedVault.getVault()->isKeychainPrivateKeyLocked(m_currentKeychain.toStdString());
+            bool canSign = !isLocked && m_dialog.getModel()->getSigsNeeded() > 0 && typeItem->text() == tr("No");
+
+            addSignatureAction->setEnabled(canSign);
+            unlockKeychainAction->setEnabled(isLocked);
+            lockKeychainAction->setEnabled(!isLocked);
+        }
     }
     else
     {
         m_currentKeychain = "";
         addSignatureAction->setEnabled(false);
+        unlockKeychainAction->setEnabled(false);
+        lockKeychainAction->setEnabled(false);
     }
-
 }
 
 void SignatureActions::addSignature()
@@ -64,6 +93,7 @@ void SignatureActions::addSignature()
         if (vault->isKeychainPrivateKeyLocked(m_currentKeychain.toStdString()))
         {
             QMessageBox::critical(nullptr, tr("Error"), tr("Keychain is locked."));
+            return;
         }
 
         std::vector<std::string> keychainNames;
@@ -76,8 +106,58 @@ void SignatureActions::addSignature()
             return;
         }
 
-        m_dialog.getModel()->update();
-        emit m_dialog.txUpdated();
+        m_dialog.updateTx();
+    }
+    catch (const std::exception& e)
+    {
+        emit error(e.what());
+    }
+}
+
+void SignatureActions::unlockKeychain()
+{
+    try
+    {
+        if (m_currentKeychain.isEmpty()) throw std::runtime_error("No keychain is selected.");
+        if (!m_synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        CoinDB::Vault* vault = m_synchedVault.getVault();
+        std::string keychainName = m_currentKeychain.toStdString();
+        if (!vault->isKeychainPrivateKeyLocked(keychainName))
+        {
+            QMessageBox::critical(nullptr, tr("Error"), tr("Keychain is already unlocked."));
+            return;
+        }
+
+        // TODO: Prompt for passphrase
+        vault->unlockKeychain(keychainName, secure_bytes_t());
+        refreshCurrentKeychain();
+        m_dialog.updateKeychains();
+    }
+    catch (const std::exception& e)
+    {
+        emit error(e.what());
+    }
+}
+
+void SignatureActions::lockKeychain()
+{
+    try
+    {
+        if (m_currentKeychain.isEmpty()) throw std::runtime_error("No keychain is selected.");
+        if (!m_synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        CoinDB::Vault* vault = m_synchedVault.getVault();
+        std::string keychainName = m_currentKeychain.toStdString();
+        if (vault->isKeychainPrivateKeyLocked(keychainName))
+        {
+            QMessageBox::critical(nullptr, tr("Error"), tr("Keychain is already locked."));
+            return;
+        }
+
+        vault->lockKeychain(keychainName);
+        refreshCurrentKeychain();
+        m_dialog.updateKeychains();
     }
     catch (const std::exception& e)
     {
@@ -90,11 +170,22 @@ void SignatureActions::createActions()
     addSignatureAction = new QAction(tr("Add signature"), this);
     addSignatureAction->setEnabled(false);
     connect(addSignatureAction, SIGNAL(triggered()), this, SLOT(addSignature()));
+
+    unlockKeychainAction = new QAction(tr("Unlock keychain..."), this);
+    unlockKeychainAction->setEnabled(false);
+    connect(unlockKeychainAction, SIGNAL(triggered()), this, SLOT(unlockKeychain()));
+
+    lockKeychainAction = new QAction(tr("Lock keychain"), this);
+    lockKeychainAction->setEnabled(false);
+    connect(lockKeychainAction, SIGNAL(triggered()), this, SLOT(lockKeychain()));
 }
 
 void SignatureActions::createMenus()
 {
     menu = new QMenu();
     menu->addAction(addSignatureAction);
+    menu->addSeparator();
+    menu->addAction(unlockKeychainAction);
+    menu->addAction(lockKeychainAction);
 }
 

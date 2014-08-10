@@ -26,11 +26,11 @@ SignatureModel::SignatureModel(CoinDB::SynchedVault& synchedVault, const bytes_t
 void SignatureModel::initColumns()
 {
     QStringList columns;
-    columns << tr("Keychain Name") << tr("Keychain Hash") << tr("Signed");
+    columns << tr("Keychain Name") << tr("Unlocked") << tr("Keychain Hash") << "";
     setHorizontalHeaderLabels(columns);
 }
 
-void SignatureModel::update()
+void SignatureModel::updateAll()
 {
     removeRows(0, rowCount());
 
@@ -43,12 +43,14 @@ void SignatureModel::update()
     {
         QList<QStandardItem*> row;
         QString keychainName = QString::fromStdString(signingKeychain.name());
+        QString keychainUnlocked = vault->isKeychainPrivateKeyLocked(signingKeychain.name()) ? tr("No") : tr("Yes");
         QString keychainHash = QString::fromStdString(uchar_vector(signingKeychain.hash()).getHex());
-        QString hasSigned = signingKeychain.hasSigned() ? tr("Yes") : tr("No");
+        QString keychainSigned = signingKeychain.hasSigned() ? tr("Signed") : tr("");
 
         row.append(new QStandardItem(keychainName));
+        row.append(new QStandardItem(keychainUnlocked));
         row.append(new QStandardItem(keychainHash));
-        row.append(new QStandardItem(hasSigned));
+        row.append(new QStandardItem(keychainSigned));
         appendRow(row);
     }
 }

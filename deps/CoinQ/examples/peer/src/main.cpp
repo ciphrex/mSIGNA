@@ -17,6 +17,8 @@
 
 #include <stdutils/stringutils.h>
 
+#include <logger/logger.h>
+
 #include <signal.h>
 
 bool g_bShutdown = false;
@@ -35,18 +37,21 @@ void onOpen(Peer& peer)
     cout << "Peer " << peer.name() << " open." << endl;
 }
 
-void onClose(Peer& peer, int code, const std::string& message)
+void onClose(Peer& peer)
 {
-    cout << "Peer " << peer.name() << " closed with code " << code << ": " << message << "." << endl;
+    cout << "Peer " << peer.name() << " closed." << endl;
 
     g_bShutdown = true;
 }
 
-void onError(Peer& peer, const std::string& message)
+void onProtocolError(Peer& peer, const std::string& message)
 {
-    cout << "Peer " << peer.name() << " error - " << message << "." << endl;
+    cout << "Peer " << peer.name() << " protocol error - " << message << "." << endl;
+}
 
-    g_bShutdown = true;
+void onConnectionError(Peer& peer, const std::string& message)
+{
+    cout << "Peer " << peer.name() << " connection error - " << message << "." << endl;
 }
 
 void onInv(Peer& peer, const Coin::Inventory& inv)
@@ -128,7 +133,7 @@ int main(int argc, char* argv[])
         peer.subscribeStop([&](Peer& peer) { cout << "Peer " << peer.name() << " stopped." << endl; });
         peer.subscribeOpen(&onOpen);
         peer.subscribeClose(&onClose);
-        peer.subscribeError(&onError);
+        peer.subscribeConnectionError(&onConnectionError);
 
         peer.subscribeTimeout([&](Peer& peer) { cout << "Peer " << peer.name() << " timed out." << endl; });
 
@@ -137,7 +142,10 @@ int main(int argc, char* argv[])
         peer.subscribeTx(&onTx);
         peer.subscribeBlock(&onBlock);
         peer.subscribeMerkleBlock(&onMerkleBlock);
+        peer.subscribeProtocolError(&onProtocolError);
 
+        INIT_LOGGER("peer.log");
+    
         signal(SIGINT, &finish);
         signal(SIGTERM, &finish);
 

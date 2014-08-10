@@ -10,6 +10,8 @@
 
 #include <logger/logger.h>
 
+using namespace CoinQ;
+
 bool CoinQBlockTreeMem::setBestChain(ChainHeader& header)
 {
     if (header.inBestChain) return false;
@@ -17,14 +19,17 @@ bool CoinQBlockTreeMem::setBestChain(ChainHeader& header)
     // Retrace back to earliest best block
     std::stack<ChainHeader*> newBestChain;
     ChainHeader* pParent = &header;
-    while (!pParent->inBestChain) {
+    while (!pParent->inBestChain)
+    {
         newBestChain.push(pParent);
         pParent = &mHeaderHashMap.at(pParent->prevBlockHash);
     }
 
-    for (auto it = pParent->childHashes.begin(); it != pParent->childHashes.end(); ++it) {
+    for (auto it = pParent->childHashes.begin(); it != pParent->childHashes.end(); ++it)
+    {
         ChainHeader& child = mHeaderHashMap.at(*it);
-        if (child.inBestChain) {
+        if (child.inBestChain)
+        {
             unsetBestChain(child);
             break;
         }
@@ -36,7 +41,8 @@ bool CoinQBlockTreeMem::setBestChain(ChainHeader& header)
 
     // Pop back up stack and make this the best chain
     int count = 0;
-    while (!newBestChain.empty()) {
+    while (!newBestChain.empty())
+    {
         ChainHeader* pChild = newBestChain.top();
         pChild->inBestChain = true;
         mHeaderHeightMap[pChild->height] = pChild;
@@ -55,12 +61,11 @@ bool CoinQBlockTreeMem::unsetBestChain(ChainHeader& header)
 {
     if (!header.inBestChain) return false;
 
-    if (header.height == 0) {
-        throw std::runtime_error("Cannot remove genesis block from best chain.");
-    }
+    if (header.height == 0) throw std::runtime_error("Cannot remove genesis block from best chain.");
 
     ChainHeader* pParent = &mHeaderHashMap.at(header.prevBlockHash);
-    if (pParent->inBestChain) {
+    if (pParent->inBestChain)
+    {
         mBestHeight = pParent->height;
         mTotalWork = pParent->chainWork;
     }
@@ -68,10 +73,13 @@ bool CoinQBlockTreeMem::unsetBestChain(ChainHeader& header)
     notifyRemoveBestChain(header);
 
     pParent = &header;
-    while (pParent->childHashes.size() != 0) {
-        for (auto it = pParent->childHashes.begin(); it != pParent->childHashes.end(); ++it) {
+    while (pParent->childHashes.size() != 0)
+    {
+        for (auto it = pParent->childHashes.begin(); it != pParent->childHashes.end(); ++it)
+        {
             ChainHeader* pChild = &mHeaderHashMap.at(*it);
-            if (pChild->inBestChain) {
+            if (pChild->inBestChain)
+            {
                 pParent = pChild;
                 mHeaderHeightMap.erase(pChild->height);
                 pChild->inBestChain = false;
@@ -85,10 +93,9 @@ bool CoinQBlockTreeMem::unsetBestChain(ChainHeader& header)
 
 void CoinQBlockTreeMem::setGenesisBlock(const Coin::CoinBlockHeader& header)
 {
-    if (mHeaderHashMap.size() != 0) {
-        throw std::runtime_error("Tree is not empty.");
-    }
+    if (mHeaderHashMap.size() != 0) throw std::runtime_error("Tree is not empty.");
 
+    bFlushed = false;
     uchar_vector hash = header.getHashLittleEndian();
     ChainHeader& genesisHeader = mHeaderHashMap[hash] = header;
     mHeaderHeightMap[0] = &genesisHeader;
@@ -104,19 +111,14 @@ void CoinQBlockTreeMem::setGenesisBlock(const Coin::CoinBlockHeader& header)
 
 bool CoinQBlockTreeMem::insertHeader(const Coin::CoinBlockHeader& header, bool bCheckProofOfWork)
 {
-    if (mHeaderHashMap.size() == 0) {
-        throw std::runtime_error("No genesis block.");
-    }
+    if (mHeaderHashMap.size() == 0) throw std::runtime_error("No genesis block.");
 
     uchar_vector headerHash = header.getHashLittleEndian();
-    if (hasHeader(headerHash)) {
-        return false;
-    }
+    if (hasHeader(headerHash)) return false;
 
     header_hash_map_t::iterator it = mHeaderHashMap.find(header.prevBlockHash);
-    if (it == mHeaderHashMap.end()) {
-        throw std::runtime_error("Parent not found.");
-    }
+    if (it == mHeaderHashMap.end()) throw std::runtime_error("Parent not found.");
+
     ChainHeader& parent = it->second;
 
     // TODO: Check version, compute work required.
@@ -127,12 +129,7 @@ bool CoinQBlockTreeMem::insertHeader(const Coin::CoinBlockHeader& header, bool b
     }*/
 
     // Check proof of work
-    if (!bCheckProofOfWork) { 
-        // Do nothing
-    }
-    else if (this->bCheckProofOfWork && BigInt(header.getPOWHashLittleEndian()) > header.getTarget()) {
-        throw std::runtime_error("Header hash is too big.");
-    }
+    if (bCheckProofOfWork && BigInt(header.getPOWHashLittleEndian()) > header.getTarget()) throw std::runtime_error("Header hash is too big.");
 
     ChainHeader& chainHeader = mHeaderHashMap[headerHash] = header;
     chainHeader.height = parent.height + 1;
@@ -140,11 +137,9 @@ bool CoinQBlockTreeMem::insertHeader(const Coin::CoinBlockHeader& header, bool b
     parent.childHashes.insert(headerHash);
     notifyInsert(chainHeader);
 
-    if (chainHeader.chainWork > mTotalWork) {
-        setBestChain(chainHeader);
-    }
+    if (chainHeader.chainWork > mTotalWork) { setBestChain(chainHeader); }
 
-//std::cout << "Inserted header: " << headerHash.getHex() << " - height: " << chainHeader.height << " total work: " << chainHeader.chainWork.getDec() << std::endl;
+    bFlushed = false;
     return true;
 }
 
@@ -156,14 +151,10 @@ bool CoinQBlockTreeMem::deleteHeader(const uchar_vector& hash)
     ChainHeader& header = it->second;
     unsetBestChain(header);
     header_hash_map_t::iterator itParent = mHeaderHashMap.find(header.getHashLittleEndian());
-    if (itParent == mHeaderHashMap.end()) {
-        throw std::runtime_error("Critical error: parent for block not found.");
-    }
+    if (itParent == mHeaderHashMap.end()) throw std::runtime_error("Critical error: parent for block not found.");
 
     // Recurse through children
-    for (auto itChild = header.childHashes.begin(); itChild != header.childHashes.end(); ++itChild) {
-        deleteHeader(*itChild);
-    }
+    for (auto itChild = header.childHashes.begin(); itChild != header.childHashes.end(); ++itChild) { deleteHeader(*itChild); }
 
     // TODO: Find new best chain if this header was in best chain.
 
@@ -173,6 +164,7 @@ bool CoinQBlockTreeMem::deleteHeader(const uchar_vector& hash)
     assert(nErased == 1);
     notifyDelete(header);
     mHeaderHashMap.erase(hash);
+    bFlushed = false;
     return true;
 }
 
@@ -181,50 +173,49 @@ bool CoinQBlockTreeMem::hasHeader(const uchar_vector& hash) const
     return (mHeaderHashMap.find(hash) != mHeaderHashMap.end());
 }
 
-ChainHeader CoinQBlockTreeMem::getHeader(const uchar_vector& hash) const
+const ChainHeader& CoinQBlockTreeMem::getHeader(const uchar_vector& hash) const
 {
     header_hash_map_t::const_iterator it = mHeaderHashMap.find(hash);
-    if (it == mHeaderHashMap.end()) {
-        throw std::runtime_error("Not found.");
-    }
+    if (it == mHeaderHashMap.end()) throw std::runtime_error("Not found.");
+
     return it->second;
 }
 
-ChainHeader CoinQBlockTreeMem::getHeader(int height) const
+const ChainHeader& CoinQBlockTreeMem::getHeader(int height) const
 {
-    if (mHeaderHeightMap.size() > 0) {
+    if (mHeaderHeightMap.size() > 0)
+    {
         if (height < 0) height += mBestHeight + 1;
-        if (height >= 0) {
+        if (height >= 0)
+        {
             header_height_map_t::const_iterator it = mHeaderHeightMap.find((unsigned int)height);
-            if (it != mHeaderHeightMap.end()) {
-                return *it->second;
-            }
+            if (it != mHeaderHeightMap.end()) return *it->second;
         }
     }
 
     throw std::runtime_error("Not found.");
 }
 
-ChainHeader CoinQBlockTreeMem::getHeaderBefore(uint32_t timestamp) const
+const ChainHeader& CoinQBlockTreeMem::getHeaderBefore(uint32_t timestamp) const
 {
-    if (mBestHeight == -1) {
-        throw std::runtime_error("Tree is empty.");
-    }
+    if (mBestHeight == -1) throw std::runtime_error("Tree is empty.");
 
     int i;
-    for (i = 1; i <= mBestHeight; i++) {
+    for (i = 1; i <= mBestHeight; i++)
+    {
         ChainHeader* header = mHeaderHeightMap.at(i);
         if (header->timestamp > timestamp) break; 
     }
 
-    return *mHeaderHeightMap.at(i-1);
+    return *mHeaderHeightMap.at(i - 1);
 }
 
 std::vector<uchar_vector> CoinQBlockTreeMem::getLocatorHashes(int maxSize = -1) const
 {
     std::vector<uchar_vector> locatorHashes;
 
-    if (mBestHeight == -1) {
+    if (mBestHeight == -1)
+    {
         locatorHashes.push_back(g_zero32bytes);
         return locatorHashes;
     }
@@ -234,7 +225,8 @@ std::vector<uchar_vector> CoinQBlockTreeMem::getLocatorHashes(int maxSize = -1) 
     int i = mBestHeight;
     int n = 0;
     int step = 1;
-    while ((i >= 0) && (n < maxSize)) {
+    while ((i >= 0) && (n < maxSize))
+    {
         locatorHashes.push_back(mHeaderHeightMap.at(i)->getHashLittleEndian());
         i -= step;
         n++;
@@ -247,33 +239,26 @@ int CoinQBlockTreeMem::getConfirmations(const uchar_vector& hash) const
 {
     header_hash_map_t::const_iterator it = mHeaderHashMap.find(hash);
     if (it == mHeaderHashMap.end() || !it->second.inBestChain) return 0;
+
     return mBestHeight - it->second.height + 1;
 }
 
-void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckProofOfWork, std::function<void(const CoinQBlockTreeMem&)> callback)
+void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckProofOfWork, CoinQBlockTreeMem::callback_t callback)
 {
     boost::filesystem::path p(filename);
-    if (!boost::filesystem::exists(p)) {
-        throw std::runtime_error("Blocktree file not found.");
-    }
+    if (!boost::filesystem::exists(p)) throw BlockTreeFileNotFoundException();
 
-    if (!boost::filesystem::is_regular_file(p)) {
-        throw std::runtime_error("Blocktree invalid file type.");
-    }
+    if (!boost::filesystem::is_regular_file(p)) throw BlockTreeInvalidFileTypeException();
 
     const unsigned int RECORD_SIZE = MIN_COIN_BLOCK_HEADER_SIZE + 4;
-    if (boost::filesystem::file_size(p) % RECORD_SIZE != 0) {
-        throw std::runtime_error("Blocktree invalid file length.");
-    }
+    if (boost::filesystem::file_size(p) % RECORD_SIZE != 0) throw BlockTreeInvalidFileLengthException();
 
 #ifndef _WIN32
     std::ifstream fs(p.native(), std::ios::binary);
 #else
     std::ifstream fs(filename, std::ios::binary);
 #endif
-    if (!fs.good()) {
-        throw std::runtime_error("Blocktree error opening file for read.");
-    }
+    if (!fs.good()) throw BlockTreeFailedToOpenFileForReadException();
 
     clear();
     uchar_vector headerBytes;
@@ -283,57 +268,62 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
     unsigned int count = 0;
 
     char buf[RECORD_SIZE * 64];
-    while (fs) {
+    while (fs)
+    {
         fs.read(buf, RECORD_SIZE * 64);
-        if (fs.bad()) {
-            throw std::runtime_error("Blocktree file read failure.");
-        }
+        if (fs.bad()) throw BlockTreeFileReadFailureException();
 
         unsigned int nbytesread = fs.gcount();
         unsigned int pos = 0;
-        for (; pos <= nbytesread - RECORD_SIZE; pos += RECORD_SIZE) {
+        for (; pos <= nbytesread - RECORD_SIZE; pos += RECORD_SIZE)
+        {
             headerBytes.assign((unsigned char*)&buf[pos], (unsigned char*)&buf[pos + MIN_COIN_BLOCK_HEADER_SIZE]);
             header.setSerialized(headerBytes);
             hash = header.getHashLittleEndian();
-            if (memcmp(&buf[pos + MIN_COIN_BLOCK_HEADER_SIZE], &hash[0], 4)) {
-                throw std::runtime_error("Blocktree checksum error in file.");
-            }
+            if (memcmp(&buf[pos + MIN_COIN_BLOCK_HEADER_SIZE], &hash[0], 4)) throw BlockTreeChecksumErrorException();
 
-            try {
-                if (mBestHeight >= 0) {
+            try
+            {
+                if (mBestHeight >= 0)
+                {
                     insertHeader(header, bCheckProofOfWork);
-                    count++;
-                    if (count % 10000 == 0) {
-                        if (callback) callback(*this);
+                    if (count % 10000 == 0)
+                    {
+                        if (callback && !callback(*this)) throw BlockTreeLoadInterruptedException();
                         LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - header hash: " << header.getHashLittleEndian().getHex() << " height: " << count << std::endl;
                     }
+                    count++;
                 }
-                else { 
-                    LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - genesis hash: " << header.getHashLittleEndian().getHex() << std::endl;
+                else
+                { 
                     setGenesisBlock(header);
+                    if (callback && !callback(*this)) throw BlockTreeLoadInterruptedException();
+                    LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - genesis hash: " << header.getHashLittleEndian().getHex() << std::endl;
                     count++;
                 }
             }
-            catch (const std::exception& e) {
+            catch (const BlockTreeException& e)
+            {
+                throw e;
+            }
+            catch (const std::exception& e)
+            {
                 throw std::runtime_error(std::string("Block ") + hash.getHex() + ": " + e.what());
             }
         }
-        if (pos != nbytesread) {
-            throw std::runtime_error("Blocktree unexpected end of file."); // Should never happen since length is checked above.
-        }
+
+        if (pos != nbytesread) throw BlockTreeUnexpectedEndOfFileException();
     }
+
+    if (callback) callback(*this); // No need to interrupt since we're done.
 }
 
 void CoinQBlockTreeMem::flushToFile(const std::string& filename)
 {
-    if (mBestHeight == -1) {
-        throw std::runtime_error("Tree is empty.");
-    }
+    if (mBestHeight == -1) throw std::runtime_error("Tree is empty.");
 
     boost::filesystem::path swapfile(filename + ".swp");
-    if (boost::filesystem::exists(swapfile)) {
-        throw std::runtime_error("Swapfile already exists.");
-    }
+    if (boost::filesystem::exists(swapfile)) throw BlockTreeSwapfileAlreadyExistsException();
 
     {
 #ifndef _WIN32
@@ -344,25 +334,26 @@ void CoinQBlockTreeMem::flushToFile(const std::string& filename)
 
         uchar_vector headerBytes, hash;
 
-        for (int i = 0; i <= mBestHeight; i++) {
+        for (int i = 0; i <= mBestHeight; i++)
+        {
             ChainHeader* pHeader = mHeaderHeightMap.at(i);
 
             headerBytes = pHeader->getSerialized();
             hash = pHeader->getHashLittleEndian();
 
             fs.write((const char*)&headerBytes[0], MIN_COIN_BLOCK_HEADER_SIZE);
-            if (fs.bad()) throw std::runtime_error("Write failure.");
+            if (fs.bad()) throw BlockTreeFileWriteFailureException();
 
             fs.write((const char*)&hash[0], 4);
-            if (fs.bad()) throw std::runtime_error("Write failure.");
+            if (fs.bad()) throw BlockTreeFileWriteFailureException();
         }
     }
 
     boost::system::error_code ec;
     boost::filesystem::path p(filename);
     boost::filesystem::rename(swapfile, p, ec);
-    if (!!ec) {
-        throw std::runtime_error(ec.message());
-    }
+    if (!!ec) throw std::runtime_error(ec.message());
+
+    bFlushed = true;
 }
 

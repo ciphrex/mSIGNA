@@ -30,6 +30,7 @@ class SignatureActions : public QObject
 
 public:
     SignatureActions(CoinDB::SynchedVault& synchedVault, SignatureDialog& dialog);
+    ~SignatureActions();
 
     QMenu* getMenu() const { return menu; }
 
@@ -41,18 +42,25 @@ signals:
 private slots:
     void updateCurrentKeychain(const QModelIndex& current, const QModelIndex& previous);
     void addSignature();
+    void unlockKeychain();
+    void lockKeychain();
 
 private:
     void createActions();
     void createMenus();
 
+    void refreshCurrentKeychain();
+
     CoinDB::SynchedVault& m_synchedVault;
 
     SignatureDialog& m_dialog;
 
+    int m_currentRow;
     QString m_currentKeychain;
 
     QAction* addSignatureAction;
+    QAction* unlockKeychainAction;
+    QAction* lockKeychainAction;
 
     QMenu* menu;
 };

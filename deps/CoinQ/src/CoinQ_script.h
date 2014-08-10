@@ -117,6 +117,8 @@ private:
 };
 
 
+typedef std::vector<Script> scripts_t;
+
 class Signer
 {
 public:
@@ -130,12 +132,15 @@ public:
     std::vector<bytes_t> sign(const std::vector<secure_bytes_t>& privkeys);
 
     bool isSigned() const { return isSigned_; }
-    const std::vector<Script>& getScripts() const { return scripts_; }
+
+    const scripts_t& getScripts() const { return scripts_; }
+
+    void clearSigs() { for (auto& script: scripts_) script.clearSigs(); }
 
 private:
     Coin::Transaction tx_;
     bool isSigned_;
-    std::vector<Script> scripts_;
+    scripts_t scripts_;
 };
 
 }

@@ -11,6 +11,7 @@
 #include "CoinQ_signals.h"
 #include "CoinQ_slots.h"
 
+#include <CoinCore/typedefs.h>
 #include <CoinCore/numericdata.h>
 
 #include <queue>
@@ -118,7 +119,7 @@ public:
     std::string resolved_name() const { std::stringstream ss; ss << endpoint_.address().to_string() << ":" << endpoint_.port(); return ss.str(); }
     std::string name() const { std::stringstream ss; ss << host_ << ":" << port_; return ss.str(); }
 
-    void getTx(const uchar_vector& hash)
+    void getTx(const bytes_t& hash)
     {
         Coin::InventoryItem tx(MSG_TX, hash);
         Coin::Inventory inv;
@@ -126,8 +127,19 @@ public:
         Coin::GetDataMessage getData(inv);
         send(getData);
     }
+
+    void getTxs(const hashvector_t& txhashes)
+    {
+        using namespace Coin;
+
+        if (txhashes.empty()) return;
+        Inventory inv;
+        for (auto& hash: txhashes) { inv.addItem(InventoryItem(MSG_TX, hash)); }
+        GetDataMessage getData(inv);
+        send(getData);
+    }
  
-    void getBlock(const uchar_vector& hash)
+    void getBlock(const bytes_t& hash)
     {
         Coin::InventoryItem block(MSG_BLOCK, hash);
         Coin::Inventory inv;
@@ -136,7 +148,7 @@ public:
         send(getData); 
     }
 
-    void getFilteredBlock(const uchar_vector& hash)
+    void getFilteredBlock(const bytes_t& hash)
     {
         Coin::InventoryItem block(MSG_FILTERED_BLOCK, hash);
         Coin::Inventory inv;
@@ -246,6 +258,7 @@ private:
     void do_send(const Coin::CoinNodeMessage& message); // calls do_write from the strand thread 
     void do_handshake();
     void do_stop();
+    void do_clearSendQueue();
 };
 
 }
