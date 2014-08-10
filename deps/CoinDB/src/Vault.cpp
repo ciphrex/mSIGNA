@@ -2159,10 +2159,14 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
     if (!r.empty())
     {
         std::shared_ptr<Tx> tx(r.begin().load());
-        tx->status(Tx::PROPAGATED);
-        db_->update(tx);
-        signalQueue.push(notifyTxUpdated.bind(tx));
-        return tx; 
+        if (tx->status() < Tx::CONFIRMED)
+        {
+            tx->status(Tx::PROPAGATED);
+            db_->update(tx);
+            signalQueue.push(notifyTxUpdated.bind(tx));
+            return tx; 
+        }
+        return nullptr;
     }
 
     std::shared_ptr<Tx> tx(new Tx());
