@@ -235,8 +235,8 @@ void TxModel::update()
             if (a.value() < 0 && b.value() > 0) return true;
             if (a.value() > 0 && b.value() < 0) return false;
 
-            // otherwise sort by descending tx index
-            return (a.txindex() > b.txindex());
+            // otherwise sort by ascending tx index
+            return (a.txindex() < b.txindex());
         }
 
         // otherwise sort by ascending confirmation count
