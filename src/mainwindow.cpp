@@ -886,7 +886,7 @@ void MainWindow::quickNewAccount()
                 synchedVault.getVault()->newKeychain(keychainName.toStdString(), entropy);
             }
 
-            accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames);
+            accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames, dlg.getCreationTime());
             accountModel->update();
             keychainModel->update();
             keychainView->update();
