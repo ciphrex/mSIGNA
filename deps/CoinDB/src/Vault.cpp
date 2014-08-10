@@ -2121,7 +2121,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool repla
     return nullptr; 
 }
 
-std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader, bool verifysigs)
+std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader, bool verifysigs, bool isCoinbase)
 {
     std::stringstream ss;
     ss << "Vault::insertNewTx(" << cointx.getHashLittleEndian().getHex() << ", ";
@@ -2135,7 +2135,7 @@ std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::sha
         boost::lock_guard<boost::mutex> lock(mutex);
         odb::core::session s;
         odb::core::transaction t(db_->begin());
-        tx = insertNewTx_unwrapped(cointx, blockheader, verifysigs);
+        tx = insertNewTx_unwrapped(cointx, blockheader, verifysigs, isCoinbase);
         t.commit();
     }
 
@@ -2143,7 +2143,7 @@ std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::sha
     return tx;
 }
 
-std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader, bool verifysigs)
+std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader, bool verifysigs, bool isCoinbase)
 {
     using namespace CoinQ::Script;
 
@@ -2159,7 +2159,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
     if (!r.empty())
     {
         std::shared_ptr<Tx> tx(r.begin().load());
-        if (tx->status() < Tx::CONFIRMED)
+        if (tx->status() < Tx::PROPAGATED)
         {
             tx->status(Tx::PROPAGATED);
             db_->update(tx);
@@ -2179,39 +2179,44 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
     std::set<std::shared_ptr<Tx>>               updated_txs;
 
     std::shared_ptr<Account> sending_account;
-    for (auto& txin: tx->txins())
-    {   bytes_t unsigned_script;
-        try
-        {
-            unsigned_script = txin->unsigned_script();
-        }
-        catch (const std::exception& e)
-        {
-            LOGGER(error) << "Vault::insertNewTx_unwrapped() - unrecognized input script type: " << e.what() << std::endl;
-            signalQueue.push(notifyTxInsertionError.bind(tx, "Unrecognized input script type."));
-            continue;
-        }
 
-        odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txinscript == unsigned_script));
-        if (!r.empty())
+    if (!isCoinbase)
+    {
+        for (auto& txin: tx->txins())
         {
-            // TODO: support sending from multiple accounts in one transaction
-            std::shared_ptr<SigningScript> signingscript(r.begin().load());
-            signingscript->markUsed();
-            updated_scripts.insert(signingscript);
-
-            sending_account = signingscript->account();
-
-            // Search for outpoint it spends
-            odb::result<TxOut> txout_r(db_->query<TxOut>(odb::query<TxOut>::tx->hash == txin->outhash() && odb::query<TxOut>::txindex == txin->outindex()));
-            if (!txout_r.empty())
+            bytes_t unsigned_script;
+            try
             {
-                std::shared_ptr<TxOut> txout(txout_r.begin().load());
-                // if (txout->script() != signingscript->txoutscript()) throw TxInvalidOutpointException();
-                txin->outpoint(txout);
+                unsigned_script = txin->unsigned_script();
+            }
+            catch (const std::exception& e)
+            {
+                LOGGER(error) << "Vault::insertNewTx_unwrapped() - unrecognized input script type: " << e.what() << std::endl;
+                signalQueue.push(notifyTxInsertionError.bind(tx, "Unrecognized input script type."));
+                continue;
+            }
 
-                txout->spent(txin);
-                updated_txouts.insert(txout);
+            odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txinscript == unsigned_script));
+            if (!r.empty())
+            {
+                // TODO: support sending from multiple accounts in one transaction
+                std::shared_ptr<SigningScript> signingscript(r.begin().load());
+                signingscript->markUsed();
+                updated_scripts.insert(signingscript);
+
+                sending_account = signingscript->account();
+
+                // Search for outpoint it spends
+                odb::result<TxOut> txout_r(db_->query<TxOut>(odb::query<TxOut>::tx->hash == txin->outhash() && odb::query<TxOut>::txindex == txin->outindex()));
+                if (!txout_r.empty())
+                {
+                    std::shared_ptr<TxOut> txout(txout_r.begin().load());
+                    // if (txout->script() != signingscript->txoutscript()) throw TxInvalidOutpointException();
+                    txin->outpoint(txout);
+
+                    txout->spent(txin);
+                    updated_txouts.insert(txout);
+                }
             }
         }
     }
@@ -2276,7 +2281,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
     return nullptr;
 }
 
-std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs)
+std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs, bool isCoinbase)
 {
     LOGGER(trace) << "Vault::insertMerkleTx(" << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << ", " << cointx.getHashLittleEndian().getHex() << ", " << txindex << ", " << txcount << ", " << (verifysigs ? "true" : "false") << ")" << std::endl;
 
@@ -2285,7 +2290,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblo
         boost::lock_guard<boost::mutex> lock(mutex);
         odb::core::session s;
         odb::core::transaction t(db_->begin());
-        tx = insertMerkleTx_unwrapped(chainmerkleblock, cointx, txindex, txcount, verifysigs);
+        tx = insertMerkleTx_unwrapped(chainmerkleblock, cointx, txindex, txcount, verifysigs, isCoinbase);
         t.commit();
     }
 
@@ -2293,7 +2298,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblo
     return tx;
 }
 
-std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs)
+std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs, bool isCoinbase)
 {
     bytes_t blockhash = chainmerkleblock.blockHeader.getHashLittleEndian();
     bytes_t txhash = cointx.getHashLittleEndian();
@@ -2412,7 +2417,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
     std::shared_ptr<Tx> tx;
     try
     {
-        tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader(), verifysigs);
+        tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader(), verifysigs, isCoinbase);
     }
     catch (const std::runtime_error& e)
     {
