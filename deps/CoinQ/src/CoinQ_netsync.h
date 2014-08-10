@@ -114,8 +114,19 @@ public:
 private:
     CoinQ::CoinParams m_coinParams;
 
-    mutable boost::mutex m_peerStartMutex;
-    bool m_bPeerStarted;
+    bool m_bStarted;
+    boost::mutex m_startMutex;
+
+    bool m_bIOServiceStarted;
+    boost::mutex m_ioServiceMutex;
+    void startIOServiceThread();
+    void stopIOServiceThread();
+    CoinQ::io_service_t m_ioService;
+    boost::thread* m_ioServiceThread;
+    CoinQ::io_service_t::work m_work;
+
+    bool m_bConnected;
+    CoinQ::Peer m_peer;
 
     bool m_bFlushingToFile;
     boost::mutex m_fileFlushMutex;
@@ -124,14 +135,6 @@ private:
     void startFileFlushThread();
     void stopFileFlushThread();
     void fileFlushLoop();
-
-    CoinQ::io_service_t m_ioService;
-    boost::thread* m_ioServiceThread;
-    CoinQ::io_service_t::work m_work;
-    CoinQ::Peer m_peer;
-
-    mutable boost::mutex m_connectionMutex;
-    bool m_bConnected;
 
     mutable boost::mutex m_syncMutex;
     std::string m_blockTreeFile;

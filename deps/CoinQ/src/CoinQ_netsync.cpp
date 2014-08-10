@@ -21,13 +21,14 @@ using namespace std;
 
 NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     m_coinParams(coinParams),
-    m_bPeerStarted(false),
-    m_bFlushingToFile(false),
-    m_fileFlushThread(nullptr),
+    m_bStarted(false),
+    m_bIOServiceStarted(false),
     m_ioServiceThread(nullptr),
     m_work(m_ioService),
-    m_peer(m_ioService),
     m_bConnected(false),
+    m_peer(m_ioService),
+    m_bFlushingToFile(false),
+    m_fileFlushThread(nullptr),
     m_bHeadersSynched(false),
     m_bFetchingBlocks(false),
     m_bBlocksFetched(false),
@@ -38,8 +39,6 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
     Coin::CoinBlockHeader::setHashFunc(m_coinParams.block_header_hash_function());
     Coin::CoinBlockHeader::setPOWHashFunc(m_coinParams.block_header_pow_hash_function());
 
-    // Start the service thread
-    m_ioServiceThread = new boost::thread(boost::bind(&CoinQ::io_service_t::run, &m_ioService));
 /*
     // Subscribe block tree handlers 
     m_blockTree.subscribeRemoveBestChain([&](const ChainHeader& header)
@@ -83,9 +82,9 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
         }
     });
 
-    m_peer.subscribeClose([&](CoinQ::Peer& /*peer*/)
+    m_peer.subscribeClose([this](CoinQ::Peer& /*peer*/)
     {
-        stop();
+        if (m_bConnected) { stop(); }
         notifyClose();
     });
 
@@ -412,19 +411,13 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams) :
 NetworkSync::~NetworkSync()
 {
     stop();
-    m_ioService.stop();
-    m_ioServiceThread->join();
-    delete m_ioServiceThread;
-
-    m_fileFlushThread->join();
-    delete m_fileFlushThread; 
 }
 
 void NetworkSync::setCoinParams(const CoinQ::CoinParams& coinParams)
 {
-    if (m_bPeerStarted) throw std::runtime_error("NetworkSync::setCoinParams() - must be stopped to set coin parameters.");
-    boost::lock_guard<boost::mutex> lock(m_peerStartMutex);
-    if (m_bPeerStarted) throw std::runtime_error("NetworkSync::setCoinParams() - must be stopped to set coin parameters.");
+    if (m_bStarted) throw std::runtime_error("NetworkSync::setCoinParams() - must be stopped to set coin parameters.");
+    boost::lock_guard<boost::mutex> lock(m_startMutex);
+    if (m_bStarted) throw std::runtime_error("NetworkSync::setCoinParams() - must be stopped to set coin parameters.");
 
     m_coinParams = coinParams;    
 }
@@ -515,11 +508,6 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
     if (!m_bConnected) throw std::runtime_error("NetworkSync::syncBlocks() - must connect before synching.");
 
     if (!m_bHeadersSynched) throw std::runtime_error("NetworkSync::syncBlocks() - headers must be synched before calling.");
-
-/*
-    boost::lock_guard<boost::mutex> lock(m_connectionMmutex);
-    if (!m_bConnected) throw std::runtime_error("NetworkSync::syncBlocks() - must connect before synching.");
-*/
 
     m_bFetchingBlocks = true;
     m_bBlocksFetched = false;
@@ -627,16 +615,17 @@ void NetworkSync::stopSyncBlocks()
 
 void NetworkSync::start(const std::string& host, const std::string& port)
 {
-    LOGGER(trace) << "NetworkSync::start(" << host << ", " << port << ")" << std::endl;
     {
-        if (m_bPeerStarted) throw std::runtime_error("NetworkSync::start() - already started.");
-        boost::lock_guard<boost::mutex> lock(m_peerStartMutex);
-        if (m_bPeerStarted) throw std::runtime_error("NetworkSync::start() - already started.");
-
+        if (m_bStarted) throw runtime_error("NetworkSync - already started.");
+        boost::lock_guard<boost::mutex> lock(m_startMutex);
+        if (m_bStarted) throw runtime_error("NetworkSync - already started.");
+    
+        LOGGER(trace) << "NetworkSync::start(" << host << ", " << port << ")" << std::endl;
         startFileFlushThread();
+        startIOServiceThread();
 
+        m_bStarted = true;
         std::string port_ = port.empty() ? m_coinParams.default_port() : port;
-        m_bPeerStarted = true;
         m_peer.set(host, port_, m_coinParams.magic_bytes(), m_coinParams.protocol_version(), "Wallet v0.1", 0, false);
         m_peer.start();
     }
@@ -654,22 +643,22 @@ void NetworkSync::start(const std::string& host, int port)
 void NetworkSync::stop()
 {
     {
-        if (!m_bPeerStarted) return;
-        boost::lock_guard<boost::mutex> startLock(m_peerStartMutex);
-        if (!m_bPeerStarted) return;
+        if (!m_bStarted) return;
+        boost::lock_guard<boost::mutex> lock(m_startMutex);
+        if (!m_bStarted) return;
 
         m_bConnected = false;
-        m_bPeerStarted = false;
+        m_peer.stop();
+        stopIOServiceThread();
+        stopFileFlushThread();
+
+        m_bStarted = false;
         m_bHeadersSynched = false;
         m_bBlocksSynched = false;
         m_bFetchingBlocks = false;
-
-        m_peer.stop();
-
         while (!m_currentMerkleTxHashes.empty()) { m_currentMerkleTxHashes.pop(); }
     }
 
-    stopFileFlushThread();
     notifyStopped();
 }
 
@@ -708,16 +697,41 @@ void NetworkSync::setBloomFilter(const Coin::BloomFilter& bloomFilter)
     LOGGER(trace) << "Sent filter to peer." << std::endl;
 }
 
+void NetworkSync::startIOServiceThread()
+{
+    if (m_bIOServiceStarted) throw std::runtime_error("NetworkSync - io service already started.");
+    boost::lock_guard<boost::mutex> lock(m_ioServiceMutex);
+    if (m_bIOServiceStarted) throw std::runtime_error("NetworkSync - io service already started.");
+
+    LOGGER(trace) << "Starting IO service thread..." << endl;
+    m_bIOServiceStarted = true;    
+    m_ioServiceThread = new boost::thread(boost::bind(&CoinQ::io_service_t::run, &m_ioService));
+    LOGGER(trace) << "IO service thread started." << endl;
+}
+
+void NetworkSync::stopIOServiceThread()
+{
+    if (!m_bIOServiceStarted) return;
+    boost::lock_guard<boost::mutex> lock(m_ioServiceMutex);
+    if (!m_bIOServiceStarted) return;
+
+    LOGGER(trace) << "Stopping IO service thread..." << endl;
+    m_ioService.stop();
+    m_ioServiceThread->join();
+    delete m_ioServiceThread;
+    m_bIOServiceStarted = false;
+    LOGGER(trace) << "IO service thread stopped." << endl; 
+}
+
 void NetworkSync::startFileFlushThread()
 {
-    stopFileFlushThread();
+    if (m_bFlushingToFile) throw std::runtime_error("NetworkSync - file flush thread already started.");
+    boost::lock_guard<boost::mutex> lock(m_fileFlushMutex);
+    if (m_bFlushingToFile) throw std::runtime_error("NetworkSync - file flush thread already started.");
 
     LOGGER(trace) << "Starting file flushing thread..." << endl;
-    {
-        boost::lock_guard<boost::mutex> lock(m_fileFlushMutex);
-        m_bFlushingToFile = true;
-        m_fileFlushThread = new boost::thread(&NetworkSync::fileFlushLoop, this);
-    }
+    m_bFlushingToFile = true;
+    m_fileFlushThread = new boost::thread(&NetworkSync::fileFlushLoop, this);
     LOGGER(trace) << "File flushing thread started." << endl;
 }
 
