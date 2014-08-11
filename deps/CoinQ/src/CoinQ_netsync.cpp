@@ -151,33 +151,31 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
             }
             processMempoolConfirmations();
 
-            // Once the queue is empty, if we're at the tip signal completion of block sync.
-            if (m_currentMerkleTxHashes.empty())
-            {
-                uchar_vector currentMerkleBlockHash = m_currentMerkleBlock.blockHeader.getHashLittleEndian();
-                const ChainHeader& chainTip = m_blockTree.getTip();
-                if (chainTip.getHashLittleEndian() == currentMerkleBlockHash)
-                {
-                    LOGGER(trace) << "Block sync detected from tx handler." << endl;
-                    m_lastRequestedBlockHash.clear();
-                    m_lastSynchedBlockHash = currentMerkleBlockHash;
-                    syncLock.unlock(); 
-                    notifyBlocksSynched();
-                    return;
-                }
+            if (!m_currentMerkleTxHashes.empty()) return; // we're still missing transactions
 
-                // Ask for the next block
-                const ChainHeader& nextHeader = m_blockTree.getHeader(m_currentMerkleBlock.height + 1);
-                m_lastRequestedBlockHash = nextHeader.getHashLittleEndian();
-                
-                try
-                {
-                    m_peer.getFilteredBlock(m_lastRequestedBlockHash);
-                }
-                catch (const exception& e)
-                {
-                    notifyConnectionError(e.what());
-                }
+            // Once the queue is empty, if we're at the tip signal completion of block sync.
+            uchar_vector currentMerkleBlockHash = m_currentMerkleBlock.blockHeader.getHashLittleEndian();
+            const ChainHeader& chainTip = m_blockTree.getTip();
+            if (chainTip.getHashLittleEndian() == currentMerkleBlockHash)
+            {
+                LOGGER(trace) << "Block sync detected from tx handler." << endl;
+                m_lastRequestedBlockHash.clear();
+                m_lastSynchedBlockHash = currentMerkleBlockHash;
+                notifyBlocksSynched();
+                return;
+            }
+
+            // Ask for the next block
+            const ChainHeader& nextHeader = m_blockTree.getHeader(m_currentMerkleBlock.height + 1);
+            m_lastRequestedBlockHash = nextHeader.getHashLittleEndian();
+            
+            try
+            {
+                m_peer.getFilteredBlock(m_lastRequestedBlockHash);
+            }
+            catch (const exception& e)
+            {
+                notifyConnectionError(e.what());
             }
         }
         catch (const exception& e)
@@ -307,6 +305,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                 const ChainHeader& merkleHeader = m_blockTree.getHeader(merkleBlockHash);
                 syncMerkleBlock(ChainMerkleBlock(merkleBlock, true, merkleHeader.height, merkleHeader.chainWork), merkleTree);
 
+                if (!m_currentMerkleTxHashes.empty()) return; // We need to wait for some transactions
+
                 if (merkleBlockHash == chainTipHash)
                 {
                     // We're at the tip
@@ -352,8 +352,6 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                 {
                     // We were synched prior to this block - we need to process this merkle block and we'll be synched again
                     notifySynchingBlocks();
-                    m_lastSynchedBlockHash = m_blockTree.getTip().getHashLittleEndian();
-                    m_lastRequestedBlockHash.clear();
                     const ChainHeader& merkleHeader = m_blockTree.getHeader(merkleBlockHash);
                     syncMerkleBlock(ChainMerkleBlock(merkleBlock, true, merkleHeader.height, merkleHeader.chainWork), merkleTree);
                 }
@@ -867,6 +865,13 @@ void NetworkSync::syncMerkleBlock(const ChainMerkleBlock& merkleBlock, const Coi
 
     // The byte order of the tx hashes must be reversed when moving between merkle trees and the block chain
     const std::list<uchar_vector>& reversedTxHashes = merkleTree.getTxHashes();
+
+    if (reversedTxHashes.empty())
+    {
+        notifyMerkleBlock(merkleBlock);
+        return;
+    }
+
     m_currentMerkleTxCount = reversedTxHashes.size();
     int i = 0;
     for (auto& reversedTxHash: merkleTree.getTxHashes())
@@ -876,19 +881,12 @@ void NetworkSync::syncMerkleBlock(const ChainMerkleBlock& merkleBlock, const Coi
         LOGGER(trace) << "  Added tx to queue (" << ++i << " of " << m_currentMerkleTxCount << "): " << txHash.getHex() << endl;
     }
     
-    if (m_currentMerkleTxCount == 0)
-    {
-        notifyMerkleBlock(merkleBlock);
-    }
-    else
-    {
-        // Set up merkle confirmation state
-        m_currentMerkleBlock = merkleBlock;
-        m_currentMerkleTxIndex = 0;
+    // Set up merkle confirmation state
+    m_currentMerkleBlock = merkleBlock;
+    m_currentMerkleTxIndex = 0;
 
-        // Confirm any transactions already in our mempool before letting tx handler do anything
-        processMempoolConfirmations();
-    }
+    // Confirm any transactions already in our mempool before letting tx handler do anything
+    processMempoolConfirmations();
 }
 
 void NetworkSync::processMempoolConfirmations()
