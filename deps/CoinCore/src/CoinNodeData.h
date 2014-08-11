@@ -913,6 +913,12 @@ public:
     std::string toIndentedString(uint spaces = 0) const;
 };
 
+class FilterClearMessage : public BlankMessage
+{
+public:
+    FilterClearMessage() : BlankMessage("filterclear") { }
+};
+
 } // namespace Coin
 
 #endif

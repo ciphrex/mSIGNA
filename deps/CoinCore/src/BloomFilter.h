@@ -52,6 +52,8 @@ public:
     void set(uint32_t nElements, double falsePositiveRate, uint32_t _nTweak, uint8_t _nFlags);
     bool isSet() const { return bSet; }
 
+    void clear() { filter.clear(); }
+
     void insert(const uchar_vector& data);
     bool match(const uchar_vector& data) const;
 
