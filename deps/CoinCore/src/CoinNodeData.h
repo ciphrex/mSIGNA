@@ -637,6 +637,8 @@ public:
     Transaction(const Transaction& tx)
         : version(tx.version), inputs(tx.inputs), outputs(tx.outputs), lockTime(tx.lockTime) { }
 
+    const uchar_vector& hash() const { return getHashLittleEndian(); }
+
     const char* getCommand() const { return "tx"; }
     uint64_t getSize() const;
     uchar_vector getSerialized() const { return this->getSerialized(true); }
@@ -689,6 +691,7 @@ public:
         nonce_ = nonce;
     }
 
+    const uchar_vector& hash() const { return getHashLittleEndian(); }
     uint32_t version() const { return version_; }
     const uchar_vector&  prevBlockHash() const { return prevBlockHash_; }
     const uchar_vector& merkleRoot() const { return merkleRoot_; }
@@ -766,6 +769,8 @@ public:
     CoinBlock(const uchar_vector& bytes) { this->setSerialized(bytes); }
     CoinBlock(const std::string& hex);
 
+    const uchar_vector& hash() const { return blockHeader.getHashLittleEndian(); }
+
     const char* getCommand() const { return "block"; }
     uint64_t getSize() const;
     uchar_vector getSerialized() const;
@@ -803,6 +808,8 @@ public:
     MerkleBlock(const MerkleBlock& merkleBlock)
         : blockHeader(merkleBlock.blockHeader), nTxs(merkleBlock.nTxs), hashes(merkleBlock.hashes), flags(merkleBlock.flags) { }
     MerkleBlock(const uchar_vector& bytes) { setSerialized(bytes); }
+
+    const uchar_vector& hash() const { return blockHeader.getHashLittleEndian(); }
 
     const char* getCommand() const { return "merkleblock"; }
     uint64_t getSize() const;
