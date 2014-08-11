@@ -69,7 +69,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                 LOGGER(trace) << "Sent filter to peer." << std::endl;
             }
 
-//            notifyStatus("Fetching block headers...");
+            LOGGER(trace) << "Peer connection opened." << endl;
             m_peer.getHeaders(m_blockTree.getLocatorHashes(-1));
         }
         catch (const std::exception& e)
@@ -331,7 +331,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                 // A reorg of depth 2 or greater has occurred - update block headers
                 LOGGER(trace) << "NetworkSync merkle block handler - block rejected: " << merkleBlockHash.getHex() << endl;
 
-                LOGGER(trace) << "Fetching block headers from peer..." << endl;
+                LOGGER(trace) << "REORG - resynching block headers from peer..." << endl;
                 m_bHeadersSynched = false;
                 try
                 {
