@@ -132,10 +132,10 @@ MainWindow::MainWindow() :
         case CoinDB::SynchedVault::STARTING:
             networkStarted();
             break;
-        case CoinDB::SynchedVault::FETCHING_HEADERS:
+        case CoinDB::SynchedVault::SYNCHING_HEADERS:
             fetchingHeaders();
             break;
-        case CoinDB::SynchedVault::FETCHING_BLOCKS:
+        case CoinDB::SynchedVault::SYNCHING_BLOCKS:
             fetchingBlocks();
             break;
         case CoinDB::SynchedVault::SYNCHED:
@@ -1352,7 +1352,7 @@ void MainWindow::syncBlocks()
 void MainWindow::fetchingHeaders()
 {
     updateNetworkState(NETWORK_STATE_SYNCHING);
-    emit status(tr("Fetching headers"));
+    emit status(tr("Synching headers"));
 }
 
 void MainWindow::headersSynched()
@@ -1373,7 +1373,7 @@ void MainWindow::headersSynched()
 void MainWindow::fetchingBlocks()
 {
     updateNetworkState(NETWORK_STATE_SYNCHING);
-    emit status(tr("Fetching blocks"));
+    emit status(tr("Synching blocks"));
 }
 
 void MainWindow::blocksSynched()
