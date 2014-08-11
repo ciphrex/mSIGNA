@@ -328,6 +328,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                     }
                     catch (const exception& e)
                     {
+                        syncLock.unlock();
                         notifyConnectionError(e.what());
                     }
                 }
@@ -354,6 +355,12 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                     notifySynchingBlocks();
                     const ChainHeader& merkleHeader = m_blockTree.getHeader(merkleBlockHash);
                     syncMerkleBlock(ChainMerkleBlock(merkleBlock, true, merkleHeader.height, merkleHeader.chainWork), merkleTree);
+                    if (m_currentMerkleTxHashes.empty())
+                    {
+                        m_lastSynchedBlockHash = m_blockTree.getTip().getHashLittleEndian();
+                        syncLock.unlock();
+                        notifyBlocksSynched();
+                    }
                 }
             }
             else if (!m_blockTree.hasHeader(merkleBlockHash))
