@@ -125,7 +125,7 @@ public:
 
     void reverse() { std::reverse(this->begin(), this->end()); }
 
-    uchar_vector getReverse()
+    uchar_vector getReverse() const
     {
         uchar_vector rval(*this);
         rval.reverse();
