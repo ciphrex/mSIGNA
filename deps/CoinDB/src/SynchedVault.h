@@ -27,8 +27,8 @@ public:
     {
         STOPPED,
         STARTING,
-        FETCHING_HEADERS,
-        FETCHING_BLOCKS,
+        SYNCHING_HEADERS,
+        SYNCHING_BLOCKS,
         SYNCHED
     };
 

@@ -22,10 +22,10 @@ const std::string SynchedVault::getStatusString(status_t status)
         return "STOPPED";
     case STARTING:
         return "STARTING";
-    case FETCHING_HEADERS:
-        return "FETCHING_HEADERS";
-    case FETCHING_BLOCKS:
-        return "FETCHING_BLOCKS";
+    case SYNCHING_HEADERS:
+        return "SYNCHING_HEADERS";
+    case SYNCHING_BLOCKS:
+        return "SYNCHING_BLOCKS";
     case SYNCHED:
         return "SYNCHED";
     default:
@@ -99,10 +99,10 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         m_notifyConnectionError("Network timed out.");
     });
 
-    m_networkSync.subscribeFetchingHeaders([this]()
+    m_networkSync.subscribeSynchingHeaders([this]()
     {
-        LOGGER(trace) << "SynchedVault - Fetching headers." << std::endl;
-        updateStatus(FETCHING_HEADERS);
+        LOGGER(trace) << "SynchedVault - Synching headers." << std::endl;
+        updateStatus(SYNCHING_HEADERS);
     });
 
     m_networkSync.subscribeHeadersSynched([this]()
@@ -132,11 +132,11 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         }
     });
 
-    m_networkSync.subscribeFetchingBlocks([this]()
+    m_networkSync.subscribeSynchingBlocks([this]()
     {
-        LOGGER(trace) << "SynchedVault - Fetching blocks." << std::endl;
+        LOGGER(trace) << "SynchedVault - Synching blocks." << std::endl;
         
-        if (m_vault) { updateStatus(FETCHING_BLOCKS); }
+        if (m_vault) { updateStatus(SYNCHING_BLOCKS); }
     });
 
     m_networkSync.subscribeBlocksSynched([this]()
@@ -381,7 +381,7 @@ void SynchedVault::closeVault()
         if (!m_vault) return;
 
         m_bInsertMerkleBlocks = false;
-        m_networkSync.stopSyncBlocks();
+        m_networkSync.stopSynchingBlocks();
         delete m_vault;
         m_vault = nullptr;
     }
