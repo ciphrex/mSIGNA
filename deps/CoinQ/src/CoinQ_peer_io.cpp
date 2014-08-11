@@ -36,6 +36,8 @@ void Peer::do_handshake()
         if (!bRunning) return;
         LOGGER(trace) << "Peer timer handler" << std::endl;
 
+        if (ec == boost::asio::error::operation_aborted) return;
+
         if (bHandshakeComplete) return;
         boost::lock_guard<boost::mutex> lock(handshakeMutex);
         if (bHandshakeComplete) return;
@@ -53,6 +55,8 @@ void Peer::do_read()
 
         if (ec)
         {
+            if (ec == boost::asio::error::operation_aborted) return;
+
             read_message.clear();
             do_stop();
 
@@ -196,6 +200,8 @@ void Peer::do_write(boost::shared_ptr<uchar_vector> data)
 
         if (ec)
         {
+            if (ec == boost::asio::error::operation_aborted) return;
+
             std::stringstream err;
             err << "Write error: " << ec.value() << ": " << ec.message();
             notifyConnectionError(*this, err.str());
@@ -224,6 +230,8 @@ void Peer::do_connect(tcp::resolver::iterator iter)
 
         if (ec)
         {
+            if (ec == boost::asio::error::operation_aborted) return;
+
             do_stop();
 
             std::stringstream err;
@@ -258,7 +266,6 @@ void Peer::do_connect(tcp::resolver::iterator iter)
 
 void Peer::do_stop()
 {
-    do_clearSendQueue();
     bRunning = false;
     bHandshakeComplete = false;
     bWriteReady = false;
@@ -287,6 +294,7 @@ void Peer::start()
 
         if (ec)
         {
+            if (ec == boost::asio::error::operation_aborted) return;
             do_stop();
 
             std::stringstream err;
@@ -308,7 +316,7 @@ void Peer::stop()
         if (!bRunning) return;
 
         bRunning = false;
-        socket_.cancel();
+//        socket_.cancel();
         socket_.close();
         do_clearSendQueue();
         bHandshakeComplete = false;

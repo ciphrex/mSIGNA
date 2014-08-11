@@ -132,7 +132,7 @@ private:
     void startIOServiceThread();
     void stopIOServiceThread();
     CoinQ::io_service_t m_ioService;
-    boost::thread* m_ioServiceThread;
+    boost::thread m_ioServiceThread;
     CoinQ::io_service_t::work m_work;
 
     bool m_bConnected;
@@ -141,7 +141,7 @@ private:
     bool m_bFlushingToFile;
     boost::mutex m_fileFlushMutex;
     boost::condition_variable m_fileFlushCond;
-    boost::thread* m_fileFlushThread;
+    boost::thread m_fileFlushThread;
     void startFileFlushThread();
     void stopFileFlushThread();
     void fileFlushLoop();

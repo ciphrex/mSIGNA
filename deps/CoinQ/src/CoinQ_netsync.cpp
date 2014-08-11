@@ -24,12 +24,10 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
     m_bCheckProofOfWork(bCheckProofOfWork),
     m_bStarted(false),
     m_bIOServiceStarted(false),
-    m_ioServiceThread(nullptr),
     m_work(m_ioService),
     m_bConnected(false),
     m_peer(m_ioService),
     m_bFlushingToFile(false),
-    m_fileFlushThread(nullptr),
     m_bHeadersSynched(false)
 {
     // Select hash functions
@@ -800,7 +798,7 @@ void NetworkSync::startIOServiceThread()
 
     LOGGER(trace) << "Starting IO service thread..." << endl;
     m_bIOServiceStarted = true;
-    m_ioServiceThread = new boost::thread(boost::bind(&CoinQ::io_service_t::run, &m_ioService));
+    m_ioServiceThread = boost::thread(boost::bind(&CoinQ::io_service_t::run, &m_ioService));
     LOGGER(trace) << "IO service thread started." << endl;
 }
 
@@ -812,8 +810,7 @@ void NetworkSync::stopIOServiceThread()
 
     LOGGER(trace) << "Stopping IO service thread..." << endl;
     m_ioService.stop();
-    m_ioServiceThread->join();
-    delete m_ioServiceThread;
+    m_ioServiceThread.join();
     m_ioService.reset();
     m_bIOServiceStarted = false;
     LOGGER(trace) << "IO service thread stopped." << endl; 
@@ -822,12 +819,12 @@ void NetworkSync::stopIOServiceThread()
 void NetworkSync::startFileFlushThread()
 {
     if (m_bFlushingToFile) throw std::runtime_error("NetworkSync - file flush thread already started.");
-    boost::lock_guard<boost::mutex> lock(m_fileFlushMutex);
+    boost::unique_lock<boost::mutex> lock(m_fileFlushMutex);
     if (m_bFlushingToFile) throw std::runtime_error("NetworkSync - file flush thread already started.");
 
     LOGGER(trace) << "Starting file flushing thread..." << endl;
     m_bFlushingToFile = true;
-    m_fileFlushThread = new boost::thread(&NetworkSync::fileFlushLoop, this);
+    m_fileFlushThread = boost::thread(&NetworkSync::fileFlushLoop, this);
     LOGGER(trace) << "File flushing thread started." << endl;
 }
 
@@ -841,8 +838,7 @@ void NetworkSync::stopFileFlushThread()
     m_bFlushingToFile = false;
     lock.unlock();
     m_fileFlushCond.notify_all();
-    m_fileFlushThread->join();
-    delete m_fileFlushThread;
+    m_fileFlushThread.join();
     LOGGER(trace) << "File flushing thread stopped." << endl;
 }
 

@@ -80,7 +80,6 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         LOGGER(trace) << "SynchedVault - connection closed." << std::endl;
         m_bConnected = false;
         m_bSynching = false;
-        updateStatus(STOPPED);
     });
 
     m_networkSync.subscribeStarted([this]()
@@ -91,6 +90,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_networkSync.subscribeStopped([this]()
     {
         LOGGER(trace) << "SynchedVault - Sync stopped." << std::endl;
+        updateStatus(STOPPED);
     });
 
     m_networkSync.subscribeTimeout([this]()
