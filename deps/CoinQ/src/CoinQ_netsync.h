@@ -43,11 +43,13 @@ typedef std::function<void(const ChainMerkleBlock&, const bytes_t& /*txhash*/ , 
 class NetworkSync
 {
 public:
-    NetworkSync(const CoinQ::CoinParams& coinParams = CoinQ::getBitcoinParams());
+    NetworkSync(const CoinQ::CoinParams& coinParams = CoinQ::getBitcoinParams(), bool bCheckProofOfWork = false);
     ~NetworkSync();
 
     void setCoinParams(const CoinQ::CoinParams& coinParams);
     const CoinQ::CoinParams& getCoinParams() const { return m_coinParams; }
+
+    void enableCheckProofOfWork(bool bCheckProofOfWork = true) { m_bCheckProofOfWork = bCheckProofOfWork; }
 
     void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = true, CoinQBlockTreeMem::callback_t callback = nullptr);
     bool headersSynched() const { return m_bHeadersSynched; }
@@ -92,10 +94,10 @@ public:
     void subscribeProtocolError(string_slot_t slot) { notifyProtocolError.connect(slot); }
     void subscribeBlockTreeError(string_slot_t slot) { notifyBlockTreeError.connect(slot); }
 
-    void subscribeFetchingHeaders(void_slot_t slot) { notifyFetchingHeaders.connect(slot); }
+    void subscribeFetchingHeaders(void_slot_t slot) { notifySynchingHeaders.connect(slot); }
     void subscribeHeadersSynched(void_slot_t slot) { notifyHeadersSynched.connect(slot); }
 
-    void subscribeFetchingBlocks(void_slot_t slot) { notifyFetchingBlocks.connect(slot); }
+    void subscribeFetchingBlocks(void_slot_t slot) { notifySynchingBlocks.connect(slot); }
     void subscribeBlocksSynched(void_slot_t slot) { notifyBlocksSynched.connect(slot); }
 
     void subscribeStatus(string_slot_t slot) { notifyStatus.connect(slot); }
@@ -113,6 +115,7 @@ public:
 
 private:
     CoinQ::CoinParams m_coinParams;
+    bool m_bCheckProofOfWork;
 
     bool m_bStarted;
     boost::mutex m_startMutex;
@@ -146,7 +149,9 @@ private:
     bool m_bBlocksFetched;
     bool m_bBlocksSynched;
 
-    uint32_t m_lastRequestedBlockHeight;
+    uchar_vector m_lastRequestedBlockHash;
+    uchar_vector m_lastSynchedBlockHash;
+    int m_lastRequestedBlockHeight;
 
     Coin::BloomFilter m_bloomFilter;
 
@@ -159,7 +164,8 @@ private:
     unsigned int m_currentMerkleTxIndex;
     unsigned int m_currentMerkleTxCount;
 
-    void processConfirmations();
+    void syncMerkleBlock(const ChainMerkleBlock& merkleBlock, const Coin::PartialMerkleTree& merkleTree);
+    void processMempoolConfirmations();
 
     // Sync signals
     CoinQSignal<void> notifyStarted;
@@ -172,10 +178,10 @@ private:
     CoinQSignal<const std::string&> notifyProtocolError;
     CoinQSignal<const std::string&> notifyBlockTreeError;
 
-    CoinQSignal<void> notifyFetchingHeaders;
+    CoinQSignal<void> notifySynchingHeaders;
     CoinQSignal<void> notifyHeadersSynched;
 
-    CoinQSignal<void> notifyFetchingBlocks;
+    CoinQSignal<void> notifySynchingBlocks;
     CoinQSignal<void> notifyBlocksSynched;
 
     CoinQSignal<const std::string&> notifyStatus;
