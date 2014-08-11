@@ -162,6 +162,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                     m_lastRequestedBlockHash.clear();
                     m_lastSynchedBlockHash = currentMerkleBlockHash;
                     notifyBlocksSynched();
+                    return;
                 }
 
                 // Ask for the next block
@@ -349,6 +350,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                 {
                     // We were synched prior to this block - we need to process this merkle block and we'll be synched again
                     notifySynchingBlocks();
+                    m_lastSynchedBlockHash = m_blockTree.getTip().getHashLittleEndian();
+                    m_lastRequestedBlockHash.clear();
                     const ChainHeader& merkleHeader = m_blockTree.getHeader(merkleBlockHash);
                     syncMerkleBlock(ChainMerkleBlock(merkleBlock, true, merkleHeader.height, merkleHeader.chainWork), merkleTree);
                 }
