@@ -141,7 +141,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
         try
         {
             // Notify of confirmations of previously received transactions as well as the current one
-            boost::lock_guard<boost::mutex> syncLock(m_syncMutex);
+            boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
             processMempoolConfirmations();
             if (!m_currentMerkleTxHashes.empty() && txHash == m_currentMerkleTxHashes.front())
             {
@@ -161,6 +161,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                     LOGGER(trace) << "Block sync detected from tx handler." << endl;
                     m_lastRequestedBlockHash.clear();
                     m_lastSynchedBlockHash = currentMerkleBlockHash;
+                    syncLock.unlock(); 
                     notifyBlocksSynched();
                     return;
                 }
@@ -299,7 +300,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
             Coin::PartialMerkleTree merkleTree(merkleBlock.nTxs, merkleBlock.hashes, merkleBlock.flags, merkleBlock.blockHeader.merkleRoot);
 
             LOGGER(debug) << "Last requested merkle block: " << m_lastRequestedBlockHash.getHex() << endl;
-            boost::lock_guard<boost::mutex> syncLock(m_syncMutex);
+            boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
             if (merkleBlockHash == m_lastRequestedBlockHash)
             {
                 // It's the block we requested - sync it and continue requesting the next until we're at the tip
@@ -312,6 +313,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                     LOGGER(trace) << "Block sync detected from merkle block handler." << endl;
                     m_lastRequestedBlockHash.clear();
                     m_lastSynchedBlockHash = chainTipHash;
+                    syncLock.unlock();
                     notifyBlocksSynched();
                 }
                 else
