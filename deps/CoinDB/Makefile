@@ -109,6 +109,8 @@ else ifeq ($(OS), osx)
     INCLUDE_PATH += -I$(SYSROOT)/include
     ODB_INCLUDE_PATH += -I$(SYSROOT)/include
 
+    BOOST_SUFFIX = -mt
+
 else ifneq ($(MAKECMDGOALS), clean)
     $(error OS must be set to linux, mingw64, or osx)
 endif
