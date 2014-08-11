@@ -34,8 +34,15 @@ typedef ChainHeader chain_header_t;
 typedef ChainBlock chain_block_t;
 typedef ChainMerkleBlock chain_merkle_block_t;
 
-namespace CoinQ {
-    namespace Network {
+namespace Coin
+{
+    class PartialMerkleTree;
+}
+
+namespace CoinQ
+{
+    namespace Network
+    {
 
 typedef std::function<void(const ChainMerkleBlock&, const Coin::Transaction&, unsigned int /*txindex*/, unsigned int /*txcount*/)> merkle_tx_slot_t;
 typedef std::function<void(const ChainMerkleBlock&, const bytes_t& /*txhash*/ , unsigned int /*txindex*/, unsigned int /*txcount*/)> tx_confirmed_slot_t;
@@ -70,11 +77,11 @@ public:
     bool connected() const { return m_bConnected; }
 
     void setBloomFilter(const Coin::BloomFilter& bloomFilter);
+    void clearBloomFilter();
 
     void syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t startTime);
-    //void syncBlocks(int resyncHeight);
-    void stopSyncBlocks();
-    bool blocksSynched() const { return m_bBlocksSynched; }
+    void syncBlocks(int startHeight);
+    void stopSynchingBlocks();
 
     // MESSAGES TO PEER
     void sendTx(Coin::Transaction& tx);
@@ -94,10 +101,10 @@ public:
     void subscribeProtocolError(string_slot_t slot) { notifyProtocolError.connect(slot); }
     void subscribeBlockTreeError(string_slot_t slot) { notifyBlockTreeError.connect(slot); }
 
-    void subscribeFetchingHeaders(void_slot_t slot) { notifySynchingHeaders.connect(slot); }
+    void subscribeSynchingHeaders(void_slot_t slot) { notifySynchingHeaders.connect(slot); }
     void subscribeHeadersSynched(void_slot_t slot) { notifyHeadersSynched.connect(slot); }
 
-    void subscribeFetchingBlocks(void_slot_t slot) { notifySynchingBlocks.connect(slot); }
+    void subscribeSynchingBlocks(void_slot_t slot) { notifySynchingBlocks.connect(slot); }
     void subscribeBlocksSynched(void_slot_t slot) { notifyBlocksSynched.connect(slot); }
 
     void subscribeStatus(string_slot_t slot) { notifyStatus.connect(slot); }
@@ -145,13 +152,8 @@ private:
     bool m_blockTreeLoaded;
     bool m_bHeadersSynched;
 
-    bool m_bFetchingBlocks;
-    bool m_bBlocksFetched;
-    bool m_bBlocksSynched;
-
     uchar_vector m_lastRequestedBlockHash;
     uchar_vector m_lastSynchedBlockHash;
-    int m_lastRequestedBlockHeight;
 
     Coin::BloomFilter m_bloomFilter;
 

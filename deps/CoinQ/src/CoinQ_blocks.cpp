@@ -198,9 +198,16 @@ const ChainHeader& CoinQBlockTreeMem::getHeader(int height) const
 
 const ChainHeader& CoinQBlockTreeMem::getTip() const
 {
-    if (!pHeader) throw std::runtime_error("Tree is empty.");
+    if (!pHead) throw std::runtime_error("Tree is empty.");
 
-    return *pHeader;
+    return *pHead;
+}
+
+int CoinQBlockTreeMem::getTipHeight() const
+{
+    if (!pHead) throw std::runtime_error("Tree is empty.");
+
+    return pHead->height;
 }
 
 const ChainHeader& CoinQBlockTreeMem::getHeaderBefore(uint32_t timestamp) const

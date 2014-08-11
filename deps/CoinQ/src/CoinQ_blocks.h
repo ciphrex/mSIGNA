@@ -106,7 +106,8 @@ public:
     virtual bool hasHeader(const uchar_vector& hash) const = 0;
     virtual const ChainHeader& getHeader(const uchar_vector& hash) const = 0;
     virtual const ChainHeader& getHeader(int height) const = 0; // Use -1 to get top block
-    virtual const ChainHeader& getTip() const;
+    virtual const ChainHeader& getTip() const = 0;
+    virtual int getTipHeight() const = 0;
     virtual const ChainHeader& getHeaderBefore(uint32_t timestamp) const = 0;
 
     virtual uchar_vector getBestHash() const = 0;
@@ -174,6 +175,7 @@ public:
     const ChainHeader& getHeader(const uchar_vector& hash) const;
     const ChainHeader& getHeader(int height) const;
     const ChainHeader& getTip() const;
+    int getTipHeight() const;
     const ChainHeader& getHeaderBefore(uint32_t timestamp) const;
 
     uchar_vector getBestHash() const { return getHeader(-1).getHashLittleEndian(); }
