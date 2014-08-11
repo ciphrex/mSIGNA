@@ -770,7 +770,16 @@ public:
     CoinBlock(const std::string& hex);
 
     const uchar_vector& hash() const { return blockHeader.getHashLittleEndian(); }
+    uint32_t version() const { return blockHeader.version(); }
+    const uchar_vector& prevBlockHash() const { return blockHeader.prevBlockHash(); }
+    const uchar_vector& merkleRoot() const { return blockHeader.merkleRoot(); }
+    uint32_t timestamp() const { return blockHeader.timestamp(); }
+    uint32_t bits() const { return blockHeader.bits(); }
+    uint32_t nonce() const { return blockHeader.nonce(); } 
 
+    const BigInt getTarget() const { return blockHeader.getTarget(); }
+    const BigInt getWork() const { return blockHeader.getWork(); }
+    
     const char* getCommand() const { return "block"; }
     uint64_t getSize() const;
     uchar_vector getSerialized() const;
@@ -810,6 +819,15 @@ public:
     MerkleBlock(const uchar_vector& bytes) { setSerialized(bytes); }
 
     const uchar_vector& hash() const { return blockHeader.getHashLittleEndian(); }
+    uint32_t version() const { return blockHeader.version(); }
+    const uchar_vector& prevBlockHash() const { return blockHeader.prevBlockHash(); }
+    const uchar_vector& merkleRoot() const { return blockHeader.merkleRoot(); }
+    uint32_t timestamp() const { return blockHeader.timestamp(); }
+    uint32_t bits() const { return blockHeader.bits(); }
+    uint32_t nonce() const { return blockHeader.nonce(); } 
+
+    const BigInt getTarget() const { return blockHeader.getTarget(); }
+    const BigInt getWork() const { return blockHeader.getWork(); }
 
     const char* getCommand() const { return "merkleblock"; }
     uint64_t getSize() const;
