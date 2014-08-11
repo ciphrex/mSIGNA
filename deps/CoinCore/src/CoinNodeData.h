@@ -93,7 +93,7 @@ typedef std::function<uchar_vector(const uchar_vector&)> hashfunc_t;
 class CoinNodeStructure
 {
 public:
-    CoinNodeStructure() : bSet_(false) { }
+    CoinNodeStructure() : isHashSet_(false) { }
 
     virtual ~CoinNodeStructure() { }
 
@@ -117,7 +117,7 @@ public:
 protected:
     mutable uchar_vector hash_;
     mutable uchar_vector hashLittleEndian_;
-    mutable bool bSet_;
+    mutable bool isHashSet_;
 };
 
 class VarInt : public CoinNodeStructure
@@ -202,12 +202,6 @@ public:
 class MessageHeader : public CoinNodeStructure
 {
 public:
-    uint32_t magic;
-    char command[12];
-    uint32_t length;
-    uint32_t checksum;
-    bool hasChecksum;
-
     MessageHeader() : hasChecksum(true) { }
     MessageHeader(uint32_t magic, const char* command, uint32_t length); // no checksum
     MessageHeader(uint32_t magic, const char* command, uint32_t length, uint32_t checksum);
@@ -223,6 +217,12 @@ public:
     std::string toIndentedString(uint spaces = 0) const;
 
     void removeChecksum() { hasChecksum = false; }
+    uint32_t magic;
+    char command[12];
+    uint32_t length;
+    uint32_t checksum;
+    bool hasChecksum;
+
 };
 
 // Full message: header + payload
@@ -662,33 +662,39 @@ public:
     uchar_vector getHashWithAppendedCode(uint32_t code) const; // in little endian
 };
 
+class CoinBlock;
+class MerkleBlock;
+
 class CoinBlockHeader : public CoinNodeStructure
 {
 public:
-    uint32_t version;
-    uchar_vector prevBlockHash;
-    uchar_vector merkleRoot;
-    uint32_t timestamp;
-    uint32_t bits;
-    uint32_t nonce;
-
-    CoinBlockHeader() : bPowSet_(false) { }
-    CoinBlockHeader(uint32_t _version, const uchar_vector& _prevBlockHash, const uchar_vector& _merkleRoot, uint32_t _timestamp, uint32_t _bits, uint32_t _nonce)
-        : version(_version), prevBlockHash(_prevBlockHash), merkleRoot(_merkleRoot), timestamp(_timestamp), bits(_bits), nonce(_nonce) { }
-    CoinBlockHeader(uint32_t _version, uint32_t _timestamp, uint32_t _bits, uint32_t _nonce = 0, const uchar_vector& _prevBlockHash = g_zero32bytes, const uchar_vector& _merkleRoot = g_zero32bytes)
-        : version(_version), prevBlockHash(_prevBlockHash), merkleRoot(_merkleRoot), timestamp(_timestamp), bits(_bits), nonce(_nonce) { }
-    CoinBlockHeader(const uchar_vector& bytes) { this->setSerialized(bytes); }
+    CoinBlockHeader() : isPOWHashSet_(false) { }
+    CoinBlockHeader(uint32_t version, const uchar_vector& prevBlockHash, const uchar_vector& merkleRoot, uint32_t timestamp, uint32_t bits, uint32_t nonce)
+        : isPOWHashSet_(false), version_(version), prevBlockHash_(prevBlockHash), merkleRoot_(merkleRoot), timestamp_(timestamp), bits_(bits), nonce_(nonce) { }
+    CoinBlockHeader(uint32_t version, uint32_t timestamp, uint32_t bits, uint32_t nonce = 0, const uchar_vector& prevBlockHash = g_zero32bytes, const uchar_vector& merkleRoot = g_zero32bytes)
+        : isPOWHashSet_(false), version_(version), prevBlockHash_(prevBlockHash), merkleRoot_(merkleRoot), timestamp_(timestamp), bits_(bits), nonce_(nonce) { }
+    CoinBlockHeader(const uchar_vector& bytes) { setSerialized(bytes); }
     CoinBlockHeader(const std::string& hex);
 
-    void set(uint32_t _version, uint32_t _timestamp, uint32_t _bits, uint32_t _nonce = 0, const uchar_vector& _prevBlockHash = g_zero32bytes, const uchar_vector& _merkleRoot = g_zero32bytes)
+    void set(uint32_t version, uint32_t timestamp, uint32_t bits, uint32_t nonce = 0, const uchar_vector& prevBlockHash = g_zero32bytes, const uchar_vector& merkleRoot = g_zero32bytes)
     {
-        version = _version;
-        prevBlockHash = _prevBlockHash;
-        merkleRoot = _merkleRoot;
-        timestamp = _timestamp;
-        bits = _bits;
-        nonce = _nonce;
+        isHashSet_ = false;
+        isPOWHashSet_ = false;
+
+        version_ = version;
+        prevBlockHash_ = prevBlockHash;
+        merkleRoot_ = merkleRoot;
+        timestamp_ = timestamp;
+        bits_ = bits;
+        nonce_ = nonce;
     }
+
+    uint32_t version() const { return version_; }
+    const uchar_vector&  prevBlockHash() const { return prevBlockHash_; }
+    const uchar_vector& merkleRoot() const { return merkleRoot_; }
+    uint32_t timestamp() const { return timestamp_; }
+    uint32_t bits() const { return bits_; }
+    uint32_t nonce() const { return nonce_; }
 
     const char* getCommand() const { return ""; }
     uint64_t getSize() const { return 80; }
@@ -698,7 +704,7 @@ public:
     std::string toString() const;
     std::string toIndentedString(uint spaces = 0) const;
 
-    void incrementNonce() { nonce++; bSet_ = false; bPowSet_ = false; }
+    void incrementNonce() { nonce_++; isHashSet_ = false; isPOWHashSet_ = false; }
 
     const BigInt getTarget() const;
     void setTarget(const BigInt& target);
@@ -708,19 +714,38 @@ public:
     static void setHashFunc(hashfunc_t hashfunc) { hashfunc_ = hashfunc; }
     static void setPOWHashFunc(hashfunc_t hashfunc) { powhashfunc_ = hashfunc; }
 
-    const uchar_vector& getHash() const { return CoinNodeStructure::getHash(hashfunc_); } // big endian
-    const uchar_vector& getHashLittleEndian() const { return CoinNodeStructure::getHashLittleEndian(hashfunc_);; }
+    const uchar_vector& getHash() const;
+    const uchar_vector& getHashLittleEndian() const;
 
     const uchar_vector& getPOWHash() const;
     const uchar_vector& getPOWHashLittleEndian() const;
 
 private:
+    friend class CoinBlock;
+    friend class MerkleBlock;
+
     static hashfunc_t hashfunc_;
     static hashfunc_t powhashfunc_;
 
-    mutable uchar_vector powHash_;
-    mutable uchar_vector powHashLittleEndian_;
-    mutable bool bPowSet_;
+/*
+    // Inherited from CoinNodeStructure
+    mutable uchar_vector hash_;
+    mutable uchar_vector hashLittleEndian_;
+    mutable bool isHashSet_;
+*/
+
+    mutable uchar_vector POWHash_;
+    mutable uchar_vector POWHashLittleEndian_;
+    mutable bool isPOWHashSet_;
+
+    void resetHash() const { isHashSet_ = false; isPOWHashSet_ = false; }
+
+    uint32_t version_;
+    uchar_vector prevBlockHash_;
+    uchar_vector merkleRoot_;
+    uint32_t timestamp_;
+    uint32_t bits_;
+    uint32_t nonce_;
 };
 
 class CoinBlock : public CoinNodeStructure
@@ -755,7 +780,7 @@ public:
     bool isValidMerkleRoot() const;
     void updateMerkleRoot();
 
-    void incrementNonce() { this->blockHeader.nonce++; }
+    void incrementNonce() { blockHeader.incrementNonce(); }
 	
     uint64_t getTotalSent() const;
 

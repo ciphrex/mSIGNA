@@ -109,52 +109,32 @@ string satoshisToBtcString(uint64_t satoshis, bool trailing_zeros)
 //
 const uchar_vector& CoinNodeStructure::getHash() const
 {
-    if (!bSet_)
-    {
-        hash_ = sha256_2(getSerialized());
-        hashLittleEndian_ = hash_.getReverse();
-        bSet_ = true;
-    }
+    hash_ = sha256_2(getSerialized());
     return hash_;
 }
 
 const uchar_vector& CoinNodeStructure::getHashLittleEndian() const
 {
-    if (!bSet_)
-    {
-        hash_ = sha256_2(getSerialized());
-        hashLittleEndian_ = hash_.getReverse();
-        bSet_ = true;
-    }
+    hashLittleEndian_ = sha256_2(getSerialized()).getReverse();
     return hashLittleEndian_;
 }
 
 const uchar_vector& CoinNodeStructure::getHash(hashfunc_t hashfunc) const
 {
-    if (!bSet_)
-    {
-        hash_ = hashfunc(getSerialized());
-        hashLittleEndian_ = hash_.getReverse();
-        bSet_ = true;
-    }
+    hash_ = hashfunc(getSerialized());
     return hash_;
 }
 
 const uchar_vector& CoinNodeStructure::getHashLittleEndian(hashfunc_t hashfunc) const
 {
-    if (!bSet_)
-    {
-        hash_ = hashfunc(getSerialized());
-        hashLittleEndian_ = hash_.getReverse();
-        bSet_ = true;
-    }
+    hashLittleEndian_ = hash_.getReverse();
     return hashLittleEndian_;
 }
 
 uint32_t CoinNodeStructure::getChecksum() const
 {
-    uchar_vector hash = this->getHash();
-    return vch_to_uint<uint32_t>(uchar_vector(hash.begin(), hash.begin() + 4), _BIG_ENDIAN);
+    getHash();
+    return vch_to_uint<uint32_t>(uchar_vector(hash_.begin(), hash_.begin() + 4), _BIG_ENDIAN);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1393,8 +1373,6 @@ void Transaction::setSerialized(const uchar_vector& bytes)
 
     // lock time
     this->lockTime = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN);
-
-    bSet_ = false;
 }
 
 string Transaction::toString() const
@@ -1451,8 +1429,6 @@ void Transaction::clearScriptSigs()
 {
     for (uint i = 0; i < this->inputs.size(); i++)
         this->inputs[i].scriptSig.clear();
-
-    bSet_ = false;
 }
 
 void Transaction::setScriptSig(uint index, const uchar_vector& scriptSig)
@@ -1460,8 +1436,6 @@ void Transaction::setScriptSig(uint index, const uchar_vector& scriptSig)
     if (index > inputs.size()-1)
         throw runtime_error("Index out of range.");
     inputs[index].scriptSig = scriptSig;
-
-    bSet_ = false;
 }
 
 void Transaction::setScriptSig(uint index, const string& scriptSigHex)
@@ -1496,17 +1470,19 @@ CoinBlockHeader::CoinBlockHeader(const string& hex)
 {
     uchar_vector bytes;
     bytes.setHex(hex);
-    this->setSerialized(bytes);
+    setSerialized(bytes);
+
+    resetHash();
 }
 
 uchar_vector CoinBlockHeader::getSerialized() const
 {
-    uchar_vector rval = uint_to_vch(this->version, _BIG_ENDIAN);
-    rval += uchar_vector(this->prevBlockHash).getReverse(); // all big endian
-    rval += uchar_vector(this->merkleRoot).getReverse();
-    rval += uint_to_vch(this->timestamp, _BIG_ENDIAN);
-    rval += uint_to_vch(this->bits, _BIG_ENDIAN);
-    rval += uint_to_vch(this->nonce, _BIG_ENDIAN);
+    uchar_vector rval = uint_to_vch(version_, _BIG_ENDIAN);
+    rval += prevBlockHash_.getReverse(); // all big endian
+    rval += merkleRoot_.getReverse();
+    rval += uint_to_vch(timestamp_, _BIG_ENDIAN);
+    rval += uint_to_vch(bits_, _BIG_ENDIAN);
+    rval += uint_to_vch(nonce_, _BIG_ENDIAN);
     return rval;
 }
 
@@ -1515,31 +1491,35 @@ void CoinBlockHeader::setSerialized(const uchar_vector& bytes)
     if (bytes.size() < MIN_COIN_BLOCK_HEADER_SIZE)
         throw runtime_error("Invalid data - CoinBlockHeader too small.");
 
-    this->version = vch_to_uint<uint32_t>(bytes, _BIG_ENDIAN); uint pos = 4;
+    version_ = vch_to_uint<uint32_t>(bytes, _BIG_ENDIAN); uint pos = 4;
 
     uchar_vector subbytes(bytes.begin() + pos, bytes.begin() + pos + 32); pos += 32;
     subbytes.reverse();
-    this->prevBlockHash = subbytes;
+    prevBlockHash_ = subbytes;
 
     subbytes.assign(bytes.begin() + pos, bytes.begin() + pos + 32); pos += 32;
     subbytes.reverse();
-    this->merkleRoot = subbytes;
+    merkleRoot_ = subbytes;
 
-    this->timestamp = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN); pos += 4;
-    this->bits = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN); pos += 4;
-    this->nonce = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN); pos += 4;
+    timestamp_ = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN); pos += 4;
+    bits_ = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN); pos += 4;
+    nonce_ = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN); pos += 4;
+
+    resetHash();
 }
 
 const BigInt CoinBlockHeader::getTarget() const
 {
-    uint32_t nExp = bits >> 24;
-    uint32_t nMantissa = bits & 0x007fffff;
-    if (nExp <= 3) {
+    uint32_t nExp = bits_ >> 24;
+    uint32_t nMantissa = bits_ & 0x007fffff;
+    if (nExp <= 3)
+    {
         nMantissa >>= 8*(3 - nExp);
         BigInt target(nMantissa);
         return target;
     }
-    else {
+    else
+    {
         BigInt target(nMantissa);
         return target << (8*(nExp - 3));
     }    
@@ -1549,27 +1529,28 @@ void CoinBlockHeader::setTarget(const BigInt& target)
 {
     uint32_t nExp =  target.numBytes();
     uint32_t nMantissa;
-    if (nExp <= 3) {
+    if (nExp <= 3)
+    {
         nMantissa = target.getWord() << 8*(3 - nExp);
     }
-    else {
+    else
+    {
         nMantissa = (target >> (8*(nExp - 3))).getWord();
     }
 
-    if (nMantissa >> 24) {
-        throw std::runtime_error("Mantissa too large.");
-    }
+    if (nMantissa >> 24) throw std::runtime_error("Mantissa too large.");
 
-    if (nMantissa & 0x00800000) {
+    if (nMantissa & 0x00800000)
+    {
         nMantissa >>= 8;
         nExp++;
     }
 
-    if (nExp >> 8) {
-        throw std::runtime_error("Exponent too large.");
-    }
+    if (nExp >> 8) throw std::runtime_error("Exponent too large.");
 
-    bits = (nExp << 24) | nMantissa;
+    bits_ = (nExp << 24) | nMantissa;
+
+    resetHash();
 }
 
 const BigInt CoinBlockHeader::getWork() const
@@ -1582,45 +1563,67 @@ const BigInt CoinBlockHeader::getWork() const
 string CoinBlockHeader::toString() const
 {
     stringstream ss;
-    ss << "hash: " << this->getHashLittleEndian().getHex() << ", version: " << this->version << ", prevBlockHash: " << this->prevBlockHash.getHex()
-       << ", merkleRoot: " << this->merkleRoot.getHex() << ", timestamp: " << timeToString(this->timestamp)
-       << ", bits: " << this->bits << ", nonce: " << this->nonce;
+    ss << "hash: " << getHashLittleEndian().getHex() << ", version: " << version_ << ", prevBlockHash: " << prevBlockHash_.getHex()
+       << ", merkleRoot: " << merkleRoot_.getHex() << ", timestamp: " << timeToString(timestamp_)
+       << ", bits: " << bits_ << ", nonce: " << nonce_;
     return ss.str();
 }
 
 string CoinBlockHeader::toIndentedString(uint spaces) const
 {
     stringstream ss;
-    ss << blankSpaces(spaces) << "hash: " << this->getHashLittleEndian().getHex() << endl
-       << blankSpaces(spaces) << "version: " << dec << this->version << endl
-       << blankSpaces(spaces) << "prevBlockHash: " << this->prevBlockHash.getHex() << endl
-       << blankSpaces(spaces) << "merkleRoot: " << this->merkleRoot.getHex() << endl
-       << blankSpaces(spaces) << "timestamp: 0x" << hex << this->timestamp << " (" << timeToString(this->timestamp) << ")" << endl
-       << blankSpaces(spaces) << "bits: " << dec << this->bits << endl
-       << blankSpaces(spaces) << "nonce: " << dec << this->nonce;
+    ss << blankSpaces(spaces) << "hash: " << getHashLittleEndian().getHex() << endl
+       << blankSpaces(spaces) << "version: " << dec << version_ << endl
+       << blankSpaces(spaces) << "prevBlockHash: " << prevBlockHash_.getHex() << endl
+       << blankSpaces(spaces) << "merkleRoot: " << merkleRoot_.getHex() << endl
+       << blankSpaces(spaces) << "timestamp: 0x" << hex << timestamp_ << " (" << timeToString(timestamp_) << ")" << endl
+       << blankSpaces(spaces) << "bits: " << dec << bits_ << endl
+       << blankSpaces(spaces) << "nonce: " << dec << nonce_;
     return ss.str();
+}
+
+const uchar_vector& CoinBlockHeader::getHash() const
+{
+    if (!isHashSet_)
+    {
+        hash_ = CoinNodeStructure::getHash(hashfunc_);
+        hashLittleEndian_ = hash_.getReverse();
+        isHashSet_ = true;
+    }
+    return hash_; 
+}
+
+const uchar_vector& CoinBlockHeader::getHashLittleEndian() const
+{
+    if (!isHashSet_)
+    {
+        hash_ = CoinNodeStructure::getHash(hashfunc_);
+        hashLittleEndian_ = hash_.getReverse();
+        isHashSet_ = true;
+    }
+    return hashLittleEndian_; 
 }
 
 const uchar_vector& CoinBlockHeader::getPOWHash() const
 {
-    if (!bPowSet_)
+    if (!isPOWHashSet_)
     {
-        powHash_ = CoinNodeStructure::getHash(powhashfunc_);
-        powHashLittleEndian_ = powHash_.getReverse();
-        bPowSet_ = true;
+        POWHash_ = CoinNodeStructure::getHash(powhashfunc_);
+        POWHashLittleEndian_ = POWHash_.getReverse();
+        isPOWHashSet_ = true;
     }
-    return powHash_; 
+    return POWHash_; 
 }
 
 const uchar_vector& CoinBlockHeader::getPOWHashLittleEndian() const
 {
-    if (!bPowSet_)
+    if (!isPOWHashSet_)
     {
-        powHash_ = CoinNodeStructure::getHash(powhashfunc_);
-        powHashLittleEndian_ = powHash_.getReverse();
-        bPowSet_ = true;
+        POWHash_ = CoinNodeStructure::getHash(powhashfunc_);
+        POWHashLittleEndian_ = POWHash_.getReverse();
+        isPOWHashSet_ = true;
     }
-    return powHashLittleEndian_; 
+    return POWHashLittleEndian_; 
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1670,7 +1673,7 @@ void CoinBlock::setSerialized(const uchar_vector& bytes)
         if (bytes.size() < pos)
             throw runtime_error("Invalid data - CoinBlock transactions exceed block size.");
     }
-    if (blockHeader.merkleRoot != txMerkleTree.getRootLittleEndian()) {
+    if (blockHeader.merkleRoot() != txMerkleTree.getRootLittleEndian()) {
         throw runtime_error("Invalid data - CoinBlock merkle root mismatch.");
     }
 }
@@ -1719,7 +1722,7 @@ bool CoinBlock::isValidMerkleRoot() const
     for (uint i = 0; i < this->txs.size(); i++)
         tree.addHash(txs[i].getHash());
 
-    return (this->blockHeader.merkleRoot == tree.getRootLittleEndian());
+    return (blockHeader.merkleRoot() == tree.getRootLittleEndian());
 }
 
 void CoinBlock::updateMerkleRoot()
@@ -1728,7 +1731,8 @@ void CoinBlock::updateMerkleRoot()
     for (uint i = 0; i < this->txs.size(); i++)
         tree.addHash(txs[i].getHash());
 
-    this->blockHeader.merkleRoot = tree.getRootLittleEndian();
+    blockHeader.merkleRoot_ = tree.getRootLittleEndian();
+    blockHeader.resetHash();
 }
 
 uint64_t CoinBlock::getTotalSent() const
@@ -1741,7 +1745,7 @@ uint64_t CoinBlock::getTotalSent() const
 
 int64_t CoinBlock::getHeight() const
 {
-    if (this->blockHeader.version < 2) return -1;
+    if (this->blockHeader.version() < 2) return -1;
 
     assert(txs.size() > 0);
     assert(txs[0].inputs.size() > 0);
