@@ -2,7 +2,7 @@
 //
 // CoinNodeData.cpp
 //
-// Copyright (c) 2011-2012 Eric Lombrozo
+// Copyright (c) 2011-2014 Eric Lombrozo
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -103,234 +103,60 @@ string satoshisToBtcString(uint64_t satoshis, bool trailing_zeros)
     return ss.str();
 }
 
-/*
-///////////////////////////////////////////////////////////////////////////////
-//
-// class MerkleTree implementation
-//
-uchar_vector MerkleTree::getRoot() const
-{
-    uchar_vector pairedHashes;
-    if (this->hashes.size() == 0)
-        return pairedHashes; // empty vector
-
-    if (this->hashes.size() == 1)
-        return this->hashes[0];
-
-    MerkleTree tree;
-    for (uint i = 0; i < this->hashes.size(); i+=2) {
-        pairedHashes = hashes[i];
-        if (i+1 < this->hashes.size()) {
-            // two different nodes
-            pairedHashes += hashes[i+1];
-        }
-        else {
-            // the same node with itself
-            pairedHashes += hashes[i];
-        }
-        //pairedHashes.reverse();
-        tree.addHash(sha256_2(pairedHashes));
-    }
-
-    return tree.getRoot(); // recurse
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//
-// class PartialMerkleTree implementation
-//
-std::string PartialMerkleTree::toIndentedString() const
-{
-    std::stringstream ss;
-    ss << "root: " << uchar_vector(root_).getReverse().getHex() << std::endl;
-    ss << "nTxs: " << nTxs_ << std::endl;
-    ss << "merkleHashes: " << endl;
-    unsigned int i = 0;
-    for (auto& hash: merkleHashes_) {
-        ss << "  " << i++ << ": " << uchar_vector(hash).getReverse().getHex() << endl; 
-    }
-
-    ss << "txHashes: " << endl;
-    i = 0;
-    for (auto& hash: txHashes_) {
-        ss << "  " << i++ << ": " << uchar_vector(hash).getReverse().getHex() << endl;
-    }
-
-    ss << "flags: " << getFlags().getHex() << endl;
-    return ss.str();
-}
-
-void PartialMerkleTree::setCompressed(unsigned int nTxs, const std::vector<uchar_vector>& hashes, const uchar_vector& flags)
-{
-    if (nTxs == 0) {
-        throw std::runtime_error("Transaction count is zero.");
-    }
-
-    // Compute depth = ceiling(log_2(leaves.size()))
-    nTxs_ = nTxs;
-    unsigned int depth = 1;
-    unsigned int n = nTxs_ - 1;
-    while (n > 0) { depth++; n >>= 1; }
-    depth--;
-
-    std::queue<uchar_vector> hashQueue;
-    merkleHashes_.clear();
-    for (auto& hash: hashes) { merkleHashes_.push_back(hash); hashQueue.push(hash); }
-    txHashes_.clear();
-    bits_.clear();
-
-    std::queue<bool> bitQueue; 
-    for (auto& flag: flags) {
-        for (unsigned int i = 0; i < 8; i++) {
-            bool bit = ((flag >> i) & (unsigned char)0x01);
-            bits_.push_back(bit);
-            bitQueue.push(bit);
-        }
-    }
-
-    setCompressed(hashQueue, bitQueue, depth);
-}
-
-void PartialMerkleTree::setCompressed(std::queue<uchar_vector>& hashQueue, std::queue<bool>& bitQueue, unsigned int depth)
-{
-    depth_ = depth;
-
-    bool bit = bitQueue.front();
-    bitQueue.pop();
-
-    // We've reached a leaf of the partial merkle tree
-    if (depth == 0 || !bit) {
-        root_ = hashQueue.front();
-        if (bit) txHashes_.push_back(hashQueue.front());
-        hashQueue.pop();
-        return;
-    }
-
-    depth--;
-
-    // we're not at a leaf and bit is set so recurse
-    PartialMerkleTree leftSubtree;
-    leftSubtree.setCompressed(hashQueue, bitQueue, depth);
-
-    txHashes_.swap(leftSubtree.txHashes_);
-
-    if (!hashQueue.empty()) {
-        // A right subtree also exists, so find it
-        PartialMerkleTree rightSubtree;
-        rightSubtree.setCompressed(hashQueue, bitQueue, depth);
-
-        root_ = sha256_2(leftSubtree.root_ + rightSubtree.root_);
-        txHashes_.splice(txHashes_.end(), rightSubtree.txHashes_);
-    }
-    else {
-        // There's no right subtree - copy over this node's hash
-        root_ = sha256_2(leftSubtree.root_ + leftSubtree.root_);
-    }
-}
-
-void PartialMerkleTree::setUncompressed(const std::vector<MerkleLeaf>& leaves)
-{
-    if (leaves.empty()) {
-        throw std::runtime_error("Leaf vector is empty.");
-    }
-
-    nTxs_ = leaves.size();
-    merkleHashes_.clear();
-    txHashes_.clear();
-    bits_.clear();
-
-    // Compute depth = ceiling(log_2(leaves.size()))
-    unsigned int depth = 1;
-    unsigned int n = nTxs_ - 1;
-    while (n > 0) { depth++; n >>= 1; }
-    depth--;
-
-    setUncompressed(leaves, 0, leaves.size(), depth);
-}
-
-void PartialMerkleTree::setUncompressed(const std::vector<MerkleLeaf>& leaves, std::size_t begin, std::size_t end, unsigned int depth)
-{
-    depth_ = depth;
-
-    // We've hit a leaf. Store the hash and push a true bit if matched, a false bit if unmatched.
-    if (depth == 0) {
-        root_ = leaves[begin].first;
-        merkleHashes_.push_back(leaves[begin].first);
-        if (leaves[begin].second) txHashes_.push_back(leaves[begin].first);
-        bits_.push_back(leaves[begin].second);
-        return;
-    }
-
-    depth--; // Descend a level
-
-    // For a full tree, each subtree should have 2^depth leaves. The total number of leaves is end - begin.
-    // We want to partition the leaves into a left set that contains 2^depth elemments
-    // and a right set with the remainder. If we have 2^depth or fewer total leaves, we need to duplicate
-    // the subtree merkle hash to compute the merkle hash but we only include the hashes, txids, and bits one time.
-    std::size_t partitionPos = std::min((std::size_t)1 << depth, end - begin);
-    PartialMerkleTree leftSubtree;
-    leftSubtree.setUncompressed(leaves, begin, begin + partitionPos, depth);
-
-    merkleHashes_.swap(leftSubtree.merkleHashes_);
-    txHashes_.swap(leftSubtree.txHashes_);
-    bits_.swap(leftSubtree.bits_);
-
-    if (begin + partitionPos < end) {
-        PartialMerkleTree rightSubtree;
-        rightSubtree.setUncompressed(leaves, begin + partitionPos, end, depth);
-
-        root_ = sha256_2(leftSubtree.root_ + rightSubtree.root_);
-
-        merkleHashes_.splice(merkleHashes_.end(), rightSubtree.merkleHashes_);
-        txHashes_.splice(txHashes_.end(), rightSubtree.txHashes_);
-        bits_.splice(bits_.end(), rightSubtree.bits_);
-    }
-    else {
-        root_ = sha256_2(leftSubtree.root_ + leftSubtree.root_);
-    }
-
-    if (txHashes_.empty()) {
-        // No matched leaves in subtree, so prepend the root to hashes and a false to bits
-        merkleHashes_.clear();
-        merkleHashes_.push_front(root_);
-        bits_.clear();
-        bits_.push_front(false);     
-    }
-    else {
-        bits_.push_front(true);
-    }
-}
-
-uchar_vector PartialMerkleTree::getFlags() const
-{
-    uchar_vector flags;
-
-    unsigned int byteCounter = 0;
-    unsigned char byte = 0;
-    for (auto bit: bits_) {
-        //std::cout << "bit: " << (bit ? "true" : "false") << std::endl;
-        if (byteCounter == 8) {
-            flags.push_back(byte);
-            byteCounter = 0;
-            byte = 0;            
-        }
-        if (bit) byte |= ((unsigned char)1 << byteCounter);
-        byteCounter++;
-    }
-    flags.push_back(byte);
-    return flags;
-}
-*/
-
 ///////////////////////////////////////////////////////////////////////////////
 //
 // class CoinNodeStructure implementation
 //
+const uchar_vector& CoinNodeStructure::getHash() const
+{
+    if (!bSet_)
+    {
+        hash_ = sha256_2(getSerialized());
+        hashLittleEndian_ = hash_.getReverse();
+        bSet_ = true;
+    }
+    return hash_;
+}
+
+const uchar_vector& CoinNodeStructure::getHashLittleEndian() const
+{
+    if (!bSet_)
+    {
+        hash_ = sha256_2(getSerialized());
+        hashLittleEndian_ = hash_.getReverse();
+        bSet_ = true;
+    }
+    return hashLittleEndian_;
+}
+
+const uchar_vector& CoinNodeStructure::getHash(hashfunc_t hashfunc) const
+{
+    if (!bSet_)
+    {
+        hash_ = hashfunc(getSerialized());
+        hashLittleEndian_ = hash_.getReverse();
+        bSet_ = true;
+    }
+    return hash_;
+}
+
+const uchar_vector& CoinNodeStructure::getHashLittleEndian(hashfunc_t hashfunc) const
+{
+    if (!bSet_)
+    {
+        hash_ = hashfunc(getSerialized());
+        hashLittleEndian_ = hash_.getReverse();
+        bSet_ = true;
+    }
+    return hashLittleEndian_;
+}
+
 uint32_t CoinNodeStructure::getChecksum() const
 {
     uchar_vector hash = this->getHash();
     return vch_to_uint<uint32_t>(uchar_vector(hash.begin(), hash.begin() + 4), _BIG_ENDIAN);
 }
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // class VarInt implementation
@@ -832,41 +658,37 @@ VersionMessage::VersionMessage(
     const char* subVersion,
     int32_t startHeight,
     bool relay
-)
+) :
+    version_(version),
+    services_(services),
+    timestamp_(timestamp),
+    recipientAddress_(recipientAddress),
+    senderAddress_(senderAddress),
+    nonce_(nonce),
+    subVersion_(subVersion),
+    startHeight_(startHeight),
+    relay_(relay)
 {
-    this->version = version;
-    this->services = services;
-    this->timestamp = timestamp;
-    this->recipientAddress = recipientAddress;
-    this->senderAddress = senderAddress;
-    this->nonce = nonce;
-    this->subVersion = subVersion;
-    this->startHeight = startHeight;
-    this->relay = relay;
 }
 
 uint64_t VersionMessage::getSize() const
 {
-    uint64_t size = this->subVersion.getSize() + MIN_VERSION_MESSAGE_SIZE;
-    if (this->version >= 70001) {
-        size++;
-    }
+    uint64_t size = subVersion_.getSize() + MIN_VERSION_MESSAGE_SIZE;
+    if (version_ >= 70001) { size++; }
     return size;
 }
 
 uchar_vector VersionMessage::getSerialized() const
 {
-    uchar_vector rval = uint_to_vch(this->version, _BIG_ENDIAN);
-    rval += uint_to_vch(this->services, _BIG_ENDIAN);
-    rval += uint_to_vch(this->timestamp, _BIG_ENDIAN);
-    rval += this->recipientAddress.getSerialized();
-    rval += this->senderAddress.getSerialized();
-    rval += uint_to_vch(this->nonce, _BIG_ENDIAN);
-    rval += this->subVersion.getSerialized();
-    rval += uint_to_vch(this->startHeight, _BIG_ENDIAN);
-    if (this->version >= 70001) {
-        rval.push_back(relay ? 1 : 0);
-    }
+    uchar_vector rval = uint_to_vch(version_, _BIG_ENDIAN);
+    rval += uint_to_vch(services_, _BIG_ENDIAN);
+    rval += uint_to_vch(timestamp_, _BIG_ENDIAN);
+    rval += recipientAddress_.getSerialized();
+    rval += senderAddress_.getSerialized();
+    rval += uint_to_vch(nonce_, _BIG_ENDIAN);
+    rval += subVersion_.getSerialized();
+    rval += uint_to_vch(startHeight_, _BIG_ENDIAN);
+    if (version_ >= 70001) { rval.push_back(relay_ ? 1 : 0); }
     return rval;
 }
 
@@ -875,44 +697,47 @@ void VersionMessage::setSerialized(const uchar_vector& bytes)
     if (bytes.size() < MIN_VERSION_MESSAGE_SIZE)
         throw runtime_error("Invalid data - VersionMessage too small.");
 
-    this->version = vch_to_uint<uint32_t>(bytes, _BIG_ENDIAN);
-    if (this->version >= 70001 && bytes.size() < MIN_VERSION_MESSAGE_SIZE + 1)
+    version_ = vch_to_uint<uint32_t>(bytes, _BIG_ENDIAN);
+    if (version_ >= 70001 && bytes.size() < MIN_VERSION_MESSAGE_SIZE + 1)
         throw runtime_error("Invalid data - VersionMessage is too small for version >= 70001.");
 
     uint pos = 4;
-    this->services = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 8), _BIG_ENDIAN);
+    services_ = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 8), _BIG_ENDIAN);
     pos += 8;
-    this->timestamp = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 8), _BIG_ENDIAN);
+    timestamp_ = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 8), _BIG_ENDIAN);
     pos += 8;
-    this->recipientAddress = NetworkAddress(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 26));
+    recipientAddress_ = NetworkAddress(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 26));
     pos += 26;
-    this->senderAddress = NetworkAddress(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 26));
+    senderAddress_ = NetworkAddress(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 26));
     pos += 26;
-    this->nonce = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 8), _BIG_ENDIAN);
+    nonce_ = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 8), _BIG_ENDIAN);
     pos += 8;
-    this->subVersion = VarString(uchar_vector(bytes.begin() + pos, bytes.end()));
-    pos += this->subVersion.getSize();
+    subVersion_ = VarString(uchar_vector(bytes.begin() + pos, bytes.end()));
+    pos += subVersion_.getSize();
     if (bytes.size() < pos + 4)
         throw runtime_error("Invalid data - VersionMessage missing startHeight.");
-    this->startHeight = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN);
-    if (this->version >= 70001) {
+    startHeight_ = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN);
+    if (version_ >= 70001)
+    {
         pos += 4;
-        this->relay = (bytes[pos] != 0);
+        relay_ = (bytes[pos] != 0);
     }
-    else {
-        this->relay = true;
+    else
+    {
+        relay_ = true;
     }
 }
 
 string VersionMessage::toString() const
 {
     stringstream ss;
-    ss << "version: " << this->version << ", services: " << this->services << ", timestamp: " << timeToString(this->timestamp)
-       << ", recipientAddress: {" << this->recipientAddress.toString()
-       << "}, senderAddress: {" << this->senderAddress.toString()
-       << "}, nonce: " << nonce << ", subVersion: \"" << this->subVersion.toString() << "\", startHeight: " << this->startHeight;
-    if (this->version >= 70001) {
-        ss << ", relay: " << (this->relay ? 1 : 0);
+    ss << "version: " << version_ << ", services: " << services_ << ", timestamp: " << timeToString(timestamp_)
+       << ", recipientAddress: {" << recipientAddress_.toString()
+       << "}, senderAddress: {" << senderAddress_.toString()
+       << "}, nonce: " << nonce_ << ", subVersion: \"" << subVersion_.toString() << "\", startHeight: " << startHeight_;
+    if (version_ >= 70001)
+    {
+        ss << ", relay: " << (relay_ ? "true" : "false");
     }
     return ss.str();
 }
@@ -920,16 +745,17 @@ string VersionMessage::toString() const
 string VersionMessage::toIndentedString(uint spaces) const
 {
     stringstream ss;
-    ss << blankSpaces(spaces) << "version: " << this->version << endl
-       << blankSpaces(spaces) << "services: " << this->services << endl
-       << blankSpaces(spaces) << "timestamp: " << timeToString(this->timestamp) << endl
-       << blankSpaces(spaces) << "recipientAddress:" << endl << this->recipientAddress.toIndentedString(spaces + 2) << endl
-       << blankSpaces(spaces) << "senderAddress:" << endl << this->senderAddress.toIndentedString(spaces + 2) << endl
-       << blankSpaces(spaces) << "nonce: " << nonce << endl
-       << blankSpaces(spaces) << "subVersion: \"" << this->subVersion.toString() << "\"" << endl
-       << blankSpaces(spaces) << "startHeight: " << this->startHeight;
-    if (this->version >= 70001) {
-        ss << endl << blankSpaces(spaces) << "relay: " << (this->relay ? 1 : 0);
+    ss << blankSpaces(spaces) << "version: " << version_ << endl
+       << blankSpaces(spaces) << "services: " << services_ << endl
+       << blankSpaces(spaces) << "timestamp: " << timeToString(timestamp_) << endl
+       << blankSpaces(spaces) << "recipientAddress:" << endl << recipientAddress_.toIndentedString(spaces + 2) << endl
+       << blankSpaces(spaces) << "senderAddress:" << endl << senderAddress_.toIndentedString(spaces + 2) << endl
+       << blankSpaces(spaces) << "nonce: " << nonce_ << endl
+       << blankSpaces(spaces) << "subVersion: \"" << subVersion_.toString() << "\"" << endl
+       << blankSpaces(spaces) << "startHeight: " << startHeight_;
+    if (version_ >= 70001)
+    {
+        ss << endl << blankSpaces(spaces) << "relay: " << (relay_ ? "true" : "false");
     }
     return ss.str();
 }
@@ -1567,6 +1393,8 @@ void Transaction::setSerialized(const uchar_vector& bytes)
 
     // lock time
     this->lockTime = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN);
+
+    bSet_ = false;
 }
 
 string Transaction::toString() const
@@ -1623,6 +1451,8 @@ void Transaction::clearScriptSigs()
 {
     for (uint i = 0; i < this->inputs.size(); i++)
         this->inputs[i].scriptSig.clear();
+
+    bSet_ = false;
 }
 
 void Transaction::setScriptSig(uint index, const uchar_vector& scriptSig)
@@ -1630,6 +1460,8 @@ void Transaction::setScriptSig(uint index, const uchar_vector& scriptSig)
     if (index > inputs.size()-1)
         throw runtime_error("Index out of range.");
     inputs[index].scriptSig = scriptSig;
+
+    bSet_ = false;
 }
 
 void Transaction::setScriptSig(uint index, const string& scriptSigHex)
@@ -1767,6 +1599,28 @@ string CoinBlockHeader::toIndentedString(uint spaces) const
        << blankSpaces(spaces) << "bits: " << dec << this->bits << endl
        << blankSpaces(spaces) << "nonce: " << dec << this->nonce;
     return ss.str();
+}
+
+const uchar_vector& CoinBlockHeader::getPOWHash() const
+{
+    if (!bPowSet_)
+    {
+        powHash_ = CoinNodeStructure::getHash(powhashfunc_);
+        powHashLittleEndian_ = powHash_.getReverse();
+        bPowSet_ = true;
+    }
+    return powHash_; 
+}
+
+const uchar_vector& CoinBlockHeader::getPOWHashLittleEndian() const
+{
+    if (!bPowSet_)
+    {
+        powHash_ = CoinNodeStructure::getHash(powhashfunc_);
+        powHashLittleEndian_ = powHash_.getReverse();
+        bPowSet_ = true;
+    }
+    return powHashLittleEndian_; 
 }
 
 ///////////////////////////////////////////////////////////////////////////////
