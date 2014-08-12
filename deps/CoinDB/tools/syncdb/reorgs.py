@@ -12,10 +12,10 @@ prevheight = ''
 
 with open(filename) as fp:
     for line in fp:
-        m = re.search('Sync height: [0-9]+$', line)
+        m = re.search('Sync height: ([0-9]+)$', line)
         if m:
-            height = m.group(0)
+            height = m.group(1)
             #print height
             if height <= prevheight:
-                print "reorg at " + height
+                print "Reorganization at height " + height
             prevheight = height
