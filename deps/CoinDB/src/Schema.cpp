@@ -618,14 +618,14 @@ void SigningScript::markUsed()
 
 void BlockHeader::fromCoinCore(const Coin::CoinBlockHeader& blockheader, uint32_t height)
 {
-    hash_ = blockheader.getHashLittleEndian();
+    hash_ = blockheader.hash();
     height_ = height;
-    version_ = blockheader.version;
-    prevhash_ = blockheader.prevBlockHash;
-    merkleroot_ = blockheader.merkleRoot;
-    timestamp_ = blockheader.timestamp;
-    bits_ = blockheader.bits;
-    nonce_ = blockheader.nonce;
+    version_ = blockheader.version();
+    prevhash_ = blockheader.prevBlockHash();
+    merkleroot_ = blockheader.merkleRoot();
+    timestamp_ = blockheader.timestamp();
+    bits_ = blockheader.bits();
+    nonce_ = blockheader.nonce();
 }
 
 Coin::CoinBlockHeader BlockHeader::toCoinCore() const
@@ -651,7 +651,7 @@ std::string BlockHeader::toJson() const
 
 void BlockHeader::updateHash()
 {
-    hash_ = Coin::CoinBlockHeader(version_, timestamp_, bits_, nonce_, prevhash_, merkleroot_).getHashLittleEndian();
+    hash_ = Coin::CoinBlockHeader(version_, timestamp_, bits_, nonce_, prevhash_, merkleroot_).hash();
 }
 
 
@@ -939,12 +939,12 @@ void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uin
     Coin::Transaction coin_tx = toCoinCore();
 
     if (missingSigCount())  { status_ = UNSIGNED; }
-    else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
+    else                    { status_ = status; hash_ = coin_tx.hash(); }
 
     conflicting_ = conflicting;
 
     coin_tx.clearScriptSigs();
-    unsigned_hash_ = coin_tx.getHashLittleEndian();
+    unsigned_hash_ = coin_tx.hash();
     updateTotals();
 }
 
@@ -956,12 +956,12 @@ void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status, boo
     timestamp_ = timestamp;
 
     if (missingSigCount())  { status_ = UNSIGNED; }
-    else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
+    else                    { status_ = status; hash_ = coin_tx.hash(); }
 
     conflicting_ = conflicting;
 
     coin_tx.clearScriptSigs();
-    unsigned_hash_ = coin_tx.getHashLittleEndian();
+    unsigned_hash_ = coin_tx.hash();
     updateTotals();
 }
 
@@ -972,12 +972,12 @@ void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status, bool confl
     timestamp_ = timestamp;
 
     if (missingSigCount())  { status_ = UNSIGNED; }
-    else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
+    else                    { status_ = status; hash_ = coin_tx.hash(); }
 
     conflicting_ = conflicting;
 
     coin_tx.clearScriptSigs();
-    unsigned_hash_ = coin_tx.getHashLittleEndian();
+    unsigned_hash_ = coin_tx.hash();
     updateTotals();
 }
 
@@ -1008,7 +1008,7 @@ bool Tx::updateStatus(status_t status /* = NO_STATUS */)
             status_ = status;
         }
 
-        hash_ = toCoinCore().getHashLittleEndian();
+        hash_ = toCoinCore().hash();
         return true;
     }
 

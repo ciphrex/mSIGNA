@@ -1224,13 +1224,13 @@ private:
         {
             std::vector<status_t> flags = Tx::getStatusFlags(statusflag);
             status_ = flags.empty() ? NO_STATUS : flags[0];
-            hash_ = coin_tx.getHashLittleEndian();
+            hash_ = coin_tx.hash();
         }
      
         conflicting_ = false;
      
         coin_tx.clearScriptSigs();
-        unsigned_hash_ = coin_tx.getHashLittleEndian();
+        unsigned_hash_ = coin_tx.hash();
         updateTotals();
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()

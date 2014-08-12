@@ -176,7 +176,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeNewTx([this](const Coin::Transaction& cointx)
     {
-        LOGGER(trace) << "SynchedVault - Received new transaction " << cointx.getHashLittleEndian().getHex() << std::endl;
+        LOGGER(trace) << "SynchedVault - Received new transaction " << cointx.hash().getHex() << std::endl;
 
         if (!m_vault) return;
         std::lock_guard<std::mutex> lock(m_vaultMutex);
@@ -195,7 +195,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeMerkleTx([this](const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount)
     {
-        LOGGER(trace) << "SynchedVault - Received merkle transaction " << cointx.getHashLittleEndian().getHex() << " in block " << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << std::endl;
+        LOGGER(trace) << "SynchedVault - Received merkle transaction " << cointx.hash().getHex() << " in block " << chainmerkleblock.hash().getHex() << std::endl;
 
         if (!m_vault) return;
         std::lock_guard<std::mutex> lock(m_vaultMutex);
@@ -215,7 +215,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeTxConfirmed([this](const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount)
     {
-        LOGGER(trace) << "SynchedVault - Received transaction confirmation " << uchar_vector(txhash).getHex() << " in block " << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << std::endl;
+        LOGGER(trace) << "SynchedVault - Received transaction confirmation " << uchar_vector(txhash).getHex() << " in block " << chainmerkleblock.hash().getHex() << std::endl;
 
         if (!m_vault) return;
         std::lock_guard<std::mutex> lock(m_vaultMutex);
@@ -234,7 +234,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 
     m_networkSync.subscribeMerkleBlock([this](const ChainMerkleBlock& chainMerkleBlock)
     {
-        LOGGER(trace) << "SynchedVault - received merkle block " << chainMerkleBlock.blockHeader.getHashLittleEndian().getHex() << " height: " << chainMerkleBlock.height << std::endl;
+        LOGGER(trace) << "SynchedVault - received merkle block " << chainMerkleBlock.hash().getHex() << " height: " << chainMerkleBlock.height << std::endl;
 
         if (!m_vault) return;
         if (!m_bInsertMerkleBlocks) return;
@@ -511,7 +511,7 @@ std::shared_ptr<Tx> SynchedVault::sendTx(unsigned long tx_id)
 
 void SynchedVault::sendTx(Coin::Transaction& coin_tx)
 {
-    uchar_vector hash = coin_tx.getHashLittleEndian();
+    uchar_vector hash = coin_tx.hash();
     LOGGER(trace) << "SynchedVault::sendTx(" << hash.getHex() << ")" << std::endl;
     if (!m_bConnected) throw std::runtime_error("Not connected.");
 

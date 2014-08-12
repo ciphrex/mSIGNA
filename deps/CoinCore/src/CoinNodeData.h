@@ -2,7 +2,7 @@
 //
 // CoinNodeData.h
 //
-// Copyright (c) 2011-2012 Eric Lombrozo
+// Copyright (c) 2011-2014 Eric Lombrozo
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef COIN_NODE_DATA_H__
-#define COIN_NODE_DATA_H__
+#pragma once
 
 #include "hash.h"
 #include "IPv6.h"
@@ -88,88 +87,24 @@ extern uchar_vector g_zero32bytes;
 
 namespace Coin
 {
-/*	
-class MerkleTree
-{
-public:
-    std::vector<uchar_vector> hashes;
-
-    MerkleTree() { }
-    MerkleTree(const std::vector<uchar_vector>& hashes) { this->hashes = hashes; }
-
-    void clear() { this->hashes.clear(); }
-    void addHash(const uchar_vector& hash) { this->hashes.push_back(hash); }
-    void addHashLittleEndian(const uchar_vector& hash) { this->hashes.push_back(uchar_vector(hash).getReverse()); }
-
-    uchar_vector getRoot() const;
-    uchar_vector getRootLittleEndian() const { return getRoot().getReverse(); }
-};
-
-class PartialMerkleTree
-{
-public:
-    typedef std::pair<uchar_vector, bool> MerkleLeaf;
-
-    PartialMerkleTree() { }
-    PartialMerkleTree(unsigned int nTxs, const std::vector<uchar_vector>& hashes, const uchar_vector& flags) { setCompressed(nTxs, hashes, flags); }
-    PartialMerkleTree(const std::vector<MerkleLeaf>& leaves) { setUncompressed(leaves); }
-
-    void setCompressed(unsigned int nTxs, const std::vector<uchar_vector>& hashes, const uchar_vector& flags);
-    void setUncompressed(const std::vector<MerkleLeaf>& leaves);
-
-    unsigned int getNTxs() const { return nTxs_; }
-    unsigned int getDepth() const { return depth_; }
-    const std::list<uchar_vector>& getMerkleHashes() const { return merkleHashes_; }
-    std::vector<uchar_vector> getMerkleHashesVector() const
-    {
-        std::vector<uchar_vector> rval;
-        for (auto& hash: merkleHashes_) { rval.push_back(hash); }
-        return rval;
-    }
-
-    const std::list<uchar_vector>& getTxHashes() const { return txHashes_; }
-    std::vector<uchar_vector> getTxHashesVector() const
-    {
-        std::vector<uchar_vector> rval;
-        for (auto& hash: txHashes_) { rval.push_back(hash); }
-        return rval;
-    }
-
-    uchar_vector getFlags() const;
-
-    const uchar_vector& getRoot() const { return root_; }
-    uchar_vector getRootLittleEndian() const { return uchar_vector(root_).getReverse(); }
-
-    std::string toIndentedString() const;
-
-private:
-    unsigned int nTxs_;
-    unsigned int depth_;
-    std::list<uchar_vector> merkleHashes_;
-    std::list<uchar_vector> txHashes_;
-    std::list<bool> bits_;
-    uchar_vector root_;
-
-    void setCompressed(std::queue<uchar_vector>& hashQueue, std::queue<bool>& bitQueue, unsigned int depth);
-    void setUncompressed(const std::vector<MerkleLeaf>& leaves, std::size_t begin, std::size_t end, unsigned int depth);
-};
-*/
 
 typedef std::function<uchar_vector(const uchar_vector&)> hashfunc_t;
 
 class CoinNodeStructure
 {
 public:
+    CoinNodeStructure() : isHashSet_(false) { }
+
     virtual ~CoinNodeStructure() { }
 
     virtual const char* getCommand() const = 0;
     virtual uint64_t getSize() const = 0;
 
-    virtual uchar_vector getHash() const { return getHash(&sha256_2); }
-    virtual uchar_vector getHashLittleEndian() const { return getHashLittleEndian(&sha256_2); }
+    virtual const uchar_vector& getHash() const;
+    virtual const uchar_vector& getHashLittleEndian() const;
 
-    virtual uchar_vector getHash(hashfunc_t hashfunc) const { return hashfunc(this->getSerialized()); } // big endian
-    virtual uchar_vector getHashLittleEndian(hashfunc_t hashfunc) const { return uchar_vector(this->getHash(hashfunc)).getReverse(); }
+    virtual const uchar_vector& getHash(hashfunc_t hashfunc) const;
+    virtual const uchar_vector& getHashLittleEndian(hashfunc_t hashfunc) const;
 
     virtual uint32_t getChecksum() const; // 4 least significant bytes, big endian
 
@@ -178,6 +113,11 @@ public:
 
     virtual std::string toString() const = 0;
     virtual std::string toIndentedString(uint spaces = 0) const = 0;
+
+protected:
+    mutable uchar_vector hash_;
+    mutable uchar_vector hashLittleEndian_;
+    mutable bool isHashSet_;
 };
 
 class VarInt : public CoinNodeStructure
@@ -262,12 +202,6 @@ public:
 class MessageHeader : public CoinNodeStructure
 {
 public:
-    uint32_t magic;
-    char command[12];
-    uint32_t length;
-    uint32_t checksum;
-    bool hasChecksum;
-
     MessageHeader() : hasChecksum(true) { }
     MessageHeader(uint32_t magic, const char* command, uint32_t length); // no checksum
     MessageHeader(uint32_t magic, const char* command, uint32_t length, uint32_t checksum);
@@ -283,6 +217,12 @@ public:
     std::string toIndentedString(uint spaces = 0) const;
 
     void removeChecksum() { hasChecksum = false; }
+    uint32_t magic;
+    char command[12];
+    uint32_t length;
+    uint32_t checksum;
+    bool hasChecksum;
+
 };
 
 // Full message: header + payload
@@ -317,16 +257,6 @@ public:
 class VersionMessage : public CoinNodeStructure
 {
 public:
-    int32_t version;
-    uint64_t services;
-    int64_t timestamp;
-    NetworkAddress recipientAddress;
-    NetworkAddress senderAddress;
-    uint64_t nonce;
-    VarString subVersion;
-    int32_t startHeight;
-    bool relay;
-
     VersionMessage () { }
     VersionMessage(
         int32_t version,
@@ -341,6 +271,16 @@ public:
     );
     VersionMessage(const uchar_vector bytes) { this->setSerialized(bytes); }
 
+    int32_t version() const { return version_; }
+    uint64_t services() const { return services_; }
+    int64_t timestamp() const { return timestamp_; }
+    const NetworkAddress& recipientAddress() const { return recipientAddress_; }
+    const NetworkAddress& senderAddress() const { return senderAddress_; }
+    uint64_t nonce() const { return nonce_; }
+    const VarString& subVersion() const { return subVersion_; }
+    int32_t startHeight() const { return startHeight_; }
+    bool relay() const { return relay_; } 
+
     const char* getCommand() const { return "version"; }
     uint64_t getSize() const;
     uchar_vector getSerialized() const;
@@ -348,6 +288,17 @@ public:
 
     std::string toString() const;
     std::string toIndentedString(uint spaces = 0) const;
+
+private:
+    int32_t version_;
+    uint64_t services_;
+    int64_t timestamp_;
+    NetworkAddress recipientAddress_;
+    NetworkAddress senderAddress_;
+    uint64_t nonce_;
+    VarString subVersion_;
+    int32_t startHeight_;
+    bool relay_;
 };
 
 class BlankMessage : public CoinNodeStructure
@@ -686,6 +637,8 @@ public:
     Transaction(const Transaction& tx)
         : version(tx.version), inputs(tx.inputs), outputs(tx.outputs), lockTime(tx.lockTime) { }
 
+    const uchar_vector& hash() const { return getHashLittleEndian(); }
+
     const char* getCommand() const { return "tx"; }
     uint64_t getSize() const;
     uchar_vector getSerialized() const { return this->getSerialized(true); }
@@ -711,33 +664,40 @@ public:
     uchar_vector getHashWithAppendedCode(uint32_t code) const; // in little endian
 };
 
+class CoinBlock;
+class MerkleBlock;
+
 class CoinBlockHeader : public CoinNodeStructure
 {
 public:
-    uint32_t version;
-    uchar_vector prevBlockHash;
-    uchar_vector merkleRoot;
-    uint32_t timestamp;
-    uint32_t bits;
-    uint32_t nonce;
-
-    CoinBlockHeader() { }
-    CoinBlockHeader(uint32_t _version, const uchar_vector& _prevBlockHash, const uchar_vector& _merkleRoot, uint32_t _timestamp, uint32_t _bits, uint32_t _nonce)
-        : version(_version), prevBlockHash(_prevBlockHash), merkleRoot(_merkleRoot), timestamp(_timestamp), bits(_bits), nonce(_nonce) { }
-    CoinBlockHeader(uint32_t _version, uint32_t _timestamp, uint32_t _bits, uint32_t _nonce = 0, const uchar_vector& _prevBlockHash = g_zero32bytes, const uchar_vector& _merkleRoot = g_zero32bytes)
-        : version(_version), prevBlockHash(_prevBlockHash), merkleRoot(_merkleRoot), timestamp(_timestamp), bits(_bits), nonce(_nonce) { }
-    CoinBlockHeader(const uchar_vector& bytes) { this->setSerialized(bytes); }
+    CoinBlockHeader() : isPOWHashSet_(false) { }
+    CoinBlockHeader(uint32_t version, const uchar_vector& prevBlockHash, const uchar_vector& merkleRoot, uint32_t timestamp, uint32_t bits, uint32_t nonce)
+        : isPOWHashSet_(false), version_(version), prevBlockHash_(prevBlockHash), merkleRoot_(merkleRoot), timestamp_(timestamp), bits_(bits), nonce_(nonce) { }
+    CoinBlockHeader(uint32_t version, uint32_t timestamp, uint32_t bits, uint32_t nonce = 0, const uchar_vector& prevBlockHash = g_zero32bytes, const uchar_vector& merkleRoot = g_zero32bytes)
+        : isPOWHashSet_(false), version_(version), prevBlockHash_(prevBlockHash), merkleRoot_(merkleRoot), timestamp_(timestamp), bits_(bits), nonce_(nonce) { }
+    CoinBlockHeader(const uchar_vector& bytes) { setSerialized(bytes); }
     CoinBlockHeader(const std::string& hex);
 
-    void set(uint32_t _version, uint32_t _timestamp, uint32_t _bits, uint32_t _nonce = 0, const uchar_vector& _prevBlockHash = g_zero32bytes, const uchar_vector& _merkleRoot = g_zero32bytes)
+    void set(uint32_t version, uint32_t timestamp, uint32_t bits, uint32_t nonce = 0, const uchar_vector& prevBlockHash = g_zero32bytes, const uchar_vector& merkleRoot = g_zero32bytes)
     {
-        version = _version;
-        prevBlockHash = _prevBlockHash;
-        merkleRoot = _merkleRoot;
-        timestamp = _timestamp;
-        bits = _bits;
-        nonce = _nonce;
+        isHashSet_ = false;
+        isPOWHashSet_ = false;
+
+        version_ = version;
+        prevBlockHash_ = prevBlockHash;
+        merkleRoot_ = merkleRoot;
+        timestamp_ = timestamp;
+        bits_ = bits;
+        nonce_ = nonce;
     }
+
+    const uchar_vector& hash() const { return getHashLittleEndian(); }
+    uint32_t version() const { return version_; }
+    const uchar_vector&  prevBlockHash() const { return prevBlockHash_; }
+    const uchar_vector& merkleRoot() const { return merkleRoot_; }
+    uint32_t timestamp() const { return timestamp_; }
+    uint32_t bits() const { return bits_; }
+    uint32_t nonce() const { return nonce_; }
 
     const char* getCommand() const { return ""; }
     uint64_t getSize() const { return 80; }
@@ -747,7 +707,7 @@ public:
     std::string toString() const;
     std::string toIndentedString(uint spaces = 0) const;
 
-    void incrementNonce() { this->nonce++; }
+    void incrementNonce() { nonce_++; isHashSet_ = false; isPOWHashSet_ = false; }
 
     const BigInt getTarget() const;
     void setTarget(const BigInt& target);
@@ -757,15 +717,38 @@ public:
     static void setHashFunc(hashfunc_t hashfunc) { hashfunc_ = hashfunc; }
     static void setPOWHashFunc(hashfunc_t hashfunc) { powhashfunc_ = hashfunc; }
 
-    uchar_vector getHash() const { return hashfunc_(this->getSerialized()); } // big endian
-    uchar_vector getHashLittleEndian() const { return uchar_vector(this->getHash()).getReverse(); }
+    const uchar_vector& getHash() const;
+    const uchar_vector& getHashLittleEndian() const;
 
-    uchar_vector getPOWHash() const { return powhashfunc_(this->getSerialized()); } // big endian
-    uchar_vector getPOWHashLittleEndian() const { return uchar_vector(this->getPOWHash()).getReverse(); }
+    const uchar_vector& getPOWHash() const;
+    const uchar_vector& getPOWHashLittleEndian() const;
 
 private:
+    friend class CoinBlock;
+    friend class MerkleBlock;
+
     static hashfunc_t hashfunc_;
     static hashfunc_t powhashfunc_;
+
+/*
+    // Inherited from CoinNodeStructure
+    mutable uchar_vector hash_;
+    mutable uchar_vector hashLittleEndian_;
+    mutable bool isHashSet_;
+*/
+
+    mutable uchar_vector POWHash_;
+    mutable uchar_vector POWHashLittleEndian_;
+    mutable bool isPOWHashSet_;
+
+    void resetHash() const { isHashSet_ = false; isPOWHashSet_ = false; }
+
+    uint32_t version_;
+    uchar_vector prevBlockHash_;
+    uchar_vector merkleRoot_;
+    uint32_t timestamp_;
+    uint32_t bits_;
+    uint32_t nonce_;
 };
 
 class CoinBlock : public CoinNodeStructure
@@ -786,6 +769,17 @@ public:
     CoinBlock(const uchar_vector& bytes) { this->setSerialized(bytes); }
     CoinBlock(const std::string& hex);
 
+    const uchar_vector& hash() const { return blockHeader.getHashLittleEndian(); }
+    uint32_t version() const { return blockHeader.version(); }
+    const uchar_vector& prevBlockHash() const { return blockHeader.prevBlockHash(); }
+    const uchar_vector& merkleRoot() const { return blockHeader.merkleRoot(); }
+    uint32_t timestamp() const { return blockHeader.timestamp(); }
+    uint32_t bits() const { return blockHeader.bits(); }
+    uint32_t nonce() const { return blockHeader.nonce(); } 
+
+    const BigInt getTarget() const { return blockHeader.getTarget(); }
+    const BigInt getWork() const { return blockHeader.getWork(); }
+    
     const char* getCommand() const { return "block"; }
     uint64_t getSize() const;
     uchar_vector getSerialized() const;
@@ -800,7 +794,7 @@ public:
     bool isValidMerkleRoot() const;
     void updateMerkleRoot();
 
-    void incrementNonce() { this->blockHeader.nonce++; }
+    void incrementNonce() { blockHeader.incrementNonce(); }
 	
     uint64_t getTotalSent() const;
 
@@ -823,6 +817,17 @@ public:
     MerkleBlock(const MerkleBlock& merkleBlock)
         : blockHeader(merkleBlock.blockHeader), nTxs(merkleBlock.nTxs), hashes(merkleBlock.hashes), flags(merkleBlock.flags) { }
     MerkleBlock(const uchar_vector& bytes) { setSerialized(bytes); }
+
+    const uchar_vector& hash() const { return blockHeader.getHashLittleEndian(); }
+    uint32_t version() const { return blockHeader.version(); }
+    const uchar_vector& prevBlockHash() const { return blockHeader.prevBlockHash(); }
+    const uchar_vector& merkleRoot() const { return blockHeader.merkleRoot(); }
+    uint32_t timestamp() const { return blockHeader.timestamp(); }
+    uint32_t bits() const { return blockHeader.bits(); }
+    uint32_t nonce() const { return blockHeader.nonce(); } 
+
+    const BigInt getTarget() const { return blockHeader.getTarget(); }
+    const BigInt getWork() const { return blockHeader.getWork(); }
 
     const char* getCommand() const { return "merkleblock"; }
     uint64_t getSize() const;
@@ -921,4 +926,3 @@ public:
 
 } // namespace Coin
 
-#endif
