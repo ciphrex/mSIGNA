@@ -22,7 +22,7 @@ bool CoinQBlockTreeMem::setBestChain(ChainHeader& header)
     while (!pParent->inBestChain)
     {
         newBestChain.push(pParent);
-        pParent = &mHeaderHashMap.at(pParent->prevBlockHash);
+        pParent = &mHeaderHashMap.at(pParent->prevBlockHash());
     }
 
     for (auto it = pParent->childHashes.begin(); it != pParent->childHashes.end(); ++it)
@@ -63,7 +63,7 @@ bool CoinQBlockTreeMem::unsetBestChain(ChainHeader& header)
 
     if (header.height == 0) throw std::runtime_error("Cannot remove genesis block from best chain.");
 
-    ChainHeader* pParent = &mHeaderHashMap.at(header.prevBlockHash);
+    ChainHeader* pParent = &mHeaderHashMap.at(header.prevBlockHash());
     if (pParent->inBestChain)
     {
         mBestHeight = pParent->height;
@@ -96,7 +96,7 @@ void CoinQBlockTreeMem::setGenesisBlock(const Coin::CoinBlockHeader& header)
     if (mHeaderHashMap.size() != 0) throw std::runtime_error("Tree is not empty.");
 
     bFlushed = false;
-    uchar_vector hash = header.getHashLittleEndian();
+    uchar_vector hash = header.hash();
     ChainHeader& genesisHeader = mHeaderHashMap[hash] = header;
     mHeaderHeightMap[0] = &genesisHeader;
     genesisHeader.height = 0;
@@ -113,10 +113,10 @@ bool CoinQBlockTreeMem::insertHeader(const Coin::CoinBlockHeader& header, bool b
 {
     if (mHeaderHashMap.size() == 0) throw std::runtime_error("No genesis block.");
 
-    uchar_vector headerHash = header.getHashLittleEndian();
+    uchar_vector headerHash = header.hash();
     if (hasHeader(headerHash)) return false;
 
-    header_hash_map_t::iterator it = mHeaderHashMap.find(header.prevBlockHash);
+    header_hash_map_t::iterator it = mHeaderHashMap.find(header.prevBlockHash());
     if (it == mHeaderHashMap.end()) throw std::runtime_error("Parent not found.");
 
     ChainHeader& parent = it->second;
@@ -150,7 +150,7 @@ bool CoinQBlockTreeMem::deleteHeader(const uchar_vector& hash)
 
     ChainHeader& header = it->second;
     unsetBestChain(header);
-    header_hash_map_t::iterator itParent = mHeaderHashMap.find(header.getHashLittleEndian());
+    header_hash_map_t::iterator itParent = mHeaderHashMap.find(header.hash());
     if (itParent == mHeaderHashMap.end()) throw std::runtime_error("Critical error: parent for block not found.");
 
     // Recurse through children
@@ -218,7 +218,7 @@ const ChainHeader& CoinQBlockTreeMem::getHeaderBefore(uint32_t timestamp) const
     for (i = 1; i <= mBestHeight; i++)
     {
         ChainHeader* header = mHeaderHeightMap.at(i);
-        if (header->timestamp > timestamp) break; 
+        if (header->timestamp() > timestamp) break; 
     }
 
     return *mHeaderHeightMap.at(i - 1);
@@ -241,7 +241,7 @@ std::vector<uchar_vector> CoinQBlockTreeMem::getLocatorHashes(int maxSize = -1) 
     int step = 1;
     while ((i >= 0) && (n < maxSize))
     {
-        locatorHashes.push_back(mHeaderHeightMap.at(i)->getHashLittleEndian());
+        locatorHashes.push_back(mHeaderHeightMap.at(i)->hash());
         i -= step;
         n++;
         if (n > 10) step *= 2;
@@ -293,7 +293,7 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
         {
             headerBytes.assign((unsigned char*)&buf[pos], (unsigned char*)&buf[pos + MIN_COIN_BLOCK_HEADER_SIZE]);
             header.setSerialized(headerBytes);
-            hash = header.getHashLittleEndian();
+            hash = header.hash();
             if (memcmp(&buf[pos + MIN_COIN_BLOCK_HEADER_SIZE], &hash[0], 4)) throw BlockTreeChecksumErrorException();
 
             try
@@ -304,7 +304,7 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
                     if (count % 10000 == 0)
                     {
                         if (callback && !callback(*this)) throw BlockTreeLoadInterruptedException();
-                        LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - header hash: " << header.getHashLittleEndian().getHex() << " height: " << count << std::endl;
+                        LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - header hash: " << header.hash().getHex() << " height: " << count << std::endl;
                     }
                     count++;
                 }
@@ -312,7 +312,7 @@ void CoinQBlockTreeMem::loadFromFile(const std::string& filename, bool bCheckPro
                 { 
                     setGenesisBlock(header);
                     if (callback && !callback(*this)) throw BlockTreeLoadInterruptedException();
-                    LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - genesis hash: " << header.getHashLittleEndian().getHex() << std::endl;
+                    LOGGER(debug) << "CoinQBlockTreeMem::loadFromFile() - genesis hash: " << header.hash().getHex() << std::endl;
                     count++;
                 }
             }
@@ -353,7 +353,7 @@ void CoinQBlockTreeMem::flushToFile(const std::string& filename)
             ChainHeader* pHeader = mHeaderHeightMap.at(i);
 
             headerBytes = pHeader->getSerialized();
-            hash = pHeader->getHashLittleEndian();
+            hash = pHeader->hash();
 
             fs.write((const char*)&headerBytes[0], MIN_COIN_BLOCK_HEADER_SIZE);
             if (fs.bad()) throw BlockTreeFileWriteFailureException();

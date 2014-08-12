@@ -12,7 +12,7 @@ bool CoinQBestChainBlockFilter::push(const Coin::CoinBlock& block) const
 {
     if (!pBlockTree) return false;
 
-    uchar_vector hash = block.blockHeader.getHashLittleEndian();
+    uchar_vector hash = block.hash();
     if (!pBlockTree->hasHeader(hash)) return false;
 
     const ChainHeader& header = pBlockTree->getHeader(hash);
