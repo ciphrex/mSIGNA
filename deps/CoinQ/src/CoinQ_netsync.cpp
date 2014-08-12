@@ -635,9 +635,16 @@ void NetworkSync::fileFlushLoop()
         while (m_bFlushingToFile && m_blockTree.flushed()) { m_fileFlushCond.wait(lock); }
         if (!m_bFlushingToFile) break;
 
-        LOGGER(trace) << "Starting blocktree file flush..." << endl;
-        m_blockTree.flushToFile(m_blockTreeFile);
-        LOGGER(trace) << "Finished flushing blocktree file." << endl;
+        try
+        {
+            LOGGER(trace) << "Starting blocktree file flush..." << endl;
+            m_blockTree.flushToFile(m_blockTreeFile);
+            LOGGER(trace) << "Finished flushing blocktree file." << endl;
+        }
+        catch (const exception& e)
+        {
+            LOGGER(error) << "Blocktree file flush error: " << e.what();
+        }
     }
 }
 
