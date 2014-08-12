@@ -245,7 +245,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         try
         {
             std::shared_ptr<MerkleBlock> merkleblock(new MerkleBlock(chainMerkleBlock));
-			merkleblock->txsinserted(true);
+	    merkleblock->txsinserted(true);
             m_vault->insertMerkleBlock(merkleblock);
         }
         catch (const std::exception& e)
