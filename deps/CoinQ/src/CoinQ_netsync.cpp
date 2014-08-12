@@ -411,7 +411,8 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
 {
     if (!m_bConnected) throw runtime_error("NetworkSync::syncBlocks() - must connect before synching.");
     if (!m_bHeadersSynched) throw runtime_error("NetworkSync::syncBlocks() - headers must be synched before calling.");
-
+    
+    LOGGER(trace) << "NetworkSync::syncBlocks - locatorHashes: " << locatorHashes.size() << " startTime: " << startTime << endl;
     int startHeight;
 
     {
@@ -425,7 +426,7 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
             try
             {
                 pMostRecentHeader = &m_blockTree.getHeader(hash);
-                if (pMostRecentHeader->inBestChain) break;
+                if (pMostRecentHeader && pMostRecentHeader->inBestChain) break;
                 pMostRecentHeader = nullptr;
 
                 LOGGER(trace) << "reorg detected at height " << pMostRecentHeader->height << std::endl;
