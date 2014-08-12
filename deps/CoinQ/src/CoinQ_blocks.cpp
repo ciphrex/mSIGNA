@@ -337,13 +337,13 @@ void CoinQBlockTreeMem::flushToFile(const std::string& filename)
     if (mBestHeight == -1) throw std::runtime_error("Tree is empty.");
 
     boost::filesystem::path swapfile(filename + ".swp");
-    if (boost::filesystem::exists(swapfile)) throw BlockTreeSwapfileAlreadyExistsException();
+    //if (boost::filesystem::exists(swapfile)) throw BlockTreeSwapfileAlreadyExistsException();
 
     {
 #ifndef _WIN32
-        std::ofstream fs(swapfile.native(), std::ios::binary);
+        std::ofstream fs(swapfile.native(), std::ios::binary | std::ios::trunc);
 #else
-        std::ofstream fs(filename + ".swp", std::ios::binary);
+        std::ofstream fs(filename + ".swp", std::ios::binary | std::ios::trunc);
 #endif
 
         uchar_vector headerBytes, hash;
