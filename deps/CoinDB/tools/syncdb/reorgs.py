@@ -16,6 +16,6 @@ with open(filename) as fp:
         if m:
             height = m.group(1)
             #print height
-            if height <= prevheight:
-                print "Reorganization at height " + height
+            if height <= prevheight and height != "0":
+                print "Reorg at height " + prevheight
             prevheight = height
