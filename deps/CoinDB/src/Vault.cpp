@@ -3536,6 +3536,7 @@ unsigned int Vault::deleteMerkleBlock(uint32_t height)
 
 unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
 {
+/*
     unsigned int count = 0;
 
     typedef odb::query<ConfirmedTxView> query_t;
@@ -3562,7 +3563,8 @@ unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
     }
 
     return count;
-/*
+*/
+
     typedef odb::query<BlockHeader> query_t;
     odb::result<BlockHeader> r(db_->query<BlockHeader>((query_t::height >= height) + "ORDER BY" + query_t::height + "DESC"));
     unsigned int count = 0;
@@ -3574,7 +3576,7 @@ unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
         odb::result<Tx> tx_r(db_->query<Tx>(odb::query<Tx>::blockheader == blockheader.id()));
         for (auto& tx: tx_r)
         {
-            LOGGER(debug) << "Vault::deleteMerkleBlock_unwrapped - unconfirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
+//            LOGGER(debug) << "Vault::deleteMerkleBlock_unwrapped - unconfirming transaction. hash: " << uchar_vector(tx.hash()).getHex() << std::endl;
             tx.blockheader(nullptr);
             db_->update(tx);
             signalQueue.push(notifyTxUpdated.bind(std::make_shared<Tx>(tx)));
@@ -3589,8 +3591,8 @@ unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
 
         count++;
     }
+
     return count;
-*/
 }
 
 unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)
