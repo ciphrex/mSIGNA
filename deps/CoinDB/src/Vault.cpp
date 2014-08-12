@@ -2141,7 +2141,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool repla
 std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader, bool verifysigs, bool isCoinbase)
 {
     std::stringstream ss;
-    ss << "Vault::insertNewTx(" << cointx.getHashLittleEndian().getHex() << ", ";
+    ss << "Vault::insertNewTx(" << cointx.hash().getHex() << ", ";
     if (blockheader)    { ss << uchar_vector(blockheader->hash()).getHex(); }
     else                { ss << "null"; }
     ss << ", " << (verifysigs ? "true" : "false") << ")";
@@ -2167,11 +2167,11 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
     if (verifysigs)
     {
         Signer signer(cointx);
-        if (!signer.isSigned()) throw TxNotSignedException(cointx.getHashLittleEndian());
+        if (!signer.isSigned()) throw TxNotSignedException(cointx.hash());
     }
 
     // If we already have it but it is unsent update to propagated
-    bytes_t txhash = cointx.getHashLittleEndian();
+    bytes_t txhash = cointx.hash();
     odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
     if (!r.empty())
     {
@@ -2300,7 +2300,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
 
 std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs, bool isCoinbase)
 {
-    LOGGER(trace) << "Vault::insertMerkleTx(" << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << ", " << cointx.getHashLittleEndian().getHex() << ", " << txindex << ", " << txcount << ", " << (verifysigs ? "true" : "false") << ")" << std::endl;
+    LOGGER(trace) << "Vault::insertMerkleTx(" << chainmerkleblock.hash().getHex() << ", " << cointx.hash().getHex() << ", " << txindex << ", " << txcount << ", " << (verifysigs ? "true" : "false") << ")" << std::endl;
 
     std::shared_ptr<Tx> tx;
     {
@@ -2317,8 +2317,8 @@ std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblo
 
 std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs, bool isCoinbase)
 {
-    bytes_t blockhash = chainmerkleblock.blockHeader.getHashLittleEndian();
-    bytes_t txhash = cointx.getHashLittleEndian();
+    bytes_t blockhash = chainmerkleblock.hash();
+    bytes_t txhash = cointx.hash();
 
     // Instantiate merkleblock
     std::shared_ptr<MerkleBlock> merkleblock;
@@ -2333,7 +2333,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
             // Connect to chain
             if (txindex != 0) throw MerkleTxBadInsertionOrderException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
 
-            odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.blockHeader.prevBlockHash));
+            odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.prevBlockHash()));
             if (r.empty())
             {
                 odb::result<BlockCountView> r(db_->query<BlockCountView>());
@@ -2396,7 +2396,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
         {
             Coin::Transaction cointxcopy(cointx);
             cointxcopy.clearScriptSigs();
-            bytes_t txunsignedhash = cointxcopy.getHashLittleEndian();
+            bytes_t txunsignedhash = cointxcopy.hash();
             odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::unsigned_hash == txunsignedhash));
             if (!r.empty())
             {
@@ -2416,7 +2416,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
                 }
 
                 // Another sanity check - compare hashes
-                if (tx->toCoinCore().getHashLittleEndian() != txhash)
+                if (tx->toCoinCore().hash() != txhash)
                     throw MerkleTxMismatchException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
 
                 tx->blockheader(merkleblock->blockheader());
@@ -2454,7 +2454,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
 
 std::shared_ptr<Tx> Vault::confirmMerkleTx(const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount)
 {
-    LOGGER(trace) << "Vault::confirmMerkleTx(" << chainmerkleblock.blockHeader.getHashLittleEndian().getHex() << ", " << uchar_vector(txhash).getHex() << ", " << txindex << ", " << txcount << ")" << std::endl;
+    LOGGER(trace) << "Vault::confirmMerkleTx(" << chainmerkleblock.hash().getHex() << ", " << uchar_vector(txhash).getHex() << ", " << txindex << ", " << txcount << ")" << std::endl;
 
     std::shared_ptr<Tx> tx;
     {
@@ -2471,7 +2471,7 @@ std::shared_ptr<Tx> Vault::confirmMerkleTx(const ChainMerkleBlock& chainmerklebl
 
 std::shared_ptr<Tx> Vault::confirmMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount)
 {
-    bytes_t blockhash = chainmerkleblock.blockHeader.getHashLittleEndian();
+    bytes_t blockhash = chainmerkleblock.hash();
 
     // Instantiate merkleblock
     std::shared_ptr<MerkleBlock> merkleblock;
@@ -2486,7 +2486,7 @@ std::shared_ptr<Tx> Vault::confirmMerkleTx_unwrapped(const ChainMerkleBlock& cha
             // Connect to chain
             if (txindex != 0) throw MerkleTxBadInsertionOrderException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
 
-            odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.blockHeader.prevBlockHash));
+            odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.prevBlockHash()));
             if (r.empty())
             {
                 odb::result<BlockCountView> r(db_->query<BlockCountView>());
