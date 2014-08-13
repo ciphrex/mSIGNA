@@ -653,8 +653,10 @@ void NetworkSync::fileFlushLoop()
             m_blockTree.flushToFile(m_blockTreeFile);
             LOGGER(trace) << "Finished flushing blocktree file." << endl;
         }
+        // TODO: use async timer
         catch (const BlockTreeException& e)
         {
+            lock.unlock();
             LOGGER(error) << "Blocktree file flush error: " << e.what() << endl;
             notifyBlockTreeError(e.what(), e.code());
             LOGGER(trace) << "Retrying blocktree file flush in 5 seconds..." << endl;
@@ -662,6 +664,7 @@ void NetworkSync::fileFlushLoop()
         }
         catch (const exception& e)
         {
+            lock.unlock();
             LOGGER(error) << "Blocktree file flush error: " << e.what() << endl;
             notifyBlockTreeError(e.what(), -1);
             LOGGER(trace) << "Retrying blocktree file flush in 5 seconds..." << endl;
