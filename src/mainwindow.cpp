@@ -146,8 +146,8 @@ MainWindow::MainWindow() :
         }
     });
 
-    synchedVault.subscribeConnectionError([this](const std::string& error) { emit signal_error(tr("Connection error: ") + QString::fromStdString(error)); });
-    //synchedVault.subscribeVaultError([this](const std::string& error) { emit signal_error(tr("Vault error: ") + QString::fromStdString(error)); });
+    synchedVault.subscribeConnectionError([this](const std::string& error, int /*code*/) { emit signal_error(tr("Connection error: ") + QString::fromStdString(error)); });
+    //synchedVault.subscribeVaultError([this](const std::string& error, int /*code*/) { emit signal_error(tr("Vault error: ") + QString::fromStdString(error)); });
     connect(this, SIGNAL(signal_error(const QString&)), this, SLOT(showError(const QString&)));
 
     synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
