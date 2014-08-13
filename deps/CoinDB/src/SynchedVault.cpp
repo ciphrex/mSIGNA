@@ -57,16 +57,22 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         LOGGER(trace) << "SynchedVault - Status: " << message << std::endl;
     });
 
-    m_networkSync.subscribeProtocolError([this](const std::string& error)
+    m_networkSync.subscribeProtocolError([this](const std::string& error, int code)
     {
         LOGGER(trace) << "SynchedVault - Protocol error: " << error << std::endl;
-        m_notifyProtocolError(error);
+        m_notifyProtocolError(error, code);
     });
 
-    m_networkSync.subscribeConnectionError([this](const std::string& error)
+    m_networkSync.subscribeConnectionError([this](const std::string& error, int code)
     {
         LOGGER(trace) << "SynchedVault - Connection error: " << error << std::endl;
-        m_notifyConnectionError(error);
+        m_notifyConnectionError(error, code);
+    });
+
+    m_networkSync.subscribeBlockTreeError([this](const std::string& error, int code)
+    {
+        LOGGER(trace) << "SynchedVault - Blocktree error: " << error << std::endl;
+        m_notifyBlockTreeError(error, code);
     });
 
     m_networkSync.subscribeOpen([this]()
@@ -96,7 +102,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_networkSync.subscribeTimeout([this]()
     {
         LOGGER(trace) << "SynchedVault - Sync timeout." << std::endl;
-        m_notifyConnectionError("Network timed out.");
+        m_notifyConnectionError("Network timed out.", -1);
     });
 
     m_networkSync.subscribeSynchingHeaders([this]()
@@ -186,10 +192,15 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         {
             m_vault->insertNewTx(cointx);
         }
+        catch (const VaultException& e)
+        {
+            LOGGER(error) << e.what() << std::endl;
+            m_notifyVaultError(e.what(), e.code());
+        } 
         catch (const std::exception& e)
         {
             LOGGER(error) << e.what() << std::endl;
-            m_notifyVaultError(e.what());
+            m_notifyVaultError(e.what(), -1);
         } 
     });
 
@@ -205,10 +216,15 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         {
             m_vault->insertMerkleTx(chainmerkleblock, cointx, txindex, txcount);
         }
+        catch (const VaultException& e)
+        {
+            LOGGER(error) << e.what() << std::endl;
+            m_notifyVaultError(e.what(), e.code());
+        } 
         catch (const std::exception& e)
         {
             LOGGER(error) << e.what() << std::endl;
-            m_notifyVaultError(e.what());
+            m_notifyVaultError(e.what(), -1);
         } 
 	
     });
@@ -225,10 +241,15 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         {
             m_vault->confirmMerkleTx(chainmerkleblock, txhash, txindex, txcount);
         }
+        catch (const VaultException& e)
+        {
+            LOGGER(error) << e.what() << std::endl;
+            m_notifyVaultError(e.what(), e.code());
+        } 
         catch (const std::exception& e)
         {
             LOGGER(error) << e.what() << std::endl;
-            m_notifyVaultError(e.what());
+            m_notifyVaultError(e.what(), -1);
         } 
     });
 
@@ -248,10 +269,15 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
 	    merkleblock->txsinserted(true);
             m_vault->insertMerkleBlock(merkleblock);
         }
+        catch (const VaultException& e)
+        {
+            LOGGER(error) << e.what() << std::endl;
+            m_notifyVaultError(e.what(), e.code());
+        } 
         catch (const std::exception& e)
         {
             LOGGER(error) << e.what() << std::endl;
-            m_notifyVaultError(e.what());
+            m_notifyVaultError(e.what(), -1);
         }
     });
 

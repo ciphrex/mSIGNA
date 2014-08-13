@@ -65,11 +65,11 @@ public:
     void sendTx(Coin::Transaction& coin_tx);
 
     // Signal types
-    typedef Signals::Signal<>                   VoidSignal;
-    typedef Signals::Signal<Vault*>             VaultSignal;
-    typedef Signals::Signal<const std::string&> ErrorSignal;
-    typedef Signals::Signal<status_t>           StatusSignal;
-    typedef Signals::Signal<uint32_t>           HeightSignal;
+    typedef Signals::Signal<>                           VoidSignal;
+    typedef Signals::Signal<Vault*>                     VaultSignal;
+    typedef Signals::Signal<const std::string&, int>    ErrorSignal;
+    typedef Signals::Signal<status_t>                   StatusSignal;
+    typedef Signals::Signal<uint32_t>                   HeightSignal;
 
     // Vault state events
     Signals::Connection subscribeVaultOpened(VaultSignal::Slot slot) { return m_notifyVaultOpened.connect(slot); }
@@ -83,6 +83,7 @@ public:
     Signals::Connection subscribeBestHeightChanged(HeightSignal::Slot slot) { return m_notifyBestHeightChanged.connect(slot); }
     Signals::Connection subscribeSyncHeightChanged(HeightSignal::Slot slot) { return m_notifySyncHeightChanged.connect(slot); }
     Signals::Connection subscribeConnectionError(ErrorSignal::Slot slot) { return m_notifyConnectionError.connect(slot); }
+    Signals::Connection subscribeBlockTreeError(ErrorSignal::Slot slot) { return m_notifyBlockTreeError.connect(slot); }
 
     // P2P network state events
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
@@ -139,6 +140,7 @@ private:
     HeightSignal                m_notifyBestHeightChanged;
     HeightSignal                m_notifySyncHeightChanged;
     ErrorSignal                 m_notifyConnectionError;
+    ErrorSignal                 m_notifyBlockTreeError;
 
     // P2P network state events
     TxSignal                    m_notifyTxInserted;
