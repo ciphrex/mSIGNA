@@ -439,8 +439,6 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
                 pMostRecentHeader = &m_blockTree.getHeader(hash);
                 if (pMostRecentHeader && pMostRecentHeader->inBestChain) break;
                 pMostRecentHeader = nullptr;
-
-                LOGGER(trace) << "reorg detected at height " << pMostRecentHeader->height << std::endl;
             }
             catch (const std::exception& e)
             {
