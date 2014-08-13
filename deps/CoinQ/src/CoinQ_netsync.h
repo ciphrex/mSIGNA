@@ -97,9 +97,9 @@ public:
     void subscribeClose(void_slot_t slot) { notifyClose.connect(slot); }
     void subscribeTimeout(void_slot_t slot) { notifyTimeout.connect(slot); }
 
-    void subscribeConnectionError(string_slot_t slot) { notifyConnectionError.connect(slot); }
-    void subscribeProtocolError(string_slot_t slot) { notifyProtocolError.connect(slot); }
-    void subscribeBlockTreeError(string_slot_t slot) { notifyBlockTreeError.connect(slot); }
+    void subscribeConnectionError(error_slot_t slot) { notifyConnectionError.connect(slot); }
+    void subscribeProtocolError(error_slot_t slot) { notifyProtocolError.connect(slot); }
+    void subscribeBlockTreeError(error_slot_t slot) { notifyBlockTreeError.connect(slot); }
 
     void subscribeSynchingHeaders(void_slot_t slot) { notifySynchingHeaders.connect(slot); }
     void subscribeHeadersSynched(void_slot_t slot) { notifyHeadersSynched.connect(slot); }
@@ -176,9 +176,9 @@ private:
     CoinQSignal<void> notifyClose;
     CoinQSignal<void> notifyTimeout;
 
-    CoinQSignal<const std::string&> notifyConnectionError;
-    CoinQSignal<const std::string&> notifyProtocolError;
-    CoinQSignal<const std::string&> notifyBlockTreeError;
+    CoinQSignal<const std::string&, int> notifyConnectionError;
+    CoinQSignal<const std::string&, int> notifyProtocolError;
+    CoinQSignal<const std::string&, int> notifyBlockTreeError;
 
     CoinQSignal<void> notifySynchingHeaders;
     CoinQSignal<void> notifyHeadersSynched;

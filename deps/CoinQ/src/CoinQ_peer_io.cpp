@@ -60,9 +60,9 @@ void Peer::do_read()
             read_message.clear();
             do_stop();
 
-            std::stringstream err;
-            err << "Read error: " << ec.value() << ": " << ec.message();
-            notifyConnectionError(*this, err.str());
+            stringstream err;
+            err << "Peer read error: " << ec.message();
+            notifyConnectionError(*this, err.str(), ec.value());
             return;
         }
 
@@ -170,7 +170,7 @@ void Peer::do_read()
 
                     std::stringstream err;
                     err << "Command type not implemented: " << command;
-                    notifyProtocolError(*this, err.str());
+                    notifyProtocolError(*this, err.str(), -1);
                 }
 
                 notifyMessage(*this, peerMessage);
@@ -179,7 +179,7 @@ void Peer::do_read()
             {
                 std::stringstream err;
                 err << "Message decode error: " << e.what();
-                notifyProtocolError(*this, err.str());
+                notifyProtocolError(*this, err.str(), -1);
             }
 
             read_message.assign(read_message.begin() + MIN_MESSAGE_HEADER_SIZE + payloadSize, read_message.end());
@@ -202,9 +202,9 @@ void Peer::do_write(boost::shared_ptr<uchar_vector> data)
         {
             if (ec == boost::asio::error::operation_aborted) return;
 
-            std::stringstream err;
-            err << "Write error: " << ec.value() << ": " << ec.message();
-            notifyConnectionError(*this, err.str());
+            stringstream err;
+            err << "Peer write error: " << ec.message();
+            notifyConnectionError(*this, err.str(), ec.value());
             return;
         }
 
@@ -234,9 +234,9 @@ void Peer::do_connect(tcp::resolver::iterator iter)
 
             do_stop();
 
-            std::stringstream err;
-            err << "Connect error: " << ec.value() << ": " << ec.message();
-            notifyConnectionError(*this, err.str());
+            stringstream err;
+            err << "Peer connect error: " << ec.message();
+            notifyConnectionError(*this, err.str(), ec.value());
             return;
         }
 
@@ -248,18 +248,12 @@ void Peer::do_connect(tcp::resolver::iterator iter)
         catch (const boost::system::error_code& ec)
         {
             do_stop();
-
-            std::stringstream err;
-            err << "Handshake error: " << ec.value() << ": " << ec.message();
-            notifyConnectionError(*this, err.str());
+            notifyConnectionError(*this, ec.message(), ec.value());
         }
         catch (const std::exception& e)
         {
             do_stop();
-
-            std::stringstream err;
-            err << "Handshake error: " << e.what();
-            notifyConnectionError(*this, err.str());
+            notifyConnectionError(*this, e.what(), -1);
         }
     }));
 }
@@ -295,11 +289,12 @@ void Peer::start()
         if (ec)
         {
             if (ec == boost::asio::error::operation_aborted) return;
+
             do_stop();
 
-            std::stringstream err;
-            err << "Resolve error: " << ec.value() << ": " << ec.message();
-            notifyConnectionError(*this, err.str());
+            stringstream err;
+            err << "Peer resolve error: " << ec.message();
+            notifyConnectionError(*this, err.str(), ec.value());
             return;
         }
 

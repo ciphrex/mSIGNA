@@ -42,7 +42,7 @@ typedef boost::asio::ip::tcp tcp;
 class Peer;
 
 typedef std::function<void(Peer&)>                                  peer_slot_t;
-typedef std::function<void(Peer&, const std::string&)>              peer_error_slot_t;
+typedef std::function<void(Peer&, const std::string&, int)>         peer_error_slot_t;
 
 typedef std::function<void(Peer&, const Coin::CoinNodeMessage&)>    peer_message_slot_t;
 typedef std::function<void(Peer&, const Coin::HeadersMessage&)>     peer_headers_slot_t;
@@ -234,13 +234,13 @@ private:
     CoinQSignal<Peer&, const Coin::Transaction&>        notifyTx;
     CoinQSignal<Peer&, const Coin::AddrMessage&>        notifyAddr;
     CoinQSignal<Peer&, const Coin::Inventory&>          notifyInv;
-    CoinQSignal<Peer&, const std::string&>              notifyProtocolError;
+    CoinQSignal<Peer&, const std::string&, int>         notifyProtocolError;
 
     CoinQSignal<Peer&>                                  notifyStart;
     CoinQSignal<Peer&>                                  notifyStop;
     CoinQSignal<Peer&>                                  notifyOpen;
     CoinQSignal<Peer&>                                  notifyClose;
-    CoinQSignal<Peer&, const std::string&>              notifyConnectionError;
+    CoinQSignal<Peer&, const std::string&, int>         notifyConnectionError;
 
     CoinQSignal<Peer&>                                  notifyTimeout;
 

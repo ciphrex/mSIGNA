@@ -17,6 +17,7 @@
 typedef std::function<void()>                                       void_slot_t;
 typedef std::function<void(int)>                                    int_slot_t;
 typedef std::function<void(const std::string&)>                     string_slot_t;
+typedef std::function<void(const std::string&, int)>                error_slot_t;
 
 typedef std::function<void(const Coin::HeadersMessage&)>            headers_slot_t;
 typedef std::function<void(const Coin::CoinBlock&)>                 block_slot_t;

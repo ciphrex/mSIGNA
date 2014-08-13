@@ -16,6 +16,9 @@
 
 #include <logger/logger.h>
 
+#include <thread>
+#include <chrono>
+
 using namespace CoinQ::Network;
 using namespace std;
 
@@ -73,7 +76,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
         catch (const std::exception& e)
         {
             LOGGER(error) << "NetworkSync - m_peer open handler - " << e.what() << std::endl;
-            notifyBlockTreeError(e.what());
+            // TODO: propagate code
+            notifyBlockTreeError(e.what(), -1);
         }
     });
 
@@ -88,14 +92,14 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
         notifyTimeout();
     });
 
-    m_peer.subscribeConnectionError([&](CoinQ::Peer& /*peer*/, const std::string& error)
+    m_peer.subscribeConnectionError([&](CoinQ::Peer& /*peer*/, const std::string& error, int code)
     {
-        notifyConnectionError(error);
+        notifyConnectionError(error, code);
     });
 
-    m_peer.subscribeProtocolError([&](CoinQ::Peer& /*peer*/, const std::string& error)
+    m_peer.subscribeProtocolError([&](CoinQ::Peer& /*peer*/, const std::string& error, int code)
     {
-        notifyProtocolError(error);
+        notifyProtocolError(error, code);
     });
 
     m_peer.subscribeInv([&](CoinQ::Peer& peer, const Coin::Inventory& inv)
@@ -173,13 +177,15 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
             }
             catch (const exception& e)
             {
-                notifyConnectionError(e.what());
+                // TODO: Propagate code
+                notifyConnectionError(e.what(), -1);
             }
         }
         catch (const exception& e)
         {
             LOGGER(error) << "Protocol error processing merkle transactions: " << e.what() << endl;
-            notifyProtocolError(e.what());
+            // TODO: propagate code
+            notifyProtocolError(e.what(), -1);
         }
     });
 
@@ -205,7 +211,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                         std::stringstream err;
                         err << "Block tree insertion error for block " << item.hash().getHex() << ": " << e.what(); // TODO: localization
                         LOGGER(error) << err.str() << std::endl;
-                        notifyBlockTreeError(err.str());
+                        // TODO: propagate code
+                        notifyBlockTreeError(err.str(), -1);
                         throw e;
                     }
                 }
@@ -301,7 +308,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                     catch (const exception& e)
                     {
                         syncLock.unlock();
-                        notifyConnectionError(e.what());
+                        // TODO: propagate code
+                        notifyConnectionError(e.what(), -1);
                     }
                 }
             }
@@ -349,14 +357,16 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                 catch (const exception& e)
                 {
                     LOGGER(error) << "Block tree error: " << e.what() << endl;
-                    notifyBlockTreeError(e.what());
+                    // TODO: propagate code
+                    notifyBlockTreeError(e.what(), -1);
                 }
             }
         }
         catch (const exception& e)
         {
             LOGGER(error) << "NetworkSync - protocol error: " << e.what() << std::endl;
-            notifyProtocolError(e.what());
+            // TODO: propagate code
+            notifyProtocolError(e.what(), -1);
         }
     });
 }
@@ -393,7 +403,8 @@ void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProof
     catch (const std::exception& e)
     {
         LOGGER(error) << "NetworkSync::loadHeaders() - " << e.what() << std::endl;
-        notifyBlockTreeError(e.what());
+        // TODO: propagate code
+        notifyBlockTreeError(e.what(), -1);
     }
 
     m_blockTree.clear();
@@ -434,7 +445,8 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
             catch (const std::exception& e)
             {
                 LOGGER(error) << "Block tree error: " << e.what() << endl;
-                notifyBlockTreeError(e.what());
+                // TODO: propagate code
+                notifyBlockTreeError(e.what(), -1);
             }
         }
 
@@ -641,9 +653,19 @@ void NetworkSync::fileFlushLoop()
             m_blockTree.flushToFile(m_blockTreeFile);
             LOGGER(trace) << "Finished flushing blocktree file." << endl;
         }
+        catch (const BlockTreeException& e)
+        {
+            LOGGER(error) << "Blocktree file flush error: " << e.what() << endl;
+            notifyBlockTreeError(e.what(), e.code());
+            LOGGER(trace) << "Retrying blocktree file flush in 5 seconds..." << endl;
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+        }
         catch (const exception& e)
         {
-            LOGGER(error) << "Blocktree file flush error: " << e.what();
+            LOGGER(error) << "Blocktree file flush error: " << e.what() << endl;
+            notifyBlockTreeError(e.what(), -1);
+            LOGGER(trace) << "Retrying blocktree file flush in 5 seconds..." << endl;
+            std::this_thread::sleep_for(std::chrono::seconds(5));
         }
     }
 }
