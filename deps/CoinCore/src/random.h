@@ -2,7 +2,7 @@
 //
 // random.h
 //
-// Copyright (c) 2011-2012 Eric Lombrozo
+// Copyright (c) 2011-2014 Eric Lombrozo
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,19 +22,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef __RANDOM_H___
-#define __RANDOM_H___
+#pragma once
+
+#include "typedefs.h"
 
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
-#include <stdutils/uchar_vector.h>
-
 #include <stdexcept>
 
-inline uchar_vector random_bytes(int length)
+inline bytes_t random_bytes(int length)
 {
-    uchar_vector r(length);
+    bytes_t r(length);
     if (!RAND_bytes(&r[0], length)) { 
         throw std::runtime_error(ERR_error_string(ERR_get_error(), NULL));
     }
@@ -42,4 +41,13 @@ inline uchar_vector random_bytes(int length)
     return r;
 }
 
-#endif // __RANDOM_H___
+inline secure_bytes_t secure_random_bytes(int length)
+{
+    secure_bytes_t r(length);
+    if (!RAND_bytes(&r[0], length)) { 
+        throw std::runtime_error(ERR_error_string(ERR_get_error(), NULL));
+    }
+
+    return r;
+}
+
