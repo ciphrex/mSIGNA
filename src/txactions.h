@@ -52,6 +52,7 @@ private slots:
     void exportTxToFile();
     void importTxFromFile();
     void viewRawTx();
+    void copyAddressToClipboard();
     void copyTxHashToClipboard();
     void copyRawTxToClipboard();
     void saveRawTxToFile();
@@ -81,6 +82,7 @@ private:
     QAction* exportTxToFileAction;
     QAction* importTxFromFileAction;
     QAction* viewRawTxAction;
+    QAction* copyAddressToClipboardAction;
     QAction* copyTxHashToClipboardAction;
     QAction* copyRawTxToClipboardAction;
     QAction* saveRawTxToFileAction;

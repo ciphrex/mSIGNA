@@ -73,6 +73,7 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
         }
 
         exportTxToFileAction->setEnabled(true);
+        copyAddressToClipboardAction->setEnabled(true);
         copyTxHashToClipboardAction->setEnabled(true);
         copyRawTxToClipboardAction->setEnabled(true);
         saveRawTxToFileAction->setEnabled(true);
@@ -84,6 +85,7 @@ void TxActions::updateCurrentTx(const QModelIndex& current, const QModelIndex& /
         signTxAction->setEnabled(false);
         sendTxAction->setEnabled(false);
         exportTxToFileAction->setEnabled(false);
+        copyAddressToClipboardAction->setEnabled(false);
         copyTxHashToClipboardAction->setEnabled(false);
         copyRawTxToClipboardAction->setEnabled(false);
         saveRawTxToFileAction->setEnabled(false);
@@ -276,6 +278,18 @@ void TxActions::viewRawTx()
     }
 }
 
+void TxActions::copyAddressToClipboard()
+{
+    try {
+        QString address = m_txModel->getTxOutAddress(currentRow);
+        QClipboard* clipboard = QApplication::clipboard();
+        clipboard->setText(address);
+    }
+    catch (const std::exception& e) {
+        emit error(e.what());
+    }
+}
+
 void TxActions::copyTxHashToClipboard()
 {
     try {
@@ -391,6 +405,7 @@ void TxActions::deleteTx()
     try {
         m_txModel->deleteTx(currentRow);
         m_txView->update();
+        m_accountModel->update();
     }
     catch (const std::exception& e) {
         emit error(e.what());
@@ -426,6 +441,10 @@ void TxActions::createActions()
     viewRawTxAction = new QAction(tr("View Raw Transaction"), this);
     viewRawTxAction->setEnabled(false);
     connect(viewRawTxAction, SIGNAL(triggered()), this, SLOT(viewRawTx()));
+
+    copyAddressToClipboardAction = new QAction(tr("Copy Address To Clipboard"), this);
+    copyAddressToClipboardAction->setEnabled(false);
+    connect(copyAddressToClipboardAction, SIGNAL(triggered()), this, SLOT(copyAddressToClipboard()));
 
     copyTxHashToClipboardAction = new QAction(tr("Copy Transaction Hash To Clipboard"), this);
     copyTxHashToClipboardAction->setEnabled(false);
@@ -463,6 +482,7 @@ void TxActions::createMenus()
     menu->addAction(importTxFromFileAction);
     menu->addSeparator();
     //menu->addAction(viewRawTxAction);
+    menu->addAction(copyAddressToClipboardAction);
     menu->addAction(copyTxHashToClipboardAction);
     menu->addAction(copyRawTxToClipboardAction);
     menu->addAction(saveRawTxToFileAction);

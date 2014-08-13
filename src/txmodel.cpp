@@ -288,6 +288,14 @@ int TxModel::getTxOutType(int row) const
     return typeItem->data(Qt::UserRole).toInt();
 }
 
+QString TxModel::getTxOutAddress(int row) const
+{
+    if (row == -1 || row >= rowCount()) throw std::runtime_error(tr("Invalid row.").toStdString());
+
+    QStandardItem* typeItem = item(row, 7);
+    return typeItem->text();
+}
+
 void TxModel::signTx(int row)
 {
     LOGGER(trace) << "TxModel::signTx(" << row << ")" << std::endl;
