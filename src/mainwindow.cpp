@@ -22,7 +22,7 @@
 #include "mainwindow.h"
 
 // Random
-#include <CoinCore/random.h>
+#include "entropysource.h"
 
 // Coin scripts
 #include <CoinQ/CoinQ_script.h>
@@ -39,6 +39,7 @@
 #include "txactions.h"
 
 // Dialogs
+#include "entropydialog.h"
 #include "newkeychaindialog.h"
 #include "quicknewaccountdialog.h"
 #include "newaccountdialog.h"
@@ -541,7 +542,7 @@ void MainWindow::newKeychain()
                 // TODO: Randomize using user input for entropy
                 CoinDB::VaultLock lock(synchedVault);
                 if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
-                secure_bytes_t entropy = getEntropy(32);
+                secure_bytes_t entropy = getRandomBytes(32);
                 synchedVault.getVault()->newKeychain(name.toStdString(), entropy);
             }
 
@@ -883,7 +884,7 @@ void MainWindow::quickNewAccount()
                 // TODO: Randomize using user input for entropy
                 CoinDB::VaultLock lock(synchedVault);
                 if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
-                secure_bytes_t entropy = getEntropy(32);
+                secure_bytes_t entropy = getRandomBytes(32);
                 synchedVault.getVault()->newKeychain(keychainName.toStdString(), entropy);
             }
 
@@ -1931,10 +1932,3 @@ void MainWindow::loadVault(const QString &fileName)
     accountModel->getVault()->unlockChainCodes(uchar_vector("1234"));
 }
 
-secure_bytes_t MainWindow::getEntropy(int bytes)
-{
-    statusBar()->showMessage("Obtaining entropy...please wait...");
-    secure_bytes_t entropy = random_bytes(bytes);
-    statusBar()->showMessage("");
-    return entropy;
-}

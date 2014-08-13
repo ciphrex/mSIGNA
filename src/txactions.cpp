@@ -21,6 +21,8 @@
 
 #include "docdir.h"
 
+#include "entropysource.h"
+
 #include <CoinDB/SynchedVault.h>
 
 #include <QAction>
@@ -167,6 +169,7 @@ void TxActions::signTx()
 {
     try
     {
+        seedEntropySource(false);
         m_txModel->signTx(currentRow);
         m_txView->update();
     }

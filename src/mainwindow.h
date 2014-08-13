@@ -203,8 +203,6 @@ private slots:
     void processCommand(const QString& command);
 
 private:
-    secure_bytes_t getEntropy(int bytes);
-
     // License accepted?
     bool licenseAccepted;
 

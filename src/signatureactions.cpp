@@ -14,6 +14,8 @@
 #include "signatureview.h"
 #include "signaturedialog.h"
 
+#include "entropysource.h"
+
 #include <CoinDB/SynchedVault.h>
 
 #include <QAction>
@@ -92,6 +94,8 @@ void SignatureActions::addSignature()
 
         std::vector<std::string> keychainNames;
         keychainNames.push_back(m_currentKeychain.toStdString());
+
+        seedEntropySource(false, &m_dialog);
         vault->signTx(m_dialog.getModel()->getTxHash(), keychainNames, true);
 
         if (keychainNames.empty())

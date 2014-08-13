@@ -54,6 +54,7 @@ HEADERS = \
     src/coinparams.h \
     src/docdir.h \
     src/severitylogger.h \
+    src/entropysource.h \
     src/currencyunitdialog.h \
     src/networkselectiondialog.h \
     src/splashscreen.h \
@@ -68,6 +69,7 @@ HEADERS = \
     src/accountview.h \
     src/keychainmodel.h \
     src/keychainview.h \
+    src/entropydialog.h \
     src/quicknewaccountdialog.h \
     src/newaccountdialog.h \
     src/newkeychaindialog.h \
@@ -99,6 +101,7 @@ SOURCES = \
     src/copyrightinfo.cpp \
     src/coinparams.cpp \
     src/docdir.cpp \
+    src/entropysource.cpp \
     src/main.cpp \
     src/currencyunitdialog.cpp \
     src/networkselectiondialog.cpp \
@@ -114,6 +117,7 @@ SOURCES = \
     src/accountview.cpp \
     src/keychainmodel.cpp \
     src/keychainview.cpp \
+    src/entropydialog.cpp \
     src/quicknewaccountdialog.cpp \
     src/newaccountdialog.cpp \
     src/newkeychaindialog.cpp \
