@@ -28,6 +28,7 @@
 
 #include <stdexcept>
 #include <algorithm>
+#include <ctime>
 
 using namespace Coin;
 
