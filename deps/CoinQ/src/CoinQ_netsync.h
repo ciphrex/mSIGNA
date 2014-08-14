@@ -83,6 +83,9 @@ public:
     void syncBlocks(int startHeight);
     void stopSynchingBlocks(bool bClearFilter = true);
 
+    // TRANSACTIONS PUSHED OFF CHAIN MUST BE ADDED BACK TO MEMPOOL
+    void addToMempool(const uchar_vector& txHash);
+
     // FOR TESTING
     void insertTx(const Coin::Transaction& tx);
     void insertMerkleBlock(const Coin::MerkleBlock& merkleBlock, const std::vector<Coin::Transaction>& txs);

@@ -188,7 +188,9 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                 vector<uchar_vector> locatorHashes = m_blockTree.getLocatorHashes(1);
                 if (locatorHashes.empty()) throw runtime_error("Blocktree is empty.");
                 if (headersMessage.headers[headersMessage.headers.size() - 1].hash() != locatorHashes[0])
+                {
                     throw runtime_error("Blocktree conflicts with peer.");
+                }
  
                 peer.getHeaders(locatorHashes);
             }
@@ -203,7 +205,6 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                     notifyStatus("Done flushing block chain to file");
                 }
 */
-
                 notifyBlockTreeChanged();
                 if (!m_bHeadersSynched)
                 {
@@ -304,6 +305,24 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
             Coin::PartialMerkleTree merkleTree(merkleBlock.merkleTree());
 
             LOGGER(debug) << "Last requested merkle block: " << m_lastRequestedMerkleBlockHash.getHex() << endl;
+
+            if (!m_bHeadersSynched)
+            {
+                LOGGER(trace) << "NetworkSync merkle block handler  - Headers are still not synched." << endl;
+
+                LOGGER(trace) << "REORG - attempting again to resync block headers from peer..." << endl;
+                try
+                {
+                    m_peer.getHeaders(m_blockTree.getLocatorHashes(-1));
+                }
+                catch (const exception& e)
+                {
+                    LOGGER(error) << "Block tree error: " << e.what() << endl;
+                    // TODO: propagate code
+                    notifyBlockTreeError(e.what(), -1);
+                }
+            }
+
             boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
             if (merkleBlockHash == m_lastRequestedMerkleBlockHash)
             {
@@ -521,10 +540,17 @@ void NetworkSync::stopSynchingBlocks(bool bClearFilter)
     if (bClearFilter) { clearBloomFilter(); }
 }
 
+void NetworkSync::addToMempool(const uchar_vector& txHash)
+{
+    boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
+    m_mempoolTxs.insert(txHash);
+}
+
 void NetworkSync::insertTx(const Coin::Transaction& tx)
 {
     boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
     m_mempoolTxs.insert(tx.hash());
+    syncLock.unlock();
 
     notifyNewTx(tx);
 }
