@@ -549,7 +549,7 @@ void SynchedVault::sendTx(Coin::Transaction& coin_tx)
 void SynchedVault::insertFakeMerkleBlock(unsigned int nExtraLeaves)
 {
     if (!m_vault) throw std::runtime_error("No vault is open.");
-    std::lock_guard<std::mutex> lock(m_vaultMutex);
+    std::unique_lock<std::mutex> lock(m_vaultMutex);
     if (!m_vault) throw std::runtime_error("No vault is open.");
 
     txs_t txs = m_vault->getTxs(Tx::PROPAGATED);
@@ -564,6 +564,8 @@ void SynchedVault::insertFakeMerkleBlock(unsigned int nExtraLeaves)
     std::shared_ptr<BlockHeader> header = m_vault->getBestBlockHeader();
 
     Coin::MerkleBlock coinmerkleblock(Coin::randomPartialMerkleTree(txhashes, txhashes.size() + nExtraLeaves), header->version(), header->hash(), time(NULL), header->bits(), 0);
+
+    lock.unlock();
     m_networkSync.insertMerkleBlock(coinmerkleblock, cointxs);
 }
 
