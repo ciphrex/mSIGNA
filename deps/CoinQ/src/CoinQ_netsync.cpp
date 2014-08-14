@@ -246,7 +246,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
         try
         {
             // Constructing the partial tree will validate the merkle root - throws exception if invalid.
-            Coin::PartialMerkleTree merkleTree(merkleBlock.nTxs, merkleBlock.hashes, merkleBlock.flags, merkleBlock.blockHeader.merkleRoot());
+            Coin::PartialMerkleTree merkleTree(merkleBlock.merkleTree());
 
             LOGGER(debug) << "Last requested merkle block: " << m_lastRequestedMerkleBlockHash.getHex() << endl;
             boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
