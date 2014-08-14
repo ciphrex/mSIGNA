@@ -31,7 +31,8 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
     m_bConnected(false),
     m_peer(m_ioService),
     m_bFlushingToFile(false),
-    m_bHeadersSynched(false)
+    m_bHeadersSynched(false),
+    m_bMissingTxs(false)
 {
     // Select hash functions
     Coin::CoinBlockHeader::setHashFunc(m_coinParams.block_header_hash_function());
@@ -139,7 +140,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
             syncLock.unlock();
             notifyNewTx(tx);
         }
-        else
+        else if (!m_bMissingTxs)
         {
             syncLock.unlock();
             processBlockTx(tx);
@@ -223,17 +224,66 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
 
         LOGGER(trace) << "Received block: " << block.hash().getHex() << endl;
 
-        boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
-        if (m_currentMerkleBlock.hash() != block.hash()) return;    // Not the block we're working on.
-
-        LOGGER(trace) << "Processing " << block.txs.size() << " block transactions..." << endl;
-        for (auto& tx: block.txs)
+        try
         {
-            if (m_currentMerkleTxHashes.empty()) return; // We're done processing this block
+            boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
+            if (!m_bMissingTxs || m_currentMerkleBlock.hash() != block.hash()) return;    // Not the block we're working on.
 
-            syncLock.unlock();
-            processBlockTx(tx);
-            syncLock.lock();
+            LOGGER(trace) << "Processing " << block.txs.size() << " block transactions..." << endl;
+            for (auto& tx: block.txs)
+            {
+                if (m_currentMerkleTxHashes.empty()) break; // We got all our transactions.
+
+                if (tx.hash() == m_currentMerkleTxHashes.front())
+                {
+                    LOGGER(trace) << "New merkle transaction (" << (m_currentMerkleTxIndex + 1) << " of " << m_currentMerkleTxCount << "): " << tx.hash().getHex() << endl;
+                    notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex++, m_currentMerkleTxCount);
+                    m_currentMerkleTxHashes.pop();
+                    m_mempoolTxs.erase(tx.hash());
+                }
+            }
+
+            if (!m_currentMerkleTxHashes.empty())
+            {
+                // In principle this should never happen. If it does we missed some earlier check.
+                throw runtime_error("Block is missing some transactions.");
+            }
+
+            m_bMissingTxs = false;
+
+            // Once the queue is empty, if we're at the tip signal completion of block sync.
+            uchar_vector currentMerkleBlockHash = m_currentMerkleBlock.hash();
+            const ChainHeader& chainTip = m_blockTree.getTip();
+            if (chainTip.hash() == currentMerkleBlockHash)
+            {
+                LOGGER(trace) << "Block sync detected from block handler." << endl;
+                m_lastRequestedMerkleBlockHash.clear();
+                m_lastSynchedMerkleBlockHash = currentMerkleBlockHash;
+                syncLock.unlock();
+                notifyBlocksSynched();
+                return;
+            }
+
+            // Ask for the next block
+            const ChainHeader& nextHeader = m_blockTree.getHeader(m_currentMerkleBlock.height + 1);
+            m_lastRequestedMerkleBlockHash = nextHeader.hash();
+            LOGGER(trace) << "Asking for filtered block from block handler: " << m_lastRequestedMerkleBlockHash.getHex() << std::endl;
+            
+            try
+            {
+                m_peer.getFilteredBlock(m_lastRequestedMerkleBlockHash);
+            }
+            catch (const exception& e)
+            {
+                // TODO: Propagate code
+                syncLock.unlock();
+                notifyConnectionError(e.what(), -1);
+            }
+        }
+        catch (const exception& e)
+        {
+            // TODO: Propagate code
+            notifyProtocolError(e.what(), -1);
         }
     });
 
@@ -483,19 +533,31 @@ void NetworkSync::insertMerkleBlock(const Coin::MerkleBlock& merkleBlock, const 
 {
     boost::unique_lock<boost::mutex> fileFlushLock(m_fileFlushMutex);
     m_blockTree.insertHeader(merkleBlock.blockHeader, m_bCheckProofOfWork);
+
+    const ChainHeader& merkleHeader = m_blockTree.getHeader(merkleBlock.hash());
+
     fileFlushLock.unlock();
     m_fileFlushCond.notify_one();
     
+    ChainMerkleBlock chainMerkleBlock(merkleBlock, true, merkleHeader.height, merkleHeader.chainWork);
+
+    LOGGER(trace) << "Inserting merkle block: " << merkleBlock.hash().getHex() << endl;
+
     boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
     int n = txs.size();
     if (n == 0)
     {
-        notifyMerkleBlock(merkleBlock);
+        notifyMerkleBlock(chainMerkleBlock);
     }
     else
     {
         int i = 0;
-        for (auto& tx: txs) { notifyMerkleTx(merkleBlock, tx, i++, n); }
+        for (auto& tx: txs)
+        {
+            LOGGER(trace) << "New merkle transaction (" << (m_currentMerkleTxIndex + 1) << " of " << m_currentMerkleTxCount << "): " << tx.hash().getHex() << endl;
+            notifyMerkleTx(chainMerkleBlock, tx, i++, n);
+            m_mempoolTxs.erase(tx.hash());
+        }
     }
 }
 
@@ -730,9 +792,8 @@ void NetworkSync::processBlockTx(const Coin::Transaction& tx)
             }
             else if (m_lastRequestedBlockHash != m_lastRequestedMerkleBlockHash)
             {
+                m_bMissingTxs = true;
                 LOGGER(trace) << "We are missing some transactions in the mempool - perhaps due to reorg." << endl;
-
-                m_lastRequestedBlockHash = m_currentMerkleBlock.hash();
                 LOGGER(trace) << "Asking for block " << m_lastRequestedBlockHash.getHex() << endl;
                 try
                 {

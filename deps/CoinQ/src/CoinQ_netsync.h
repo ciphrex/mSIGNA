@@ -172,6 +172,7 @@ private:
     std::queue<bytes_t> m_currentMerkleTxHashes;
     unsigned int m_currentMerkleTxIndex;
     unsigned int m_currentMerkleTxCount;
+    bool m_bMissingTxs;
 
     void syncMerkleBlock(const ChainMerkleBlock& merkleBlock, const Coin::PartialMerkleTree& merkleTree);
     void processBlockTx(const Coin::Transaction& tx);
