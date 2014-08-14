@@ -9,7 +9,7 @@ int main()
 {
     try {
         cout << "setUncompressed..." << endl;
-        std::vector<PartialMerkleTree::MerkleLeaf> leaves;
+        std::vector<MerkleLeaf> leaves;
     /*
         leaves.push_back(make_pair(uchar_vector("cf86811c2853a14c520d7bc7cd2f41e16ba1d02a19ddef197df8fe4c575a599e").getReverse(), false));
         leaves.push_back(make_pair(uchar_vector("da9219371684385a997194b54ee7cbe908eb829043e1cb245b09157a2adb5de3").getReverse(), false));

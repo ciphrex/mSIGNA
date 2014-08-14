@@ -13,7 +13,8 @@ OBJ = \
 
 TARGETS = \
     build/set \
-    build/merge
+    build/merge \
+    build/random
 
 all: $(TARGETS)
 
