@@ -972,7 +972,7 @@ cli::result_t cmd_insertrawmerkleblock(const cli::params_t& params)
 
     uchar_vector rawmerkleblock(params[1]);
     std::shared_ptr<MerkleBlock> merkleblock(new MerkleBlock());
-    merkleblock->fromCoinCore(rawmerkleblock, height);
+    merkleblock->fromCoinCore(Coin::MerkleBlock(rawmerkleblock), height);
 
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     bool rval = (bool)vault.insertMerkleBlock(merkleblock);
