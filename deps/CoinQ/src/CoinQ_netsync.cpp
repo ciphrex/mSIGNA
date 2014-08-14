@@ -184,7 +184,12 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                 status << "Best Height: " << m_blockTree.getBestHeight() << " / " << "Total Work: " << m_blockTree.getTotalWork().getDec();
                 notifyStatus(status.str());
 
-                peer.getHeaders(m_blockTree.getLocatorHashes(1));
+                vector<uchar_vector> locatorHashes = m_blockTree.getLocatorHashes(1);
+                if (locatorHashes.empty()) throw runtime_error("Blocktree is empty.");
+                if (headersMessage.headers[headersMessage.headers.size() - 1].hash() != locatorHashes[0])
+                    throw runtime_error("Blocktree conflicts with peer.");
+ 
+                peer.getHeaders(locatorHashes);
             }
             else
             {
@@ -482,9 +487,16 @@ void NetworkSync::insertMerkleBlock(const Coin::MerkleBlock& merkleBlock, const 
     m_fileFlushCond.notify_one();
     
     boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
-    int i = 0;
     int n = txs.size();
-    for (auto& tx: txs) { notifyMerkleTx(merkleBlock, tx, i++, n); }
+    if (n == 0)
+    {
+        notifyMerkleBlock(merkleBlock);
+    }
+    else
+    {
+        int i = 0;
+        for (auto& tx: txs) { notifyMerkleTx(merkleBlock, tx, i++, n); }
+    }
 }
 
 void NetworkSync::start(const std::string& host, const std::string& port)
