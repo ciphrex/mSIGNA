@@ -2393,7 +2393,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
                 for (odb::result<Tx>::iterator it = r.begin(); it != r.end(); ++it)
                 {
                     std::shared_ptr<Tx> tx(it.load());
-                    tx->status(Tx::PROPAGATED);
+                    tx->blockheader(nullptr);
                     db_->update(tx);
                     signalQueue.push(notifyTxUpdated.bind(tx));
                 }
