@@ -103,6 +103,30 @@ void subscribeHandlers(SynchedVault& synchedVault)
         LOGGER(info) << ss.str() << endl;
         cout << ss.str() << endl;
     });
+
+    synchedVault.subscribeProtocolError([](const string& error, int /*code*/)
+    {
+        stringstream ss;
+        ss << "Protocol error: " << error;
+        LOGGER(error) << ss.str() << endl;
+        cout << ss.str() << endl;
+    });
+
+    synchedVault.subscribeConnectionError([](const string& error, int /*code*/)
+    {
+        stringstream ss;
+        ss << "Connection error: " << error;
+        LOGGER(error) << ss.str() << endl;
+        cout << ss.str() << endl;
+    });
+
+    synchedVault.subscribeBlockTreeError([](const string& error, int /*code*/)
+    {
+        stringstream ss;
+        ss << "Blocktree error: " << error;
+        LOGGER(error) << ss.str() << endl;
+        cout << ss.str() << endl;
+    });
 }
 
 int main(int argc, char* argv[])
