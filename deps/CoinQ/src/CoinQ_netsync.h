@@ -153,7 +153,10 @@ private:
     bool m_bHeadersSynched;
 
     uchar_vector m_lastRequestedBlockHash;
-    uchar_vector m_lastSynchedBlockHash;
+    uchar_vector m_lastRequestedMerkleBlockHash;
+    uchar_vector m_lastSynchedMerkleBlockHash;
+
+    void do_syncBlocks(int startHeight);
 
     Coin::BloomFilter m_bloomFilter;
 
@@ -167,6 +170,7 @@ private:
     unsigned int m_currentMerkleTxCount;
 
     void syncMerkleBlock(const ChainMerkleBlock& merkleBlock, const Coin::PartialMerkleTree& merkleTree);
+    void processBlockTx(const Coin::Transaction& tx);
     void processMempoolConfirmations();
 
     // Sync signals
