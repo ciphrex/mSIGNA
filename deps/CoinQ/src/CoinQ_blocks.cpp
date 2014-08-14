@@ -109,7 +109,7 @@ void CoinQBlockTreeMem::setGenesisBlock(const Coin::CoinBlockHeader& header)
     notifyAddBestChain(header);
 }
 
-bool CoinQBlockTreeMem::insertHeader(const Coin::CoinBlockHeader& header, bool bCheckProofOfWork)
+bool CoinQBlockTreeMem::insertHeader(const Coin::CoinBlockHeader& header, bool bCheckProofOfWork, bool bReplaceTip)
 {
     if (mHeaderHashMap.size() == 0) throw std::runtime_error("No genesis block.");
 
@@ -137,7 +137,10 @@ bool CoinQBlockTreeMem::insertHeader(const Coin::CoinBlockHeader& header, bool b
     parent.childHashes.insert(headerHash);
     notifyInsert(chainHeader);
 
-    if (chainHeader.chainWork > mTotalWork) { setBestChain(chainHeader); }
+    if ((bReplaceTip && chainHeader.chainWork >= mTotalWork) || chainHeader.chainWork > mTotalWork)
+    {
+        setBestChain(chainHeader);
+    }
 
     bFlushed = false;
     return true;
