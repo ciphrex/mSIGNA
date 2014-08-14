@@ -142,6 +142,7 @@ public:
     ///////////////////
     std::shared_ptr<Tx>                     getTx(const bytes_t& hash) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     std::shared_ptr<Tx>                     getTx(unsigned long tx_id) const; // Uses the database id. Throws TxNotFoundException.
+    txs_t                                   getTxs(int tx_status_flags = Tx::ALL, unsigned long start = 0, int count = -1, uint32_t minheight = 0) const;
     uint32_t                                getTxConfirmations(const bytes_t& hash) const;
     uint32_t                                getTxConfirmations(unsigned long tx_id) const;
     uint32_t                                getTxConfirmations(std::shared_ptr<Tx> tx) const;
@@ -300,6 +301,7 @@ protected:
     ///////////////////
     std::shared_ptr<Tx>                     getTx_unwrapped(const bytes_t& hash) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     std::shared_ptr<Tx>                     getTx_unwrapped(unsigned long tx_id) const; // Uses database id. Throws TxNotFoundException.
+    txs_t                                   getTxs_unwrapped(int tx_status_flags = Tx::ALL, unsigned long start = 0, int count = -1, uint32_t minheight = 0) const;
     std::vector<std::string>                getSerializedUnsignedTxs_unwrapped(const std::string& account_name) const;
     uint32_t                                getTxConfirmations_unwrapped(std::shared_ptr<Tx> tx) const;
     std::shared_ptr<Tx>                     insertTx_unwrapped(std::shared_ptr<Tx> tx, bool replace_labels = false);

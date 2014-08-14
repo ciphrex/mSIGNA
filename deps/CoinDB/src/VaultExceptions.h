@@ -350,7 +350,7 @@ class BlockHeaderNotFoundException : public BlockHeaderException
 public:
     explicit BlockHeaderNotFoundException(const bytes_t& hash, uint32_t height) : BlockHeaderException("Block header not found.", BLOCKHEADER_NOT_FOUND, hash, height) { }
     explicit BlockHeaderNotFoundException(const bytes_t& hash) : BlockHeaderException("Block header not found.", BLOCKHEADER_NOT_FOUND, hash) { }
-    explicit BlockHeaderNotFoundException(uint32_t height) : BlockHeaderException("Block header not found.", BLOCKHEADER_NOT_FOUND, height) { }
+    explicit BlockHeaderNotFoundException(uint32_t height = 0) : BlockHeaderException("Block header not found.", BLOCKHEADER_NOT_FOUND, height) { }
 };
 
 // MERKLE BLOCK EXCEPTIONS

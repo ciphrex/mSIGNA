@@ -1688,6 +1688,48 @@ std::shared_ptr<Tx> Vault::getTx_unwrapped(unsigned long tx_id) const
     return tx;
 }
 
+txs_t Vault::getTxs(int tx_status_flags, unsigned long start, int count, uint32_t minheight) const
+{
+    LOGGER(trace) << "Vault::getTxs(" << Tx::getStatusString(tx_status_flags) << ", " << start << ", " << count << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    return getTxs_unwrapped(tx_status_flags, start, count, minheight);
+}
+
+txs_t Vault::getTxs_unwrapped(int tx_status_flags, unsigned long start, int count, uint32_t minheight) const
+{
+    txs_t txs;
+
+    typedef odb::query<Tx> query_t;
+    query_t query (1 == 1);
+    if (tx_status_flags != Tx::ALL)
+    {
+        std::vector<Tx::status_t> tx_statuses = Tx::getStatusFlags(tx_status_flags);
+        query = query && query_t::status.in_range(tx_statuses.begin(), tx_statuses.end());
+    }
+
+    if (minheight > 0)
+    {
+        query = query && (query_t::blockheader->height >= minheight);
+    }
+
+    query += "ORDER BY" + query_t::blockheader->height + "ASC," + query_t::timestamp + "ASC," + query_t::id + "ASC";
+    if (start != 0 || count != -1)
+    {
+        if (count == -1) { count = 0xffffffff; } // TODO: do this correctly
+        std::stringstream ss;
+        ss << "LIMIT " << start << "," << count;
+        query = query + ss.str().c_str();
+    }
+    odb::result<Tx> r(db_->query<Tx>(query));
+    for (odb::result<Tx>::iterator it = r.begin(); it != r.end(); ++it) { txs.push_back(it.load()); }
+    return txs; 
+}
+
 std::vector<std::string> Vault::getSerializedUnsignedTxs(const std::string& account_name) const
 {
     LOGGER(trace) << "Vault::getSerializedUnsignedTxs(" << account_name << ")" << std::endl;

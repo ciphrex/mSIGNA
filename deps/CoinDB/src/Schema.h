@@ -1236,6 +1236,8 @@ private:
     BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
+typedef std::vector<std::shared_ptr<Tx>> txs_t;
+
 
 // Views
 #pragma db view \
