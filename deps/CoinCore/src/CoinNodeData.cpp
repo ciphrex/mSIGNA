@@ -1765,6 +1765,20 @@ int64_t CoinBlock::getHeight() const
 //
 // class MerkleBlock implementation
 //
+MerkleBlock::MerkleBlock(const PartialMerkleTree& merkleTree, uint32_t version, const uchar_vector& prevBlockHash, uint32_t timestamp, uint32_t bits, uint32_t nonce)
+{
+    blockHeader = CoinBlockHeader(version, prevBlockHash, merkleTree.getRootLittleEndian(), timestamp, bits, nonce);
+
+    nTxs = merkleTree.getNTxs();
+    hashes = merkleTree.getMerkleHashesVector();
+    flags = merkleTree.getFlags();
+}
+
+PartialMerkleTree MerkleBlock::merkleTree() const
+{
+    return PartialMerkleTree(nTxs, hashes, flags, blockHeader.merkleRoot());
+}
+
 uint64_t MerkleBlock::getSize() const
 {
     return MIN_COIN_BLOCK_HEADER_SIZE + 4 + VarInt(hashes.size()).getSize() + (hashes.size() * 32) + VarInt(flags.size()).getSize() + flags.size();

@@ -26,6 +26,7 @@
 
 #include "hash.h"
 #include "IPv6.h"
+#include "MerkleTree.h"
 
 #include "BigInt.h"
 
@@ -707,6 +708,7 @@ public:
     std::string toString() const;
     std::string toIndentedString(uint spaces = 0) const;
 
+    void nonce(uint32_t nonce) { nonce_ = nonce; isHashSet_ = false; isPOWHashSet_ = false; }
     void incrementNonce() { nonce_++; isHashSet_ = false; isPOWHashSet_ = false; }
 
     const BigInt getTarget() const;
@@ -816,7 +818,8 @@ public:
         : blockHeader(_blockHeader), nTxs(_nTxs), hashes(_hashes), flags(_flags) { }
     MerkleBlock(const MerkleBlock& merkleBlock)
         : blockHeader(merkleBlock.blockHeader), nTxs(merkleBlock.nTxs), hashes(merkleBlock.hashes), flags(merkleBlock.flags) { }
-    MerkleBlock(const uchar_vector& bytes) { setSerialized(bytes); }
+    MerkleBlock(const PartialMerkleTree& merkleTree, uint32_t version, const uchar_vector& prevBlockHash, uint32_t timestamp, uint32_t bits, uint32_t nonce);
+    explicit MerkleBlock(const uchar_vector& bytes) { setSerialized(bytes); }
 
     const uchar_vector& hash() const { return blockHeader.getHashLittleEndian(); }
     uint32_t version() const { return blockHeader.version(); }
@@ -825,6 +828,8 @@ public:
     uint32_t timestamp() const { return blockHeader.timestamp(); }
     uint32_t bits() const { return blockHeader.bits(); }
     uint32_t nonce() const { return blockHeader.nonce(); } 
+
+    PartialMerkleTree merkleTree() const;
 
     const BigInt getTarget() const { return blockHeader.getTarget(); }
     const BigInt getWork() const { return blockHeader.getWork(); }
