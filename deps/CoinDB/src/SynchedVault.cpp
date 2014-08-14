@@ -312,6 +312,8 @@ void SynchedVault::loadHeaders(const std::string& blockTreeFile, bool bCheckProo
 // Vault operations
 void SynchedVault::openVault(const std::string& dbname, bool bCreate)
 {
+    openVault("", "", dbname, bCreate);
+/*
     LOGGER(trace) << "SynchedVault::openVault(" << dbname << ", " << (bCreate ? "true" : "false") << ")" << std::endl;
 
     {
@@ -339,7 +341,11 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
         m_vault->subscribeKeychainUnlocked([this](const std::string& keychainName) { m_notifyKeychainUnlocked(keychainName); });
         m_vault->subscribeKeychainLocked([this](const std::string& keychainName) { m_notifyKeychainLocked(keychainName); });
         m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
-        m_vault->subscribeTxUpdated([this](std::shared_ptr<Tx> tx) { m_notifyTxUpdated(tx); });
+        m_vault->subscribeTxUpdated([this](std::shared_ptr<Tx> tx)
+        {
+            if (tx->status() = Tx::PROPAGATED) { m_networkSync.addToMempool(tx.hash()); }
+            m_notifyTxUpdated(tx);
+        });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
         {
             updateSyncHeight(merkleblock->blockheader()->height());
@@ -352,6 +358,7 @@ void SynchedVault::openVault(const std::string& dbname, bool bCreate)
 
     m_notifyVaultOpened(m_vault);
     if (m_networkSync.connected() && m_networkSync.headersSynched()) { syncBlocks(); }
+*/
 }
 
 void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate)
@@ -382,7 +389,11 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         m_vault->subscribeKeychainUnlocked([this](const std::string& keychainName) { m_notifyKeychainUnlocked(keychainName); });
         m_vault->subscribeKeychainLocked([this](const std::string& keychainName) { m_notifyKeychainLocked(keychainName); });
         m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
-        m_vault->subscribeTxUpdated([this](std::shared_ptr<Tx> tx) { m_notifyTxUpdated(tx); });
+        m_vault->subscribeTxUpdated([this](std::shared_ptr<Tx> tx)
+        {
+            if (tx->status() == Tx::PROPAGATED) { m_networkSync.addToMempool(tx->hash()); }
+            m_notifyTxUpdated(tx);
+        });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
         {
             updateSyncHeight(merkleblock->blockheader()->height());
