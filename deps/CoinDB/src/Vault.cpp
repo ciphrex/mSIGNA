@@ -2422,17 +2422,17 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
     }
 
     // If we already have the transaction, just update it.
+    std::shared_ptr<Tx> tx;
     {
         odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
         if (!r.empty())
         {
-            std::shared_ptr<Tx> tx(r.begin().load());
+            tx = r.begin().load();
             tx->blockheader(merkleblock->blockheader());
             tx->status(Tx::CONFIRMED);
             tx->conflicting(false);
             db_->update(tx);
             signalQueue.push(notifyTxUpdated.bind(tx));
-            return tx;
         }
         else
         {
@@ -2443,7 +2443,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
             if (!r.empty())
             {
                 // We have an unsigned version of the transaction
-                std::shared_ptr<Tx> tx(r.begin().load());
+                tx = r.begin().load();
 
                 // Sanity check - the following condition should never be true, but using out-of-bounds indices will crash the program
                 if (tx->txins().size() != cointx.inputs.size())
@@ -2467,21 +2467,22 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
                 tx->conflicting(false);
                 db_->update(tx);
                 signalQueue.push(notifyTxUpdated.bind(tx));
-                return tx;
             }
         } 
     }
 
     // We've never seen this transaction before - treat it as a new transaction
-    std::shared_ptr<Tx> tx;
-    try
+    if (!tx)
     {
-        tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader(), verifysigs, isCoinbase);
-    }
-    catch (const std::runtime_error& e)
-    {
-        LOGGER(error) << "insertNewTx_unwrapped() threw exception: " << e.what() << std::endl;
-        signalQueue.push(notifyMerkleBlockInsertionError.bind(merkleblock, e.what()));
+        try
+        {
+            tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader(), verifysigs, isCoinbase);
+        }
+        catch (const std::runtime_error& e)
+        {
+            LOGGER(error) << "insertNewTx_unwrapped() threw exception: " << e.what() << std::endl;
+            signalQueue.push(notifyMerkleBlockInsertionError.bind(merkleblock, e.what()));
+        }
     }
 
     if (txindex + 1 == txcount)
