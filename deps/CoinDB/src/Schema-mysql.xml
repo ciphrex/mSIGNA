@@ -1,4 +1,10 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="mysql" version="1">
+  <changeset version="11">
+    <alter-table name="MerkleBlock">
+      <add-column name="txsinserted" type="TINYINT(1)" null="false"/>
+    </alter-table>
+  </changeset>
+
   <model version="10">
     <table name="Version" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
