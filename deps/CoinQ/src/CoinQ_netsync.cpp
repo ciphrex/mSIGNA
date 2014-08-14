@@ -793,6 +793,7 @@ void NetworkSync::processBlockTx(const Coin::Transaction& tx)
             else if (m_lastRequestedBlockHash != m_lastRequestedMerkleBlockHash)
             {
                 m_bMissingTxs = true;
+                m_lastRequestedBlockHash = m_lastRequestedMerkleBlockHash;
                 LOGGER(trace) << "We are missing some transactions in the mempool - perhaps due to reorg." << endl;
                 LOGGER(trace) << "Asking for block " << m_lastRequestedBlockHash.getHex() << endl;
                 try
@@ -862,4 +863,5 @@ void NetworkSync::processMempoolConfirmations()
         m_mempoolTxs.erase(txHash);
         m_currentMerkleTxHashes.pop();
     }
+    LOGGER(trace) << "Done processing mempool confirmations." << endl;
 }
