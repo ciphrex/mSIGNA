@@ -893,6 +893,7 @@ void MainWindow::quickNewAccount()
             accountView->updateColumns();
             keychainModel->update();
             keychainView->update();
+            selectAccount(accountName);
             tabWidget->setCurrentWidget(accountView);
             updateStatusMessage(tr("Created account ") + accountName);
             break;
@@ -918,6 +919,7 @@ void MainWindow::newAccount()
         if (dlg.exec()) {
             accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames(), dlg.getCreationTime());
             accountView->updateColumns();
+            selectAccount(dlg.getName());
             tabWidget->setCurrentWidget(accountView);
             synchedVault.updateBloomFilter();
             //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
