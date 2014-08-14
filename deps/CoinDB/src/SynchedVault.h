@@ -64,6 +64,9 @@ public:
     std::shared_ptr<Tx> sendTx(unsigned long tx_id);
     void sendTx(Coin::Transaction& coin_tx);
 
+    // For testing
+    void insertFakeMerkleBlock(unsigned int nExtraLeaves = 0);
+
     // Signal types
     typedef Signals::Signal<>                           VoidSignal;
     typedef Signals::Signal<Vault*>                     VaultSignal;
