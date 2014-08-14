@@ -24,7 +24,10 @@
 
 #include "MerkleTree.h"
 
+#include "random.h"
+
 #include <stdexcept>
+#include <algorithm>
 
 using namespace Coin;
 
@@ -415,5 +418,24 @@ void PartialMerkleTree::updateTxIndices()
         if (txHashesSet.count(hash)) { txIndices_.push_back(i); } 
         i++;
     }
+}
+
+// For testing
+PartialMerkleTree Coin::randomPartialMerkleTree(const std::vector<uchar_vector>& txHashes, unsigned int nTxs)
+{
+    if (txHashes.size() > nTxs) throw std::runtime_error("Number of tx hashes exceeds number of transactions.");
+
+    std::vector<MerkleLeaf> leaves;
+    for (auto& txHash: txHashes) { leaves.push_back(MerkleLeaf(txHash, true)); }
+
+    unsigned int i = txHashes.size();
+    for (; i < nTxs; i++) { leaves.push_back(MerkleLeaf(random_bytes(32), false)); }
+
+    std::srand(std::time(0));
+    std::random_shuffle(leaves.begin(), leaves.end(), [](int i) { return std::rand() % i; });
+
+    PartialMerkleTree tree;
+    tree.setUncompressed(leaves);
+    return tree;    
 }
 

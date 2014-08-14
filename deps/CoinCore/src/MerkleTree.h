@@ -2,7 +2,7 @@
 //
 // MerkleTree.h
 //
-// Copyright (c) 2011-2012 Eric Lombrozo
+// Copyright (c) 2011-2014 Eric Lombrozo
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef COIN_MERKLETREE_H__
-#define COIN_MERKLETREE_H__
+#pragma once
 
 #include "hash.h"
 
@@ -37,6 +36,8 @@
 namespace Coin
 {
 	
+typedef std::pair<uchar_vector, bool> MerkleLeaf;
+
 class MerkleTree
 {
 public:
@@ -58,8 +59,6 @@ private:
 class PartialMerkleTree
 {
 public:
-    typedef std::pair<uchar_vector, bool> MerkleLeaf;
-
     PartialMerkleTree() { }
     PartialMerkleTree(unsigned int nTxs, const std::vector<uchar_vector>& hashes, const uchar_vector& flags, const uchar_vector& merkleRoot = uchar_vector()) { setCompressed(nTxs, hashes, flags, merkleRoot); }
     PartialMerkleTree(const std::vector<MerkleLeaf>& leaves) { setUncompressed(leaves); }
@@ -137,6 +136,8 @@ private:
     void updateTxIndices();
 };
 
+// For testing
+PartialMerkleTree randomPartialMerkleTree(const std::vector<uchar_vector>& txHashes, unsigned int nTxs);
+
 } // namespace Coin
 
-#endif // COIN_MERKLETREE_H__
