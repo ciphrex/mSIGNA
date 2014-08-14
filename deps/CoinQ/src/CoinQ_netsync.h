@@ -81,7 +81,11 @@ public:
 
     void syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t startTime);
     void syncBlocks(int startHeight);
-    void stopSynchingBlocks();
+    void stopSynchingBlocks(bool bClearFilter = true);
+
+    // FOR TESTING
+    void insertTx(const Coin::Transaction& tx);
+    void insertMerkleBlock(const Coin::MerkleBlock& merkleBlock, const std::vector<Coin::Transaction>& txs);
 
     // MESSAGES TO PEER
     void sendTx(Coin::Transaction& tx);

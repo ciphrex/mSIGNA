@@ -129,14 +129,12 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
 
     m_peer.subscribeTx([&](CoinQ::Peer& /*peer*/, const Coin::Transaction& tx)
     {
-        if (!m_bConnected) return;
-        uchar_vector txHash = tx.hash();
-        LOGGER(trace) << "Received transaction: " << txHash.getHex() << endl;
+        LOGGER(trace) << "Received transaction: " << tx.hash().getHex() << endl;
 
         boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
         if (m_currentMerkleTxHashes.empty())
         {
-            m_mempoolTxs.insert(txHash);
+            m_mempoolTxs.insert(tx.hash());
 
             syncLock.unlock();
             notifyNewTx(tx);
@@ -460,12 +458,33 @@ void NetworkSync::do_syncBlocks(int startHeight)
     m_peer.getFilteredBlock(m_lastRequestedMerkleBlockHash);
 }
 
-void NetworkSync::stopSynchingBlocks()
+void NetworkSync::stopSynchingBlocks(bool bClearFilter)
 {
     boost::lock_guard<boost::mutex> lock(m_syncMutex);
     m_lastRequestedMerkleBlockHash.clear();
     m_lastSynchedMerkleBlockHash.clear();
-    clearBloomFilter();
+    if (bClearFilter) { clearBloomFilter(); }
+}
+
+void NetworkSync::insertTx(const Coin::Transaction& tx)
+{
+    boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
+    m_mempoolTxs.insert(tx.hash());
+
+    notifyNewTx(tx);
+}
+
+void NetworkSync::insertMerkleBlock(const Coin::MerkleBlock& merkleBlock, const vector<Coin::Transaction>& txs)
+{
+    boost::unique_lock<boost::mutex> fileFlushLock(m_fileFlushMutex);
+    m_blockTree.insertHeader(merkleBlock.blockHeader, m_bCheckProofOfWork);
+    fileFlushLock.unlock();
+    m_fileFlushCond.notify_one();
+    
+    boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
+    int i = 0;
+    int n = txs.size();
+    for (auto& tx: txs) { notifyMerkleTx(merkleBlock, tx, i++, n); }
 }
 
 void NetworkSync::start(const std::string& host, const std::string& port)
