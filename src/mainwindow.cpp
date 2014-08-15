@@ -98,7 +98,6 @@ MainWindow::MainWindow() :
     keychainView = new KeychainView();
     keychainView->setModel(keychainModel);
     keychainView->setSelectionMode(KeychainView::MultiSelection);
-    keychainView->setMenu(keychainMenu);
 
     keychainSelectionModel = keychainView->selectionModel();
     connect(keychainSelectionModel, &QItemSelectionModel::currentChanged,
@@ -184,6 +183,7 @@ MainWindow::MainWindow() :
     createMenus();
     accountView->setMenu(accountMenu);
     txView->setMenu(txActions->getMenu());
+    keychainView->setMenu(keychainMenu);
 
     tabWidget = new QTabWidget();
     tabWidget->addTab(accountView, tr("Accounts"));
