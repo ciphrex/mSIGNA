@@ -473,7 +473,7 @@ void TxActions::createActions()
 
 void TxActions::createMenus()
 {
-    menu = new QMenu();
+    menu = new QMenu(tr("&Transactions"));
     menu->addAction(sendTxAction);
     menu->addAction(signaturesAction);
     menu->addSeparator();

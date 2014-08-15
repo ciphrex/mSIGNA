@@ -85,7 +85,6 @@ MainWindow::MainWindow() :
     txActions(nullptr)
 {
     createActions();
-    createMenus();
     createToolBars();
     createStatusBar();
 
@@ -113,7 +112,6 @@ MainWindow::MainWindow() :
     accountModel = new AccountModel(synchedVault);
     accountView = new AccountView();
     accountView->setModel(accountModel);
-    accountView->setMenu(accountMenu);
     accountView->updateColumns();
     connect(accountView, SIGNAL(updateModel()), accountModel, SLOT(update()));
 
@@ -181,6 +179,9 @@ MainWindow::MainWindow() :
     txActions = new TxActions(txModel, txView, accountModel, keychainModel, &synchedVault);
     connect(txActions, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
 
+    // Menus
+    createMenus();
+    accountView->setMenu(accountMenu);
     txView->setMenu(txActions->getMenu());
 
     tabWidget = new QTabWidget();
@@ -1859,6 +1860,8 @@ void MainWindow::createMenus()
     accountMenu->addSeparator();
     accountMenu->addAction(viewUnsignedTxsAction);
 
+    menuBar()->addMenu(txActions->getMenu());
+/*
     txMenu = menuBar()->addMenu(tr("&Transactions"));
     txMenu->addAction(insertRawTxAction);
     //txMenu->addSeparator();
@@ -1868,6 +1871,7 @@ void MainWindow::createMenus()
     //txMenu->addAction(createTxAction);
     //txMenu->addSeparator();
     txMenu->addAction(sendRawTxAction);
+*/
 
     keychainMenu = menuBar()->addMenu(tr("&Keychains"));
     keychainMenu->addAction(quickNewAccountAction);
