@@ -1896,11 +1896,11 @@ void MainWindow::createMenus()
 
     menuBar()->addSeparator();
 
-    viewMenu = menuBar()->addMenu(tr("&View"));
-    viewMenu->addSeparator()->setText(tr("Font Size"));
-    viewMenu->addAction(smallFontsAction);
-    viewMenu->addAction(mediumFontsAction);
-    viewMenu->addAction(largeFontsAction);
+    fontsMenu = menuBar()->addMenu(tr("Fonts"));
+    fontsMenu->addSeparator()->setText(tr("Font Size"));
+    fontsMenu->addAction(smallFontsAction);
+    fontsMenu->addAction(mediumFontsAction);
+    fontsMenu->addAction(largeFontsAction);
 
     menuBar()->addSeparator();
 

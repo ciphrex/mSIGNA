@@ -244,7 +244,7 @@ private:
     QMenu* accountMenu;
     QMenu* txMenu;
     QMenu* networkMenu;
-    QMenu* viewMenu;
+    QMenu* fontsMenu;
     QMenu* helpMenu;
 
     // toolbars
@@ -322,7 +322,7 @@ private:
     QMovie* synchingMovie;
     QPixmap* synchedIcon;
 
-    // view actions
+    // font actions
     QActionGroup* fontSizeGroup;
     QAction* smallFontsAction;
     QAction* mediumFontsAction;
