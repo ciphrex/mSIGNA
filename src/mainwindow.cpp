@@ -89,7 +89,6 @@ MainWindow::MainWindow() :
     createToolBars();
     createStatusBar();
 
-    loadSettings();
 
     //setCurrentFile("");
     setUnifiedTitleAndToolBarOnMac(true);
@@ -185,9 +184,9 @@ MainWindow::MainWindow() :
     txView->setMenu(txActions->getMenu());
 
     tabWidget = new QTabWidget();
-    tabWidget->addTab(keychainView, tr("Keychains"));
     tabWidget->addTab(accountView, tr("Accounts"));
     tabWidget->addTab(txView, tr("Transactions"));
+    tabWidget->addTab(keychainView, tr("Keychains"));
     setCentralWidget(tabWidget);
 
     requestPaymentDialog = new RequestPaymentDialog(accountModel, accountView);
@@ -247,6 +246,8 @@ MainWindow::MainWindow() :
     });
 
     setAcceptDrops(true);
+
+    loadSettings();
 }
 
 void MainWindow::loadHeaders()
@@ -324,7 +325,11 @@ void MainWindow::updateFonts(int fontSize)
     default:
         return;
     }
-        
+
+    accountView->updateColumns();
+    keychainView->updateColumns();
+    txView->updateColumns();
+            
     QSettings settings("Ciphrex", getDefaultSettings().getSettingsRoot());
     settings.setValue("fontsize", fontSize);
 }
@@ -1839,25 +1844,6 @@ void MainWindow::createMenus()
     fileMenu->addSeparator();
     fileMenu->addAction(quitAction);    
 
-    keychainMenu = menuBar()->addMenu(tr("&Keychains"));
-    keychainMenu->addAction(quickNewAccountAction);
-    keychainMenu->addSeparator();
-    keychainMenu->addAction(newKeychainAction);
-    keychainMenu->addAction(newAccountAction);
-    keychainMenu->addSeparator();
-    keychainMenu->addAction(unlockKeychainAction);
-    keychainMenu->addAction(lockKeychainAction);
-    keychainMenu->addAction(lockAllKeychainsAction);
-    keychainMenu->addSeparator()->setText(tr("Import Mode"));
-    keychainMenu->addAction(importPrivateAction);
-    keychainMenu->addAction(importPublicAction);
-    keychainMenu->addSeparator();
-    keychainMenu->addAction(importKeychainAction);
-    keychainMenu->addAction(exportPrivateKeychainAction);
-    keychainMenu->addAction(exportPublicKeychainAction);
-    keychainMenu->addSeparator();
-    keychainMenu->addAction(backupKeychainAction);
-
     accountMenu = menuBar()->addMenu(tr("&Accounts"));
     accountMenu->addAction(requestPaymentAction);
     accountMenu->addAction(sendPaymentAction);
@@ -1882,6 +1868,25 @@ void MainWindow::createMenus()
     //txMenu->addAction(createTxAction);
     //txMenu->addSeparator();
     txMenu->addAction(sendRawTxAction);
+
+    keychainMenu = menuBar()->addMenu(tr("&Keychains"));
+    keychainMenu->addAction(quickNewAccountAction);
+    keychainMenu->addSeparator();
+    keychainMenu->addAction(newKeychainAction);
+    keychainMenu->addAction(newAccountAction);
+    keychainMenu->addSeparator();
+    keychainMenu->addAction(unlockKeychainAction);
+    keychainMenu->addAction(lockKeychainAction);
+    keychainMenu->addAction(lockAllKeychainsAction);
+    keychainMenu->addSeparator()->setText(tr("Import Mode"));
+    keychainMenu->addAction(importPrivateAction);
+    keychainMenu->addAction(importPublicAction);
+    keychainMenu->addSeparator();
+    keychainMenu->addAction(importKeychainAction);
+    keychainMenu->addAction(exportPrivateKeychainAction);
+    keychainMenu->addAction(exportPublicKeychainAction);
+    keychainMenu->addSeparator();
+    keychainMenu->addAction(backupKeychainAction);
 
     networkMenu = menuBar()->addMenu(tr("&Network"));
     networkMenu->addAction(connectAction);
@@ -1912,14 +1917,14 @@ void MainWindow::createToolBars()
     fileToolBar->addAction(openVaultAction);
     fileToolBar->addAction(closeVaultAction);
 
+    accountToolBar = addToolBar(tr("Accounts"));
+    accountToolBar->addAction(requestPaymentAction);
+    accountToolBar->addAction(sendPaymentAction);
+
     keychainToolBar = addToolBar(tr("Keychains"));
     keychainToolBar->addAction(quickNewAccountAction);
     keychainToolBar->addAction(newKeychainAction);
     keychainToolBar->addAction(newAccountAction);
-
-    accountToolBar = addToolBar(tr("Accounts"));
-    accountToolBar->addAction(requestPaymentAction);
-    accountToolBar->addAction(sendPaymentAction);
 
     networkToolBar = addToolBar(tr("Network"));
     networkToolBar->addAction(connectAction);
