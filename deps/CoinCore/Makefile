@@ -82,6 +82,7 @@ OBJS = \
         obj/BloomFilter.o \
         obj/MerkleTree.o \
         obj/secp256k1.o \
+        obj/aes.o \
         obj/StandardTransactions.o
 
 OBJ_HEADERS = \
