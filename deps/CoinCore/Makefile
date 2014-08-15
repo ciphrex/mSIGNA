@@ -88,7 +88,6 @@ OBJS = \
 OBJ_HEADERS = \
         src/Base58Check.h \
         src/BigInt.h \
-        src/aes.h \
         src/encodings.h \
         src/hash.h \
         src/hashblock.h \

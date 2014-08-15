@@ -35,10 +35,9 @@
  * Create an 256 bit key and IV using the supplied key_data. salt can be added for taste.
  * Fills in the encryption and decryption ctx objects and returns 0 on success
  **/
-int aes_init(const unsigned char *key_data, int key_data_len, unsigned char *salt, EVP_CIPHER_CTX *e_ctx, 
-             EVP_CIPHER_CTX *d_ctx)
+int aes_init(const unsigned char* key_data, int key_data_len, const unsigned char* salt, EVP_CIPHER_CTX* e_ctx, EVP_CIPHER_CTX* d_ctx)
 {
-    int i, nrounds = 5;
+    int nrounds = 5;
     unsigned char key[32], iv[32];
 
     /*
@@ -46,8 +45,9 @@ int aes_init(const unsigned char *key_data, int key_data_len, unsigned char *sal
     * nrounds is the number of times the we hash the material. More rounds are more secure but
     * slower.
     */
-    i = EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha1(), salt, key_data, key_data_len, nrounds, key, iv);
-    if (i != 32) {
+    int i = EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha1(), salt, key_data, key_data_len, nrounds, key, iv);
+    if (i != 32)
+    {
         printf("Key size is %d bits - should be 256 bits\n", i);
         return -1;
     }
@@ -64,7 +64,7 @@ int aes_init(const unsigned char *key_data, int key_data_len, unsigned char *sal
  * Encrypt *len bytes of data
  * All data going in & out is considered binary (unsigned char[])
  */
-unsigned char *aes_encrypt(EVP_CIPHER_CTX *e, unsigned char *plaintext, int *len)
+unsigned char* aes_encrypt(EVP_CIPHER_CTX* e, unsigned char* plaintext, int* len)
 {
     /* max ciphertext len for a n bytes of plaintext is n + AES_BLOCK_SIZE -1 bytes */
     int c_len = *len + AES_BLOCK_SIZE, f_len = 0;
@@ -84,17 +84,15 @@ unsigned char *aes_encrypt(EVP_CIPHER_CTX *e, unsigned char *plaintext, int *len
     return ciphertext;
 }
 
-secure_bytes_t aes_encrypt(const secure_bytes_t& key, const secure_bytes_t& plaintext, uint64_t salt)
+secure_bytes_t aes_encrypt(const secure_bytes_t& key, const secure_bytes_t& plaintext, bool useSalt, uint64_t salt)
 {
     EVP_CIPHER_CTX en, de;
 
     int key_len = key.size();
 
     /* gen key and iv. init the cipher ctx object */
-    uint64_t salt_[] = { salt };
-    if (aes_init(&key[0], key_len, (unsigned char*)&salt_, &en, &de)) {
-        throw std::runtime_error("aes_encrypt - aes_init error.");    
-    }
+    const unsigned char* pSalt = useSalt ? (const unsigned char*)&salt : nullptr;
+    if (aes_init(&key[0], key_len, pSalt, &en, &de)) throw std::runtime_error("aes_encrypt - aes_init error.");    
 
     int len = plaintext.size();
     unsigned char* ciphertext_ = aes_encrypt(&en, (unsigned char*)&plaintext[0], &len);
@@ -111,7 +109,7 @@ secure_bytes_t aes_encrypt(const secure_bytes_t& key, const secure_bytes_t& plai
 /*
  * Decrypt *len bytes of ciphertext
  */
-unsigned char *aes_decrypt(EVP_CIPHER_CTX *e, unsigned char *ciphertext, int *len)
+unsigned char* aes_decrypt(EVP_CIPHER_CTX* e, unsigned char* ciphertext, int* len)
 {
     /* because we have padding ON, we must allocate an extra cipher block size of memory */
     int p_len = *len, f_len = 0;
@@ -125,22 +123,21 @@ unsigned char *aes_decrypt(EVP_CIPHER_CTX *e, unsigned char *ciphertext, int *le
     return plaintext;
 }
 
-secure_bytes_t aes_decrypt(const secure_bytes_t& key, const secure_bytes_t& ciphertext, uint64_t salt)
+secure_bytes_t aes_decrypt(const secure_bytes_t& key, const secure_bytes_t& ciphertext, bool useSalt, uint64_t salt)
 {
     EVP_CIPHER_CTX en, de;
 
     int key_len = key.size();
 
     /* gen key and iv. init the cipher ctx object */
-    uint64_t salt_[] = { salt };
-    if (aes_init(&key[0], key_len, (unsigned char *)&salt_, &en, &de)) {
-        throw std::runtime_error("aes_decrypt - aes_init error.");    
-    }
+    const unsigned char* pSalt = useSalt ? (const unsigned char*)&salt : nullptr;
+    if (aes_init(&key[0], key_len, pSalt, &en, &de)) throw std::runtime_error("aes_decrypt - aes_init error.");    
 
     int len = ciphertext.size();
     unsigned char* plaintext_ = aes_decrypt(&de, (unsigned char*)&ciphertext[0], &len);
 
-    if (len <= 0) {
+    if (len <= 0)
+    {
         free (plaintext_);
         EVP_CIPHER_CTX_cleanup(&en);
         EVP_CIPHER_CTX_cleanup(&de);

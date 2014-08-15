@@ -31,6 +31,6 @@
 
 #include <stdexcept>
 
-secure_bytes_t aes_encrypt(const secure_bytes_t& key, const secure_bytes_t& plaintext, uint64_t salt);
-secure_bytes_t aes_decrypt(const secure_bytes_t& key, const secure_bytes_t& ciphertext, uint64_t salt);
+secure_bytes_t aes_encrypt(const secure_bytes_t& key, const secure_bytes_t& plaintext, bool useSalt = false, uint64_t salt = 0);
+secure_bytes_t aes_decrypt(const secure_bytes_t& key, const secure_bytes_t& ciphertext, bool useSalt = false, uint64_t salt = 0);
 
