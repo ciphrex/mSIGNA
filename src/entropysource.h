@@ -14,6 +14,6 @@
 
 class QWidget;
 
-void seedEntropySource(bool reseed = false, QWidget* parent = nullptr);
+void seedEntropySource(bool reseed = false, bool showDialog = false, QWidget* parent = nullptr);
 secure_bytes_t getRandomBytes(int n, QWidget* parent = nullptr);
 

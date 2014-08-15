@@ -51,26 +51,34 @@ void EntropySource::seed(bool reseed)
 
 static EntropySource entropySource;
 
-void seedEntropySource(bool reseed, QWidget* parent)
+void seedEntropySource(bool reseed, bool showDialog, QWidget* parent)
 {
     if (entropySource.isSeeded() && !reseed) return;
 
     EntropyDialog dlg(parent);
-    dlg.setModal(true);
-    dlg.setResult(QDialog::Accepted);
-    dlg.show();
+
+    if (showDialog)
+    {
+        dlg.setModal(true);
+        dlg.setResult(QDialog::Accepted);
+        dlg.show();
+    }
 
     entropySource.seed(reseed);
 
     while (!entropySource.isSeeded())
     {
         qApp->processEvents();
-        if (dlg.result() == QDialog::Rejected) throw runtime_error("Entropy seeding operation canceled.");
+        if (showDialog && dlg.result() == QDialog::Rejected) throw runtime_error("Entropy seeding operation canceled.");
         this_thread::sleep_for(std::chrono::microseconds(200)); 
     }
 
     entropySource.join();
-    dlg.hide();
+
+    if (showDialog)
+    {
+        dlg.hide();
+    }
 }
 
 secure_bytes_t getRandomBytes(int n, QWidget* parent)

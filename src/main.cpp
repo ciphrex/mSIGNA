@@ -13,6 +13,8 @@
 #include "coinparams.h"
 #include "networkselectiondialog.h"
 
+#include "entropysource.h"
+
 #include <QApplication>
 #include <QSettings>
 #include <QDateTime>
@@ -64,6 +66,8 @@ int main(int argc, char* argv[])
     QApplication app(argc, argv);
     app.setOrganizationName("Ciphrex");
     app.setOrganizationDomain("ciphrex.com");
+
+    seedEntropySource();
 
     // Check whether another instance is already running. If so, send it commands and exit.    
     CommandServer commandServer(&app);
