@@ -70,48 +70,40 @@ public:
     Coin::BloomFilter                       getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
     hashvector_t                            getIncompleteBlockHashes() const;
 
-    void                                    exportVault(const std::string& filepath, bool exportprivkeys = true, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
+    void                                    exportVault(const std::string& filepath, bool exportprivkeys = true) const;
 
-    void                                    importVault(const std::string& filepath, bool importprivkeys = true, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
-
-    ///////////////////////////
-    // CHAIN CODE OPERATIONS //
-    ///////////////////////////
-    bool                                    areChainCodesLocked() const;
-    void                                    lockChainCodes() const;
-    void                                    unlockChainCodes(const secure_bytes_t& unlockKey) const;
-    void                                    setChainCodeUnlockKey(const secure_bytes_t& newUnlockKey);
+    void                                    importVault(const std::string& filepath, bool importprivkeys = true);
 
     /////////////////////////
     // KEYCHAIN OPERATIONS //
     /////////////////////////
-    void                                    exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
-    std::shared_ptr<Keychain>               importKeychain(const std::string& filepath, bool& importprivkeys, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
+    void                                    exportKeychain(const std::string& keychain_name, const std::string& filepath, bool exportprivkeys = false) const;
+    std::shared_ptr<Keychain>               importKeychain(const std::string& filepath, bool& importprivkeys);
     bool                                    keychainExists(const std::string& keychain_name) const;
     bool                                    keychainExists(const bytes_t& keychain_hash) const;
     bool                                    isKeychainPrivate(const std::string& keychain_name) const;
-    std::shared_ptr<Keychain>               newKeychain(const std::string& keychain_name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
+    std::shared_ptr<Keychain>               newKeychain(const std::string& keychain_name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey = secure_bytes_t());
     //void eraseKeychain(const std::string& keychain_name) const;
     void                                    renameKeychain(const std::string& old_name, const std::string& new_name);
     std::shared_ptr<Keychain>               getKeychain(const std::string& keychain_name) const;
     std::vector<std::shared_ptr<Keychain>>  getAllKeychains(bool root_only = false, bool get_hidden = false) const;
     std::vector<KeychainView>               getRootKeychainViews(const std::string& account_name = "", bool get_hidden = false) const;
-    secure_bytes_t                          getKeychainExtendedKey(const std::string& keychain_name, bool get_private) const;
-    std::shared_ptr<Keychain>               importKeychainExtendedKey(const std::string& keychain_name, const secure_bytes_t& extkey, bool try_private, const secure_bytes_t& lockKey = secure_bytes_t(), const bytes_t& salt = bytes_t());
+    secure_bytes_t                          exportBIP32(const std::string& keychain_name, bool export_private) const;
+    std::shared_ptr<Keychain>               importBIP32(const std::string& keychain_name, const secure_bytes_t& extkey, const secure_bytes_t& lock_key = secure_bytes_t());
 
     // The following private key lock/unlock methods do not maintain a database session open so they only
     // store and erase the unlock keys in a member map to be used by the other class methods.
     void                                    lockAllKeychains();
     void                                    lockKeychain(const std::string& keychain_name);
     void                                    unlockKeychain(const std::string& keychain_name, const secure_bytes_t& unlock_key);
-    bool                                    isKeychainPrivateKeyLocked(const std::string& keychainName) const;
+    bool                                    isKeychainLocked(const std::string& keychainName) const;
 
 
     ////////////////////////
     // ACCOUNT OPERATIONS //
     ////////////////////////
-    void                                    exportAccount(const std::string& account_name, const std::string& filepath, bool exportprivkeys = false, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
-    std::shared_ptr<Account>                importAccount(const std::string& filepath, unsigned int& privkeysimported, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t()); // pass privkeysimported = 0 to not inport any private keys.
+    void                                    exportAccount(const std::string& account_name, const std::string& filepath, bool exportprivkeys = false) const;
+    std::shared_ptr<Account>                importAccount(const std::string& filepath, unsigned int& privkeysimported); // pass privkeysimported = 0 to not inport any private keys.
     bool                                    accountExists(const std::string& account_name) const;
     void                                    newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL));
     //void                                  eraseAccount(const std::string& name) const;
@@ -134,8 +126,8 @@ public:
     ////////////////////////////
     std::shared_ptr<AccountBin>             getAccountBin(const std::string& account_name, const std::string& bin_name) const;
     std::vector<AccountBinView>             getAllAccountBinViews() const;
-    void                                    exportAccountBin(const std::string& account_name, const std::string& bin_name, const std::string& export_name, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
-    std::shared_ptr<AccountBin>             importAccountBin(const std::string& filepath, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t()); 
+    void                                    exportAccountBin(const std::string& account_name, const std::string& bin_name, const std::string& export_name, const std::string& filepath) const;
+    std::shared_ptr<AccountBin>             importAccountBin(const std::string& filepath); 
 
     ///////////////////
     // TX OPERATIONS //
@@ -236,12 +228,6 @@ protected:
     Coin::BloomFilter                       getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
     hashvector_t                            getIncompleteBlockHashes_unwrapped() const;
 
-    ///////////////////////////
-    // CHAIN CODE OPERATIONS //
-    ///////////////////////////
-    void                                    verifyChainCodeUnlockKey_unwrapped(const secure_bytes_t& unlockKey) const;
-    void                                    setChainCodeUnlockKey_unwrapped(const secure_bytes_t& newUnlockKey);
-
     /////////////////////////
     // KEYCHAIN OPERATIONS //
     /////////////////////////
@@ -250,35 +236,24 @@ protected:
     bool                                    isKeychainPrivate_unwrapped(const std::string& keychain_name) const;
     std::shared_ptr<Keychain>               getKeychain_unwrapped(const std::string& keychain_name) const;
     void                                    persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
-    void                                    exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
-    std::shared_ptr<Keychain>               importKeychain_unwrapped(const std::string& filepath, bool& importprivkeys, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
-    secure_bytes_t                          getKeychainExtendedKey_unwrapped(std::shared_ptr<Keychain> keychain, bool get_private) const;
+    void                                    exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath) const;
+    std::shared_ptr<Keychain>               importKeychain_unwrapped(const std::string& filepath, bool& importprivkeys);
+    secure_bytes_t                          exportBIP32_unwrapped(std::shared_ptr<Keychain> keychain, bool export_private) const;
     std::vector<KeychainView>               getRootKeychainViews_unwrapped(const std::string& account_name = "", bool get_hidden = false) const;
 
     // All the keychain unlock methods use the global keys by default
 
-    // The following methods throw KeychainChainCodeUnlockFailedException
-    void                                    unlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain, const secure_bytes_t& overrideChainCodeUnlockKey = secure_bytes_t()) const;
-    void                                    unlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain, const secure_bytes_t& overridePrivateKeyUnlockKey = secure_bytes_t()) const;
+    void                                    unlockKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const secure_bytes_t& lock_key = secure_bytes_t()) const;
 
     // The following methods return true iff successful
-    bool                                    tryUnlockKeychainChainCode_unwrapped(std::shared_ptr<Keychain> keychain, const secure_bytes_t& overrideChainCodeUnlockKey = secure_bytes_t()) const;
-    bool                                    tryUnlockKeychainPrivateKey_unwrapped(std::shared_ptr<Keychain> keychain, const secure_bytes_t& overridePrivateKeyUnlockKey = secure_bytes_t()) const;
+    bool                                    tryUnlockKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const secure_bytes_t& lock_key = secure_bytes_t()) const;
 
     ////////////////////////
     // Account operations //
     ////////////////////////
-    // The following methods try to use the vault's global chainCodeUnlockKey by default.
-    void                                    exportAccount_unwrapped(Account& account, boost::archive::text_oarchive& oa, bool exportprivkeys, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
-    std::shared_ptr<Account>                importAccount_unwrapped(boost::archive::text_iarchive& ia, unsigned int& privkeysimported, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t());
+    void                                    exportAccount_unwrapped(Account& account, boost::archive::text_oarchive& oa, bool exportprivkeys) const;
+    std::shared_ptr<Account>                importAccount_unwrapped(boost::archive::text_iarchive& ia, unsigned int& privkeysimported);
 
-    // The following method throws KeychainChainCodeUnlockFailedException
-    void                                    unlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account, const secure_bytes_t& overrideChainCodeUnlockKey = secure_bytes_t()) const;
-
-    // The following method returns true iff successful for all keychains
-    bool                                    tryUnlockAccountChainCodes_unwrapped(std::shared_ptr<Account> account, const secure_bytes_t& overrideChainCodeUnlockKey = secure_bytes_t()) const;
-
-    // The following method throws KeychainChainCodeLockedException
     void                                    refillAccountPool_unwrapped(std::shared_ptr<Account> account);
 
     bool                                    accountExists_unwrapped(const std::string& account_name) const;
@@ -291,10 +266,9 @@ protected:
     ////////////////////////////
     std::shared_ptr<AccountBin>             getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;
     std::shared_ptr<SigningScript>          issueAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> account_bin, const std::string& label = "");
-    void                                    unlockAccountBinChainCodes_unwrapped(std::shared_ptr<AccountBin> bin, const secure_bytes_t& overrideChainCodeUnlockKey = secure_bytes_t()) const;
     void                                    refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin);
-    void                                    exportAccountBin_unwrapped(const std::shared_ptr<AccountBin> account_bin, const std::string& export_name, const std::string& filepath, const secure_bytes_t& exportChainCodeUnlockKey = secure_bytes_t()) const;
-    std::shared_ptr<AccountBin>             importAccountBin_unwrapped(const std::string& filepath, const secure_bytes_t& importChainCodeUnlockKey = secure_bytes_t()); 
+    void                                    exportAccountBin_unwrapped(const std::shared_ptr<AccountBin> account_bin, const std::string& export_name, const std::string& filepath) const;
+    std::shared_ptr<AccountBin>             importAccountBin_unwrapped(const std::string& filepath); 
 
     ///////////////////
     // TX OPERATIONS //
@@ -361,7 +335,6 @@ private:
     std::shared_ptr<odb::core::database> db_;
     std::string name_;
 
-    mutable secure_bytes_t chainCodeUnlockKey;
     mutable std::map<std::string, secure_bytes_t> mapPrivateKeyUnlock;
 };
 

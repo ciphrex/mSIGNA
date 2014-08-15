@@ -1,13 +1,8 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="mysql" version="1">
-  <changeset version="11">
-    <alter-table name="MerkleBlock">
-      <add-column name="txsinserted" type="TINYINT(1)" null="false"/>
-    </alter-table>
-  </changeset>
-
-  <model version="10">
+  <model version="12">
     <table name="Version" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="network" type="VARCHAR(255)" null="false"/>
       <column name="version" type="INT UNSIGNED" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
@@ -20,10 +15,9 @@
       <column name="parent_fp" type="INT UNSIGNED" null="false"/>
       <column name="child_num" type="INT UNSIGNED" null="false"/>
       <column name="pubkey" type="VARBINARY(255)" null="false"/>
-      <column name="chain_code_ciphertext" type="VARBINARY(255)" null="false"/>
-      <column name="chain_code_salt" type="VARBINARY(255)" null="false"/>
+      <column name="chain_code" type="VARBINARY(255)" null="false"/>
       <column name="privkey_ciphertext" type="VARBINARY(255)" null="false"/>
-      <column name="privkey_salt" type="VARBINARY(255)" null="false"/>
+      <column name="privkey_salt" type="BIGINT UNSIGNED" null="false"/>
       <column name="parent" type="BIGINT UNSIGNED" null="true"/>
       <column name="hash" type="VARBINARY(255)" null="false"/>
       <column name="hidden" type="TINYINT(1)" null="false"/>
@@ -254,6 +248,7 @@
       <column name="blockheader" type="BIGINT UNSIGNED" null="false"/>
       <column name="txcount" type="INT UNSIGNED" null="false"/>
       <column name="flags" type="VARBINARY(255)" null="false"/>
+      <column name="txsinserted" type="TINYINT(1)" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>

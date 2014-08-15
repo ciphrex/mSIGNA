@@ -80,8 +80,6 @@ public:
     uint32_t version() const { return version_; }
 
 private:
-    Version() { }
-
     friend class odb::access;
 
     #pragma db id auto
@@ -134,7 +132,7 @@ public:
     void lock() const;
     void unlock(const secure_bytes_t& lock_key) const;
     bool isLocked() const;
-    void changeLock(const secure_bytes_t& old_lock_key, const secure_bytes_t& new_lock_key) const;
+    void changeLock(const secure_bytes_t& old_lock_key, const secure_bytes_t& new_lock_key);
 
     secure_bytes_t getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
     bytes_t getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
@@ -144,8 +142,6 @@ public:
     uint32_t child_num() const { return child_num_; }
     const bytes_t& pubkey() const { return pubkey_; }
     secure_bytes_t privkey() const;
-    secure_bytes_t chain_code() const { return chain_code_; }
-
     const bytes_t& chain_code() const { return chain_code_; }
 
     void importPrivateKey(const Keychain& source);
@@ -216,6 +212,7 @@ private:
             // This field is now a uint64_t
             bytes_t old_privkey_salt_;
             ar & old_privkey_salt_;
+            privkey_salt_ = 0;
         }
         else
         {
@@ -1689,7 +1686,7 @@ BOOST_CLASS_VERSION(CoinDB::TxIn, 1)
 BOOST_CLASS_VERSION(CoinDB::TxOut, 1)
 BOOST_CLASS_VERSION(CoinDB::Tx, 1)
 
-BOOST_CLASS_VERSION(CoinDB::Keychain, 1)
+BOOST_CLASS_VERSION(CoinDB::Keychain, 2)
 BOOST_CLASS_VERSION(CoinDB::AccountBin, 2)
 BOOST_CLASS_VERSION(CoinDB::Account, 1)
 

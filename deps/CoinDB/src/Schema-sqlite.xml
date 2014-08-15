@@ -1,13 +1,8 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="sqlite" version="1">
-  <changeset version="11">
-    <alter-table name="MerkleBlock">
-      <add-column name="txsinserted" type="INTEGER" null="false"/>
-    </alter-table>
-  </changeset>
-
-  <model version="10">
+  <model version="12">
     <table name="Version" kind="object">
       <column name="id" type="INTEGER" null="false"/>
+      <column name="network" type="TEXT" null="false"/>
       <column name="version" type="INTEGER" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
@@ -20,10 +15,9 @@
       <column name="parent_fp" type="INTEGER" null="false"/>
       <column name="child_num" type="INTEGER" null="false"/>
       <column name="pubkey" type="BLOB" null="false"/>
-      <column name="chain_code_ciphertext" type="BLOB" null="false"/>
-      <column name="chain_code_salt" type="BLOB" null="false"/>
+      <column name="chain_code" type="BLOB" null="false"/>
       <column name="privkey_ciphertext" type="BLOB" null="false"/>
-      <column name="privkey_salt" type="BLOB" null="false"/>
+      <column name="privkey_salt" type="INTEGER" null="false"/>
       <column name="parent" type="INTEGER" null="true"/>
       <column name="hash" type="BLOB" null="false"/>
       <column name="hidden" type="INTEGER" null="false"/>
@@ -254,6 +248,7 @@
       <column name="blockheader" type="INTEGER" null="false"/>
       <column name="txcount" type="INTEGER" null="false"/>
       <column name="flags" type="BLOB" null="false"/>
+      <column name="txsinserted" type="INTEGER" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>

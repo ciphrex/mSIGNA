@@ -69,15 +69,8 @@ cli::result_t cmd_exportvault(const cli::params_t& params)
 
     bool exportprivkeys = params.size() <= 1 || params[1] == "true";
 
-    secure_bytes_t exportChainCodeUnlockKey;
-    if (params.size() > 2 && !params[2].empty())
-        exportChainCodeUnlockKey = sha256_2(params[2]);
-
-    if (params.size() > 3 && !params[3].empty())
-        vault.unlockChainCodes(sha256_2(params[3]));
-
-    std::string output_file = params.size() > 4 ? params[4] : (params[0] + ".portable");
-    vault.exportVault(output_file, exportprivkeys, exportChainCodeUnlockKey);
+    std::string output_file = params.size() > 2 ? params[2] : (params[0] + ".portable");
+    vault.exportVault(output_file, exportprivkeys);
 
     stringstream ss;
     ss << "Vault " << params[0] << " exported to " << output_file << ".";
@@ -90,14 +83,7 @@ cli::result_t cmd_importvault(const cli::params_t& params)
 
     bool importprivkeys = params.size() <= 2 || params[2] == "true";
 
-    secure_bytes_t chainCodeUnlockKey;
-    if (params.size() > 3 && !params[3].empty())
-        chainCodeUnlockKey = sha256_2(params[3]);
-
-    if (params.size() > 4 && !params[4].empty())
-        vault.unlockChainCodes(sha256_2(params[4]));
-
-    vault.importVault(params[1], importprivkeys, chainCodeUnlockKey);
+    vault.importVault(params[1], importprivkeys);
 
     stringstream ss;
     ss << "Vault " << params[0] << " imported from " << params[1] << ".";
@@ -236,13 +222,12 @@ cli::result_t cmd_exportbip32(const cli::params_t& params)
     bool export_privkey = params.size() > 2;
 
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
-    vault.unlockChainCodes(uchar_vector("1234"));
     if (export_privkey)
     {
         secure_bytes_t unlock_key = sha256_2(params[2]);
         vault.unlockKeychain(params[1], unlock_key);
     }
-    secure_bytes_t extkey = vault.getKeychainExtendedKey(params[1], export_privkey);
+    secure_bytes_t extkey = vault.exportBIP32(params[1], export_privkey);
 
     stringstream ss;
     ss << toBase58Check(extkey);
@@ -264,7 +249,7 @@ cli::result_t cmd_importbip32(const cli::params_t& params)
     if (!fromBase58Check(params[2], extkey)) throw std::runtime_error("Invalid BIP32.");
 
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
-    std::shared_ptr<Keychain> keychain = vault.importKeychainExtendedKey(params[1], extkey, import_privkey, lock_key);
+    std::shared_ptr<Keychain> keychain = vault.importBIP32(params[1], extkey, lock_key);
 
     stringstream ss;
     ss << (keychain->isPrivate() ? "Private" : "Public") << " keychain " << keychain->name() << " imported from BIP32.";
@@ -294,7 +279,6 @@ cli::result_t cmd_newaccount(const cli::params_t& params)
         keychain_names.push_back(params[i]);
 
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
-    vault.unlockChainCodes(secure_bytes_t());
     vault.newAccount(params[1], minsigs, keychain_names);
 
     stringstream ss;
@@ -349,15 +333,8 @@ cli::result_t cmd_exportaccount(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
-    secure_bytes_t exportChainCodeUnlockKey;
-    if (params.size() > 2 && !params[2].empty())
-        exportChainCodeUnlockKey = sha256_2(params[2]);
-
-    if (params.size() > 3 && !params[3].empty())
-        vault.unlockChainCodes(sha256_2(params[3]));
-
-    std::string output_file = params.size() > 4 ? params[4] : (params[1] + ".acct");
-    vault.exportAccount(params[1], output_file, true, exportChainCodeUnlockKey);
+    std::string output_file = params.size() > 2 ? params[2] : (params[1] + ".acct");
+    vault.exportAccount(params[1], output_file, true);
 
     stringstream ss;
     ss << "Account " << params[1] << " exported to " << output_file << ".";
@@ -370,14 +347,7 @@ cli::result_t cmd_importaccount(const cli::params_t& params)
 
     unsigned int privkeycount = 1;
 
-    secure_bytes_t chainCodeUnlockKey;
-    if (params.size() > 2 && !params[2].empty())
-        chainCodeUnlockKey = sha256_2(params[2]);
-
-    if (params.size() > 3 && !params[3].empty())
-        vault.unlockChainCodes(sha256_2(params[3]));
-
-    std::shared_ptr<Account> account = vault.importAccount(params[1], privkeycount, chainCodeUnlockKey);
+    std::shared_ptr<Account> account = vault.importAccount(params[1], privkeycount);
 
     stringstream ss;
     ss << "Account " << account->name() << " imported from " << params[1] << ".";
@@ -388,7 +358,6 @@ cli::result_t cmd_newaccountbin(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
-    vault.unlockChainCodes(secure_bytes_t());
     vault.addAccountBin(params[1], params[2]);
 
     stringstream ss;
@@ -508,7 +477,6 @@ cli::result_t cmd_refillaccountpool(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
     AccountInfo accountInfo = vault.getAccountInfo(params[1]);
-    vault.unlockChainCodes(secure_bytes_t());
     vault.refillAccountPool(params[1]);
 
     stringstream ss;
@@ -521,15 +489,9 @@ cli::result_t cmd_exportbin(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
-    string export_name = params.size() > 3 ? params[3] : (params[1].empty() ? params[2] : params[1] + "-" + params[2]);
-    secure_bytes_t exportChainCodeUnlockKey;
-    if (params.size() > 4 && !params[4].empty())
-        exportChainCodeUnlockKey = sha256_2(params[4]);
-
-    vault.unlockChainCodes(secure_bytes_t());
-
-    string output_file = params.size() > 5 ? params[5] : (export_name + ".bin");
-    vault.exportAccountBin(params[1], params[2], export_name, output_file, exportChainCodeUnlockKey);
+    string export_name = params.size() > 3 ? params[3] : (params[2].empty() ? params[1] : params[1] + "-" + params[2]);
+    string output_file = params.size() > 4 ? params[4] : (export_name + ".bin");
+    vault.exportAccountBin(params[1], params[2], export_name, output_file);
 
     stringstream ss;
     ss << "Account bin " << export_name << " exported to " << output_file << ".";
@@ -541,12 +503,7 @@ cli::result_t cmd_importbin(const cli::params_t& params)
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
 
     secure_bytes_t importChainCodeUnlockKey;
-    if (params.size() > 2 && !params[2].empty())
-        importChainCodeUnlockKey = sha256_2(params[2]);
-
-    vault.unlockChainCodes(uchar_vector("1234"));
-
-    std::shared_ptr<AccountBin> bin = vault.importAccountBin(params[1], importChainCodeUnlockKey);
+    std::shared_ptr<AccountBin> bin = vault.importAccountBin(params[1]);
 
     stringstream ss;
     ss << "Account bin " << bin->name() << " imported from " << params[1] << ".";
@@ -827,7 +784,6 @@ cli::result_t cmd_signingrequest(const cli::params_t& params)
 cli::result_t cmd_signtx(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
-    vault.unlockChainCodes(uchar_vector("1234"));
     vault.unlockKeychain(params[2], secure_bytes_t());
 
     stringstream ss;
@@ -846,7 +802,7 @@ cli::result_t cmd_signtx(const cli::params_t& params)
         tx = vault.signTx(tx_id, keychain_names, true);
     }
 
-    if (tx)
+    if (!keychain_names.empty())
     {
         ss << "Signatures added.";
     }
@@ -1061,13 +1017,13 @@ int main(int argc, char* argv[])
         "exportvault",
         "export vault contents to portable file",
         command::params(1, "db file"),
-        command::params(4, "export private keys = true", "export chain code passphrase", "native chain code passphrase", "output file = *.portable")));
+        command::params(2, "export private keys = true", "output file = *.portable")));
     shell.add(command(
         &cmd_importvault,
         "importvault",
         "import vault contents from portable file",
         command::params(2, "db file", "portable file"),
-        command::params(3, "import private keys = true", "import chain code passphrase", "native chain code passphrase")));
+        command::params(1, "import private keys = true")));
 
     // Keychain operations
     shell.add(command(
@@ -1153,13 +1109,12 @@ int main(int argc, char* argv[])
         "exportaccount",
         "export account to file",
         command::params(2, "db file", "account name"),
-        command::params(3, "export chain code passphrase", "native chain code passphrase", "output file = *.acct")));
+        command::params(1, "output file = *.acct")));
     shell.add(command(
         &cmd_importaccount,
         "importaccount",
         "import account from file",
-        command::params(2, "db file", "account file"),
-        command::params(2, "import chain code passphrase", "native chain code passphrase"))); 
+        command::params(2, "db file", "account file")));
     shell.add(command(
         &cmd_newaccountbin,
         "newaccountbin",
@@ -1212,13 +1167,12 @@ int main(int argc, char* argv[])
         "exportbin",
         "export account bin to file",
         command::params(3, "db file", "account name", "bin name"),
-        command::params(3, "export name = account_name-bin_name", "export chain code passphrase", "output file = *.bin")));
+        command::params(2, "export name = account_name-bin_name", "output file = *.bin")));
     shell.add(command(
         &cmd_importbin,
         "importbin",
         "import account bin from file",
-        command::params(2, "db file", "bin file"),
-        command::params(1, "import chain code passphrase")));
+        command::params(2, "db file", "bin file")));
 
     // Tx operations
     shell.add(command(
