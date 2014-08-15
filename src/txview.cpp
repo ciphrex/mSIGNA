@@ -26,7 +26,7 @@ void TxView::setModel(TxModel* model)
     m_model = model;
 }
 
-void TxView::update()
+void TxView::updateColumns()
 {
     if (!m_model) return;
     for (int i = 0; i < m_model->columnCount(); i++) { resizeColumnToContents(i); }

@@ -18,12 +18,10 @@ KeychainView::KeychainView(QWidget* parent)
 {
 }
 
-void KeychainView::update()
+void KeychainView::updateColumns()
 {
-    resizeColumnToContents(0);
-    resizeColumnToContents(1);
-    resizeColumnToContents(2);
-    resizeColumnToContents(3);
+    if (!model()) return;
+    for (int i = 0; i < model()->columnCount(); i++) { resizeColumnToContents(i); }
 }
 
 void KeychainView::contextMenuEvent(QContextMenuEvent* event)

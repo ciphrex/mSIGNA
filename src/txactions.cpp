@@ -173,7 +173,7 @@ void TxActions::signTx()
     {
         seedEntropySource(false);
         m_txModel->signTx(currentRow);
-        m_txView->update();
+        m_txView->updateColumns();
     }
     catch (const std::exception& e)
     {
@@ -185,7 +185,7 @@ void TxActions::sendTx()
 {
     try {
         m_txModel->sendTx(currentRow, m_synchedVault);
-        m_txView->update();
+        m_txView->updateColumns();
     }
     catch (const std::exception& e) {
         emit error(e.what());
@@ -258,7 +258,7 @@ void TxActions::importTxFromFile()
         if (!tx) throw std::runtime_error("Transaction not inserted.");
         m_accountModel->update();
         m_txModel->update();
-        m_txView->update();
+        m_txView->updateColumns();
     }
     catch (const std::exception& e) {
         emit error(e.what());
@@ -371,7 +371,7 @@ void TxActions::insertRawTxFromFile()
         tx->set(uchar_vector(rawhex));
         tx = m_accountModel->insertTx(tx);
         m_txModel->update();
-        m_txView->update();
+        m_txView->updateColumns();
     }
     catch (const std::exception& e) {
         emit error(e.what());
@@ -404,7 +404,7 @@ void TxActions::deleteTx()
 
     try {
         m_txModel->deleteTx(currentRow);
-        m_txView->update();
+        m_txView->updateColumns();
         m_accountModel->update();
     }
     catch (const std::exception& e) {

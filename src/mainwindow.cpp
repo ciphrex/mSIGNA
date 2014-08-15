@@ -15,6 +15,8 @@
 #include <QInputDialog>
 #include <QItemSelectionModel>
 
+#include "entropysource.h"
+
 #include "settings.h"
 //#include "versioninfo.h"
 //#include "copyrightinfo.h"
@@ -197,14 +199,14 @@ MainWindow::MainWindow() :
     connect(this, &MainWindow::vaultOpened, [this](CoinDB::Vault* vault) {
         keychainModel->setVault(vault);
         keychainModel->update();
-        keychainView->update();
+        keychainView->updateColumns();
 
         accountModel->update();
         accountView->updateColumns();
 
         txModel->setVault(vault);
         txModel->update();
-        txView->update();
+        txView->updateColumns();
 
         selectAccount(0);
 
@@ -219,7 +221,7 @@ MainWindow::MainWindow() :
 
         txModel->setVault(nullptr);
         txModel->update();
-        txView->update();
+        txView->updateColumns();
 
         updateStatusMessage(tr("Closed vault"));
     });
@@ -241,7 +243,7 @@ MainWindow::MainWindow() :
         accountModel->update();
         accountView->updateColumns();
         txModel->update();
-        txView->update();
+        txView->updateColumns();
     });
 
     setAcceptDrops(true);
@@ -276,6 +278,7 @@ void MainWindow::closeEvent(QCloseEvent * /*event*/)
 {
     synchedVault.stopSync();
     saveSettings();
+    joinEntropyThread();
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent* event)
@@ -578,7 +581,7 @@ void MainWindow::newKeychain()
             }
 
             keychainModel->update();
-            keychainView->update();
+            keychainView->updateColumns();
             tabWidget->setCurrentWidget(keychainView);
             updateStatusMessage(tr("Created keychain ") + name);
         }
@@ -678,7 +681,7 @@ void MainWindow::importKeychain(QString fileName)
         updateStatusMessage(tr("Importing keychain..."));
         bool isPrivate = importPrivate; // importPrivate is a user setting. isPrivate is whether or not this particular keychain is private.
         keychainModel->importKeychain(name, fileName, isPrivate);
-        keychainView->update();
+        keychainView->updateColumns();
         tabWidget->setCurrentWidget(keychainView);
         updateStatusMessage(tr("Imported ") + (isPrivate ? tr("private") : tr("public")) + tr(" keychain ") + name);
     }
@@ -846,7 +849,7 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
         selectedAccount = accountModel->data(indexes.at(0)).toString();
         txModel->setAccount(selectedAccount);
         txModel->update();
-        txView->update();
+        txView->updateColumns();
         tabWidget->setTabText(2, tr("Transactions - ") + selectedAccount);
         requestPaymentDialog->setCurrentAccount(selectedAccount);
     }
@@ -879,7 +882,7 @@ void MainWindow::refreshAccounts()
     else
     {
         txModel->update();
-        txView->update();
+        txView->updateColumns();
     }
 }
 
@@ -923,7 +926,7 @@ void MainWindow::quickNewAccount()
             accountModel->update();
             accountView->updateColumns();
             keychainModel->update();
-            keychainView->update();
+            keychainView->updateColumns();
             selectAccount(accountName);
             tabWidget->setCurrentWidget(accountView);
             updateStatusMessage(tr("Created account ") + accountName);
@@ -1002,7 +1005,7 @@ void MainWindow::importAccount(QString fileName)
         accountModel->update();
         accountView->updateColumns();
         keychainModel->update();
-        keychainView->update();
+        keychainView->updateColumns();
         selectAccount(name);
         tabWidget->setCurrentWidget(accountView);
         synchedVault.updateBloomFilter();
@@ -1211,7 +1214,7 @@ void MainWindow::insertRawTx()
         if (dlg.exec() && accountModel->insertRawTx(dlg.getRawTx())) {
             accountView->updateColumns();
             txModel->update();
-            txView->update();
+            txView->updateColumns();
             tabWidget->setCurrentWidget(txView);
         } 
     }

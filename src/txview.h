@@ -27,7 +27,7 @@ public:
     #pragma clang diagnostic pop
 
     void setMenu(QMenu* menu) { m_menu = menu; }
-    void update();
+    void updateColumns();
 
 protected:
     void contextMenuEvent(QContextMenuEvent* event);
