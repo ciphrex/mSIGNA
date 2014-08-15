@@ -51,6 +51,7 @@ HEADERS = \
     src/filesystem.h \
     src/versioninfo.h \
     src/copyrightinfo.h \
+    src/stylesheets.h \
     src/aboutdialog.h \
     src/coinparams.h \
     src/docdir.h \
@@ -100,6 +101,7 @@ SOURCES = \
     src/filesystem.cpp \
     src/versioninfo.cpp \
     src/copyrightinfo.cpp \
+    src/stylesheets.cpp \
     src/aboutdialog.cpp \
     src/coinparams.cpp \
     src/docdir.cpp \

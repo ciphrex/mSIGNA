@@ -39,6 +39,8 @@ class RequestPaymentDialog;
 
 #include <QMainWindow>
 
+enum fontsize_t { SMALL_FONTS , MEDIUM_FONTS , LARGE_FONTS };
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -102,6 +104,7 @@ protected:
     void dropEvent(QDropEvent* event);
 
 protected slots:
+    void updateFonts(int fontSize);
     void updateSyncLabel();
     void updateNetworkState(network_state_t newState);
     void updateVaultStatus(const QString& name = QString());
@@ -203,6 +206,8 @@ private slots:
     void processCommand(const QString& command);
 
 private:
+    int fontSize;
+
     // License accepted?
     bool licenseAccepted;
 
@@ -239,6 +244,7 @@ private:
     QMenu* accountMenu;
     QMenu* txMenu;
     QMenu* networkMenu;
+    QMenu* viewMenu;
     QMenu* helpMenu;
 
     // toolbars
@@ -315,6 +321,12 @@ private:
     QPixmap* stoppedIcon;
     QMovie* synchingMovie;
     QPixmap* synchedIcon;
+
+    // view actions
+    QActionGroup* fontSizeGroup;
+    QAction* smallFontsAction;
+    QAction* mediumFontsAction;
+    QAction* largeFontsAction;
 
     // about/help actions
     QAction* aboutAction;

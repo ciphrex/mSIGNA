@@ -19,6 +19,8 @@
 //#include "versioninfo.h"
 //#include "copyrightinfo.h"
 
+#include "stylesheets.h"
+
 #include "mainwindow.h"
 
 // Random
@@ -80,12 +82,12 @@ MainWindow::MainWindow() :
     keychainModel(nullptr),
     txActions(nullptr)
 {
-    loadSettings();
-
     createActions();
     createMenus();
     createToolBars();
     createStatusBar();
+
+    loadSettings();
 
     //setCurrentFile("");
     setUnifiedTitleAndToolBarOnMac(true);
@@ -295,6 +297,33 @@ void MainWindow::dropEvent(QDropEvent* event)
     }
 
     QMessageBox::information(this, tr("Drop Event"), mimeData->text());
+}
+
+void MainWindow::updateFonts(int fontSize)
+{
+    switch (fontSize)
+    {
+    case SMALL_FONTS:
+        smallFontsAction->setChecked(true);
+        setStyleSheet(getSmallFontsStyle());
+        break;
+
+    case MEDIUM_FONTS:
+        mediumFontsAction->setChecked(true);
+        setStyleSheet(getMediumFontsStyle());
+        break;
+
+    case LARGE_FONTS:
+        largeFontsAction->setChecked(true);
+        setStyleSheet(getLargeFontsStyle());
+        break;
+
+    default:
+        return;
+    }
+        
+    QSettings settings("Ciphrex", getDefaultSettings().getSettingsRoot());
+    settings.setValue("fontsize", fontSize);
 }
 
 void MainWindow::updateSyncLabel()
@@ -1763,6 +1792,27 @@ void MainWindow::createActions()
     networkSettingsAction->setEnabled(true);
     connect(networkSettingsAction, SIGNAL(triggered()), this, SLOT(networkSettings()));
 
+    // view actions
+    smallFontsAction = new QAction(tr("&Small"), this);
+    smallFontsAction->setCheckable(true);
+    smallFontsAction->setStatusTip(tr("Use small fonts"));
+    connect(smallFontsAction, &QAction::triggered, [this]() { updateFonts(SMALL_FONTS); });
+
+    mediumFontsAction = new QAction(tr("&Medium"), this);
+    mediumFontsAction->setCheckable(true);
+    mediumFontsAction->setStatusTip(tr("Use medium fonts"));
+    connect(mediumFontsAction, &QAction::triggered, [this]() { updateFonts(MEDIUM_FONTS); });
+
+    largeFontsAction = new QAction(tr("&Large"), this);
+    largeFontsAction->setCheckable(true);
+    largeFontsAction->setStatusTip(tr("Use large fonts"));
+    connect(largeFontsAction, &QAction::triggered, [this]() { updateFonts(LARGE_FONTS); });
+
+    fontSizeGroup = new QActionGroup(this);
+    fontSizeGroup->addAction(smallFontsAction);
+    fontSizeGroup->addAction(mediumFontsAction);
+    fontSizeGroup->addAction(largeFontsAction);
+
     // about/help actions
     aboutAction = new QAction(tr("About..."), this);
     aboutAction->setStatusTip(tr("About ") + getDefaultSettings().getAppName());
@@ -1838,6 +1888,14 @@ void MainWindow::createMenus()
 
     menuBar()->addSeparator();
 
+    viewMenu = menuBar()->addMenu(tr("&View"));
+    viewMenu->addSeparator()->setText(tr("Font Size"));
+    viewMenu->addAction(smallFontsAction);
+    viewMenu->addAction(mediumFontsAction);
+    viewMenu->addAction(largeFontsAction);
+
+    menuBar()->addSeparator();
+
     helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAction);
 }
@@ -1891,6 +1949,9 @@ void MainWindow::loadSettings()
         QSize size = settings.value("size", QSize(800, 400)).toSize();
         resize(size);
         move(pos);
+
+        int fontSize = settings.value("fontsize", MEDIUM_FONTS).toInt();
+        updateFonts(fontSize);
 
         licenseAccepted = settings.value("licenseaccepted", false).toBool();
     }
