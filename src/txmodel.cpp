@@ -92,11 +92,12 @@ void TxModel::setAccount(const QString& accountName)
 class SortableRow
 {
 public:
-    SortableRow(const QList<QStandardItem*>& row, uint32_t nConfirmations, int64_t value, uint32_t txindex) :
-        row_(row), nConfirmations_(nConfirmations), value_(value), txindex_(txindex) { }
+    SortableRow(const QList<QStandardItem*>& row, int status, uint32_t nConfirmations, int64_t value, uint32_t txindex) :
+        row_(row), status_(status), nConfirmations_(nConfirmations), value_(value), txindex_(txindex) { }
 
     QList<QStandardItem*>& row() { return row_; }
 
+    int status() const { return status_; }
     uint32_t nConfirmations() const { return nConfirmations_; }
     int64_t value() const { return value_; }
     uint32_t txindex() const { return txindex_; }
@@ -104,6 +105,7 @@ public:
 private:
     QList<QStandardItem*> row_;
 
+    int status_;
     uint32_t nConfirmations_;
     int64_t value_;
     uint32_t txindex_;
@@ -225,10 +227,14 @@ void TxModel::update()
         hashItem->setData(item.tx_index, Qt::UserRole);
         row.append(hashItem);
 
-        rows.append(SortableRow(row, nConfirmations, value, item.tx_index));
+        rows.append(SortableRow(row, item.tx_status, nConfirmations, value, item.tx_index));
     }
 
     qSort(rows.begin(), rows.end(), [](const SortableRow& a, const SortableRow& b) {
+        // order by status first (unsigned, then propagated, then confirmed)
+        if (a.status() < b.status()) return true;
+        if (a.status() > b.status()) return false;
+
         // if confirmation counts are equal
         if (a.nConfirmations() == b.nConfirmations()) {
             // if one value is positive and the other is negative, sort so that running balance remains positive

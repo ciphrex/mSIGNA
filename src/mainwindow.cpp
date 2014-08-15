@@ -190,6 +190,8 @@ MainWindow::MainWindow() :
     tabWidget->addTab(keychainView, tr("Keychains"));
     setCentralWidget(tabWidget);
 
+    connect(txActions, SIGNAL(setCurrentWidget(QWidget*)), tabWidget, SLOT(setCurrentWidget(QWidget*))); 
+
     requestPaymentDialog = new RequestPaymentDialog(accountModel, accountView);
 
     // Vault open and close

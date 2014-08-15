@@ -43,6 +43,7 @@ public:
 
 signals:
     void error(const QString& message);
+    void setCurrentWidget(QWidget* widget);
 
 private slots:
     void updateCurrentTx(const QModelIndex& current, const QModelIndex& previous);

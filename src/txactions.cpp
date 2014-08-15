@@ -132,10 +132,11 @@ void TxActions::searchTx()
 
             if (!hashItem) throw std::runtime_error("Transaction not found.");
 
-            QItemSelection selection(m_txModel->index(row, 0), m_txModel->index(row, m_txModel->columnCount() - 1));
+            emit setCurrentWidget(m_txView);
+            QItemSelection selection(m_txModel->index(row, 0), m_txModel->index(row, 0));//m_txModel->columnCount() - 1));
             m_txView->clearSelection();
-            m_txView->selectionModel()->select(selection, QItemSelectionModel::SelectCurrent);
             m_txView->scrollTo(hashItem->index(), QAbstractItemView::PositionAtCenter);
+            m_txView->selectionModel()->select(selection, QItemSelectionModel::SelectCurrent);
         }
     }
     catch (const std::exception& e)
@@ -174,6 +175,7 @@ void TxActions::signTx()
         seedEntropySource(false);
         m_txModel->signTx(currentRow);
         m_txView->updateColumns();
+        emit setCurrentWidget(m_txView);
     }
     catch (const std::exception& e)
     {
@@ -259,6 +261,7 @@ void TxActions::importTxFromFile()
         m_accountModel->update();
         m_txModel->update();
         m_txView->updateColumns();
+        emit setCurrentWidget(m_txView);
     }
     catch (const std::exception& e) {
         emit error(e.what());
@@ -372,6 +375,7 @@ void TxActions::insertRawTxFromFile()
         tx = m_accountModel->insertTx(tx);
         m_txModel->update();
         m_txView->updateColumns();
+        emit setCurrentWidget(m_txView);
     }
     catch (const std::exception& e) {
         emit error(e.what());
