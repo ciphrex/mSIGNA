@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// aes.h
+// decrypt.cpp
 //
 // Copyright (c) 2014 Eric Lombrozo
 //
@@ -22,47 +22,52 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// Uses public domain code by Saju Pillai (saju.pillai@gmail.com)
 
+#include <aes.h>
+#include <hash.h>
+#include <random.h>
+#include <stdutils/uchar_vector.h>
 
-#pragma once
+#include <iostream>
 
-#include "typedefs.h"
+using namespace AES;
+using namespace std;
 
-#include <stdutils/customerror.h>
-
-namespace AES
+int main(int argc, char* argv[])
 {
+    if (argc != 4)
+    {
+        cerr << "# Usage: " << argv[0] << " <salt> <passphrase> <ciphertext>" << endl;
+        return -1;
+    }
 
-enum ErrorCodes
-{
-    AES_INIT_ERROR = 21200,
-    AES_DECRYPT_ERROR
-};
+    try
+    {
+        uint64_t salt = strtoull(argv[1], NULL, 0);
+        cout << salt << endl;
+/*
+        secure_bytes_t passphrase((unsigned char*)argv[1], (unsigned char*)argv[1] + strlen(argv[1]));
+        secure_bytes_t key = sha256_2(passphrase);
 
-class AESException : public stdutils::custom_error
-{
-public:
-    virtual ~AESException() throw() { }
+        secure_bytes_t data((unsigned char*)argv[2], (unsigned char*)argv[2] + strlen(argv[2]));
 
-protected:
-    AESException(const std::string& what, int code) : stdutils::custom_error(what, code) { }
-};
+        uint64_t salt = random_salt();
+        bytes_t cipherdata = encrypt(passphrase, data, true, salt);
 
-class AESInitException : public AESException
-{
-public:
-    AESInitException() : AESException("Failed to initialize the AES environment.", AES_INIT_ERROR) { }
-};
+        cout << "Salt:           " << salt << endl;
+        cout << "Hex ciphertext: " << uchar_vector(cipherdata).getHex() << endl;
+*/
+    }
+    catch (const AESException& e)
+    {
+        cerr << "AES Exception: " << e.what() << endl;
+        return e.code();
+    }
+    catch (const exception& e)
+    {
+        cerr << "Exception: " << e.what() << endl;
+        return -2;
+    }    
 
-class AESDecryptException : public AESException
-{
-public:
-    AESDecryptException() : AESException("AES decryption failed.", AES_DECRYPT_ERROR) { }
-};
-
-secure_bytes_t encrypt(const secure_bytes_t& key, const secure_bytes_t& plaintext, bool useSalt = false, uint64_t salt = 0);
-secure_bytes_t decrypt(const secure_bytes_t& key, const secure_bytes_t& ciphertext, bool useSalt = false, uint64_t salt = 0);
-
+    return 0;
 }
-

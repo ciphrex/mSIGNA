@@ -11,7 +11,8 @@ OBJ = \
     $(ROOTDIR)/obj/aes.o
 
 TARGETS = \
-    build/encrypt
+    build/encrypt \
+    build/decrypt
 
 all: $(TARGETS)
 
