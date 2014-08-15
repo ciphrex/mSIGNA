@@ -37,26 +37,24 @@ int main(int argc, char* argv[])
 {
     if (argc != 4)
     {
-        cerr << "# Usage: " << argv[0] << " <salt> <passphrase> <ciphertext>" << endl;
+        cerr << "# Usage: " << argv[0] << " <salt> <passphrase> <hex ciphertext>" << endl;
         return -1;
     }
 
     try
     {
         uint64_t salt = strtoull(argv[1], NULL, 0);
-        cout << salt << endl;
-/*
-        secure_bytes_t passphrase((unsigned char*)argv[1], (unsigned char*)argv[1] + strlen(argv[1]));
-        secure_bytes_t key = sha256_2(passphrase);
+        secure_bytes_t key((unsigned char*)argv[2], (unsigned char*)argv[2] + strlen(argv[2]));
+        bytes_t ciphertext = uchar_vector(argv[3]);
 
-        secure_bytes_t data((unsigned char*)argv[2], (unsigned char*)argv[2] + strlen(argv[2]));
+        secure_bytes_t data = decrypt(key, ciphertext, true, salt);
+        char* plaintext = (char*)malloc(data.size() + 1);
+        memcpy((void*)plaintext, (const void*)&data[0], data.size());
+        plaintext[data.size()] = 0;
 
-        uint64_t salt = random_salt();
-        bytes_t cipherdata = encrypt(passphrase, data, true, salt);
+        cout << "Plaintext: " << plaintext << endl;
 
-        cout << "Salt:           " << salt << endl;
-        cout << "Hex ciphertext: " << uchar_vector(cipherdata).getHex() << endl;
-*/
+        free(plaintext);
     }
     catch (const AESException& e)
     {
