@@ -136,7 +136,14 @@ void Keychain::lock() const
 void Keychain::unlock(const secure_bytes_t& lock_key) const
 {
     if (!isPrivate()) throw std::runtime_error("Cannot unlock a nonprivate key.");
-    privkey_ = AES::decrypt(lock_key, privkey_ciphertext_, true, privkey_salt_); 
+    if (privkey_salt_ == 0)
+    {
+        privkey_ = privkey_ciphertext_;
+    }
+    else
+    {
+        privkey_ = AES::decrypt(lock_key, privkey_ciphertext_, true, privkey_salt_); 
+    }
 }
 
 bool Keychain::isLocked() const

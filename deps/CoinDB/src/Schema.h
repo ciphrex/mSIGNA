@@ -128,6 +128,7 @@ public:
     const std::vector<uint32_t>& derivation_path() const { return derivation_path_; }
 
     bool isPrivate() const { return (!privkey_ciphertext_.empty()); }
+    bool isEncrypted() const { return privkey_salt_ != 0; }
 
     void lock() const;
     void unlock(const secure_bytes_t& lock_key) const;
@@ -191,7 +192,35 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int version)
+    void save(Archive& ar, const unsigned int version) const
+    {
+        ar & name_;
+        ar & hash_;
+        ar & depth_;
+        ar & parent_fp_;
+        ar & child_num_;
+        ar & pubkey_;
+        ar & chain_code_;
+        if (version == 1)
+        {
+            // This field has been removed
+            bytes_t chain_code_salt_;
+            ar & chain_code_salt_;
+        }
+        ar & privkey_ciphertext_;
+        if (version == 1)
+        {
+            // This field is now a uint64_t
+            bytes_t old_privkey_salt_;
+            ar & old_privkey_salt_;
+        }
+        else
+        {
+            ar & privkey_salt_;
+        }
+    }
+    template<class Archive>
+    void load(Archive& ar, const unsigned int version)
     {
         ar & name_;
         ar & hash_;
@@ -219,6 +248,7 @@ private:
             ar & privkey_salt_;
         }
     }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 typedef std::set<std::shared_ptr<Keychain>> KeychainSet;
