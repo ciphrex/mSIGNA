@@ -855,12 +855,12 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
         txModel->setAccount(selectedAccount);
         txModel->update();
         txView->updateColumns();
-        tabWidget->setTabText(2, tr("Transactions - ") + selectedAccount);
+        tabWidget->setTabText(1, tr("Transactions - ") + selectedAccount);
         requestPaymentDialog->setCurrentAccount(selectedAccount);
     }
     else {
         selectedAccount = "";
-        tabWidget->setTabText(2, tr("Transactions"));
+        tabWidget->setTabText(1, tr("Transactions"));
     }
     deleteAccountAction->setEnabled(isSelected);
     exportAccountAction->setEnabled(isSelected);
