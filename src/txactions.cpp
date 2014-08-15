@@ -38,8 +38,8 @@
 
 #include <fstream>
 
-TxActions::TxActions(TxModel* txModel, TxView* txView, AccountModel* accountModel, KeychainModel* keychainModel, CoinDB::SynchedVault* synchedVault)
-    : m_txModel(txModel), m_txView(txView), m_accountModel(accountModel), m_keychainModel(keychainModel), m_synchedVault(synchedVault), currentRow(-1)
+TxActions::TxActions(TxModel* txModel, TxView* txView, AccountModel* accountModel, KeychainModel* keychainModel, CoinDB::SynchedVault* synchedVault, QWidget* parent)
+    : m_parent(parent), m_txModel(txModel), m_txView(txView), m_accountModel(accountModel), m_keychainModel(keychainModel), m_synchedVault(synchedVault), currentRow(-1)
 {
     createActions();
     createMenus();
@@ -148,7 +148,7 @@ void TxActions::showSignatureDialog()
 {
     try
     {
-        SignatureDialog dlg(*m_synchedVault, m_txModel->getTxHash(currentRow));
+        SignatureDialog dlg(*m_synchedVault, m_txModel->getTxHash(currentRow), m_parent);
         if (m_txModel)
         {
             connect(&dlg, &SignatureDialog::txUpdated, [this]() { m_txModel->update(); });

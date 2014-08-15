@@ -12,6 +12,7 @@
 
 #include <QObject>
 
+class QWidget;
 class QAction;
 class QMenu;
 
@@ -32,7 +33,7 @@ class TxActions : public QObject
     Q_OBJECT
 
 public:
-    TxActions(TxModel* txModel, TxView* txView, AccountModel* accountModel, KeychainModel* keychainModel, CoinDB::SynchedVault* synchedVault = nullptr); // model and view must be valid, non-null.
+    TxActions(TxModel* txModel, TxView* txView, AccountModel* accountModel, KeychainModel* keychainModel, CoinDB::SynchedVault* synchedVault = nullptr, QWidget* parent = nullptr); // model and view must be valid, non-null.
 
     void setNetworkSync(CoinDB::SynchedVault* synchedVault) { m_synchedVault = synchedVault; }
 
@@ -61,6 +62,8 @@ private slots:
     void deleteTx();
 
 private:
+    QWidget* m_parent;
+
     void createActions();
     void createMenus();
 

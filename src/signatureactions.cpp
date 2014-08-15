@@ -62,7 +62,7 @@ void SignatureActions::refreshCurrentKeychain()
             bool hasSigned = m_dialog.getModel()->getKeychainHasSigned(m_currentRow);
             int sigsNeeded = m_dialog.getModel()->getSigsNeeded();
 
-            addSignatureAction->setEnabled(keychainState == SignatureModel::UNLOCKED && !hasSigned && sigsNeeded > 0);
+            addSignatureAction->setEnabled(keychainState != SignatureModel::PUBLIC && !hasSigned && sigsNeeded > 0);
             unlockKeychainAction->setEnabled(keychainState == SignatureModel::LOCKED);
             lockKeychainAction->setEnabled(keychainState == SignatureModel::UNLOCKED);
             return;
@@ -86,10 +86,15 @@ void SignatureActions::addSignature()
         if (!m_synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
 
         CoinDB::Vault* vault = m_synchedVault.getVault();
+        if (!vault->isKeychainPrivate(m_currentKeychain.toStdString()))
+        {
+            QMessageBox::critical(nullptr, tr("Error"), tr("Keychain is public."));
+            return;
+        }
+
         if (vault->isKeychainPrivateKeyLocked(m_currentKeychain.toStdString()))
         {
-            QMessageBox::critical(nullptr, tr("Error"), tr("Keychain is locked."));
-            return;
+            unlockKeychain();
         }
 
         std::vector<std::string> keychainNames;
@@ -165,7 +170,7 @@ void SignatureActions::lockKeychain()
 
 void SignatureActions::createActions()
 {
-    addSignatureAction = new QAction(tr("Add signature"), this);
+    addSignatureAction = new QAction(tr("Add signature..."), this);
     addSignatureAction->setEnabled(false);
     connect(addSignatureAction, SIGNAL(triggered()), this, SLOT(addSignature()));
 
