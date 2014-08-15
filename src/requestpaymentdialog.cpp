@@ -12,6 +12,7 @@
 #include "ui_requestpaymentdialog.h"
 
 #include "accountmodel.h"
+#include "accountview.h"
 #include "coinparams.h"
 #include "numberformats.h"
 #include "currencyvalidator.h"
@@ -22,10 +23,11 @@
 
 #include <qrencode.h>
 
-RequestPaymentDialog::RequestPaymentDialog(AccountModel* accountModel, QWidget *parent) :
+RequestPaymentDialog::RequestPaymentDialog(AccountModel* accountModel, AccountView* accountView, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::RequestPaymentDialog),
-    accountModel_(accountModel)
+    accountModel_(accountModel),
+    accountView_(accountView)
 {
     ui->setupUi(this);
     connect(accountModel_, SIGNAL(updated(const QStringList&)), this, SLOT(setAccounts(const QStringList&)));
@@ -86,7 +88,7 @@ void RequestPaymentDialog::on_newInvoiceButton_clicked()
         QString invoiceLabel = ui->invoiceLineEdit->text();
         QString invoiceAmount = ui->invoiceAmountLineEdit->text();
         auto pair = accountModel_->issueNewScript(accountName, invoiceLabel);
-        accountModel_->update();
+        accountView_->updateAll();
         ui->invoiceDetailsLabelLineEdit->setText(invoiceLabel);
         ui->invoiceDetailsAddressLineEdit->setText(pair.first);
         ui->invoiceDetailsScriptLineEdit->setText(QString::fromStdString(uchar_vector(pair.second).getHex()));

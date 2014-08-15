@@ -111,6 +111,7 @@ MainWindow::MainWindow() :
     accountView->setModel(accountModel);
     accountView->setMenu(accountMenu);
     accountView->updateColumns();
+    connect(accountView, SIGNAL(updateModel()), accountModel, SLOT(update()));
 
 /*
     qRegisterMetaType<bytes_t>("bytes_t");
@@ -184,7 +185,7 @@ MainWindow::MainWindow() :
     tabWidget->addTab(txView, tr("Transactions"));
     setCentralWidget(tabWidget);
 
-    requestPaymentDialog = new RequestPaymentDialog(accountModel, this);
+    requestPaymentDialog = new RequestPaymentDialog(accountModel, accountView, this);
 
     // Vault open and close
     synchedVault.subscribeVaultOpened([this](CoinDB::Vault* vault) { emit vaultOpened(vault); });

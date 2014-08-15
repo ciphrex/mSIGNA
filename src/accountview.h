@@ -22,7 +22,11 @@ public:
     AccountView(QWidget* parent = NULL);
 
     void setMenu(QMenu* menu) { this->menu = menu; }
+    void updateAll();
     void updateColumns();
+
+signals:
+    void updateModel();
 
 protected:
     void contextMenuEvent(QContextMenuEvent* event);

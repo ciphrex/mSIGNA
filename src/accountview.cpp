@@ -22,6 +22,24 @@ AccountView::AccountView(QWidget* parent)
 {
 }
 
+void AccountView::updateAll()
+{
+    if (!model()) return;
+
+    QModelIndexList indexes = selectionModel()->selectedRows(0);
+    int selectedRow = indexes.isEmpty() ? -1 : indexes.at(0).row();
+
+    emit updateModel();
+    for (int i = 0; i < model()->columnCount(); i++) { resizeColumnToContents(i); }
+
+    if (selectedRow >= model()->rowCount()) { selectedRow = 0; }
+    if (selectedRow < model()->rowCount())
+    {
+        QItemSelection selection(model()->index(selectedRow, 0), model()->index(selectedRow, model()->columnCount() - 1));
+        selectionModel()->select(selection, QItemSelectionModel::SelectCurrent);
+    }
+}
+
 void AccountView::updateColumns()
 {
     if (!model()) return;

@@ -181,7 +181,7 @@ QPair<QString, bytes_t> AccountModel::issueNewScript(const QString& accountName,
 
     std::shared_ptr<SigningScript> signingscript = vault->issueSigningScript(accountName.toStdString(), DEFAULT_BIN_NAME, label.toStdString());
     QString address = QString::fromStdString(getAddressForTxOutScript(signingscript->txoutscript(), base58_versions));
-    update();
+//    update();
 
     return qMakePair(address, signingscript->txoutscript());
 }

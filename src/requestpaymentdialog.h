@@ -11,6 +11,7 @@
 #pragma once
 
 class AccountModel;
+class AccountView;
 
 #include <QDialog>
 
@@ -23,7 +24,7 @@ class RequestPaymentDialog : public QDialog
     Q_OBJECT
     
 public:
-    explicit RequestPaymentDialog(AccountModel* accountModel, QWidget *parent = 0);
+    explicit RequestPaymentDialog(AccountModel* accountModel, AccountView* accountView, QWidget *parent = 0);
     ~RequestPaymentDialog();
 
 public slots:
@@ -44,5 +45,6 @@ private:
     Ui::RequestPaymentDialog *ui;
 
     AccountModel* accountModel_;
+    AccountView* accountView_;
 };
 
