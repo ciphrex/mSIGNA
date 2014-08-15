@@ -25,7 +25,6 @@
 
 #include <aes.h>
 #include <hash.h>
-#include <random.h>
 #include <stdutils/uchar_vector.h>
 
 #include <iostream>
@@ -44,7 +43,8 @@ int main(int argc, char* argv[])
     try
     {
         uint64_t salt = strtoull(argv[1], NULL, 0);
-        secure_bytes_t key((unsigned char*)argv[2], (unsigned char*)argv[2] + strlen(argv[2]));
+        secure_bytes_t passphrase((unsigned char*)argv[2], (unsigned char*)argv[2] + strlen(argv[2]));
+        secure_bytes_t key = sha256_2(passphrase);
         bytes_t ciphertext = uchar_vector(argv[3]);
 
         secure_bytes_t data = decrypt(key, ciphertext, true, salt);
