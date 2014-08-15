@@ -10,9 +10,9 @@
 
 #include "stylesheets.h"
 
-const QString SMALL_FONTS_STYLE("font: 9pt;");
-const QString MEDIUM_FONTS_STYLE("font: 10pt;");
-const QString LARGE_FONTS_STYLE("font: 11pt;");
+const QString SMALL_FONTS_STYLE("font: 8pt;");
+const QString MEDIUM_FONTS_STYLE("font: 9pt;");
+const QString LARGE_FONTS_STYLE("font: 12pt;");
 
 const QString& getSmallFontsStyle() { return SMALL_FONTS_STYLE; }
 const QString& getMediumFontsStyle() { return MEDIUM_FONTS_STYLE; }

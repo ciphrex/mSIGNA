@@ -188,7 +188,7 @@ MainWindow::MainWindow() :
     tabWidget->addTab(txView, tr("Transactions"));
     setCentralWidget(tabWidget);
 
-    requestPaymentDialog = new RequestPaymentDialog(accountModel, accountView, this);
+    requestPaymentDialog = new RequestPaymentDialog(accountModel, accountView);
 
     // Vault open and close
     synchedVault.subscribeVaultOpened([this](CoinDB::Vault* vault) { emit vaultOpened(vault); });
