@@ -132,10 +132,9 @@ public:
     bool isPrivate() const { return (!privkey_ciphertext_.empty()); }
 
     void lock() const;
-    bool unlock(const secure_bytes_t& lock_key) const;
+    void unlock(const secure_bytes_t& lock_key) const;
     bool isLocked() const;
-    bool setLock(const secure_bytes_t& new_lock_key) const;
-    void clearLock() const;
+    void changeLock(const secure_bytes_t& old_lock_key, const secure_bytes_t& new_lock_key) const;
 
     secure_bytes_t getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
     bytes_t getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
@@ -145,7 +144,7 @@ public:
     uint32_t child_num() const { return child_num_; }
     const bytes_t& pubkey() const { return pubkey_; }
     secure_bytes_t privkey() const;
-    secure_bytes_t chain_code() const;
+    secure_bytes_t chain_code() const { return chain_code_; }
 
     const bytes_t& chain_code() const { return chain_code_; }
 
@@ -157,8 +156,8 @@ public:
     void hidden(bool hidden) { hidden_ = hidden; }
     bool hidden() const { return hidden_; }
 
-    void importbip32extkey(const secure_bytes_t& bip32extkey, const secure_bytes_t& lock_key = secure_bytes_t());
-    secure_bytes_t exportbip32extkey(bool get_private = false) const;
+    void importBIP32(const secure_bytes_t& extkey, const secure_bytes_t& lock_key = secure_bytes_t());
+    secure_bytes_t exportBIP32(bool export_private = false) const;
 
     void clearPrivateKey();
 
@@ -180,7 +179,6 @@ private:
 
     #pragma db transient
     mutable secure_bytes_t privkey_;
-    bool is_encrypted_;
     bytes_t privkey_ciphertext_;
     uint64_t privkey_salt_;
 
@@ -197,7 +195,7 @@ private:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int /*version*/)
+    void serialize(Archive& ar, const unsigned int version)
     {
         ar & name_;
         ar & hash_;
@@ -205,10 +203,24 @@ private:
         ar & parent_fp_;
         ar & child_num_;
         ar & pubkey_;
-        ar & chain_code_ciphertext_;
-        ar & chain_code_salt_;
+        ar & chain_code_;
+        if (version == 1)
+        {
+            // This field has been removed
+            bytes_t chain_code_salt_;
+            ar & chain_code_salt_;
+        }
         ar & privkey_ciphertext_;
-        ar & privkey_salt_;
+        if (version == 1)
+        {
+            // This field is now a uint64_t
+            bytes_t old_privkey_salt_;
+            ar & old_privkey_salt_;
+        }
+        else
+        {
+            ar & privkey_salt_;
+        }
     }
 };
 

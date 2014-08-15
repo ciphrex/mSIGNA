@@ -30,14 +30,6 @@
 
 using namespace CoinDB;
 
-static uint64_t generateSalt()
-{
-    secure_bytes_t salt_bytes = random_bytes(8);
-    uint64_t salt;
-    memcpy((void*)&salt, (const void*)&salt_bytes[0], 8);
-    return salt;
-}
-
 /*
  * class Keychain
  */
@@ -62,12 +54,12 @@ Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const
 
     if (is_encrypted_)
     {
-        salt_ = generateSalt();
-        privkey_ciphertext_ = aes_encrypt(lock_key, privkey_, true, salt_);
+        privkey_salt_ = AES::random_salt();
+        privkey_ciphertext_ = AES::encrypt(lock_key, privkey_, true, privkey_salt_);
     }
     else
     {
-        salt_ = 0;
+        privkey_salt_ = 0;
         privkey_ciphertext_ = privkey_;
     }
 }
@@ -152,132 +144,29 @@ void Keychain::lock() const
     privkey_.clear();
 }
 
-bool Keychain::setLock(const secure_bytes_t& new_lock_key);
+void Keychain::unlock(const secure_bytes_t& lock_key) const
 {
-    if (!isPrivate()) throw std::runtime_error("Cannot lock a public keychain.");
-    if (privkey_.empty()) throw std::runtime_error("Key is locked.");
-
-#ifdef ENABLE_CRYPTO
-    if (lock_key.empty())
-    {
-        privkey_ciphertext_ = privkey_;
-        privkey_salt_.clear(); // empty salt means no encryption
-    }
-    else
-    {
-        // TODO: add real salt, better crypto function
-        privkey_ciphertext_ = aes_encrypt(lock_key, privkey_, 0);
-        privkey_salt_.clear();
-        privkey_salt_.push_back(1);
-    }
-#else
-    privkey_ciphertext_ = privkey_;
-    privkey_salt_.clear();
-#endif
-
-    return true;
+    if (!isPrivate()) throw std::runtime_error("Cannot unlock a nonprivate key.");
+    privkey_ = AES::decrypt(lock_key, privkey_ciphertext_, true, privkey_salt_); 
 }
 
-bool Keychain::setChainCodeUnlockKey(const secure_bytes_t& lock_key, const bytes_t& /*salt*/)
+bool isLocked() const
 {
-    if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
-
-#ifdef ENABLE_CRYPTO
-    if (lock_key.empty())
-    {
-        chain_code_ciphertext_ = chain_code_;
-        chain_code_salt_.clear();
-    }
-    else
-    {
-        // TODO: add real salt, better crypto function
-        chain_code_ciphertext_ = aes_encrypt(lock_key, chain_code_, 0);
-        chain_code_salt_.clear();
-        chain_code_salt_.push_back(1);
-    }
-#else
-    chain_code_ciphertext_ = chain_code_;
-    chain_code_salt_.clear();
-#endif
-
-    return true;
-}
-
-void Keychain::lockPrivateKey() const
-{
-    privkey_.clear();
-}
-
-void Keychain::lockChainCode() const 
-{
-    chain_code_.clear();
-}
-
-void Keychain::lockAll() const
-{
-    lockPrivateKey();
-    lockChainCode();
-}
-
-bool Keychain::isPrivateKeyLocked() const
-{
-    if (!isPrivate()) throw std::runtime_error("Keychain is not private.");
     return privkey_.empty();
 }
 
-bool Keychain::isChainCodeLocked() const
+void changeLock(const secure_bytes_t& old_lock_key, const secure_bytes_t& new_lock_key) const
 {
-    return chain_code_.empty();
-}
-
-bool Keychain::unlockPrivateKey(const secure_bytes_t& lock_key) const
-{
-    if (!isPrivate()) throw std::runtime_error("Missing private key.");
-    if (!privkey_.empty()) return true; // Already unlocked
-
-#ifdef ENABLE_CRYPTO
-    if (privkey_salt_.empty())
-    {
-        privkey_ = privkey_ciphertext_;
-    }
-    else
-    {
-        // TODO: add real salt, better crypto function
-        privkey_ = aes_decrypt(lock_key, privkey_ciphertext_, 0);
-    }
-#else
-    privkey_ = privkey_ciphertext_;
-#endif
-
-    return true;
-}
-
-bool Keychain::unlockChainCode(const secure_bytes_t& lock_key) const
-{
-    if (!chain_code_.empty()) return true; // Already unlocked
-
-#ifdef ENABLE_CRYPTO
-    if (chain_code_salt_.empty())
-    {
-        chain_code_ = chain_code_ciphertext_;
-    }
-    else
-    {
-        // TODO: add real salt, better crypto function
-        chain_code_ = aes_decrypt(lock_key, chain_code_ciphertext_, 0);
-    }
-#else
-    chain_code_ = chain_code_ciphertext_;
-#endif
-
-    return true;
+    if (!isPrivate()) throw std::runtime_error("Cannot change the lock of a nonprivate key.");
+    privkey_ = AES::decrypt(lock_key, privkey_ciphertext_, true, privkey_salt_); 
+    privkey_salt_ = AES::random_salt();
+    privkey_ciphertext_ = AES::encrypt(new_lock_key, privkey_, true, privkey_salt_);
 }
 
 secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path) const
 {
     if (!isPrivate()) throw std::runtime_error("Missing private key.");
-    if (privkey_.empty()) throw std::runtime_error("Private key is locked.");
-    if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
+    if (isLocked()) throw std::runtime_error("Private key is locked.");
 
     // Remove initial zero from privkey if necessary
     secure_bytes_t stripped_privkey = (privkey_.size() > 32) ? secure_bytes_t(privkey_.begin() + 1, privkey_.end()) : privkey_;
@@ -288,8 +177,6 @@ secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vector<uint
 
 bytes_t Keychain::getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path) const
 {
-    if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
-
     Coin::HDKeychain hdkeychain(pubkey_, chain_code_, child_num_, parent_fp_, depth_);
     for (auto k: derivation_path) { hdkeychain = hdkeychain.getChild(k); }
     return hdkeychain.getPublicSigningKey(i);
@@ -297,15 +184,9 @@ bytes_t Keychain::getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& d
 
 secure_bytes_t Keychain::privkey() const
 {
-    if (!isPrivate()) throw std::runtime_error("Keychain is public.");
-    if (privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
+    if (!isPrivate()) throw std::runtime_error("Keychain is nonprivate.");
+    if (privkey_.empty()) throw std::runtime_error("Keychain is locked.");
     return privkey_;
-}
-
-secure_bytes_t Keychain::chain_code() const
-{
-    if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
-    return chain_code_;
 }
 
 void Keychain::importPrivateKey(const Keychain& source)
@@ -314,7 +195,7 @@ void Keychain::importPrivateKey(const Keychain& source)
     privkey_salt_ = source.privkey_salt_;
 }
 
-void Keychain::extkey(const secure_bytes_t& extkey, bool try_private, const secure_bytes_t& lock_key, const bytes_t& salt)
+void Keychain::importBIP32(const secure_bytes_t& extkey, const secure_bytes_t& lock_key)
 {
     Coin::HDKeychain hdKeychain(extkey);
 
@@ -322,35 +203,40 @@ void Keychain::extkey(const secure_bytes_t& extkey, bool try_private, const secu
     parent_fp_ = hdKeychain.parent_fp();
     child_num_ = hdKeychain.child_num();
     chain_code_ = hdKeychain.chain_code();
-    if (hdKeychain.isPrivate() && try_private)
+    privkey_.clear();
+    if (!lock_key.empty())
     {
-        privkey_ = hdKeychain.key();
-        setPrivateKeyUnlockKey(lock_key, salt);
+        if (!hdKeychain.isPrivate()) throw std::runtime_error("Keychain is nonprivate.");
+        privkey_salt_ = AES::random_salt();
+        privkey_ciphertext_ = AES::encrypt(lock_key, hdKeychain.key(), true, privkey_salt_);
     }
     else
     {
-        privkey_.clear();
+        privkey_salt_ = 0;
+        privkey_ciphertext_.clear();
     }
+
     pubkey_ = hdKeychain.pubkey();
     hash_ = hdKeychain.full_hash();
 }
 
-secure_bytes_t Keychain::extkey(bool get_private) const
+secure_bytes_t Keychain::exportBIP32(bool export_private) const
 {
-    if (get_private && !isPrivate()) throw std::runtime_error("Missing private key.");
-    if (get_private && privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
-    if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
-
     secure_bytes_t key;
-    if (get_private)
+
+    if (export_private)
     {
+        if (!isPrivate()) throw std::runtime_error("Keychain is nonprivate.");
+        if (isLocked()) throw std::runtime_error("Keychain is locked.");
+
+        // Remove initial zero from privkey if necessary
         key = (privkey_.size() > 32) ? secure_bytes_t(privkey_.begin() + 1, privkey_.end()) : privkey_;
     }
     else
     {
         key = pubkey_;
     }
-    // Remove initial zero from privkey if necessary
+
     return Coin::HDKeychain(key, chain_code_, child_num_, parent_fp_, depth_).extkey();
 }
 
@@ -358,7 +244,7 @@ void Keychain::clearPrivateKey()
 {
     privkey_.clear();
     privkey_ciphertext_.clear();
-    privkey_salt_.clear();
+    privkey_salt_ = 0;
 }
 
 
