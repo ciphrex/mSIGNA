@@ -41,9 +41,13 @@ namespace AES
 
 uint64_t random_salt()
 {
-    secure_bytes_t bytes = random_bytes(8);
     uint64_t salt;
-    memcpy((void*)&salt, (const void*)&bytes[0], 8);
+    do
+    {
+        secure_bytes_t bytes = random_bytes(8);
+        memcpy((void*)&salt, (const void*)&bytes[0], 8);
+    }
+    while (salt == 0);
     return salt;
 }
 
