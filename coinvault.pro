@@ -51,6 +51,7 @@ HEADERS = \
     src/filesystem.h \
     src/versioninfo.h \
     src/copyrightinfo.h \
+    src/aboutdialog.h \
     src/coinparams.h \
     src/docdir.h \
     src/severitylogger.h \
@@ -99,6 +100,7 @@ SOURCES = \
     src/filesystem.cpp \
     src/versioninfo.cpp \
     src/copyrightinfo.cpp \
+    src/aboutdialog.cpp \
     src/coinparams.cpp \
     src/docdir.cpp \
     src/entropysource.cpp \

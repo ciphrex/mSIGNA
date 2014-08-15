@@ -21,3 +21,7 @@ const QString& getCommitHash();
 const QString& getShortCommitHash();
 
 uint32_t getSchemaVersion();
+const QString& getSchemaVersionText();
+
+uint32_t getOpenSSLVersionNumber();
+const QString& getOpenSSLVersionText();

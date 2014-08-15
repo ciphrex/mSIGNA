@@ -16,8 +16,8 @@
 #include <QItemSelectionModel>
 
 #include "settings.h"
-#include "versioninfo.h"
-#include "copyrightinfo.h"
+//#include "versioninfo.h"
+//#include "copyrightinfo.h"
 
 #include "mainwindow.h"
 
@@ -39,6 +39,7 @@
 #include "txactions.h"
 
 // Dialogs
+#include "aboutdialog.h"
 #include "entropydialog.h"
 #include "newkeychaindialog.h"
 #include "quicknewaccountdialog.h"
@@ -1499,9 +1500,13 @@ void MainWindow::networkSettings()
 
 void MainWindow::about()
 {
+    AboutDialog dlg(this);
+    dlg.exec();
+/*
    QMessageBox::about(this, tr("About ") + getDefaultSettings().getAppName(),
             tr("<b>") + getDefaultSettings().getAppName() + "(TM) " + getVersionText() + "</b><br />" +
             "Commit: " + getCommitHash() + "<br />" + "Schema version: " + QString::number(getSchemaVersion()) + "<br />" + getCopyrightText());
+*/
 }
 
 void MainWindow::errorStatus(const QString& message)
