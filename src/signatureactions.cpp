@@ -92,13 +92,14 @@ void SignatureActions::addSignature()
             return;
         }
 
+        QString currentKeychain = m_currentKeychain;
         if (vault->isKeychainPrivateKeyLocked(m_currentKeychain.toStdString()))
-        {
+        { 
             unlockKeychain();
         }
 
         std::vector<std::string> keychainNames;
-        keychainNames.push_back(m_currentKeychain.toStdString());
+        keychainNames.push_back(currentKeychain.toStdString());
 
         seedEntropySource(false, &m_dialog);
         vault->signTx(m_dialog.getModel()->getTxHash(), keychainNames, true);

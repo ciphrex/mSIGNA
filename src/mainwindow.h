@@ -115,6 +115,7 @@ private slots:
     ////////////////////
     // GLOBAL OPERATIONS
     void selectCurrencyUnit();
+    void selectCurrencyUnit(const QString& prefix);
 
     ///////////////////
     // VAULT OPERATIONS
@@ -245,6 +246,7 @@ private:
     QMenu* txMenu;
     QMenu* networkMenu;
     QMenu* fontsMenu;
+    QMenu* currencyUnitMenu;
     QMenu* helpMenu;
 
     // toolbars
@@ -327,6 +329,10 @@ private:
     QAction* smallFontsAction;
     QAction* mediumFontsAction;
     QAction* largeFontsAction;
+
+    // currency unit actions
+    QActionGroup* currencyUnitGroup;
+    QList<QAction*> currencyUnitActions;
 
     // about/help actions
     QAction* aboutAction;

@@ -84,6 +84,7 @@ MainWindow::MainWindow() :
     keychainModel(nullptr),
     txActions(nullptr)
 {
+    loadSettings();
     createActions();
     createToolBars();
     createStatusBar();
@@ -250,7 +251,7 @@ MainWindow::MainWindow() :
 
     setAcceptDrops(true);
 
-    loadSettings();
+    updateFonts(fontSize);
 }
 
 void MainWindow::loadHeaders()
@@ -439,6 +440,17 @@ void MainWindow::selectCurrencyUnit()
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::createTx - " << e.what() << std::endl;
         showError(e.what());
+    }
+}
+
+void MainWindow::selectCurrencyUnit(const QString& newCurrencyUnitPrefix)
+{
+    if (newCurrencyUnitPrefix != currencyUnitPrefix)
+    {
+        currencyUnitPrefix = newCurrencyUnitPrefix;
+        saveSettings();
+        setCurrencyUnitPrefix(currencyUnitPrefix);
+        emit signal_currencyUnitChanged();
     }
 }
 
@@ -1803,7 +1815,7 @@ void MainWindow::createActions()
     networkSettingsAction->setEnabled(true);
     connect(networkSettingsAction, SIGNAL(triggered()), this, SLOT(networkSettings()));
 
-    // view actions
+    // font actions
     smallFontsAction = new QAction(tr("&Small"), this);
     smallFontsAction->setCheckable(true);
     smallFontsAction->setStatusTip(tr("Use small fonts"));
@@ -1824,6 +1836,18 @@ void MainWindow::createActions()
     fontSizeGroup->addAction(mediumFontsAction);
     fontSizeGroup->addAction(largeFontsAction);
 
+    // currency unit actions
+    currencyUnitGroup = new QActionGroup(this);
+    for (auto& prefix: getValidCurrencyPrefixes())
+    {
+        QAction* currencyUnitAction = new QAction(prefix + getCoinParams().currency_symbol(), this);
+        currencyUnitAction->setCheckable(true);
+        if (currencyUnitPrefix == prefix) { currencyUnitAction->setChecked(true); }
+        connect(currencyUnitAction, &QAction::triggered, [this, prefix]() { selectCurrencyUnit(prefix); });
+        currencyUnitGroup->addAction(currencyUnitAction);
+        currencyUnitActions << currencyUnitAction;
+    }
+
     // about/help actions
     aboutAction = new QAction(tr("About..."), this);
     aboutAction->setStatusTip(tr("About ") + getDefaultSettings().getAppName());
@@ -1842,8 +1866,8 @@ void MainWindow::createMenus()
     fileMenu->addAction(importVaultAction);
     fileMenu->addAction(exportVaultAction);
     fileMenu->addAction(exportPublicVaultAction);
-    fileMenu->addSeparator();
-    fileMenu->addAction(selectCurrencyUnitAction);
+   // fileMenu->addSeparator();
+  //  fileMenu->addAction(selectCurrencyUnitAction);
     fileMenu->addSeparator();
     fileMenu->addAction(quitAction);    
 
@@ -1908,8 +1932,16 @@ void MainWindow::createMenus()
     fontsMenu->addAction(mediumFontsAction);
     fontsMenu->addAction(largeFontsAction);
 
+    currencyUnitMenu = menuBar()->addMenu(tr("Currency Units"));
+    currencyUnitMenu->addSeparator()->setText(tr("Currency Unit"));
+    for (auto& currencyUnitAction: currencyUnitActions)
+    {
+        currencyUnitMenu->addAction(currencyUnitAction);
+    }
+
     menuBar()->addSeparator();
 
+    
     helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAction);
 }
@@ -1964,8 +1996,7 @@ void MainWindow::loadSettings()
         resize(size);
         move(pos);
 
-        int fontSize = settings.value("fontsize", MEDIUM_FONTS).toInt();
-        updateFonts(fontSize);
+        fontSize = settings.value("fontsize", MEDIUM_FONTS).toInt();
 
         licenseAccepted = settings.value("licenseaccepted", false).toBool();
     }
