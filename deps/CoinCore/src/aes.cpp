@@ -29,14 +29,11 @@
 #include "aes.h"
 #include "random.h"
 
-#include <stdutils/uchar_vector.h>
-
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 
 #include <cstring>
 
-#include <iostream>
 using namespace std;
 
 namespace AES
