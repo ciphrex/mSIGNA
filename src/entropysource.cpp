@@ -81,6 +81,11 @@ void seedEntropySource(bool reseed, bool showDialog, QWidget* parent)
     }
 }
 
+void joinEntropyThread()
+{
+    entropySource.join();
+}
+
 secure_bytes_t getRandomBytes(int n, QWidget* parent)
 {
     seedEntropySource(false, parent);
