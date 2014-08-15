@@ -16,6 +16,7 @@
 #include <CoinCore/MerkleTree.h>
 #include <CoinCore/hdkeys.h>
 #include <CoinCore/aes.h>
+#include <CoinCore/random.h>
 
 #include <logger/logger.h>
 
@@ -23,34 +24,51 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 
+#include <cstring>
+
 //#define ENABLE_CRYPTO
 
 using namespace CoinDB;
+
+static uint64_t generateSalt()
+{
+    secure_bytes_t salt_bytes = random_bytes(8);
+    uint64_t salt;
+    memcpy((void*)&salt, (const void*)&salt_bytes[0], 8);
+    return salt;
+}
 
 /*
  * class Keychain
  */
 
-Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lock_key, const bytes_t& salt)
+Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lock_key)
     : name_(name), hidden_(false)
 {
     if (name.empty() || name[0] == '@') throw std::runtime_error("Invalid keychain name.");
+    if (entropy.size() < 16) throw std::runtime_error("At least 128 bits of entropy must be supplied.");
 
-    if (!entropy.empty())
+    Coin::HDSeed hdSeed(entropy);
+    Coin::HDKeychain hdKeychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
+
+    depth_ = (uint32_t)hdKeychain.depth();
+    parent_fp_ = hdKeychain.parent_fp();
+    child_num_ = hdKeychain.child_num();
+    chain_code_ = hdKeychain.chain_code();
+    privkey_ = hdKeychain.key();
+    pubkey_ = hdKeychain.pubkey();
+    hash_ = hdKeychain.full_hash();
+    is_encrypted_ = !lock_key.empty();
+
+    if (is_encrypted_)
     {
-        Coin::HDSeed hdSeed(entropy);
-        Coin::HDKeychain hdKeychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
-
-        depth_ = (uint32_t)hdKeychain.depth();
-        parent_fp_ = hdKeychain.parent_fp();
-        child_num_ = hdKeychain.child_num();
-        chain_code_ = hdKeychain.chain_code();
-        privkey_ = hdKeychain.key();
-        pubkey_ = hdKeychain.pubkey();
-        hash_ = hdKeychain.full_hash();
-
-        setPrivateKeyUnlockKey(lock_key, salt);
-        setChainCodeUnlockKey(lock_key, salt);
+        salt_ = generateSalt();
+        privkey_ciphertext_ = aes_encrypt(lock_key, privkey_, true, salt_);
+    }
+    else
+    {
+        salt_ = 0;
+        privkey_ciphertext_ = privkey_;
     }
 }
 
@@ -64,10 +82,9 @@ Keychain& Keychain::operator=(const Keychain& source)
     pubkey_ = source.pubkey_;
 
     chain_code_ = source.chain_code_;
-    chain_code_ciphertext_ = source.chain_code_ciphertext_;
-    chain_code_salt_ = source.chain_code_salt_;
 
     privkey_ = source.privkey_;
+    is_encrypted_ = source.is_encrypted_;
     privkey_ciphertext_ = source.privkey_ciphertext_;
     privkey_salt_ = source.privkey_salt_;
 
@@ -130,9 +147,14 @@ std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private)
     }
 }
 
-bool Keychain::setPrivateKeyUnlockKey(const secure_bytes_t& lock_key, const bytes_t& /*salt*/)
+void Keychain::lock() const
 {
-    if (!isPrivate()) throw std::runtime_error("Cannot lock the private key of a public keychain.");
+    privkey_.clear();
+}
+
+bool Keychain::setLock(const secure_bytes_t& new_lock_key);
+{
+    if (!isPrivate()) throw std::runtime_error("Cannot lock a public keychain.");
     if (privkey_.empty()) throw std::runtime_error("Key is locked.");
 
 #ifdef ENABLE_CRYPTO

@@ -54,12 +54,14 @@ typedef odb::nullable<unsigned long> null_id_t;
 // SCHEMA VERSION //
 ////////////////////
 
-#define SCHEMA_BASE_VERSION 10
-#define SCHEMA_VERSION      11
+#define SCHEMA_BASE_VERSION 12
+#define SCHEMA_VERSION      12
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
 #endif
+
+#define DEFAULT_NETWORK "bitcoin"
 
 typedef std::vector<unsigned long> ids_t;
 
@@ -67,18 +69,25 @@ typedef std::vector<unsigned long> ids_t;
 class Version
 {
 public:
-    Version(uint32_t version = SCHEMA_VERSION) : version_(version) { }
+    explicit Version(const std::string& network = DEFAULT_NETWORK, uint32_t version = SCHEMA_VERSION) : network_(network), version_(version) { }
 
     unsigned long id() const { return id_; }
+
+    void network(const std::string& network) { network_ = network; }
+    const std::string& network() const { return network_; }
 
     void version(uint32_t version) { version_ = version; }
     uint32_t version() const { return version_; }
 
 private:
+    Version() { }
+
     friend class odb::access;
 
     #pragma db id auto
     unsigned long id_;
+
+    std::string network_;
 
     uint32_t version_;
 };
@@ -101,9 +110,9 @@ class Keychain : public std::enable_shared_from_this<Keychain>
 
 public:
     Keychain(bool hidden = false) : hidden_(hidden) { }
-    Keychain(const std::string& name, const secure_bytes_t& entropy = secure_bytes_t(), const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t()); // Creates a new root keychain
+    Keychain(const std::string& name, const secure_bytes_t& entropy = secure_bytes_t(), const secure_bytes_t& lock_key = secure_bytes_t()); // Creates a new root keychain
     Keychain(const Keychain& source)
-        : base(source), name_(source.name_), depth_(source.depth_), parent_fp_(source.parent_fp_), child_num_(source.child_num_), pubkey_(source.pubkey_), chain_code_(source.chain_code_), chain_code_ciphertext_(source.chain_code_ciphertext_), chain_code_salt_(source.chain_code_salt_), privkey_(source.privkey_), privkey_ciphertext_(source.privkey_ciphertext_), privkey_salt_(source.privkey_salt_), parent_(source.parent_), derivation_path_(source.derivation_path_), hidden_(source.hidden_) { }
+        : base(source), name_(source.name_), depth_(source.depth_), parent_fp_(source.parent_fp_), child_num_(source.child_num_), pubkey_(source.pubkey_), chain_code_(source.chain_code_), privkey_(source.privkey_), privkey_ciphertext_(source.privkey_ciphertext_), privkey_salt_(source.privkey_salt_), parent_(source.parent_), derivation_path_(source.derivation_path_), hidden_(source.hidden_) { }
 
     Keychain& operator=(const Keychain& source);
 
@@ -120,22 +129,13 @@ public:
 
     const std::vector<uint32_t>& derivation_path() const { return derivation_path_; }
 
-    bool isPrivate() const { return (!privkey_.empty()) || (!privkey_ciphertext_.empty()); }
-    bool isEncrypted() const { return !privkey_salt_.empty(); }
+    bool isPrivate() const { return (!privkey_ciphertext_.empty()); }
 
-    // Lock keys must be set before persisting
-    bool setPrivateKeyUnlockKey(const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
-    bool setChainCodeUnlockKey(const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
-
-    void lockPrivateKey() const;
-    void lockChainCode() const;
-    void lockAll() const;
-
-    bool isPrivateKeyLocked() const;
-    bool isChainCodeLocked() const;
-
-    bool unlockPrivateKey(const secure_bytes_t& lock_key) const;
-    bool unlockChainCode(const secure_bytes_t& lock_key) const;
+    void lock() const;
+    bool unlock(const secure_bytes_t& lock_key) const;
+    bool isLocked() const;
+    bool setLock(const secure_bytes_t& new_lock_key) const;
+    void clearLock() const;
 
     secure_bytes_t getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
     bytes_t getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
@@ -147,8 +147,7 @@ public:
     secure_bytes_t privkey() const;
     secure_bytes_t chain_code() const;
 
-    const bytes_t& chain_code_ciphertext() const { return chain_code_ciphertext_; }
-    const bytes_t& chain_code_salt() const { return chain_code_salt_; }
+    const bytes_t& chain_code() const { return chain_code_; }
 
     void importPrivateKey(const Keychain& source);
 
@@ -158,8 +157,8 @@ public:
     void hidden(bool hidden) { hidden_ = hidden; }
     bool hidden() const { return hidden_; }
 
-    void extkey(const secure_bytes_t& extkey, bool try_private = true, const secure_bytes_t& lock_key = secure_bytes_t(), const bytes_t& salt = bytes_t());
-    secure_bytes_t extkey(bool get_private = false) const;
+    void importbip32extkey(const secure_bytes_t& bip32extkey, const secure_bytes_t& lock_key = secure_bytes_t());
+    secure_bytes_t exportbip32extkey(bool get_private = false) const;
 
     void clearPrivateKey();
 
@@ -177,15 +176,13 @@ private:
     uint32_t child_num_;
     bytes_t pubkey_;
 
-    #pragma db transient
-    mutable secure_bytes_t chain_code_;
-    bytes_t chain_code_ciphertext_;
-    bytes_t chain_code_salt_;
+    bytes_t chain_code_;
 
     #pragma db transient
     mutable secure_bytes_t privkey_;
+    bool is_encrypted_;
     bytes_t privkey_ciphertext_;
-    bytes_t privkey_salt_;
+    uint64_t privkey_salt_;
 
     #pragma db null
     std::shared_ptr<Keychain> parent_;
