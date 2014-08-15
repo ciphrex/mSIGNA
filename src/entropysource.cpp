@@ -25,7 +25,6 @@ class EntropySource
 {
 public:
     EntropySource() : m_bSeeded(false) { }
-    ~EntropySource() { if (m_thread.joinable()) m_thread.detach(); }
 
     bool isSeeded() const { return m_bSeeded; }
     void seed(bool reseed = false);
