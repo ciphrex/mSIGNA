@@ -53,7 +53,7 @@ void SignatureModel::updateAll()
         QString stateStr;
         if (vault->isKeychainPrivate(keychain.name()))
         {
-            bool isLocked = vault->isKeychainPrivateKeyLocked(keychain.name());
+            bool isLocked = vault->isKeychainLocked(keychain.name());
             state = isLocked ? LOCKED : UNLOCKED;
             stateStr = isLocked ? tr("Locked") : tr("Unlocked");
         }

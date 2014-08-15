@@ -93,7 +93,7 @@ void SignatureActions::addSignature()
         }
 
         QString currentKeychain = m_currentKeychain;
-        if (vault->isKeychainPrivateKeyLocked(m_currentKeychain.toStdString()))
+        if (vault->isKeychainLocked(m_currentKeychain.toStdString()))
         { 
             unlockKeychain();
         }
@@ -127,7 +127,7 @@ void SignatureActions::unlockKeychain()
 
         CoinDB::Vault* vault = m_synchedVault.getVault();
         std::string keychainName = m_currentKeychain.toStdString();
-        if (!vault->isKeychainPrivateKeyLocked(keychainName))
+        if (!vault->isKeychainLocked(keychainName))
         {
             QMessageBox::critical(nullptr, tr("Error"), tr("Keychain is already unlocked."));
             return;
@@ -153,7 +153,7 @@ void SignatureActions::lockKeychain()
 
         CoinDB::Vault* vault = m_synchedVault.getVault();
         std::string keychainName = m_currentKeychain.toStdString();
-        if (vault->isKeychainPrivateKeyLocked(keychainName))
+        if (vault->isKeychainLocked(keychainName))
         {
             QMessageBox::critical(nullptr, tr("Error"), tr("Keychain is already locked."));
             return;

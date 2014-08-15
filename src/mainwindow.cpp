@@ -212,9 +212,6 @@ MainWindow::MainWindow() :
         txView->updateColumns();
 
         selectAccount(0);
-
-        // TODO: prompt user to unlock chain codes.
-        synchedVault.getVault()->unlockChainCodes(uchar_vector("1234"));
     });
     connect(this, &MainWindow::vaultClosed, [this]() {
         keychainModel->setVault(nullptr);
@@ -2043,6 +2040,5 @@ void MainWindow::clearSettings()
 void MainWindow::loadVault(const QString &fileName)
 {
     synchedVault.openVault(fileName.toStdString(), false);
-    accountModel->getVault()->unlockChainCodes(uchar_vector("1234"));
 }
 

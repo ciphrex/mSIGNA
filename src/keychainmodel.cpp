@@ -135,7 +135,7 @@ bytes_t KeychainModel::getExtendedKeyBytes(const QString& keychainName, bool get
         throw std::runtime_error("No vault is loaded.");
     }
 
-    return vault->getKeychainExtendedKey(keychainName.toStdString(), getPrivate);
+    return vault->exportBIP32(keychainName.toStdString(), getPrivate);
 }
 
 QVariant KeychainModel::data(const QModelIndex& index, int role) const
