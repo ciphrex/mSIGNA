@@ -29,10 +29,15 @@
 #include "aes.h"
 #include "random.h"
 
+#include <stdutils/uchar_vector.h>
+
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 
 #include <cstring>
+
+#include <iostream>
+using namespace std;
 
 namespace AES
 {
@@ -79,14 +84,23 @@ unsigned char* encrypt(EVP_CIPHER_CTX* e, unsigned char* plaintext, int* len)
     unsigned char* ciphertext = (unsigned char*)malloc(c_len);
 
     /* allows reusing of 'e' for multiple encryption cycles */
-    EVP_EncryptInit_ex(e, NULL, NULL, NULL, NULL);
+    if (!EVP_EncryptInit_ex(e, NULL, NULL, NULL, NULL))
+    {
+        throw std::runtime_error("EVP_EncryptInit_ex() failed.");
+    }
 
     /* update ciphertext, c_len is filled with the length of ciphertext generated,
     *len is the size of plaintext in bytes */
-    EVP_EncryptUpdate(e, ciphertext, &c_len, plaintext, *len);
+    if (!EVP_EncryptUpdate(e, ciphertext, &c_len, plaintext, *len))
+    {
+        throw std::runtime_error("EVP_EncryptUpdate() failed.");
+    }
 
     /* update ciphertext with the final remaining bytes */
-    EVP_EncryptFinal_ex(e, ciphertext+c_len, &f_len);
+    if (!EVP_EncryptFinal_ex(e, ciphertext+c_len, &f_len))
+    {
+        throw std::runtime_error("EVP_EncryptFinal_ex() failed.");
+    }
 
     *len = c_len + f_len;
     return ciphertext;
@@ -123,9 +137,20 @@ unsigned char* decrypt(EVP_CIPHER_CTX* e, unsigned char* ciphertext, int* len)
     int p_len = *len, f_len = 0;
     unsigned char *plaintext = (unsigned char*)malloc(p_len + AES_BLOCK_SIZE);
 
-    EVP_DecryptInit_ex(e, NULL, NULL, NULL, NULL);
-    EVP_DecryptUpdate(e, plaintext, &p_len, ciphertext, *len);
-    EVP_DecryptFinal_ex(e, plaintext+p_len, &f_len);
+    if (!EVP_DecryptInit_ex(e, NULL, NULL, NULL, NULL))
+    {
+        throw std::runtime_error("EVP_DecryptInit_ex() failed.");
+    }
+
+    if (!EVP_DecryptUpdate(e, plaintext, &p_len, ciphertext, *len))
+    {
+        throw std::runtime_error("EVP_DecryptUpdate() failed.");
+    }
+
+    if (!EVP_DecryptFinal_ex(e, plaintext + p_len, &f_len))
+    {
+        throw std::runtime_error("EVP_DecryptFinal_ex() failed.");
+    }
 
     *len = p_len + f_len;
     return plaintext;
@@ -141,6 +166,8 @@ secure_bytes_t decrypt(const secure_bytes_t& key, const bytes_t& ciphertext, boo
     const unsigned char* pSalt = useSalt ? (const unsigned char*)&salt : nullptr;
     init(&key[0], key_len, pSalt, &en, &de);
 
+
+    //EVP_CIPHER_CTX_set_padding(&de, 0);
     int len = ciphertext.size();
     unsigned char* plaintext_ = decrypt(&de, (unsigned char*)&ciphertext[0], &len);
 

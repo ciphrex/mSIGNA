@@ -36,23 +36,28 @@ int main(int argc, char* argv[])
 {
     if (argc != 4)
     {
-        cerr << "# Usage: " << argv[0] << " <salt> <passphrase> <hex ciphertext>" << endl;
+        cerr << "# Usage: " << argv[0] << " <passphrase> <hex ciphertext> <salt>" << endl;
         return -1;
     }
 
     try
     {
-        uint64_t salt = strtoull(argv[1], NULL, 0);
-        secure_bytes_t passphrase((unsigned char*)argv[2], (unsigned char*)argv[2] + strlen(argv[2]));
+        secure_bytes_t passphrase((unsigned char*)&argv[1][0], (unsigned char*)&argv[1][0] + strlen(argv[1]));
         secure_bytes_t key = sha256_2(passphrase);
-        bytes_t ciphertext = uchar_vector(argv[3]);
+
+        bytes_t ciphertext = uchar_vector(argv[2]);
+
+        uint64_t salt = strtoull(argv[3], NULL, 0);
 
         secure_bytes_t data = decrypt(key, ciphertext, true, salt);
+
         char* plaintext = (char*)malloc(data.size() + 1);
         memcpy((void*)plaintext, (const void*)&data[0], data.size());
         plaintext[data.size()] = 0;
 
-        cout << "Plaintext: " << plaintext << endl;
+        cout << "Hex key:        " << uchar_vector(key).getHex() << endl;
+        cout << "Plaintext:      " << plaintext << endl;
+        cout << "Salt:           " << salt << endl;
 
         free(plaintext);
     }

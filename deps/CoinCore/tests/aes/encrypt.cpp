@@ -23,6 +23,8 @@
 // THE SOFTWARE.
 //
 
+#include <openssl/aes.h>
+
 #include <aes.h>
 #include <hash.h>
 #include <random.h>
@@ -35,24 +37,26 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3)
+
+    if (argc < 3 || argc > 4)
     {
-        cerr << "# Usage: " << argv[0] << " <passphrase> <plaintext>" << endl;
+        cerr << "# Usage: " << argv[0] << " <passphrase> <plaintext> [salt]" << endl;
         return -1;
     }
 
     try
     {
-        secure_bytes_t passphrase((unsigned char*)argv[1], (unsigned char*)argv[1] + strlen(argv[1]));
+        secure_bytes_t passphrase((unsigned char*)&argv[1][0], (unsigned char*)&argv[1][0] + strlen(argv[1]));
         secure_bytes_t key = sha256_2(passphrase);
 
-        secure_bytes_t data((unsigned char*)argv[2], (unsigned char*)argv[2] + strlen(argv[2]));
+        secure_bytes_t data((unsigned char*)&argv[2][0], (unsigned char*)&argv[2][0] + strlen(argv[2]));
 
-        uint64_t salt = random_salt();
-        bytes_t cipherdata = encrypt(passphrase, data, true, salt);
+        uint64_t salt = argc > 3 ? strtoull(argv[3], NULL, 0) : random_salt();
+        bytes_t cipherdata = encrypt(key, data, true, salt);
 
-        cout << "Salt:           " << salt << endl;
+        cout << "Hex key:        " << uchar_vector(key).getHex() << endl;
         cout << "Hex ciphertext: " << uchar_vector(cipherdata).getHex() << endl;
+        cout << "Salt:           " << salt << endl;
     }
     catch (const AESException& e)
     {
