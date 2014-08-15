@@ -29,8 +29,40 @@
 
 #include "typedefs.h"
 
-#include <stdexcept>
+#include <stdutils/customerror.h>
 
-secure_bytes_t aes_encrypt(const secure_bytes_t& key, const secure_bytes_t& plaintext, bool useSalt = false, uint64_t salt = 0);
-secure_bytes_t aes_decrypt(const secure_bytes_t& key, const secure_bytes_t& ciphertext, bool useSalt = false, uint64_t salt = 0);
+namespace AES
+{
+
+enum ErrorCodes
+{
+    AES_INIT_ERROR = 21200,
+    AES_DECRYPT_ERROR
+};
+
+class AESException : public stdutils::custom_error
+{
+public:
+    virtual ~AESException() throw() { }
+
+protected:
+    AESException(const std::string& what, int code) : stdutils::custom_error(what, code) { }
+};
+
+class AESInitException : public AESException
+{
+public:
+    AESInitException() : AESException("Failed to initialize the AES environment.", AES_INIT_ERROR) { }
+};
+
+class AESDecryptException : public AESException
+{
+public:
+    AESDecryptException() : AESException("AES decryption failed.", AES_DECRYPT_ERROR) { }
+};
+
+secure_bytes_t encrypt(const secure_bytes_t& key, const secure_bytes_t& plaintext, bool useSalt = false, uint64_t salt = 0);
+secure_bytes_t decrypt(const secure_bytes_t& key, const secure_bytes_t& ciphertext, bool useSalt = false, uint64_t salt = 0);
+
+}
 
