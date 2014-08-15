@@ -23,8 +23,6 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
 #include <aes.h>
 #include <hash.h>
 #include <random.h>
