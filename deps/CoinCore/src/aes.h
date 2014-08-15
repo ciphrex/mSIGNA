@@ -28,6 +28,7 @@
 #pragma once
 
 #include "typedefs.h"
+#include "random.h"
 
 #include <stdutils/customerror.h>
 
@@ -61,8 +62,9 @@ public:
     AESDecryptException() : AESException("AES decryption failed.", AES_DECRYPT_ERROR) { }
 };
 
-secure_bytes_t encrypt(const secure_bytes_t& key, const secure_bytes_t& plaintext, bool useSalt = false, uint64_t salt = 0);
-secure_bytes_t decrypt(const secure_bytes_t& key, const secure_bytes_t& ciphertext, bool useSalt = false, uint64_t salt = 0);
+uint64_t        random_salt();
+bytes_t         encrypt(const secure_bytes_t& key, const secure_bytes_t& plaintext, bool useSalt = false, uint64_t salt = 0);
+secure_bytes_t  decrypt(const secure_bytes_t& key, const bytes_t& ciphertext, bool useSalt = false, uint64_t salt = 0);
 
 }
 

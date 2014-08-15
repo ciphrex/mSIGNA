@@ -27,15 +27,29 @@
 // TODO: Use secure buffers
 
 #include "aes.h"
+#include "random.h"
 
 #include <openssl/aes.h>
 #include <openssl/evp.h>
+
+#include <cstring>
+
+namespace AES
+{
+
+uint64_t random_salt()
+{
+    secure_bytes_t bytes = random_bytes(8);
+    uint64_t salt;
+    memcpy((void*)&salt, (const void*)&bytes[0], 8);
+    return salt;
+}
 
 /**
  * Create an 256 bit key and IV using the supplied key_data. salt can be added for taste.
  * Fills in the encryption and decryption ctx objects and returns 0 on success
  **/
-int aes_init(const unsigned char* key_data, int key_data_len, const unsigned char* salt, EVP_CIPHER_CTX* e_ctx, EVP_CIPHER_CTX* d_ctx)
+void init(const unsigned char* key_data, int key_data_len, const unsigned char* salt, EVP_CIPHER_CTX* e_ctx, EVP_CIPHER_CTX* d_ctx)
 {
     int nrounds = 5;
     unsigned char key[32], iv[32];
@@ -46,25 +60,19 @@ int aes_init(const unsigned char* key_data, int key_data_len, const unsigned cha
     * slower.
     */
     int i = EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha1(), salt, key_data, key_data_len, nrounds, key, iv);
-    if (i != 32)
-    {
-        printf("Key size is %d bits - should be 256 bits\n", i);
-        return -1;
-    }
+    if (i != 32) throw AESInitException();
 
     EVP_CIPHER_CTX_init(e_ctx);
     EVP_EncryptInit_ex(e_ctx, EVP_aes_256_cbc(), NULL, key, iv);
     EVP_CIPHER_CTX_init(d_ctx);
     EVP_DecryptInit_ex(d_ctx, EVP_aes_256_cbc(), NULL, key, iv);
-
-    return 0;
 }
 
 /*
  * Encrypt *len bytes of data
  * All data going in & out is considered binary (unsigned char[])
  */
-unsigned char* aes_encrypt(EVP_CIPHER_CTX* e, unsigned char* plaintext, int* len)
+unsigned char* encrypt(EVP_CIPHER_CTX* e, unsigned char* plaintext, int* len)
 {
     /* max ciphertext len for a n bytes of plaintext is n + AES_BLOCK_SIZE -1 bytes */
     int c_len = *len + AES_BLOCK_SIZE, f_len = 0;
@@ -84,7 +92,7 @@ unsigned char* aes_encrypt(EVP_CIPHER_CTX* e, unsigned char* plaintext, int* len
     return ciphertext;
 }
 
-secure_bytes_t aes_encrypt(const secure_bytes_t& key, const secure_bytes_t& plaintext, bool useSalt, uint64_t salt)
+bytes_t encrypt(const secure_bytes_t& key, const secure_bytes_t& plaintext, bool useSalt, uint64_t salt)
 {
     EVP_CIPHER_CTX en, de;
 
@@ -92,10 +100,10 @@ secure_bytes_t aes_encrypt(const secure_bytes_t& key, const secure_bytes_t& plai
 
     /* gen key and iv. init the cipher ctx object */
     const unsigned char* pSalt = useSalt ? (const unsigned char*)&salt : nullptr;
-    if (aes_init(&key[0], key_len, pSalt, &en, &de)) throw std::runtime_error("aes_encrypt - aes_init error.");    
+    init(&key[0], key_len, pSalt, &en, &de);
 
     int len = plaintext.size();
-    unsigned char* ciphertext_ = aes_encrypt(&en, (unsigned char*)&plaintext[0], &len);
+    unsigned char* ciphertext_ = encrypt(&en, (unsigned char*)&plaintext[0], &len);
 
     secure_bytes_t ciphertext(ciphertext_, ciphertext_ + len);
 
@@ -109,7 +117,7 @@ secure_bytes_t aes_encrypt(const secure_bytes_t& key, const secure_bytes_t& plai
 /*
  * Decrypt *len bytes of ciphertext
  */
-unsigned char* aes_decrypt(EVP_CIPHER_CTX* e, unsigned char* ciphertext, int* len)
+unsigned char* decrypt(EVP_CIPHER_CTX* e, unsigned char* ciphertext, int* len)
 {
     /* because we have padding ON, we must allocate an extra cipher block size of memory */
     int p_len = *len, f_len = 0;
@@ -123,7 +131,7 @@ unsigned char* aes_decrypt(EVP_CIPHER_CTX* e, unsigned char* ciphertext, int* le
     return plaintext;
 }
 
-secure_bytes_t aes_decrypt(const secure_bytes_t& key, const secure_bytes_t& ciphertext, bool useSalt, uint64_t salt)
+secure_bytes_t decrypt(const secure_bytes_t& key, const bytes_t& ciphertext, bool useSalt, uint64_t salt)
 {
     EVP_CIPHER_CTX en, de;
 
@@ -131,19 +139,17 @@ secure_bytes_t aes_decrypt(const secure_bytes_t& key, const secure_bytes_t& ciph
 
     /* gen key and iv. init the cipher ctx object */
     const unsigned char* pSalt = useSalt ? (const unsigned char*)&salt : nullptr;
-    if (aes_init(&key[0], key_len, pSalt, &en, &de)) throw std::runtime_error("aes_decrypt - aes_init error.");    
+    init(&key[0], key_len, pSalt, &en, &de);
 
     int len = ciphertext.size();
-    unsigned char* plaintext_ = aes_decrypt(&de, (unsigned char*)&ciphertext[0], &len);
+    unsigned char* plaintext_ = decrypt(&de, (unsigned char*)&ciphertext[0], &len);
 
     if (len <= 0)
     {
-        free (plaintext_);
+        free(plaintext_);
         EVP_CIPHER_CTX_cleanup(&en);
         EVP_CIPHER_CTX_cleanup(&de);
-
-        // TODO: use exception codes
-        throw std::runtime_error("aes_decrypt - invalid key, ciphertext, or salt.");
+        throw AESDecryptException();
     }
 
     secure_bytes_t plaintext(plaintext_, plaintext_ + len);
@@ -155,3 +161,4 @@ secure_bytes_t aes_decrypt(const secure_bytes_t& key, const secure_bytes_t& ciph
     return plaintext;
 }
 
+}
