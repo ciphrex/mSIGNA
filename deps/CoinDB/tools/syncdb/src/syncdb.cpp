@@ -28,7 +28,7 @@ using namespace CoinDB;
 using namespace CoinQ;
 using namespace std;
 
-const std::string VERSION_INFO = "v0.1.2";
+const std::string VERSION_INFO = "v0.2.0";
 
 bool g_bShutdown = false;
 
