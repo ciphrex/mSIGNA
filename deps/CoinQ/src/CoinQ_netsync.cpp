@@ -135,7 +135,10 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
         boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
         if (m_currentMerkleTxHashes.empty())
         {
-            m_mempoolTxs.insert(tx.hash());
+            {
+                boost::lock_guard<boost::mutex> mempoolLock(m_mempoolMutex);
+                m_mempoolTxs.insert(tx.hash());
+            }
 
             syncLock.unlock();
             notifyNewTx(tx);
@@ -238,9 +241,14 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                 if (tx.hash() == m_currentMerkleTxHashes.front())
                 {
                     LOGGER(trace) << "New merkle transaction (" << (m_currentMerkleTxIndex + 1) << " of " << m_currentMerkleTxCount << "): " << tx.hash().getHex() << endl;
+
                     notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex++, m_currentMerkleTxCount);
                     m_currentMerkleTxHashes.pop();
-                    m_mempoolTxs.erase(tx.hash());
+
+                    {
+                        boost::lock_guard<boost::mutex> mempoolLock(m_mempoolMutex);
+                        m_mempoolTxs.erase(tx.hash());
+                    }
                 }
             }
 
@@ -547,15 +555,16 @@ void NetworkSync::stopSynchingBlocks(bool bClearFilter)
 
 void NetworkSync::addToMempool(const uchar_vector& txHash)
 {
-    boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
+    boost::lock_guard<boost::mutex> mempoolLock(m_mempoolMutex);
     m_mempoolTxs.insert(txHash);
 }
 
 void NetworkSync::insertTx(const Coin::Transaction& tx)
 {
-    boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
-    m_mempoolTxs.insert(tx.hash());
-    syncLock.unlock();
+    {
+        boost::lock_guard<boost::mutex> mempoolLock(m_mempoolMutex);
+        m_mempoolTxs.insert(tx.hash());
+    }
 
     notifyNewTx(tx);
 }
@@ -587,7 +596,11 @@ void NetworkSync::insertMerkleBlock(const Coin::MerkleBlock& merkleBlock, const 
         {
             LOGGER(trace) << "New merkle transaction (" << (m_currentMerkleTxIndex + 1) << " of " << m_currentMerkleTxCount << "): " << tx.hash().getHex() << endl;
             notifyMerkleTx(chainMerkleBlock, tx, i++, n);
-            m_mempoolTxs.erase(tx.hash());
+
+            {
+                boost::lock_guard<boost::mutex> mempoolLock(m_mempoolMutex);
+                m_mempoolTxs.erase(tx.hash());
+            }
         }
     }
 }
@@ -885,12 +898,16 @@ void NetworkSync::processBlockTx(const Coin::Transaction& tx)
 
 void NetworkSync::processMempoolConfirmations()
 {
+    boost::unique_lock<boost::mutex> mempoolLock(m_mempoolMutex);
     LOGGER(trace) << "Confirming " << m_currentMerkleTxHashes.size() << " merkle block transactions from " << m_mempoolTxs.size() << " mempool transactions..." << endl;
     while (!m_currentMerkleTxHashes.empty() && m_mempoolTxs.count(m_currentMerkleTxHashes.front()))
     {
         const uchar_vector& txHash = m_currentMerkleTxHashes.front();
         LOGGER(trace) << "  Confirming tx (" << (m_currentMerkleTxIndex + 1) << " of " << m_currentMerkleTxCount << "): " << txHash.getHex() << endl;
+        mempoolLock.unlock();
         notifyTxConfirmed(m_currentMerkleBlock, txHash, m_currentMerkleTxIndex++, m_currentMerkleTxCount);
+
+        mempoolLock.lock();
         m_mempoolTxs.erase(txHash);
         m_currentMerkleTxHashes.pop();
     }

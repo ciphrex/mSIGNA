@@ -171,6 +171,7 @@ private:
     void initBlockFilter();
 
     // Merkle block state
+    mutable boost::mutex m_mempoolMutex;
     std::set<bytes_t> m_mempoolTxs;
     ChainMerkleBlock m_currentMerkleBlock;
     std::queue<bytes_t> m_currentMerkleTxHashes;
