@@ -78,6 +78,27 @@ Vault::~Vault()
     close();
 }
 
+////////////////////
+// STATIC MEMBERS //
+////////////////////
+bool Vault::isValidObjectName(const std::string& name)
+{
+    if (name.empty()) return false;
+    for (auto& c: name)
+    {
+        if (c >= 'a' && c <= 'z') continue;
+        if (c >= 'A' && c <= 'Z') continue;
+        if (c >= '0' && c <= '9') continue;
+        if (c == ' ') continue;
+        if (c == '_') continue;
+        if (c == '-') continue;
+
+        return false;
+    }
+
+    return true;
+}
+
 ///////////////////////
 // GLOBAL OPERATIONS //
 ///////////////////////
@@ -512,6 +533,7 @@ std::shared_ptr<Keychain> Vault::importKeychain_unwrapped(const std::string& fil
         throw KeychainAlreadyExistsException(stored_keychain->name());
     }
 
+/*
     std::string keychain_name = keychain->name();
     unsigned int append_num = 1; // in case of name conflict
     while (keychainExists_unwrapped(keychain->name()))
@@ -520,7 +542,9 @@ std::shared_ptr<Keychain> Vault::importKeychain_unwrapped(const std::string& fil
         ss << keychain_name << append_num++;
         keychain->name(ss.str());
     }
+*/
 
+    keychain->name(getNextAvailableKeychainName_unwrapped(keychain->name()));
     db_->persist(keychain);
     return keychain;
 }
@@ -557,6 +581,25 @@ bool Vault::keychainExists_unwrapped(const bytes_t& keychain_hash) const
 {
     odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::hash == keychain_hash));
     return !r.empty();
+}
+
+std::string Vault::getNextAvailableKeychainName_unwrapped(const std::string& desired_keychain_name) const
+{
+    std::string keychain_name(desired_keychain_name);
+    bool bValid = isValidObjectName(keychain_name);
+    if (!bValid) { keychain_name = "keychain"; }
+
+    unsigned int append_num = 1;
+    std::stringstream ss;
+    ss << keychain_name;
+    if (!bValid) { ss << " " << append_num++; }
+    while (keychainExists_unwrapped(ss.str()))
+    {
+        ss.str(std::string());
+        ss << keychain_name << " " << append_num++;
+    }
+
+    return ss.str();
 }
 
 bool Vault::isKeychainPrivate(const std::string& keychain_name) const
@@ -897,15 +940,20 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(boost::archive::text_iar
     odb::result<Account> r(db_->query<Account>(odb::query<Account>::hash == account->hash()));
     if (!r.empty()) throw AccountAlreadyExistsException(r.begin().load()->name());
 
-    // In case of account name conflict
+    // In case of missing account name or account name conflict
+/*
     std::string account_name = account->name();
+    if (account_name.empty()) { account_name = "default"; }
     unsigned int append_num = 1;
     while (accountExists_unwrapped(account->name()))
     {
         std::stringstream ss;
-        ss << account_name << append_num++;
+        ss << account_name << "_" << append_num++;
         account->name(ss.str());
     }
+*/
+
+    account->name(getNextAvailableAccountName_unwrapped(account->name()));
 
     // Persist keychains
     bool countprivkeys = (privkeysimported != 0);
@@ -920,6 +968,7 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(boost::archive::text_iar
             if (countprivkeys) { if (keychain->isPrivate()) privkeysimported++; }
             else               { keychain->clearPrivateKey(); }
 
+/*
             std::string keychain_name = keychain->name();
             unsigned int append_num = 1; // in case of name conflict
             while (keychainExists_unwrapped(keychain->name()))
@@ -928,6 +977,9 @@ std::shared_ptr<Account> Vault::importAccount_unwrapped(boost::archive::text_iar
                 ss << keychain_name << append_num++;
                 keychain->name(ss.str());
             }
+*/
+
+            keychain->name(getNextAvailableKeychainName_unwrapped(keychain->name()));
             db_->persist(keychain);
         }
         else
@@ -999,6 +1051,25 @@ bool Vault::accountExists_unwrapped(const std::string& account_name) const
 {
     odb::result<Account> r(db_->query<Account>(odb::query<Account>::name == account_name));
     return !r.empty();
+}
+
+std::string Vault::getNextAvailableAccountName_unwrapped(const std::string& desired_account_name) const
+{
+    std::string account_name(desired_account_name);
+    bool bValid = isValidObjectName(account_name);
+    if (!bValid) { account_name = "account"; }
+
+    unsigned int append_num = 1;
+    std::stringstream ss;
+    ss << account_name;
+    if (!bValid) { ss << " " << append_num++; }
+    while (accountExists_unwrapped(ss.str()))
+    {
+        ss.str(std::string());
+        ss << account_name << " " << append_num++;
+    }
+
+    return ss.str();
 }
 
 void Vault::newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size, uint32_t time_created)

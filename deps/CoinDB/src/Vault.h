@@ -51,6 +51,11 @@ public:
 
     virtual ~Vault();
 
+    ////////////////////
+    // STATIC MEMBERS //
+    ////////////////////
+    static bool isValidObjectName(const std::string& name);
+
     ///////////////////////
     // GLOBAL OPERATIONS //
     ///////////////////////
@@ -238,6 +243,7 @@ protected:
     /////////////////////////
     bool                                    keychainExists_unwrapped(const std::string& keychain_name) const;
     bool                                    keychainExists_unwrapped(const bytes_t& keychain_hash) const;
+    std::string                             getNextAvailableKeychainName_unwrapped(const std::string& desired_keychain_name) const;
     bool                                    isKeychainPrivate_unwrapped(const std::string& keychain_name) const;
     std::shared_ptr<Keychain>               getKeychain_unwrapped(const std::string& keychain_name) const;
     void                                    persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
@@ -262,6 +268,7 @@ protected:
     void                                    refillAccountPool_unwrapped(std::shared_ptr<Account> account);
 
     bool                                    accountExists_unwrapped(const std::string& account_name) const;
+    std::string                             getNextAvailableAccountName_unwrapped(const std::string& desired_account_name) const;
     std::shared_ptr<Account>                getAccount_unwrapped(const std::string& account_name) const; // throws AccountNotFoundException
 
     std::vector<TxOutView>                  getUnspentTxOutViews_unwrapped(std::shared_ptr<Account> account, uint32_t min_confirmations = 0) const;
