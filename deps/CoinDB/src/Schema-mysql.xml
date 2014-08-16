@@ -2,8 +2,14 @@
   <model version="12">
     <table name="Version" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>
-      <column name="network" type="VARCHAR(255)" null="false"/>
       <column name="version" type="INT UNSIGNED" null="false"/>
+      <primary-key auto="true">
+        <column name="id"/>
+      </primary-key>
+    </table>
+    <table name="Network" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="network" type="VARCHAR(255)" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>

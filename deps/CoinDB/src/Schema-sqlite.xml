@@ -2,8 +2,14 @@
   <model version="12">
     <table name="Version" kind="object">
       <column name="id" type="INTEGER" null="false"/>
-      <column name="network" type="TEXT" null="false"/>
       <column name="version" type="INTEGER" null="false"/>
+      <primary-key auto="true">
+        <column name="id"/>
+      </primary-key>
+    </table>
+    <table name="Network" kind="object">
+      <column name="id" type="INTEGER" null="false"/>
+      <column name="network" type="TEXT" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>

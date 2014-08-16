@@ -45,22 +45,24 @@ class Vault
 {
 public:
     Vault() : db_(nullptr) { }
-    Vault(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION);
-    Vault(const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION);
-    Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION);
+    Vault(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
+    Vault(const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
+    Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
 
     virtual ~Vault();
 
     ///////////////////////
     // GLOBAL OPERATIONS //
     ///////////////////////
-    void                                    open(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION);
-    void                                    open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION);
+    void                                    open(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
+    void                                    open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
     void                                    close();
 
     const std::string&                      getName() const { return name_; }
     uint32_t                                getSchemaVersion() const;
     void                                    setSchemaVersion(uint32_t version);
+    std::string                             getNetwork() const;
+    void                                    setNetwork(const std::string& network);
 
     static const uint32_t                   MAX_HORIZON_TIMESTAMP_OFFSET = 6 * 60 * 60; // a good six hours initial tolerance for incorrect clock
     uint32_t                                getHorizonTimestamp() const; // nothing that happened before this should matter to us.
@@ -220,6 +222,9 @@ protected:
     ///////////////////////
     uint32_t                                getSchemaVersion_unwrapped() const;
     void                                    setSchemaVersion_unwrapped(uint32_t version);
+
+    std::string                             getNetwork_unwrapped() const;
+    void                                    setNetwork_unwrapped(const std::string& network);
 
     uint32_t                                getHorizonTimestamp_unwrapped() const;
     uint32_t                                getMaxFirstBlockTimestamp_unwrapped() const;

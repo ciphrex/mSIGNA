@@ -61,20 +61,16 @@ typedef odb::nullable<unsigned long> null_id_t;
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
 #endif
 
-#define DEFAULT_NETWORK "bitcoin"
-
 typedef std::vector<unsigned long> ids_t;
 
+// DO NOT CHANGE THE VERSION CLASS SCHEMA
 #pragma db object pointer(std::shared_ptr)
 class Version
 {
 public:
-    explicit Version(const std::string& network = DEFAULT_NETWORK, uint32_t version = SCHEMA_VERSION) : network_(network), version_(version) { }
+    explicit Version(uint32_t version = SCHEMA_VERSION) : version_(version) { }
 
     unsigned long id() const { return id_; }
-
-    void network(const std::string& network) { network_ = network; }
-    const std::string& network() const { return network_; }
 
     void version(uint32_t version) { version_ = version; }
     uint32_t version() const { return version_; }
@@ -85,9 +81,32 @@ private:
     #pragma db id auto
     unsigned long id_;
 
-    std::string network_;
-
     uint32_t version_;
+};
+
+
+//////////////
+// NETWORK  //
+//////////////
+#pragma db object pointer(std::shared_ptr)
+class Network
+{
+public:
+    explicit Network(const std::string& network) : network_(network) { }
+
+    unsigned long id() const { return id_; }
+
+    void network(const std::string& network) { network_ = network; }
+    const std::string& network() const { return network_; }
+
+private:
+    Network() { }
+    friend class odb::access;
+
+    #pragma db id auto
+    unsigned long id_;
+
+    std::string network_;
 };
 
 

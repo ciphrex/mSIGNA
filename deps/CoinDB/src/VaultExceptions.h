@@ -20,6 +20,7 @@ enum ErrorCodes
 {
     // Vault errors
     VAULT_WRONG_SCHEMA_VERSION = 101,
+    VAULT_WRONG_NETWORK,
     VAULT_MISSING_TXS,
 
     // Chain code errors
@@ -91,6 +92,17 @@ public:
 
 private:
     uint32_t schema_version_;
+};
+
+class VaultWrongNetworkException : public VaultException
+{
+public:
+    explicit VaultWrongNetworkException(const std::string& vault_name, const std::string& network) : VaultException("Wrong network.", VAULT_WRONG_NETWORK, vault_name), network_(network) { }
+
+    const std::string&  network() const { return network_; }
+
+private:
+    std::string network_;
 };
 
 class VaultMissingTxsException : public VaultException

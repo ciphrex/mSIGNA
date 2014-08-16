@@ -44,32 +44,29 @@ using namespace CoinDB;
 /*
  * class Vault implementation
 */
-Vault::Vault(int argc, char** argv, bool create, uint32_t version)
-//    : db_(open_database(argc, argv, create))
+Vault::Vault(int argc, char** argv, bool create, uint32_t version, const std::string& network)
 {
-    LOGGER(trace) << "Vault::Vault(..., " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
+    LOGGER(trace) << "Vault::Vault(..., " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
 
-    open(argc, argv, create, version);
+    open(argc, argv, create, version, network);
 //    if (argc >= 2) name_ = argv[1];
 //    if (create) setSchemaVersion(version);
 }
 
-Vault::Vault(const std::string& dbname, bool create, uint32_t version)
-//    : db_(openDatabase("", "", dbname, create))
+Vault::Vault(const std::string& dbname, bool create, uint32_t version, const std::string& network)
 {
-    LOGGER(trace) << "Vault::Vault(" << dbname << ", " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
+    LOGGER(trace) << "Vault::Vault(" << dbname << ", " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
 
-    open("", "", dbname, create, version);
+    open("", "", dbname, create, version, network);
 //    name_ = dbname;
 //    if (create) setSchemaVersion(version);
 }
 
-Vault::Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version)
-//    : db_(openDatabase(dbuser, dbpasswd, dbname, create))
+Vault::Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version, const std::string& network)
 {
-    LOGGER(trace) << "Vault::Vault(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
+    LOGGER(trace) << "Vault::Vault(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
 
-    open(dbuser, dbpasswd, dbname, create, version);
+    open(dbuser, dbpasswd, dbname, create, version, network);
 //    name_ = dbname;
 //    if (create) setSchemaVersion(version);
 }
@@ -84,9 +81,9 @@ Vault::~Vault()
 ///////////////////////
 // GLOBAL OPERATIONS //
 ///////////////////////
-void Vault::open(int argc, char** argv, bool create, uint32_t version)
+void Vault::open(int argc, char** argv, bool create, uint32_t version, const std::string& network)
 {
-    LOGGER(trace) << "Vault::open(..., " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
+    LOGGER(trace) << "Vault::open(..., " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     db_ = open_database(argc, argv, create);
@@ -96,18 +93,25 @@ void Vault::open(int argc, char** argv, bool create, uint32_t version)
     if (create)
     {
         setSchemaVersion_unwrapped(version);
+        setNetwork_unwrapped(network);
         t.commit();
     }
     else
     {
         uint32_t schemaVersion = getSchemaVersion_unwrapped();
         if (schemaVersion != version) throw VaultWrongSchemaVersionException(name_, schemaVersion);
+
+        if (!network.empty())
+        {
+            std::string dbNetwork = getNetwork_unwrapped();
+            if (!dbNetwork.empty() && dbNetwork != network) throw VaultWrongNetworkException(name_, dbNetwork);
+        }
     }
 }
 
-void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version)
+void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version, const std::string& network)
 {
-    LOGGER(trace) << "Vault::open(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ")" << std::endl;
+    LOGGER(trace) << "Vault::open(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     db_ = openDatabase(dbuser, dbpasswd, dbname, create);
@@ -117,12 +121,19 @@ void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const s
     if (create)
     {
         setSchemaVersion_unwrapped(version);
+        setNetwork_unwrapped(network);
         t.commit();
     }
     else
     {
         uint32_t schemaVersion = getSchemaVersion_unwrapped();
         if (schemaVersion != version) throw VaultWrongSchemaVersionException(name_, schemaVersion);
+
+        if (!network.empty())
+        {
+            std::string dbNetwork = getNetwork_unwrapped();
+            if (!dbNetwork.empty() && dbNetwork != network) throw VaultWrongNetworkException(name_, dbNetwork);
+        }
     }
 }
 
@@ -167,7 +178,7 @@ void Vault::setSchemaVersion_unwrapped(uint32_t version)
     odb::result<Version> r(db_->query<Version>());
     if (r.empty())
     {
-        std::shared_ptr<Version> version_obj(new Version(DEFAULT_NETWORK, version));
+        std::shared_ptr<Version> version_obj(new Version(version));
         db_->persist(version_obj);
     }
     else
@@ -175,6 +186,49 @@ void Vault::setSchemaVersion_unwrapped(uint32_t version)
         std::shared_ptr<Version> version_obj(r.begin().load());
         version_obj->version(version);
         db_->update(version_obj);
+    }
+}
+
+std::string Vault::getNetwork() const
+{
+    LOGGER(trace) << "Vault::getNetwork()" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::transaction t(db_->begin());
+    return getNetwork_unwrapped();
+}
+
+std::string Vault::getNetwork_unwrapped() const
+{
+    odb::result<Network> r(db_->query<Network>());
+    return r.empty() ? "" : r.begin()->network();
+}
+
+void Vault::setNetwork(const std::string& network)
+{
+    LOGGER(trace) << "Vault::setNetwork(" << network << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    setNetwork_unwrapped(network);
+    t.commit();
+}
+
+void Vault::setNetwork_unwrapped(const std::string& network)
+{
+    odb::result<Network> r(db_->query<Network>());
+    if (r.empty())
+    {
+        std::shared_ptr<Network> network_obj(new Network(network));
+        db_->persist(network_obj);
+    }
+    else
+    {
+        std::shared_ptr<Network> network_obj(r.begin().load());
+        network_obj->network(network);
+        db_->update(network_obj);
     }
 }
 
