@@ -53,7 +53,7 @@ public:
     void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch = QDateTime::currentDateTime().toMSecsSinceEpoch());
     bool accountExists(const QString& name) const;
     void exportAccount(const QString& name, const QString& filePath, bool shared) const;
-    void importAccount(const QString& name, const QString& filePath);
+    QString importAccount(const QString& filePath);
     void deleteAccount(const QString& name);
     QPair<QString, bytes_t> issueNewScript(const QString& accountName, const QString& label); // returns qMakePair<address, script>
     uint32_t getMaxFirstBlockTimestamp() const; // the timestamp for latest acceptable first block

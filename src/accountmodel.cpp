@@ -146,7 +146,7 @@ void AccountModel::exportAccount(const QString& name, const QString& filePath, b
     vault->exportAccount(name.toStdString(), filePath.toStdString(), !shared);
 }
 
-void AccountModel::importAccount(const QString& /*name*/, const QString& filePath)
+QString AccountModel::importAccount(const QString& filePath)
 {
     CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
@@ -154,8 +154,9 @@ void AccountModel::importAccount(const QString& /*name*/, const QString& filePat
     }
 
     unsigned int privkeysimported = 1;
-    vault->importAccount(filePath.toStdString(), privkeysimported);
+    std::shared_ptr<Account> account = vault->importAccount(filePath.toStdString(), privkeysimported);
     update();
+    return QString::fromStdString(account->name());
 }
 
 void AccountModel::deleteAccount(const QString& /*name*/)

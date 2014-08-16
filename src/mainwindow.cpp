@@ -1021,6 +1021,7 @@ void MainWindow::importAccount(QString fileName)
     setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
+/*
     bool ok;
     QString name = QFileInfo(fileName).baseName();
     while (true) {
@@ -1036,18 +1037,19 @@ void MainWindow::importAccount(QString fileName)
         }
         break;
     }
+*/
 
     try {
         synchedVault.suspendBlockUpdates();
         updateStatusMessage(tr("Importing account..."));
-        accountModel->importAccount(name, fileName);
+        QString accountName = accountModel->importAccount(fileName);
         accountView->updateColumns();
         keychainModel->update();
         keychainView->updateColumns();
-        selectAccount(name);
+        selectAccount(accountName);
         tabWidget->setCurrentWidget(accountView);
         synchedVault.updateBloomFilter();
-        updateStatusMessage(tr("Imported account ") + name);
+        updateStatusMessage(tr("Imported account ") + accountName);
         if (synchedVault.isConnected()) { synchedVault.syncBlocks(); }
         //promptSync();
     }
