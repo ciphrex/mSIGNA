@@ -1,79 +1,7 @@
-CXX_FLAGS += -Wall
-ifdef DEBUG
-    CXX_FLAGS += -g
-else
-    CXX_FLAGS += -O3
-endif
-
+INCLUDE_PATH += -Isrc
 LOCAL_SYSROOT = ../../sysroot
 
-INCLUDE_PATH += \
-    -Isrc
-
-ifneq ($(wildcard $(LOCAL_SYSROOT)/include),)
-    INCLUDE_PATH += -I$(LOCAL_SYSROOT)/include
-endif
-
-ifndef OS
-    UNAME_S := $(shell uname -s)
-    ifeq ($(UNAME_S), Linux)
-        OS = linux
-    else ifeq ($(UNAME_S), Darwin)
-        OS = osx
-    endif
-endif
-
-ifeq ($(OS), linux)
-    ifndef SYSROOT
-        ifeq ($(shell whoami), root)
-            SYSROOT = /usr/local
-        else
-            SYSROOT = $(LOCAL_SYSROOT)
-        endif
-    endif
-
-    CXX = g++
-    CC = gcc
-    CXX_FLAGS += -Wno-unknown-pragmas -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
-
-    ARCHIVER = ar
-
-else ifeq ($(OS), mingw64)
-    ifndef SYSROOT
-        SYSROOT = /usr/x86_64-w64-mingw32
-    endif
-
-    CXX =  x86_64-w64-mingw32-g++
-    CC =  x86_64-w64-mingw32-gcc
-    CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
-
-
-    INCLUDE_PATH += -I$(MINGW64_ROOT)/include
-
-    ARCHIVER = x86_64-w64-mingw32-ar
-
-    EXE_EXT = .exe
-
-else ifeq ($(OS), osx)
-    ifndef SYSROOT
-        ifeq ($(shell whoami), root)
-            SYSROOT = /usr/local
-        else
-            SYSROOT = $(LOCAL_SYSROOT)
-        endif
-    endif
-
-    CXX = clang++
-    CC = clang
-    CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
-
-    INCLUDE_PATH += -I/usr/local/include
-
-    ARCHIVER = ar
-
-else ifneq ($(MAKECMDGOALS), clean)
-    $(error OS must be set to linux, mingw64, or osx)
-endif
+include ../mk/sysroot.mk ../mk/os.mk ../mk/cxx_flags.mk ../mk/boost_suffix.mk
 
 OBJS = \
     obj/CoinQ_coinparams.o \
@@ -85,7 +13,25 @@ OBJS = \
     obj/CoinQ_keys.o \
     obj/CoinQ_filter.o
 
-all: lib/libCoinQ.a
+LIBS = \
+    -lCoinQ \
+    -lCoinCore \
+    -llogger \
+    -lsysutils \
+    -lboost_regex$(BOOST_SUFFIX) \
+    -lboost_system$(BOOST_SUFFIX) \
+    -lboost_filesystem$(BOOST_SUFFIX) \
+    -lboost_thread$(BOOST_THREAD_SUFFIX)$(BOOST_SUFFIX) \
+    -lboost_program_options$(BOOST_SUFFIX) \
+    -lcrypto
+
+EXAMPLES = \
+    examples/build/peer$(EXE_EXT) \
+    examples/build/netsync$(EXE_EXT)
+
+lib: lib/libCoinQ.a
+
+all: lib/libCoinQ.a examples
 
 lib/libCoinQ.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
@@ -93,15 +39,32 @@ lib/libCoinQ.a: $(OBJS)
 obj/%.o: src/%.cpp src/%.h
 	$(CXX) $(CXX_FLAGS) -c -o $@ $< $(INCLUDE_PATH)
 
-install:
+examples: $(EXAMPLES)
+
+examples/build/%$(EXE_EXT): examples/%/src/main.cpp
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $< -o $@ $(LIBS) $(PLATFORM_LIBS)
+
+install: install-lib
+
+install-lib:
 	-mkdir -p $(SYSROOT)/include/CoinQ
 	-rsync -u src/*.h  $(SYSROOT)/include/CoinQ/
 	-mkdir -p $(SYSROOT)/lib
 	-rsync -u lib/libCoinQ.a $(SYSROOT)/lib/
 
-remove:
+remove: remove-lib
+
+remove-lib:
 	-rm -rf $(SYSROOT)/include/CoinQ
 	-rm $(SYSROOT)/lib/libCoinQ.a
 
-clean:
+clean: clean-lib
+
+clean-all: clean-lib clean-examples
+
+clean-lib:
 	-rm -f obj/*.o lib/*.a
+
+clean-examples:
+	-rm -f $(EXAMPLES)
+
