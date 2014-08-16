@@ -460,9 +460,14 @@ void NetworkSync::loadHeaders(const std::string& blockTreeFile, bool bCheckProof
     notifyAddBestChain(m_blockTree.getHeader(-1));
 }
 
-int NetworkSync::getBestHeight()
+int NetworkSync::getBestHeight() const
 {
     return m_blockTree.getBestHeight();
+}
+
+const bytes_t& NetworkSync::getBestHash() const
+{
+    return m_blockTree.getBestHash();
 }
 
 void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t startTime)

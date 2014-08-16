@@ -110,7 +110,7 @@ public:
     virtual int getTipHeight() const = 0;
     virtual const ChainHeader& getHeaderBefore(uint32_t timestamp) const = 0;
 
-    virtual uchar_vector getBestHash() const = 0;
+    virtual const uchar_vector& getBestHash() const = 0;
     virtual int getBestHeight() const = 0;
     virtual BigInt getTotalWork() const = 0;
 
@@ -178,7 +178,7 @@ public:
     int getTipHeight() const;
     const ChainHeader& getHeaderBefore(uint32_t timestamp) const;
 
-    uchar_vector getBestHash() const { return getHeader(-1).getHashLittleEndian(); }
+    const uchar_vector& getBestHash() const { return getHeader(-1).hash(); }
     int getBestHeight() const { return mBestHeight; }
     BigInt getTotalWork() const { return mTotalWork; }
 
