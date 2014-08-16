@@ -88,18 +88,18 @@ void subscribeHandlers(SynchedVault& synchedVault)
         cout << ss.str() << endl;
     });
 
-    synchedVault.subscribeBestHeightChanged([](uint32_t bestheight)
+    synchedVault.subscribeBestHeaderChanged([](uint32_t bestheight, const bytes_t& besthash)
     {
         stringstream ss;
-        ss << "Best height: " << bestheight;
+        ss << "Best height: " << bestheight << " Best hash: " << uchar_vector(besthash).getHex();
         LOGGER(info) << ss.str() << endl;
         cout << ss.str() << endl;
     });
 
-    synchedVault.subscribeSyncHeightChanged([](uint32_t syncheight)
+    synchedVault.subscribeSyncHeaderChanged([](uint32_t syncheight, const bytes_t& synchash)
     {
         stringstream ss;
-        ss << "Sync height: " << syncheight;
+        ss << "Sync height: " << syncheight << " Sync hash: " << uchar_vector(synchash).getHex();
         LOGGER(info) << ss.str() << endl;
         cout << ss.str() << endl;
     });

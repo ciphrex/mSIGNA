@@ -115,7 +115,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     {
         LOGGER(trace) << "SynchedVault - Headers sync complete." << std::endl;
         m_bBlockTreeSynched = true;
-        updateBestHeight(m_networkSync.getBestHeight());
+        updateBestHeader(m_networkSync.getBestHeight(), m_networkSync.getBestHash());
 
         if (!m_networkSync.connected())
         {
@@ -166,7 +166,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     {
         LOGGER(trace) << "SynchedVault - Added best chain. New best height: " << header.height << std::endl;
 
-        updateBestHeight(header.height);
+        updateBestHeader(header.height, header.hash());
     });
 
     m_networkSync.subscribeRemoveBestChain([this](const chain_header_t& header)
@@ -176,7 +176,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         if (diff >= 0)
         {
             LOGGER(trace) << "Reorganizing " << (diff + 1) << " blocks." << std::endl;
-            updateBestHeight(m_networkSync.getBestHeight());
+            updateBestHeader(m_networkSync.getBestHeight(), m_networkSync.getBestHash());
         }
     });
 
@@ -286,7 +286,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         LOGGER(trace) << "SynchedVault - block tree changed." << std::endl;
 
         m_bBlockTreeSynched = false;
-        updateBestHeight(m_networkSync.getBestHeight());
+        updateBestHeader(m_networkSync.getBestHeight(), m_networkSync.getBestHash());
     });
 }
 
@@ -313,52 +313,6 @@ void SynchedVault::loadHeaders(const std::string& blockTreeFile, bool bCheckProo
 void SynchedVault::openVault(const std::string& dbname, bool bCreate)
 {
     openVault("", "", dbname, bCreate);
-/*
-    LOGGER(trace) << "SynchedVault::openVault(" << dbname << ", " << (bCreate ? "true" : "false") << ")" << std::endl;
-
-    {
-        std::lock_guard<std::mutex> lock(m_vaultMutex);
-        m_bInsertMerkleBlocks = false;
-        m_notifyVaultClosed();
-        if (m_vault) delete m_vault;
-        try
-        {
-            m_vault = new Vault(dbname, bCreate);
-        }
-        catch (const VaultException& e)
-        {
-            m_vault = nullptr;
-            throw e;
-        }
-        catch (const std::exception& e)
-        {
-            m_vault = nullptr;
-            throw e;
-        }
-
-        updateSyncHeight(m_vault->getBestHeight());
-
-        m_vault->subscribeKeychainUnlocked([this](const std::string& keychainName) { m_notifyKeychainUnlocked(keychainName); });
-        m_vault->subscribeKeychainLocked([this](const std::string& keychainName) { m_notifyKeychainLocked(keychainName); });
-        m_vault->subscribeTxInserted([this](std::shared_ptr<Tx> tx) { m_notifyTxInserted(tx); });
-        m_vault->subscribeTxUpdated([this](std::shared_ptr<Tx> tx)
-        {
-            if (tx->status() = Tx::PROPAGATED) { m_networkSync.addToMempool(tx.hash()); }
-            m_notifyTxUpdated(tx);
-        });
-        m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
-        {
-            updateSyncHeight(merkleblock->blockheader()->height());
-            m_notifyMerkleBlockInserted(merkleblock);
-        });
-        m_vault->subscribeTxInsertionError([this](std::shared_ptr<Tx> tx, std::string description) { m_notifyTxInsertionError(tx, description); });
-        m_vault->subscribeMerkleBlockInsertionError([this](std::shared_ptr<MerkleBlock> merkleblock, std::string description) { m_notifyMerkleBlockInsertionError(merkleblock, description); });
-        m_vault->subscribeTxConfirmationError([this](std::shared_ptr<MerkleBlock> merkleblock, bytes_t txhash) { m_notifyTxConfirmationError(merkleblock, txhash); });
-    }
-
-    m_notifyVaultOpened(m_vault);
-    if (m_networkSync.connected() && m_networkSync.headersSynched()) { syncBlocks(); }
-*/
 }
 
 void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate)
@@ -384,7 +338,9 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
             throw e;
         }
 
-        updateSyncHeight(m_vault->getBestHeight());
+        std::shared_ptr<BlockHeader> blockheader = m_vault->getBestBlockHeader();
+        if (blockheader)    { updateSyncHeader(blockheader->height(), blockheader->hash()); }
+        else                { updateSyncHeader(0, bytes_t()); }
 
         m_vault->subscribeKeychainUnlocked([this](const std::string& keychainName) { m_notifyKeychainUnlocked(keychainName); });
         m_vault->subscribeKeychainLocked([this](const std::string& keychainName) { m_notifyKeychainLocked(keychainName); });
@@ -396,7 +352,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
         {
-            updateSyncHeight(merkleblock->blockheader()->height());
+            updateSyncHeader(merkleblock->blockheader()->height(), merkleblock->blockheader()->hash());
             m_notifyMerkleBlockInserted(merkleblock);
         });
         m_vault->subscribeTxInsertionError([this](std::shared_ptr<Tx> tx, std::string description) { m_notifyTxInsertionError(tx, description); });
@@ -424,7 +380,7 @@ void SynchedVault::closeVault()
     }
 
     m_notifyVaultClosed();
-    updateSyncHeight(0);
+    updateSyncHeader(0, bytes_t());
     if (m_networkSync.connected() && m_networkSync.headersSynched()) { updateStatus(SYNCHED); }
 }
 
@@ -591,8 +547,8 @@ void SynchedVault::clearAllSlots()
     m_notifyVaultError.clear();
 
     m_notifyStatusChanged.clear();
-    m_notifyBestHeightChanged.clear();
-    m_notifySyncHeightChanged.clear();
+    m_notifyBestHeaderChanged.clear();
+    m_notifySyncHeaderChanged.clear();
     m_notifyConnectionError.clear();
 
     m_notifyTxInserted.clear();
@@ -612,20 +568,22 @@ void SynchedVault::updateStatus(status_t newStatus)
     }
 }
 
-void SynchedVault::updateBestHeight(uint32_t bestHeight)
+void SynchedVault::updateBestHeader(uint32_t bestHeight, const bytes_t& bestHash)
 {
-    if (m_bestHeight != bestHeight)
+    if (m_bestHeight != bestHeight || m_bestHash != bestHash)
     {
         m_bestHeight = bestHeight;
-        m_notifyBestHeightChanged(bestHeight);
+        m_bestHash = bestHash;
+        m_notifyBestHeaderChanged(bestHeight, bestHash);
     }
 }
 
-void SynchedVault::updateSyncHeight(uint32_t syncHeight)
+void SynchedVault::updateSyncHeader(uint32_t syncHeight, const bytes_t& syncHash)
 {
-    if (m_syncHeight != syncHeight)
+    if (m_syncHeight != syncHeight || m_syncHash != syncHash)
     {
         m_syncHeight = syncHeight;
-        m_notifySyncHeightChanged(syncHeight);
+        m_syncHash = syncHash;
+        m_notifySyncHeaderChanged(syncHeight, syncHash);
     }
 }

@@ -58,7 +58,9 @@ public:
 
     status_t getStatus() const { return m_status; }
     uint32_t getBestHeight() const { return m_bestHeight; }
+    const bytes_t& getBestHash() const { return m_bestHash; }
     uint32_t getSyncHeight() const { return m_syncHeight; }
+    const bytes_t& getSyncHash() const { return m_syncHash; }
 
     std::shared_ptr<Tx> sendTx(const bytes_t& hash);
     std::shared_ptr<Tx> sendTx(unsigned long tx_id);
@@ -72,7 +74,7 @@ public:
     typedef Signals::Signal<Vault*>                     VaultSignal;
     typedef Signals::Signal<const std::string&, int>    ErrorSignal;
     typedef Signals::Signal<status_t>                   StatusSignal;
-    typedef Signals::Signal<uint32_t>                   HeightSignal;
+    typedef Signals::Signal<uint32_t, const bytes_t&>   HeaderSignal;
 
     // Vault state events
     Signals::Connection subscribeVaultOpened(VaultSignal::Slot slot) { return m_notifyVaultOpened.connect(slot); }
@@ -83,8 +85,8 @@ public:
 
     // Sync state events
     Signals::Connection subscribeStatusChanged(StatusSignal::Slot slot) { return m_notifyStatusChanged.connect(slot); }
-    Signals::Connection subscribeBestHeightChanged(HeightSignal::Slot slot) { return m_notifyBestHeightChanged.connect(slot); }
-    Signals::Connection subscribeSyncHeightChanged(HeightSignal::Slot slot) { return m_notifySyncHeightChanged.connect(slot); }
+    Signals::Connection subscribeBestHeaderChanged(HeaderSignal::Slot slot) { return m_notifyBestHeaderChanged.connect(slot); }
+    Signals::Connection subscribeSyncHeaderChanged(HeaderSignal::Slot slot) { return m_notifySyncHeaderChanged.connect(slot); }
     Signals::Connection subscribeConnectionError(ErrorSignal::Slot slot) { return m_notifyConnectionError.connect(slot); }
     Signals::Connection subscribeBlockTreeError(ErrorSignal::Slot slot) { return m_notifyBlockTreeError.connect(slot); }
 
@@ -108,13 +110,15 @@ private:
     status_t                    m_status;
     void                        updateStatus(status_t newStatus);
 
-    // Height of best known chain
+    // Best known chain
     uint32_t                    m_bestHeight;
-    void                        updateBestHeight(uint32_t bestHeight);
+    bytes_t                     m_bestHash;
+    void                        updateBestHeader(uint32_t bestHeight, const bytes_t& bestHash);
 
-    // Height of most recent block stored in vault
+    // Most recent block stored in vault
     uint32_t                    m_syncHeight;
-    void                        updateSyncHeight(uint32_t syncHeight);
+    bytes_t                     m_syncHash;
+    void                        updateSyncHeader(uint32_t syncHeight, const bytes_t& syncHash);
 
     // Bloom filter parameters
     double                      m_filterFalsePositiveRate;
@@ -140,8 +144,8 @@ private:
 
     // Sync state events
     StatusSignal                m_notifyStatusChanged;
-    HeightSignal                m_notifyBestHeightChanged;
-    HeightSignal                m_notifySyncHeightChanged;
+    HeaderSignal                m_notifyBestHeaderChanged;
+    HeaderSignal                m_notifySyncHeaderChanged;
     ErrorSignal                 m_notifyConnectionError;
     ErrorSignal                 m_notifyBlockTreeError;
 
