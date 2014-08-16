@@ -32,7 +32,11 @@ endif
 
 ifeq ($(OS), linux)
     ifndef SYSROOT
-        SYSROOT = /usr/local
+        ifeq ($(shell whoami), root)
+            SYSROOT = /usr/local
+        else
+            SYSROOT = $(LOCAL_SYSROOT)
+        endif
     endif
 
     CXX = g++
@@ -62,7 +66,11 @@ else ifeq ($(OS), mingw64)
 
 else ifeq ($(OS), osx)
     ifndef SYSROOT
-        SYSROOT = /usr/local
+        ifeq ($(shell whoami), root)
+            SYSROOT = /usr/local
+        else
+            SYSROOT = $(LOCAL_SYSROOT)
+        endif
     endif
 
     CXX = clang++

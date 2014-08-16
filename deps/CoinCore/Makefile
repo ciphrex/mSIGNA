@@ -1,5 +1,3 @@
-USER = $(shell whoami)
-
 CXX_FLAGS += -Wall
 ifdef DEBUG
     C_FLAGS += -g
