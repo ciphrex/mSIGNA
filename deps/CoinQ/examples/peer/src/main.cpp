@@ -44,12 +44,12 @@ void onClose(Peer& peer)
     g_bShutdown = true;
 }
 
-void onProtocolError(Peer& peer, const std::string& message)
+void onProtocolError(Peer& peer, const std::string& message, int /*codd*/)
 {
     cout << "Peer " << peer.name() << " protocol error - " << message << "." << endl;
 }
 
-void onConnectionError(Peer& peer, const std::string& message)
+void onConnectionError(Peer& peer, const std::string& message, int /*code*/)
 {
     cout << "Peer " << peer.name() << " connection error - " << message << "." << endl;
 }

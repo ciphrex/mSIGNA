@@ -69,7 +69,14 @@ int main(int argc, char* argv[])
         Network::NetworkSync networkSync(coinParams);
         networkSync.loadHeaders("blocktree.dat", false, [&](const CoinQBlockTreeMem& blocktree) {
             cout << "Best height: " << blocktree.getBestHeight() << " Total work: " << blocktree.getTotalWork().getDec() << endl;
+            return !g_bShutdown;
         });
+
+        if (g_bShutdown)
+        {
+            cout << "Interrupted." << endl;
+            return 0;
+        }
 
         networkSync.subscribeStarted([&]() {
             cout << endl << "NetworkSync started." << endl;
@@ -91,19 +98,19 @@ int main(int argc, char* argv[])
             cout << endl << "NetworkSync timeout." << endl;
         });
 
-        networkSync.subscribeConnectionError([&](const string& error) {
+        networkSync.subscribeConnectionError([&](const string& error, int /*code*/) {
             cout << endl << "NetworkSync connection error: " << error << endl;
         });
 
-        networkSync.subscribeProtocolError([&](const string& error) {
+        networkSync.subscribeProtocolError([&](const string& error, int /*code*/) {
             cout << endl << "NetworkSync protocol error: " << error << endl;
         });
 
-        networkSync.subscribeBlockTreeError([&](const string& error) {
+        networkSync.subscribeBlockTreeError([&](const string& error, int /*code*/) {
             cout << endl << "NetworkSync block tree error: " << error << endl;
         });
 
-        networkSync.subscribeFetchingHeaders([&]() {
+        networkSync.subscribeSynchingHeaders([&]() {
             cout << endl << "NetworkSync fetching headers." << endl;
         });
 
@@ -113,7 +120,7 @@ int main(int argc, char* argv[])
             networkSync.syncBlocks(hashes, time(NULL) - 10*60*60); // Start 10 hours earlier
         });
 
-        networkSync.subscribeFetchingBlocks([&]() {
+        networkSync.subscribeSynchingBlocks([&]() {
             cout << endl << "NetworkSync fetching blocks." << endl;
         });
 
@@ -148,7 +155,7 @@ int main(int argc, char* argv[])
 
             try
             {
-                PartialMerkleTree tree(merkleblock.nTxs, merkleblock.hashes, merkleblock.flags, merkleblock.blockHeader.merkleRoot);
+                PartialMerkleTree tree(merkleblock.nTxs, merkleblock.hashes, merkleblock.flags, merkleblock.merkleRoot());
                 std::vector<uchar_vector> txhashes = tree.getTxHashesLittleEndianVector();
                 unsigned int i = 0;
                 cout << "should contain txs:" << endl;
