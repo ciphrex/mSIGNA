@@ -1,25 +1,3 @@
-#use sqlite by default
-ifndef DB
-    DB = sqlite
-endif
-
-ifeq ($(DB), mysql)
-    ODB_DB = -DDATABASE_MYSQL
-else ifeq ($(DB), sqlite)
-    ODB_DB = -DDATABASE_SQLITE
-else
-    $(error OS must be set to linux, mingw64, or osx)
-endif
-
-CXX_FLAGS += -Wall
-ifdef DEBUG
-    CXX_FLAGS += -g
-else
-    CXX_FLAGS += -O3
-endif
-
-LOCAL_SYSROOT = ../../sysroot
-
 CLI = ../cli
 
 INCLUDE_PATH += \
@@ -29,98 +7,12 @@ INCLUDE_PATH += \
 ODB_INCLUDE_PATH += \
     -Isrc
 
-ifneq ($(wildcard $(LOCAL_SYSROOT)/include),)
-    INCLUDE_PATH += -I$(LOCAL_SYSROOT)/include
-    ODB_INCLUDE_PATH += -I$(LOCAL_SYSROOT)/include
-endif
-
 LIB_PATH += \
     -Llib
 
-ifneq ($(wildcard $(LOCAL_SYSROOT)/lib),)
-    LIB_PATH += -L$(LOCAL_SYSROOT)/lib
-endif
+LOCAL_SYSROOT = ../../sysroot
 
-ifndef OS
-    UNAME_S := $(shell uname -s)
-    ifeq ($(UNAME_S), Linux)
-        OS = linux
-    else ifeq ($(UNAME_S), Darwin)
-        OS = osx
-    endif
-endif
-
-ifeq ($(OS), linux)
-    ifndef SYSROOT
-        ifeq ($(shell whoami), root)
-            SYSROOT = /usr/local
-        else
-            SYSROOT = $(LOCAL_SYSROOT)
-        endif
-    endif
-
-    CXX = g++
-    CC = gcc
-    CXX_FLAGS += -Wno-unknown-pragmas -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
-    ARCHIVER = ar
-
-    PLATFORM_LIBS += \
-        -lpthread
-
-else ifeq ($(OS), mingw64)
-    ifndef SYSROOT
-        SYSROOT = /usr/x86_64-w64-mingw32
-    endif
-
-    CXX =  x86_64-w64-mingw32-g++
-    CC =  x86_64-w64-mingw32-gcc
-    CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
-    ARCHIVER = x86_64-w64-mingw32-ar
-
-    INCLUDE_PATH += -I$(SYSROOT)/include
-
-    # ODB_INCLUDE_PATH must not contain windows system headers
-    ODB_INCLUDE_PATH += -I$(SYSROOT)/local/include
-
-    EXE_EXT = .exe
-
-    BOOST_THREAD_SUFFIX = _win32
-
-    PLATFORM_LIBS += \
-        -static-libgcc -static-libstdc++ \
-        -lgdi32 \
-        -lws2_32 \
-        -lmswsock
-
-else ifeq ($(OS), osx)
-    ifndef SYSROOT
-        ifeq ($(shell whoami), root)
-            SYSROOT = /usr/local
-        else
-            SYSROOT = $(LOCAL_SYSROOT)
-        endif
-    endif
-
-    CXX = clang++
-    CC = clang
-    CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
-    ARCHIVER = ar
-
-    INCLUDE_PATH += -I$(SYSROOT)/include
-    ODB_INCLUDE_PATH += -I$(SYSROOT)/include
-
-    BOOST_SUFFIX = -mt
-
-else ifneq ($(MAKECMDGOALS), clean)
-    $(error OS must be set to linux, mingw64, or osx)
-endif
-
-# Detect boost library filename suffix
-ifneq ($(wildcard $(SYSROOT)/lib/libboost_system-mt.*),)
-    BOOST_SUFFIX = -mt
-else ifneq ($(wildcard $(SYSROOT)/lib/libboost_system-mt-s.*),)
-    BOOST_SUFFIX = -mt-s
-endif
+include ../mk/sysroot.mk ../mk/os.mk ../mk/cxx_flags.mk ../mk/boost_suffix.mk ../mk/odb.mk
 
 LIBS = \
     -lCoinDB \
