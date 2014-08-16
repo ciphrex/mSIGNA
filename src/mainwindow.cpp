@@ -124,8 +124,8 @@ MainWindow::MainWindow() :
 
     connect(accountModel, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
 
-    synchedVault.subscribeBestHeightChanged([this](uint32_t height) { emit updateBestHeight((int)height); });
-    synchedVault.subscribeSyncHeightChanged([this](uint32_t height) { emit updateSyncHeight((int)height); });
+    synchedVault.subscribeBestHeaderChanged([this](uint32_t height, const bytes_t& /*hash*/) { emit updateBestHeight((int)height); });
+    synchedVault.subscribeSyncHeaderChanged([this](uint32_t height, const bytes_t& /*hash*/) { emit updateSyncHeight((int)height); });
 
     synchedVault.subscribeStatusChanged([this](CoinDB::SynchedVault::status_t status) {
         switch (status)
@@ -660,6 +660,28 @@ void MainWindow::lockKeychain()
 void MainWindow::lockAllKeychains()
 {
     keychainModel->lockAllKeychains();
+}
+
+void MainWindow::setKeychainPassphrase()
+{
+    if (!synchedVault.isVaultOpen())
+    {
+        showError(tr("No vault is open."));
+        return;
+    }
+
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0)
+    {
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+
+    keychainModel->setKeychainPassphrase(name); 
 }
 
 void MainWindow::importKeychain(QString fileName)
@@ -1677,6 +1699,11 @@ void MainWindow::createActions()
     lockAllKeychainsAction->setEnabled(false);
     connect(lockAllKeychainsAction, SIGNAL(triggered()), this, SLOT(lockAllKeychains()));
 
+    setKeychainPassphraseAction = new QAction(tr("Set keychain passphrase..."), this);
+    setKeychainPassphraseAction->setStatusTip(tr("Set the encryption passphrase for the keychain"));
+    setKeychainPassphraseAction->setEnabled(false);
+    connect(setKeychainPassphraseAction, SIGNAL(triggered()), this, SLOT(setKeychainPassphrase()));
+
     importPrivateAction = new QAction(tr("Private Imports"), this);
     importPrivateAction->setCheckable(true);
     importPrivateAction->setStatusTip(tr("Import private keys if available"));
@@ -1905,6 +1932,7 @@ void MainWindow::createMenus()
     keychainMenu->addAction(unlockKeychainAction);
     keychainMenu->addAction(lockKeychainAction);
     keychainMenu->addAction(lockAllKeychainsAction);
+    //keychainMenu->addAction(setKeychainPassphraseAction);
     keychainMenu->addSeparator()->setText(tr("Import Mode"));
     keychainMenu->addAction(importPrivateAction);
     keychainMenu->addAction(importPublicAction);

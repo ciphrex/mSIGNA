@@ -103,6 +103,18 @@ void KeychainModel::lockAllKeychains()
     update();
 }
 
+void KeychainModel::setKeychainPassphrase(const QString& name)
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    if (!vault->isKeychainPrivate(name.toStdString()))
+        throw std::runtime_error("Keychain is not private.");
+
+    throw std::runtime_error("Not implemented yet.");
+}
+
 bool KeychainModel::exists(const QString& keychainName) const
 {
     QList<QStandardItem*> items = findItems(keychainName, Qt::MatchExactly, 0);

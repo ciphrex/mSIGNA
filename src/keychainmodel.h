@@ -34,6 +34,7 @@ public:
     void unlockKeychain(const QString& keychainName, const secure_bytes_t& unlockKey);
     void lockKeychain(const QString& keychainName);
     void lockAllKeychains();
+    void setKeychainPassphrase(const QString& keychainName);
 
     bytes_t getExtendedKeyBytes(const QString& keychainName, bool getPrivate = false, const bytes_t& decryptionKey = bytes_t()) const;
 

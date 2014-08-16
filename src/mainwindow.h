@@ -131,6 +131,7 @@ private slots:
     void unlockKeychain();
     void lockKeychain();
     void lockAllKeychains();
+    void setKeychainPassphrase();
     void importKeychain(QString fileName = QString());
     void exportKeychain(bool exportPrivate);
     void backupKeychain();
@@ -274,6 +275,7 @@ private:
     QAction* unlockKeychainAction;
     QAction* lockKeychainAction;
     QAction* lockAllKeychainsAction;
+    QAction* setKeychainPassphraseAction;
     bool     importPrivate;
     QAction* importPrivateAction;
     QAction* importPublicAction;
