@@ -1,7 +1,9 @@
-CXX_FLAGS += -Wall
+INITIAL_CXX_FLAGS += -Wall
 ifdef DEBUG
-    CXX_FLAGS += -g
+    INITIAL_CXX_FLAGS += -g
 else
-    CXX_FLAGS += -O3
+    INITIAL_CXX_FLAGS += -O3
 endif
+
+CXX_FLAGS := $(INITIAL_CXX_FLAGS) $(CXX_FLAGS)
 

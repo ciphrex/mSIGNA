@@ -15,10 +15,12 @@ ifdef LOCAL_SYSROOT
     ODB_INCLUDE_PATH += -I$(LOCAL_SYSROOT)/include
 endif
 
-ifdef SYSROOT
+ifdef GLOBAL_SYSROOT
     ifeq ($(OS), mingw64)
         # ODB include path cannot include windows system headers when doing crossbuilds
-        ODB_INCLUDE_PATH += -I$(SYSROOT)/local/include
+        ODB_INCLUDE_PATH += -I$(GLOBAL_SYSROOT)/local/include
+    else
+        ODB_INCLUDE_PATH += -I$(GLOBAL_SYSROOT)/include
     endif
 endif
 
