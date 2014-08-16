@@ -46,6 +46,6 @@ else ifneq ($(MAKECMDGOALS), clean)
 endif
 
 ifndef SYSROOT
-    SYSROOT = GLOBAL_SYSROOT
+    SYSROOT = $(GLOBAL_SYSROOT)
 endif
 
