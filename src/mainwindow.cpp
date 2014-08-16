@@ -1041,7 +1041,6 @@ void MainWindow::importAccount(QString fileName)
         synchedVault.suspendBlockUpdates();
         updateStatusMessage(tr("Importing account..."));
         accountModel->importAccount(name, fileName);
-        accountModel->update();
         accountView->updateColumns();
         keychainModel->update();
         keychainView->updateColumns();
