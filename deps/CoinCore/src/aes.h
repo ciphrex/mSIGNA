@@ -47,7 +47,7 @@ public:
     virtual ~AESException() throw() { }
 
 protected:
-    AESException(const std::string& what, int code) : stdutils::custom_error(what, code) { }
+    AESException(const char* what, int code) : stdutils::custom_error(what, code) { }
 };
 
 class AESInitException : public AESException
