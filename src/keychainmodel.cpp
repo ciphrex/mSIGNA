@@ -19,7 +19,7 @@ KeychainModel::KeychainModel()
     : vault(NULL)
 {
     QStringList columns;
-    columns << tr("Keychain") << tr("Type") << tr("Unlocked") << tr("Hash");
+    columns << tr("Keychain") << tr("Type") << tr("Unlocked") << tr("Encrypted") << tr("Hash");
     setHorizontalHeaderLabels(columns);
 
     connect(this, &KeychainModel::dataChanged, [this]() { emit keychainChanged(); });
@@ -50,6 +50,10 @@ void KeychainModel::update()
         QStandardItem* lockedItem = new QStandardItem(
             keychain.is_private ? (keychain.is_locked ? tr("No") : tr("Yes")) : tr(""));
         row.append(lockedItem);
+
+        QStandardItem* encryptedItem = new QStandardItem(
+            keychain.is_private ? (keychain.is_encrypted ? tr("Yes") : tr("No")) : tr(""));
+        row.append(encryptedItem);
         
         row.append(new QStandardItem(QString::fromStdString(uchar_vector(keychain.hash).getHex())));
         appendRow(row);
@@ -103,18 +107,6 @@ void KeychainModel::lockAllKeychains()
 
     vault->lockAllKeychains();
     update();
-}
-
-void KeychainModel::setKeychainPassphrase(const QString& name)
-{
-    if (!vault) {
-        throw std::runtime_error("No vault is loaded.");
-    }
-
-    if (!vault->isKeychainPrivate(name.toStdString()))
-        throw std::runtime_error("Keychain is not private.");
-
-    throw std::runtime_error("Not implemented yet.");
 }
 
 bool KeychainModel::exists(const QString& keychainName) const

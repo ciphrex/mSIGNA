@@ -13,10 +13,12 @@
 #include "signaturemodel.h"
 #include "signatureview.h"
 #include "signaturedialog.h"
+#include "passphrasedialog.h"
 
 #include "entropysource.h"
 
 #include <CoinDB/SynchedVault.h>
+#include <CoinDB/Passphrase.h>
 
 #include <QAction>
 #include <QMenu>
@@ -133,8 +135,15 @@ void SignatureActions::unlockKeychain()
             return;
         }
 
-        // TODO: Prompt for passphrase
-        vault->unlockKeychain(keychainName, secure_bytes_t());
+        secure_bytes_t lockKey;
+        if (vault->isKeychainEncrypted(keychainName))
+        {
+            PassphraseDialog dlg(tr("Please enter the decryption passphrase for ") + m_currentKeychain + ":");
+            if (!dlg.exec()) return;
+            lockKey = passphraseHash(dlg.getPassphrase().toStdString());
+        }
+
+        vault->unlockKeychain(keychainName, lockKey);
         refreshCurrentKeychain();
         m_dialog.updateKeychains();
     }

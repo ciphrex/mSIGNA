@@ -683,7 +683,7 @@ void MainWindow::setKeychainPassphrase()
     QStandardItem* nameItem = keychainModel->item(row, 0);
     QString name = nameItem->data(Qt::DisplayRole).toString();
 
-    keychainModel->setKeychainPassphrase(name); 
+//    keychainModel->setKeychainPassphrase(name); 
 }
 
 void MainWindow::importKeychain(QString fileName)
