@@ -40,6 +40,12 @@ using namespace CoinDB;
 std::string g_dbuser;
 std::string g_dbpasswd;
 
+template<typename S>
+secure_bytes_t passphraseHash(S& passphrase)
+{
+    return sha256_2(secure_bytes_t((unsigned char*)&passphrase[0], (unsigned char*)&passphrase[0] + passphrase.size()));
+}
+
 // Global operations
 cli::result_t cmd_create(const cli::params_t& params)
 {
@@ -148,8 +154,7 @@ cli::result_t cmd_encryptkeychain(const cli::params_t& params)
     if (keychain->isEncrypted()) throw runtime_error("Keychain is already encrypted.");
 
     vault.unlockKeychain(keychain->name());
-    secure_bytes_t passphrase((unsigned char*)&params[2][0], (unsigned char*)&params[2][0] + params[2].size());
-    vault.encryptKeychain(keychain->name(), sha256_2(passphrase));
+    vault.encryptKeychain(keychain->name(), passphraseHash(params[2]));
 
     stringstream ss;
     ss << "Keychain " << keychain->name() << " encrypted.";
@@ -165,8 +170,7 @@ cli::result_t cmd_decryptkeychain(const cli::params_t& params)
     if (!keychain->isPrivate()) throw runtime_error("Keychain is nonprivate.");
     if (!keychain->isEncrypted()) throw runtime_error("Keychain is not encrypted.");
 
-    secure_bytes_t passphrase((unsigned char*)&params[2][0], (unsigned char*)&params[2][0] + params[2].size());
-    vault.unlockKeychain(keychain->name(), sha256_2(passphrase));
+    vault.unlockKeychain(keychain->name(), passphraseHash(params[2]));
     vault.decryptKeychain(keychain->name());
 
     stringstream ss;
@@ -184,11 +188,8 @@ cli::result_t cmd_reencryptkeychain(const cli::params_t& params)
     if (!keychain->isPrivate()) throw runtime_error("Keychain is nonprivate.");
     if (!keychain->isEncrypted()) throw runtime_error("Keychain is not encrypted.");
 
-    secure_bytes_t old_passphrase((unsigned char*)&params[2][0], (unsigned char*)&params[2][0] + params[2].size());
-    vault.unlockKeychain(keychain->name(), sha256_2(old_passphrase));
-
-    secure_bytes_t new_passphrase((unsigned char*)&params[3][0], (unsigned char*)&params[3][0] + params[3].size());
-    vault.encryptKeychain(keychain->name(), sha256_2(new_passphrase));
+    vault.unlockKeychain(keychain->name(), passphraseHash(params[2]));
+    vault.encryptKeychain(keychain->name(), passphraseHash(params[3]));
 
     stringstream ss;
     ss << "Keychain " << keychain->name() << " reencrypted.";
