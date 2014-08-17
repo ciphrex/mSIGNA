@@ -150,7 +150,7 @@ unsigned char* decrypt(EVP_CIPHER_CTX* e, unsigned char* ciphertext, int* len)
 
     if (!EVP_DecryptFinal_ex(e, plaintext + p_len, &f_len))
     {
-        throw std::runtime_error("EVP_DecryptFinal_ex() failed.");
+        throw AESDecryptException();
     }
 
     *len = p_len + f_len;
