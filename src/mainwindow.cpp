@@ -946,7 +946,7 @@ void MainWindow::quickNewAccount()
             int i = 0;
             QList<QString> keychainNames;
             while (keychainNames.size() < dlg.getMaxSigs() && ++i <= MAX_KEYCHAIN_INDEX) {
-                QString keychainName = accountName + "_" + QString::number(i);
+                QString keychainName = accountName + " " + QString::number(i);
                 if (!keychainModel->exists(keychainName))
                     keychainNames << keychainName;
             }
