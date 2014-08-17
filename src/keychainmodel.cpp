@@ -21,6 +21,8 @@ KeychainModel::KeychainModel()
     QStringList columns;
     columns << tr("Keychain") << tr("Type") << tr("Unlocked") << tr("Hash");
     setHorizontalHeaderLabels(columns);
+
+    connect(this, &KeychainModel::dataChanged, [this]() { emit keychainChanged(); });
 }
 
 void KeychainModel::setVault(CoinDB::Vault* vault)

@@ -45,6 +45,7 @@ public:
 
 signals:
     void error(const QString& message);
+    void keychainChanged();
 
 private:
     CoinDB::Vault* vault;

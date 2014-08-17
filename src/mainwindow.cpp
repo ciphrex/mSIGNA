@@ -98,6 +98,7 @@ MainWindow::MainWindow() :
     keychainView = new KeychainView();
     keychainView->setModel(keychainModel);
     keychainView->setSelectionMode(KeychainView::MultiSelection);
+    connect(keychainModel, SIGNAL(keychainChanged()), keychainView, SLOT(updateColumns()));
 
     keychainSelectionModel = keychainView->selectionModel();
     connect(keychainSelectionModel, &QItemSelectionModel::currentChanged,
@@ -114,6 +115,7 @@ MainWindow::MainWindow() :
     accountView->setModel(accountModel);
     accountView->updateColumns();
     connect(accountView, SIGNAL(updateModel()), accountModel, SLOT(update()));
+    connect(keychainModel, SLOT(keychainChanged()), accountModel, SLOT(update()));
 
 /*
     qRegisterMetaType<bytes_t>("bytes_t");

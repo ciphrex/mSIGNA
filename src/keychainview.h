@@ -22,6 +22,8 @@ public:
     KeychainView(QWidget* parent = NULL);
 
     void setMenu(QMenu* menu) { this->menu = menu; }
+
+public slots:
     void updateColumns();
 
 protected:

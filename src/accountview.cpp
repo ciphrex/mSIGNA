@@ -13,6 +13,8 @@
 
 #include "txdialog.h"
 
+#include <logger/logger.h>
+
 #include <QMenu>
 #include <QContextMenuEvent>
 #include <QAction>
@@ -25,6 +27,8 @@ AccountView::AccountView(QWidget* parent)
 void AccountView::updateAll()
 {
     if (!model()) return;
+
+    LOGGER(trace) << "AccountView::updateAll()" << std::endl;
 
     QModelIndexList indexes = selectionModel()->selectedRows(0);
     int selectedRow = indexes.isEmpty() ? -1 : indexes.at(0).row();
