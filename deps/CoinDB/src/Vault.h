@@ -110,7 +110,7 @@ public:
     // store and erase the unlock keys in a member map to be used by the other class methods.
     void                                    lockAllKeychains();
     void                                    lockKeychain(const std::string& keychain_name);
-    void                                    unlockKeychain(const std::string& keychain_name, const secure_bytes_t& unlock_key);
+    void                                    unlockKeychain(const std::string& keychain_name, const secure_bytes_t& unlock_key = secure_bytes_t());
     bool                                    isKeychainLocked(const std::string& keychainName) const;
 
 
