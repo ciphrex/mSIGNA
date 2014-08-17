@@ -142,7 +142,7 @@ public:
 
     std::shared_ptr<Keychain> root() { return (parent_ ? parent_->root() : shared_from_this()); }
     std::shared_ptr<Keychain> parent() const { return parent_; }
-    std::shared_ptr<Keychain> child(uint32_t i, bool get_private = false);
+    std::shared_ptr<Keychain> child(uint32_t i, bool get_private = false, const secure_bytes_t& lock_key = secure_bytes_t());
 
     const std::vector<uint32_t>& derivation_path() const { return derivation_path_; }
 
@@ -152,7 +152,8 @@ public:
     void lock() const;
     void unlock(const secure_bytes_t& lock_key) const;
     bool isLocked() const;
-    void changeLock(const secure_bytes_t& old_lock_key, const secure_bytes_t& new_lock_key);
+    void encrypt(const secure_bytes_t& lock_key);
+    void unencrypt();
 
     secure_bytes_t getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
     bytes_t getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;

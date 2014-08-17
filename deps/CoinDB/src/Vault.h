@@ -92,6 +92,7 @@ public:
     bool                                    keychainExists(const std::string& keychain_name) const;
     bool                                    keychainExists(const bytes_t& keychain_hash) const;
     bool                                    isKeychainPrivate(const std::string& keychain_name) const;
+    bool                                    isKeychainEncrypted(const std::string& keychain_name) const;
     std::shared_ptr<Keychain>               newKeychain(const std::string& keychain_name, const secure_bytes_t& entropy, const secure_bytes_t& lockKey = secure_bytes_t());
     //void eraseKeychain(const std::string& keychain_name) const;
     void                                    renameKeychain(const std::string& old_name, const std::string& new_name);
@@ -100,6 +101,10 @@ public:
     std::vector<KeychainView>               getRootKeychainViews(const std::string& account_name = "", bool get_hidden = false) const;
     secure_bytes_t                          exportBIP32(const std::string& keychain_name, bool export_private) const;
     std::shared_ptr<Keychain>               importBIP32(const std::string& keychain_name, const secure_bytes_t& extkey, const secure_bytes_t& lock_key = secure_bytes_t());
+
+    // The following methods change the persisted encryption state using the in-memory unlock key map.
+    void                                    encryptKeychain(const std::string& keychain_name, const secure_bytes_t& lock_key);
+    void                                    unencryptKeychain(const std::string& keychain_name);
 
     // The following private key lock/unlock methods do not maintain a database session open so they only
     // store and erase the unlock keys in a member map to be used by the other class methods.
@@ -250,6 +255,7 @@ protected:
     bool                                    isKeychainPrivate_unwrapped(const std::string& keychain_name) const;
     std::shared_ptr<Keychain>               getKeychain_unwrapped(const std::string& keychain_name) const;
     void                                    persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
+    void                                    updateKeychain_unwrapped(std::shared_ptr<Keychain> keychain);
     void                                    exportKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const std::string& filepath) const;
     std::shared_ptr<Keychain>               importKeychain_unwrapped(const std::string& filepath, bool& importprivkeys);
     secure_bytes_t                          exportBIP32_unwrapped(std::shared_ptr<Keychain> keychain, bool export_private) const;

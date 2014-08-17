@@ -48,9 +48,18 @@ Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const
     child_num_ = hdKeychain.child_num();
     chain_code_ = hdKeychain.chain_code();
     pubkey_ = hdKeychain.pubkey();
+    privkey_ = hdKeychain.privkey();
+    if (lock_key.empty())
+    {
+        privkey_salt_ = 0;
+        privkey_ciphertext_ = privkey_;
+    }
+    else
+    {
+        privkey_salt_ = AES::random_salt();
+        privkey_ciphertext_ = AES::encrypt(lock_key, privkey_, true, privkey_salt_);
+    }
     privkey_.clear();
-    privkey_salt_ = AES::random_salt();
-    privkey_ciphertext_ = AES::encrypt(lock_key, privkey_, true, privkey_salt_);
     hash_ = hdKeychain.full_hash();
 }
 
@@ -82,10 +91,9 @@ Keychain& Keychain::operator=(const Keychain& source)
     return *this;
 }
 
-std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private)
+std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private, const secure_bytes_t& lock_key)
 {
-    if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private child from public keychain.");
-    if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
+        if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private child from nonprivate keychain.");
     if (get_private)
     {
         if (privkey_.empty()) throw std::runtime_error("Private key is locked.");
@@ -93,15 +101,22 @@ std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private)
         hdkeychain = hdkeychain.getChild(i);
         std::shared_ptr<Keychain> child(new Keychain());
         child->parent_ = get_shared_ptr();
-        secure_bytes_t privkey = hdkeychain.privkey();
-        // Strip leading zero byte if necessary
-        if (privkey.size() > 32)
-            child->privkey_.assign(privkey.begin() + 1, privkey.end());
-        else
-            child->privkey_ = privkey;
-        child->privkey_ = privkey;
         child->pubkey_ = hdkeychain.pubkey();
         child->chain_code_ = hdkeychain.chain_code();
+
+        child->privkey_ = hdkeychain.privkey();
+        if (lock_key.empty())
+        {
+            child->privkey_salt_ = 0;
+            child->privkey_ciphertext_ = privkey_;
+        }
+        else
+        {
+            child->privkey_salt_ = AES::random_salt();
+            child->privkey_ciphertext_ = AES::encrypt(lock_key, child->privkey_, true, child->privkey_salt_);
+        }
+        child->privkey_.clear();
+
         child->child_num_ = hdkeychain.child_num();
         child->parent_fp_ = hdkeychain.parent_fp();
         child->depth_ = hdkeychain.depth();
@@ -135,7 +150,7 @@ void Keychain::lock() const
 
 void Keychain::unlock(const secure_bytes_t& lock_key) const
 {
-    if (!isPrivate()) throw std::runtime_error("Cannot unlock a nonprivate key.");
+    if (!isPrivate()) throw std::runtime_error("Cannot unlock a nonprivate keychain.");
     if (privkey_salt_ == 0)
     {
         privkey_ = privkey_ciphertext_;
@@ -151,13 +166,22 @@ bool Keychain::isLocked() const
     return privkey_.empty();
 }
 
-void Keychain::changeLock(const secure_bytes_t& old_lock_key, const secure_bytes_t& new_lock_key)
+void Keychain::encrypt(const secure_bytes_t& lock_key)
 {
-    if (!isPrivate()) throw std::runtime_error("Cannot change the lock of a nonprivate key.");
-    privkey_ = AES::decrypt(old_lock_key, privkey_ciphertext_, true, privkey_salt_); 
+    if (!isPrivate()) throw std::runtime_error("Cannot encrypt a nonprivate keychain.");
+    if (isLocked()) throw std::runtime_error("Keychain is locked.");
+
     privkey_salt_ = AES::random_salt();
-    privkey_ciphertext_ = AES::encrypt(new_lock_key, privkey_, true, privkey_salt_);
-    privkey_.clear();
+    privkey_ciphertext_ = AES::encrypt(lock_key, privkey_, true, privkey_salt_);
+}
+
+void Keychain::unencrypt()
+{
+    if (!isPrivate()) throw std::runtime_error("Cannot unencrypt a nonprivate keychain.");
+    if (isLocked()) throw std::runtime_error("Keychain is locked.");
+
+    privkey_salt_ = 0;
+    privkey_ciphertext_ = privkey_;
 }
 
 secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path) const

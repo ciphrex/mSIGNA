@@ -696,6 +696,14 @@ void Vault::persistKeychain_unwrapped(std::shared_ptr<Keychain> keychain)
     db_->persist(keychain);
 }
 
+void Vault::updateKeychain_unwrapped(std::shared_ptr<Keychain> keychain)
+{
+    if (keychain->parent())
+        db_->update(keychain->parent());
+
+    db_->update(keychain);
+}
+
 std::vector<KeychainView> Vault::getRootKeychainViews(const std::string& account_name, bool get_hidden) const
 {
     LOGGER(trace) << "Vault::getRootKeychainViews(" << account_name << ", " << (get_hidden ? "true" : "false") << ")" << std::endl;
@@ -766,6 +774,36 @@ std::shared_ptr<Keychain> Vault::importBIP32(const std::string& keychain_name, c
     return keychain;
 }
 
+void Vault::encryptKeychain(const std::string& keychain_name, const secure_bytes_t& lock_key)
+{
+    LOGGER(trace) << "Vault::encryptKeychain(" << keychain_name << ", ...)" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+
+    std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
+    unlockKeychain_unwrapped(keychain);
+    keychain->encrypt(lock_key);
+    updateKeychain_unwrapped(keychain);
+    t.commit(); 
+}
+
+void Vault::unencryptKeychain(const std::string& keychain_name)
+{
+    LOGGER(trace) << "Vault::unencryptKeychain(" << keychain_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+
+    std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
+    unlockKeychain_unwrapped(keychain);
+    keychain->unencrypt();
+    updateKeychain_unwrapped(keychain);
+    t.commit(); 
+}
+
 void Vault::refillAccountPool(const std::string& account_name)
 {
     LOGGER(trace) << "Vault::refillAccountPool(" << account_name << ")" << std::endl;
@@ -822,6 +860,7 @@ std::vector<std::shared_ptr<Keychain>> Vault::getAllKeychains(bool root_only, bo
     return keychains;
 }
 
+//TODO: do keychain locking notifications properly
 void Vault::lockAllKeychains()
 {
     LOGGER(trace) << "Vault::lockAllKeychains()" << std::endl;
@@ -847,15 +886,19 @@ void Vault::unlockKeychain(const std::string& keychain_name, const secure_bytes_
 {
     LOGGER(trace) << "Vault::unlockKeychain(" << keychain_name << ", ?)" << std::endl;
 
+    boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
-    std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
-    if (!keychain->isPrivate())
-        throw KeychainIsNotPrivateException(keychain->name());
 
-    keychain->unlock(lock_key);
+    {
+        std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
+        if (!keychain->isPrivate())
+            throw KeychainIsNotPrivateException(keychain->name());
 
-    boost::lock_guard<boost::mutex> lock(mutex);
+        // This is the only way to know the lock key is correct
+        keychain->unlock(lock_key);
+    }
+
     mapPrivateKeyUnlock[keychain_name] = lock_key;
     notifyKeychainUnlocked(keychain_name);
 }
