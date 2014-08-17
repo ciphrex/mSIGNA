@@ -6,6 +6,7 @@ do
     linux)
         if [[ ! -z "$OS" ]]; then echo "OS cannot be set twice"; exit 1; fi
         OS=linux
+        OPTIONS="OS=linux $OPTIONS"
     ;;
 
     mingw64)
@@ -18,6 +19,7 @@ do
     osx)
         if [[ ! -z "$OS" ]]; then echo "OS cannot be set twice"; exit 1; fi
         OS=osx
+        OPTIONS="OS=osx $OPTIONS"
     ;;
 
     debug)

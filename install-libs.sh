@@ -6,26 +6,31 @@ do
     linux)
         if [[ ! -z "$OS" ]]; then echo "OS cannot be set twice"; exit 1; fi
         OS=linux
+        OPTIONS="OS=linux $OPTIONS"
     ;;
 
     mingw64)
         if [[ ! -z "$OS" ]]; then echo "OS cannot be set twice"; exit 1; fi
         OS=mingw64
+        OPTIONS="OS=mingw64 $OPTIONS"
     ;;
 
     osx)
         if [[ ! -z "$OS" ]]; then echo "OS cannot be set twice"; exit 1; fi
         OS=osx
+        OPTIONS="OS=osx $OPTIONS"
     ;;
 
     sqlite)
         if [[ ! -z "$DB" ]]; then echo "DB cannot be set twice"; exit 1; fi
         DB=sqlite
+        OPTIONS="DB=sqlite $OPTIONS"
     ;;
 
     mysql)
         if [[ ! -z "$DB" ]]; then echo "DB cannot be set twice"; exit 1; fi
         DB=mysql
+        OPTIONS="DB=mysql $OPTIONS"
     ;;
 
     debug)
