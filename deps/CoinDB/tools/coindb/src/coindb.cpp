@@ -841,11 +841,13 @@ cli::result_t cmd_signingrequest(const cli::params_t& params)
     return ss.str();
 }
 
-// TODO: do something with passphrase
 cli::result_t cmd_signtx(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
-    vault.unlockKeychain(params[2], secure_bytes_t());
+
+    secure_bytes_t lock_key;
+    if (params.size() > 3) { lock_key = passphraseHash(params[3]); }
+    vault.unlockKeychain(params[2], lock_key);
 
     stringstream ss;
     std::vector<std::string> keychain_names;
@@ -1305,7 +1307,8 @@ int main(int argc, char* argv[])
         &cmd_signtx,
         "signtx",
         "add signatures to transaction for specified keychain",
-        command::params(4, "db file", "tx hash or id", "keychain name", "passphrase")));
+        command::params(3, "db file", "tx hash or id", "keychain name"),
+        command::params(1, "passphrase")));
     shell.add(command(
         &cmd_exporttxs,
         "exporttxs",
