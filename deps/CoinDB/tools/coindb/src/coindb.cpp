@@ -31,7 +31,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-const std::string COINDB_VERSION = "v0.5.0";
+const std::string COINDB_VERSION = "v0.5.1";
 
 using namespace std;
 using namespace odb::core;
@@ -135,6 +135,63 @@ cli::result_t cmd_renamekeychain(const cli::params_t& params)
 
     stringstream ss;
     ss << "Keychain " << params[1] << " renamed to " << params[2] << ".";
+    return ss.str();
+}
+
+cli::result_t cmd_encryptkeychain(const cli::params_t& params)
+{
+    if (params[2].empty()) throw runtime_error("Passphrase is empty.");
+
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    shared_ptr<Keychain> keychain = vault.getKeychain(params[1]);
+    if (!keychain->isPrivate()) throw runtime_error("Keychain is nonprivate.");
+    if (keychain->isEncrypted()) throw runtime_error("Keychain is already encrypted.");
+
+    vault.unlockKeychain(keychain->name());
+    secure_bytes_t passphrase((unsigned char*)&params[2][0], (unsigned char*)&params[2][0] + params[2].size());
+    vault.encryptKeychain(keychain->name(), sha256_2(passphrase));
+
+    stringstream ss;
+    ss << "Keychain " << keychain->name() << " encrypted.";
+    return ss.str();
+}
+
+cli::result_t cmd_decryptkeychain(const cli::params_t& params)
+{
+    if (params[2].empty()) throw runtime_error("Passphrase is empty.");
+
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    shared_ptr<Keychain> keychain = vault.getKeychain(params[1]);
+    if (!keychain->isPrivate()) throw runtime_error("Keychain is nonprivate.");
+    if (!keychain->isEncrypted()) throw runtime_error("Keychain is not encrypted.");
+
+    secure_bytes_t passphrase((unsigned char*)&params[2][0], (unsigned char*)&params[2][0] + params[2].size());
+    vault.unlockKeychain(keychain->name(), sha256_2(passphrase));
+    vault.decryptKeychain(keychain->name());
+
+    stringstream ss;
+    ss << "Keychain " << keychain->name() << " decrypted.";
+    return ss.str();
+}
+
+cli::result_t cmd_reencryptkeychain(const cli::params_t& params)
+{
+    if (params[2].empty()) throw runtime_error("Old passphrase is empty.");
+    if (params[3].empty()) throw runtime_error("New passphrase is empty.");
+
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    shared_ptr<Keychain> keychain = vault.getKeychain(params[1]);
+    if (!keychain->isPrivate()) throw runtime_error("Keychain is nonprivate.");
+    if (!keychain->isEncrypted()) throw runtime_error("Keychain is not encrypted.");
+
+    secure_bytes_t old_passphrase((unsigned char*)&params[2][0], (unsigned char*)&params[2][0] + params[2].size());
+    vault.unlockKeychain(keychain->name(), sha256_2(old_passphrase));
+
+    secure_bytes_t new_passphrase((unsigned char*)&params[3][0], (unsigned char*)&params[3][0] + params[3].size());
+    vault.encryptKeychain(keychain->name(), sha256_2(new_passphrase));
+
+    stringstream ss;
+    ss << "Keychain " << keychain->name() << " reencrypted.";
     return ss.str();
 }
 
@@ -1041,6 +1098,21 @@ int main(int argc, char* argv[])
         "renamekeychain",
         "rename a keychain",
         command::params(3, "db file", "old name", "new name")));
+    shell.add(command(
+        &cmd_encryptkeychain,
+        "encryptkeychain",
+        "encrypt a keychain",
+        command::params(3, "db file", "keychain name", "passphrase")));
+    shell.add(command(
+        &cmd_decryptkeychain,
+        "decryptkeychain",
+        "decrypt a keychain",
+        command::params(3, "db file", "keychain name", "passphrase")));
+    shell.add(command(
+        &cmd_reencryptkeychain,
+        "reencryptkeychain",
+        "reencrypt a keychain",
+        command::params(4, "db file", "keychain name", "old passphrase", "new passphrase")));
     shell.add(command(
         &cmd_keychaininfo,
         "keychaininfo",
