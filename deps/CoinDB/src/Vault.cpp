@@ -952,6 +952,18 @@ bool Vault::isKeychainLocked(const std::string& keychainName) const
     return (it == mapPrivateKeyUnlock.end());
 }
 
+bool Vault::isKeychainEncrypted(const std::string& keychain_name) const
+{
+    LOGGER(trace) << "Vault::isKeychainEncrypted(" << keychain_name << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+
+    std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
+    return keychain->isEncrypted();
+}
+
 ////////////////////////
 // ACCOUNT OPERATIONS //
 ////////////////////////    

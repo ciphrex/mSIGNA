@@ -13,7 +13,7 @@
 #include <CoinCore/hash.h>
 
 template<typename S>
-inline secure_bytes_t passphraseHash(S& passphrase)
+inline secure_bytes_t passphraseHash(const S& passphrase)
 {
     return sha256_2(secure_bytes_t((unsigned char*)&passphrase[0], (unsigned char*)&passphrase[0] + passphrase.size()));
 }
