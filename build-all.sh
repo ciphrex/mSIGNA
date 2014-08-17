@@ -11,6 +11,8 @@ do
     mingw64)
         if [[ ! -z "$OS" ]]; then echo "OS cannot be set twice"; exit 1; fi
         OS=mingw64
+        OPTIONS="OS=mingw64 $OPTIONS"
+        mingw64=true
     ;;
 
     osx)
@@ -27,6 +29,10 @@ do
     release)
         if [[ ! -z "$BUILD_TYPE" ]]; then echo "Build type cannot be set twice"; exit 2; fi
         BUILD_TYPE=release
+    ;;
+
+    libs_only)
+        libs_only=true
     ;;
 
     tools_only)
@@ -51,22 +57,11 @@ then
 fi
 
 # Set target platform parameters
-case $OS in
-linux)
-;;
-
-mingw64)
+if [ $mingw64 ]
+then
     if [[ -z "$QMAKE_PATH" ]]; then QMAKE_PATH="/usr/x86_64-w64-mingw32/host/bin/"; fi
     SPEC="-spec win32-g++"
-;;
-
-osx)
-;;
-
-*)
-    echo "You must specify between linux, mingw64, and osx."
-    exit
-esac
+fi
 
 # Use release as default build type
 if [[ -z "$BUILD_TYPE" ]]
@@ -103,39 +98,44 @@ set -x
 set -e
 
 cd deps/logger
-make OS=$OS $OPTIONS
-SYSROOT=../../sysroot make install
+make $OPTIONS
+make install
 
 cd ../Signals
-SYSROOT=../../sysroot make install
+make install
 
 cd ../stdutils
-SYSROOT=../../sysroot make install
+make install
 
 cd ../sysutils
-make OS=$OS $OPTIONS
-SYSROOT=../../sysroot make install
+make $OPTIONS
+make install
 
 cd ../CoinCore
-make OS=$OS $OPTIONS
-SYSROOT=../../sysroot make install
+make $OPTIONS
+make install
 
 cd ../CoinQ
-make OS=$OS $OPTIONS
-SYSROOT=../../sysroot make install
+make $OPTIONS
+make install
 
 cd ../CoinDB
-make lib OS=$OS $OPTIONS
-SYSROOT=../../sysroot make install_lib
+make lib $OPTIONS
+make install_lib
+
+if [ $libs_only ]
+then
+    exit
+fi
 
 if [ $tools_only ]
 then
-    make tools OS=$OS $OPTIONS
+    make tools $OPTIONS
     set +x
     echo
     echo "All dependencies built."
     echo
-    echo "To install coindb, run the following commands:"
+    echo "To install coindb and syncdb tools, run the following commands:"
     echo "  $ cd deps/CoinDB"
     echo "  $ sudo make install_tools"
     echo

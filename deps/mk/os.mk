@@ -13,7 +13,8 @@ ifeq ($(OS), linux)
     CXX_FLAGS += -Wno-unknown-pragmas -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
     ARCHIVER = ar
 
-    GLOBAL_SYSROOT = /usr/local
+    LOCAL_SYSROOT = /usr/local
+    GLOBAL_SYSROOT = /usr
 
     PLATFORM_LIBS += \
         -lpthread
@@ -25,6 +26,7 @@ else ifeq ($(OS), mingw64)
     ARCHIVER = x86_64-w64-mingw32-ar
     EXE_EXT = .exe
 
+    LOCAL_SYSROOT = /usr/x86_64-w64-mingw32/local
     GLOBAL_SYSROOT = /usr/x86_64-w64-mingw32
 
     PLATFORM_LIBS += \
@@ -39,13 +41,30 @@ else ifeq ($(OS), osx)
     CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
     ARCHIVER = ar
 
-    GLOBAL_SYSROOT = /usr/local
+    LOCAL_SYSROOT = /usr/local
+    GLOBAL_SYSROOT = /usr
 
 else ifneq ($(MAKECMDGOALS), clean)
     $(error OS must be set to linux, mingw64, or osx)
 endif
 
 ifndef SYSROOT
-    SYSROOT = $(GLOBAL_SYSROOT)
+    ifneq ($(shell whoami), root)
+        ifdef PROJECT_SYSROOT
+            SYSROOT = $(PROJECT_SYSROOT)
+        else
+            SYSROOT = $(LOCAL_SYSROOT)
+        endif 
+    else
+        SYSROOT = $(LOCAL_SYSROOT)
+    endif
+endif
+
+ifneq ($(wildcard $(SYSROOT)/include),)
+    INCLUDE_PATH += -I$(SYSROOT)/include
+endif
+
+ifneq ($(wildcard $(SYSROOT)/lib),)
+    LIB_PATH += -L$(SYSROOT)/lib
 endif
 

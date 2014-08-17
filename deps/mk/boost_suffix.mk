@@ -1,6 +1,10 @@
 # Detect boost library filename suffix
-ifneq ($(wildcard $(GLOBAL_SYSROOT)/lib/libboost_system-mt.*),)
+ifneq ($(wildcard $(LOCAL_SYSROOT)/lib/libboost_system-mt.*),)
     BOOST_SUFFIX = -mt
+else ifneq ($(wildcard $(GLOBAL_SYSROOT)/lib/libboost_system-mt.*),)
+    BOOST_SUFFIX = -mt
+else ifneq ($(wildcard $(LOCAL_SYSROOT)/lib/libboost_system-mt-s.*),)
+    BOOST_SUFFIX = -mt-s
 else ifneq ($(wildcard $(GLOBAL_SYSROOT)/lib/libboost_system-mt-s.*),)
     BOOST_SUFFIX = -mt-s
 endif

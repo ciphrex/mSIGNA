@@ -10,9 +10,9 @@ ODB_INCLUDE_PATH += \
 LIB_PATH += \
     -Llib
 
-LOCAL_SYSROOT = ../../sysroot
+PROJECT_SYSROOT = ../../sysroot
 
-include ../mk/sysroot.mk ../mk/os.mk ../mk/cxx_flags.mk ../mk/boost_suffix.mk ../mk/odb.mk
+include ../mk/os.mk ../mk/cxx_flags.mk ../mk/boost_suffix.mk ../mk/odb.mk
 
 LIBS = \
     -lCoinDB \

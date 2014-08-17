@@ -1,6 +1,6 @@
-LOCAL_SYSROOT = ../../sysroot
+PROJECT_SYSROOT = ../../sysroot
 
-include ../mk/sysroot.mk ../mk/os.mk ../mk/cxx_flags.mk ../mk/c_flags.mk
+include ../mk/os.mk ../mk/cxx_flags.mk ../mk/c_flags.mk
 
 OBJS = \
         obj/IPv6.o \

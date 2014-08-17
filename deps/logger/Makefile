@@ -1,5 +1,6 @@
-LOCAL_SYSROOT = ../../sysroot
-include ../mk/sysroot.mk ../mk/os.mk ../mk/cxx_flags.mk
+PROJECT_SYSROOT = ../../sysroot
+
+include ../mk/os.mk ../mk/cxx_flags.mk
 
 all: lib/liblogger.a
 

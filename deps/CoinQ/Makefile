@@ -1,7 +1,7 @@
 INCLUDE_PATH += -Isrc
-LOCAL_SYSROOT = ../../sysroot
+PROJECT_SYSROOT = ../../sysroot
 
-include ../mk/sysroot.mk ../mk/os.mk ../mk/cxx_flags.mk ../mk/boost_suffix.mk
+include ../mk/os.mk ../mk/cxx_flags.mk ../mk/boost_suffix.mk
 
 OBJS = \
     obj/CoinQ_coinparams.o \
