@@ -17,6 +17,7 @@
 #include <odb/transaction.hxx>
 
 #include <Vault.h>
+#include <Passphrase.h>
 
 #include <CoinCore/Base58Check.h>
 #include <CoinCore/random.h>
@@ -39,12 +40,6 @@ using namespace CoinDB;
 
 std::string g_dbuser;
 std::string g_dbpasswd;
-
-template<typename S>
-secure_bytes_t passphraseHash(S& passphrase)
-{
-    return sha256_2(secure_bytes_t((unsigned char*)&passphrase[0], (unsigned char*)&passphrase[0] + passphrase.size()));
-}
 
 // Global operations
 cli::result_t cmd_create(const cli::params_t& params)
