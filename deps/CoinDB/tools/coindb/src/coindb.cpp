@@ -110,7 +110,10 @@ cli::result_t cmd_keychainexists(const cli::params_t& params)
 cli::result_t cmd_newkeychain(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
-    vault.newKeychain(params[1], random_bytes(32));
+
+    secure_bytes_t lock_key;
+    if (params.size() > 2) { lock_key = passphraseHash(params[2]); }
+    vault.newKeychain(params[1], secure_random_bytes(32), lock_key);
 
     stringstream ss;
     ss << "Added keychain " << params[1] << " to vault " << params[0] << ".";
@@ -1093,7 +1096,8 @@ int main(int argc, char* argv[])
         &cmd_newkeychain,
         "newkeychain",
         "create a new keychain",
-        command::params(2, "db file", "keychain name")));
+        command::params(2, "db file", "keychain name"),
+        command::params(1, "passphrase")));
     shell.add(command(
         &cmd_renamekeychain,
         "renamekeychain",
