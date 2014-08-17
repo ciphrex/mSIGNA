@@ -52,9 +52,12 @@ public:
     virtual ~Vault();
 
     ////////////////////
-    // STATIC MEMBERS //
+    // STATIC METHODS //
     ////////////////////
-    static bool isValidObjectName(const std::string& name);
+    static bool                             isValidObjectName(const std::string& name);
+
+    typedef std::pair<std::string, unsigned int> split_name_t;
+    static split_name_t                     getSplitObjectName(const std::string& name);
 
     ///////////////////////
     // GLOBAL OPERATIONS //

@@ -79,7 +79,7 @@ Vault::~Vault()
 }
 
 ////////////////////
-// STATIC MEMBERS //
+// STATIC METHODS //
 ////////////////////
 bool Vault::isValidObjectName(const std::string& name)
 {
@@ -97,6 +97,27 @@ bool Vault::isValidObjectName(const std::string& name)
     }
 
     return true;
+}
+
+Vault::split_name_t Vault::getSplitObjectName(const std::string& name)
+{
+    if (name.empty()) return split_name_t(std::string(), 0);
+
+    unsigned int n = 0;
+    unsigned int mult = 1;
+    unsigned int digit = 0;
+    int i = name.size() - 1;
+    for (; i >= 0; i--)
+    {
+        if (name[i] < '0' || name[i] > '9') break;
+        digit = name[i] - '0';
+        n += digit * mult;
+        mult *= 10;
+    }
+
+    if (i < 0 && digit != 0) return split_name_t(std::string(), n); // all digits, no leading 0's
+    if (digit == 0 || name[i] != ' ') return split_name_t(name, 0); // leading 0's or no space
+    return split_name_t(name.substr(0, i), n);
 }
 
 ///////////////////////
@@ -589,14 +610,20 @@ std::string Vault::getNextAvailableKeychainName_unwrapped(const std::string& des
     bool bValid = isValidObjectName(keychain_name);
     if (!bValid) { keychain_name = "keychain"; }
 
-    unsigned int append_num = 1;
+/*
+    split_name_t split_name = getSplitObjectName(keychain_name);
+    keychain_name = split_name.first;
+    unsigned int append_num = split_name.second;
+*/
+
+    unsigned int append_num = 0;
     std::stringstream ss;
     ss << keychain_name;
-    if (!bValid) { ss << " " << append_num++; }
+    if (!bValid) { ss << " " << ++append_num; }
     while (keychainExists_unwrapped(ss.str()))
     {
         ss.str(std::string());
-        ss << keychain_name << " " << append_num++;
+        ss << keychain_name << " " << ++append_num;
     }
 
     return ss.str();
@@ -1059,14 +1086,21 @@ std::string Vault::getNextAvailableAccountName_unwrapped(const std::string& desi
     bool bValid = isValidObjectName(account_name);
     if (!bValid) { account_name = "account"; }
 
-    unsigned int append_num = 1;
+/*
+    split_name_t split_name = getSplitObjectName(account_name);
+    account_name = split_name.first;
+    unsigned int append_num = split_name.second;
+*/
+
+    unsigned int append_num = 0;
+
     std::stringstream ss;
     ss << account_name;
-    if (!bValid) { ss << " " << append_num++; }
+    if (!bValid) { ss << " " << ++append_num; }
     while (accountExists_unwrapped(ss.str()))
     {
         ss.str(std::string());
-        ss << account_name << " " << append_num++;
+        ss << account_name << " " << ++append_num;
     }
 
     return ss.str();
