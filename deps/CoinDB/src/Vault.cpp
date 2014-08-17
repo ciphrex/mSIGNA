@@ -789,7 +789,7 @@ void Vault::encryptKeychain(const std::string& keychain_name, const secure_bytes
     t.commit(); 
 }
 
-void Vault::unencryptKeychain(const std::string& keychain_name)
+void Vault::decryptKeychain(const std::string& keychain_name)
 {
     LOGGER(trace) << "Vault::unencryptKeychain(" << keychain_name << ")" << std::endl;
 
@@ -799,7 +799,7 @@ void Vault::unencryptKeychain(const std::string& keychain_name)
 
     std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
     unlockKeychain_unwrapped(keychain);
-    keychain->unencrypt();
+    keychain->decrypt();
     updateKeychain_unwrapped(keychain);
     t.commit(); 
 }

@@ -175,7 +175,7 @@ void Keychain::encrypt(const secure_bytes_t& lock_key)
     privkey_ciphertext_ = AES::encrypt(lock_key, privkey_, true, privkey_salt_);
 }
 
-void Keychain::unencrypt()
+void Keychain::decrypt()
 {
     if (!isPrivate()) throw std::runtime_error("Cannot unencrypt a nonprivate keychain.");
     if (isLocked()) throw std::runtime_error("Keychain is locked.");

@@ -153,7 +153,7 @@ public:
     void unlock(const secure_bytes_t& lock_key) const;
     bool isLocked() const;
     void encrypt(const secure_bytes_t& lock_key);
-    void unencrypt();
+    void decrypt();
 
     secure_bytes_t getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
     bytes_t getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;

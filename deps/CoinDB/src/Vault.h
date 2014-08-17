@@ -104,7 +104,7 @@ public:
 
     // The following methods change the persisted encryption state using the in-memory unlock key map.
     void                                    encryptKeychain(const std::string& keychain_name, const secure_bytes_t& lock_key);
-    void                                    unencryptKeychain(const std::string& keychain_name);
+    void                                    decryptKeychain(const std::string& keychain_name);
 
     // The following private key lock/unlock methods do not maintain a database session open so they only
     // store and erase the unlock keys in a member map to be used by the other class methods.
