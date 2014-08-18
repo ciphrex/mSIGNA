@@ -3577,22 +3577,35 @@ std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock_unwrapped(std::shared_ptr<
         return nullptr;
     }
 
-    // Check if it connects
     blockheader_r = db_->query<BlockHeader>(query_t::hash == new_blockheader->prevhash());
-    if (blockheader_r.empty())
+    if (!blockheader_r.empty())
     {
-        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - could not connect block. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
-        return nullptr;
+        // Try connecting forward
+
+        // Make sure we have correct height
+        new_blockheader->height(blockheader_r.begin().load()->height() + 1);
+
+        // Make sure this block is unique at this height. All higher blocks are also deleted.
+        unsigned int reorg_depth = deleteMerkleBlock_unwrapped(new_blockheader->height());
+        if (reorg_depth > 0)
+        {
+            LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - reorganization. " << reorg_depth << " blocks removed from chain." << std::endl;
+        }
     }
-
-    // Make sure we have correct height
-    new_blockheader->height(blockheader_r.begin().load()->height() + 1);
-
-    // Make sure this block is unique at this height. All higher blocks are also deleted.
-    unsigned int reorg_depth = deleteMerkleBlock_unwrapped(new_blockheader->height());
-    if (reorg_depth > 0)
+    else
     {
-        LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - reorganization. " << reorg_depth << " blocks removed from chain." << std::endl;
+        // Try connecting backward
+        blockheader_r = db_->query<BlockHeader>(query_t::prevhash == new_blockheader->hash());
+        if (!blockheader_r.empty())
+        {
+            // Make sure we have correct height
+            new_blockheader->height(blockheader_r.begin().load()->height() - 1);
+        }
+        else
+        {
+            LOGGER(debug) << "Vault::insertMerkleBlock_unwrapped - could not connect block. hash: " << new_blockheader_hash << ", height: " << new_blockheader->height() << std::endl;
+            return nullptr;
+        }
     }
 
     // Persist merkle block
