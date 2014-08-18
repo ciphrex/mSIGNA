@@ -147,7 +147,12 @@ void Vault::open(int argc, char** argv, bool create, uint32_t version, const std
         if (!network.empty())
         {
             std::string dbNetwork = getNetwork_unwrapped();
-            if (!dbNetwork.empty() && dbNetwork != network) throw VaultWrongNetworkException(name_, dbNetwork);
+            if (!dbNetwork.empty())
+            {
+                std::string lowerNetwork = network;
+                std::transform(lowerNetwork.begin(), lowerNetwork.end(), lowerNetwork.begin(), ::tolower);
+                if (dbNetwork != lowerNetwork) throw VaultWrongNetworkException(name_, dbNetwork);
+            }
         }
     }
 }
@@ -175,7 +180,12 @@ void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const s
         if (!network.empty())
         {
             std::string dbNetwork = getNetwork_unwrapped();
-            if (!dbNetwork.empty() && dbNetwork != network) throw VaultWrongNetworkException(name_, dbNetwork);
+            if (!dbNetwork.empty())
+            {
+                std::string lowerNetwork = network;
+                std::transform(lowerNetwork.begin(), lowerNetwork.end(), lowerNetwork.begin(), ::tolower);
+                if (dbNetwork != lowerNetwork) throw VaultWrongNetworkException(name_, dbNetwork);
+            }
         }
     }
 }
@@ -261,16 +271,19 @@ void Vault::setNetwork(const std::string& network)
 
 void Vault::setNetwork_unwrapped(const std::string& network)
 {
+    std::string lower_network = network;
+    std::transform(lower_network.begin(), lower_network.end(), lower_network.begin(), ::tolower);
+
     odb::result<Network> r(db_->query<Network>());
     if (r.empty())
     {
-        std::shared_ptr<Network> network_obj(new Network(network));
+        std::shared_ptr<Network> network_obj(new Network(lower_network));
         db_->persist(network_obj);
     }
     else
     {
         std::shared_ptr<Network> network_obj(r.begin().load());
-        network_obj->network(network);
+        network_obj->network(lower_network);
         db_->update(network_obj);
     }
 }
