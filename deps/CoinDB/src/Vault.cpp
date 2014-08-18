@@ -128,9 +128,18 @@ void Vault::open(int argc, char** argv, bool create, uint32_t version, const std
 {
     LOGGER(trace) << "Vault::open(..., " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
 
-    boost::lock_guard<boost::mutex> lock(mutex);
-    db_ = open_database(argc, argv, create);
     if (argc >= 2) name_ = argv[1];
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+
+    try
+    {
+        db_ = open_database(argc, argv, create);
+    }
+    catch (const std::exception& e)
+    {
+        throw VaultFailedToOpenDatabaseException(name_, e.what());
+    }
 
     odb::core::transaction t(db_->begin());
     if (create)
@@ -161,9 +170,18 @@ void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const s
 {
     LOGGER(trace) << "Vault::open(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
 
-    boost::lock_guard<boost::mutex> lock(mutex);
-    db_ = openDatabase(dbuser, dbpasswd, dbname, create);
     name_ = dbname;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+
+    try
+    {
+        db_ = openDatabase(dbuser, dbpasswd, dbname, create);
+    }
+    catch (const std::exception& e)
+    {
+        throw VaultFailedToOpenDatabaseException(name_, e.what());
+    }
 
     odb::core::transaction t(db_->begin());
     if (create)

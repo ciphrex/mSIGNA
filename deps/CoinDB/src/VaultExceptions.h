@@ -21,6 +21,7 @@ enum ErrorCodes
     // Vault errors
     VAULT_WRONG_SCHEMA_VERSION = 101,
     VAULT_WRONG_NETWORK,
+    VAULT_FAILED_TO_OPEN_DATABASE,
     VAULT_MISSING_TXS,
 
     // Chain code errors
@@ -103,6 +104,17 @@ public:
 
 private:
     std::string network_;
+};
+
+class VaultFailedToOpenDatabaseException : public VaultException
+{
+public:
+    explicit VaultFailedToOpenDatabaseException(const std::string& vault_name, const std::string& dberror) : VaultException("Failed to open database.", VAULT_FAILED_TO_OPEN_DATABASE, vault_name), dberror_(dberror) { }
+
+    const std::string&  dberror() const { return dberror_; }
+
+private:
+    std::string dberror_;
 };
 
 class VaultMissingTxsException : public VaultException
