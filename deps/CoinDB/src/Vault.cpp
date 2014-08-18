@@ -27,6 +27,7 @@
 #include <odb/session.hxx>
 
 #include <CoinCore/hash.h>
+#include <CoinCore/aes.h>
 #include <CoinCore/MerkleTree.h>
 #include <CoinCore/secp256k1.h>
 #include <CoinCore/BigInt.h>
@@ -896,7 +897,15 @@ void Vault::unlockKeychain(const std::string& keychain_name, const secure_bytes_
             throw KeychainIsNotPrivateException(keychain->name());
 
         // This is the only way to know the lock key is correct
-        keychain->unlock(lock_key);
+        try
+        {
+            keychain->unlock(lock_key);
+        }
+        catch (const std::exception& e)
+        {
+            LOGGER(error) << "Failed to decrypt keychain " << keychain->name() << ": " << e.what() << std::endl;
+            throw KeychainPrivateKeyUnlockFailedException(keychain->name());
+        }
     }
 
     mapPrivateKeyUnlock[keychain_name] = lock_key;
@@ -918,7 +927,14 @@ void Vault::unlockKeychain_unwrapped(std::shared_ptr<Keychain> keychain, const s
     }
     else
     {
-        keychain->unlock(lock_key);
+        try
+        {
+            keychain->unlock(lock_key);
+        }
+        catch (const AES::AESDecryptException& e)
+        {
+            throw KeychainPrivateKeyUnlockFailedException(keychain->name());
+        }
     }
 }
 
