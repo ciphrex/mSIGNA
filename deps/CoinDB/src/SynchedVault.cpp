@@ -375,6 +375,7 @@ void SynchedVault::closeVault()
 
     m_notifyVaultClosed();
     updateSyncHeader(0, bytes_t());
+    updateHorizonHeader(0, bytes_t());
     if (m_networkSync.connected() && m_networkSync.headersSynched()) { updateStatus(SYNCHED); }
 }
 
@@ -574,7 +575,7 @@ void SynchedVault::updateBestHeader(uint32_t bestHeight, const bytes_t& bestHash
 
 void SynchedVault::updateSyncHeader(uint32_t syncHeight, const bytes_t& syncHash)
 {
-    if (m_syncHeight >= syncHeight && m_syncHash != syncHash)
+    if (m_syncHeight <= syncHeight && m_syncHash != syncHash)
     {
         m_syncHeight = syncHeight;
         m_syncHash = syncHash;
@@ -584,7 +585,7 @@ void SynchedVault::updateSyncHeader(uint32_t syncHeight, const bytes_t& syncHash
 
 void SynchedVault::updateHorizonHeader(uint32_t horizonHeight, const bytes_t& horizonHash)
 {
-    if (m_horizonHeight <= horizonHeight && m_horizonHash != horizonHash)
+    if ((m_horizonHeight == 0 || m_horizonHeight >= horizonHeight) && m_horizonHash != horizonHash)
     {
         m_horizonHeight = horizonHeight;
         m_horizonHash = horizonHash;
