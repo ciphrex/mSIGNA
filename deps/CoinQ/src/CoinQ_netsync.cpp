@@ -31,7 +31,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
     m_bConnected(false),
     m_peer(m_ioService),
     m_bFlushingToFile(false),
-    m_backscanHeight(-1),
+    m_backscanHeight(0),
     m_bHeadersSynched(false),
     m_bBlocksSynched(false),
     m_bMissingTxs(false)
@@ -347,7 +347,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                 if (m_bBlocksSynched && m_backscanHeight > 0 && merkleHeader.height == m_backscanHeight)
                 {
                     m_backscanHeight--;
-                    if (m_backscanHeight < 0)
+                    if (m_backscanHeight == 0)
                     {
                         LOGGER(trace) << "Backscan complete (2)." << std::endl;
                         return;
@@ -571,8 +571,8 @@ void NetworkSync::syncBlocks(int startHeight, int backscanHeight)
 
 void NetworkSync::do_syncBlocks(int startHeight, int backscanHeight)
 {
-    // backscanHeight of 0 is used when synching the first time
-    if (backscanHeight == 0) { backscanHeight = startHeight - 1; }
+    // backscanHeight of -1 is used when synching the first time
+    if (backscanHeight == -1) { backscanHeight = startHeight - 1; }
 
     m_backscanHeight = backscanHeight;
     m_bBlocksSynched = false;
@@ -923,10 +923,10 @@ void NetworkSync::processBlockTx(const Coin::Transaction& tx)
             return;
         }
 
-        if (m_bBlocksSynched && m_backscanHeight >= 0 && m_currentMerkleBlock.height == m_backscanHeight)
+        if (m_bBlocksSynched && m_backscanHeight > 0 && m_currentMerkleBlock.height == m_backscanHeight)
         {
             m_backscanHeight--;
-            if (m_backscanHeight < 0)
+            if (m_backscanHeight == 0)
             {
                 LOGGER(trace) << "Backscan complete (1)." << std::endl;
                 return;
@@ -996,7 +996,7 @@ void NetworkSync::processMempoolConfirmations()
 void NetworkSync::startBackscan()
 {
     boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
-    if (m_backscanHeight < 0) return;
+    if (m_backscanHeight <= 0) return;
 
     LOGGER(trace) << "Starting backscan at height " << m_backscanHeight << "." << std::endl;
 
