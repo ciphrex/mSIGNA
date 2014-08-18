@@ -516,7 +516,7 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
     if (!m_bConnected) throw runtime_error("NetworkSync::syncBlocks() - must connect before synching.");
     if (!m_bHeadersSynched) throw runtime_error("NetworkSync::syncBlocks() - headers must be synched before calling.");
     
-    LOGGER(trace) << "NetworkSync::syncBlocks - locatorHashes: " << locatorHashes.size() << " startTime: " << startTime << endl;
+    LOGGER(trace) << "NetworkSync::syncBlocks - locatorHashes: " << locatorHashes.size() << " startTime: " << startTime << " backscanHeight: " << backscanHeight << endl;
     int startHeight;
 
     boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
@@ -547,6 +547,7 @@ void NetworkSync::syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t
             m_bBlocksSynched = true;
             syncLock.unlock();
             notifyBlocksSynched();
+            m_backscanHeight = backscanHeight - 1;
             startBackscan();
             return;
         } 
