@@ -3513,6 +3513,24 @@ std::shared_ptr<BlockHeader> Vault::getBestBlockHeader_unwrapped() const
     return r.begin().load();
 }
 
+std::shared_ptr<BlockHeader> Vault::getHorizonBlockHeader() const
+{
+    LOGGER(trace) << "Vault::getHorizonBlockHeader()" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::transaction t(db_->begin());
+    return getHorizonBlockHeader_unwrapped();
+}
+
+std::shared_ptr<BlockHeader> Vault::getHorizonBlockHeader_unwrapped() const
+{
+    odb::result<BlockHeader> r(db_->query<BlockHeader>("ORDER BY" + odb::query<BlockHeader>::height + "ASC LIMIT 1"));
+    if (r.empty()) return nullptr;
+    return r.begin().load();
+}
+
 std::shared_ptr<MerkleBlock> Vault::insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock)
 {
     LOGGER(trace) << "Vault::insertMerkleBlock(" << uchar_vector(merkleblock->blockheader()->hash()).getHex() << ")" << std::endl;

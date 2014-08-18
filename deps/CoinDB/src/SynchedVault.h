@@ -61,6 +61,8 @@ public:
     const bytes_t& getBestHash() const { return m_bestHash; }
     uint32_t getSyncHeight() const { return m_syncHeight; }
     const bytes_t& getSyncHash() const { return m_syncHash; }
+    uint32_t getHorizonHeight() const { return m_horizonHeight; }
+    const bytes_t& getHorizonHash() const { return m_horizonHash; }
 
     std::shared_ptr<Tx> sendTx(const bytes_t& hash);
     std::shared_ptr<Tx> sendTx(unsigned long tx_id);
@@ -87,6 +89,7 @@ public:
     Signals::Connection subscribeStatusChanged(StatusSignal::Slot slot) { return m_notifyStatusChanged.connect(slot); }
     Signals::Connection subscribeBestHeaderChanged(HeaderSignal::Slot slot) { return m_notifyBestHeaderChanged.connect(slot); }
     Signals::Connection subscribeSyncHeaderChanged(HeaderSignal::Slot slot) { return m_notifySyncHeaderChanged.connect(slot); }
+    Signals::Connection subscribeHorizonHeaderChanged(HeaderSignal::Slot slot) { return m_notifyHorizonHeaderChanged.connect(slot); }
     Signals::Connection subscribeConnectionError(ErrorSignal::Slot slot) { return m_notifyConnectionError.connect(slot); }
     Signals::Connection subscribeBlockTreeError(ErrorSignal::Slot slot) { return m_notifyBlockTreeError.connect(slot); }
 
@@ -120,6 +123,11 @@ private:
     bytes_t                     m_syncHash;
     void                        updateSyncHeader(uint32_t syncHeight, const bytes_t& syncHash);
 
+    // Earliest block stored in vault
+    uint32_t                    m_horizonHeight;
+    bytes_t                     m_horizonHash;
+    void                        updateHorizonHeader(uint32_t horizonHeight, const bytes_t& horizonHash);
+
     // Bloom filter parameters
     double                      m_filterFalsePositiveRate;
     uint32_t                    m_filterTweak;
@@ -146,6 +154,7 @@ private:
     StatusSignal                m_notifyStatusChanged;
     HeaderSignal                m_notifyBestHeaderChanged;
     HeaderSignal                m_notifySyncHeaderChanged;
+    HeaderSignal                m_notifyHorizonHeaderChanged;
     ErrorSignal                 m_notifyConnectionError;
     ErrorSignal                 m_notifyBlockTreeError;
 

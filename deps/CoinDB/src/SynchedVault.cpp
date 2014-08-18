@@ -39,6 +39,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     m_status(STOPPED),
     m_bestHeight(0),
     m_syncHeight(0),
+    m_horizonHeight(0),
     m_filterFalsePositiveRate(0.001),
     m_filterTweak(0),
     m_filterFlags(0),
@@ -325,9 +326,14 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         if (m_vault) delete m_vault;
         m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate, version, network);
 
-        std::shared_ptr<BlockHeader> blockheader = m_vault->getBestBlockHeader();
+        std::shared_ptr<BlockHeader> blockheader;
+        blockheader = m_vault->getBestBlockHeader();
         if (blockheader)    { updateSyncHeader(blockheader->height(), blockheader->hash()); }
         else                { updateSyncHeader(0, bytes_t()); }
+
+        blockheader = m_vault->getHorizonBlockHeader();
+        if (blockheader)    { updateHorizonHeader(blockheader->height(), blockheader->hash()); }
+        else                { updateHorizonHeader(0, bytes_t()); }
 
         m_vault->subscribeKeychainUnlocked([this](const std::string& keychainName) { m_notifyKeychainUnlocked(keychainName); });
         m_vault->subscribeKeychainLocked([this](const std::string& keychainName) { m_notifyKeychainLocked(keychainName); });
@@ -340,6 +346,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
         {
             updateSyncHeader(merkleblock->blockheader()->height(), merkleblock->blockheader()->hash());
+            updateHorizonHeader(merkleblock->blockheader()->height(), merkleblock->blockheader()->hash());
             m_notifyMerkleBlockInserted(merkleblock);
         });
         m_vault->subscribeTxInsertionError([this](std::shared_ptr<Tx> tx, std::string description) { m_notifyTxInsertionError(tx, description); });
@@ -567,10 +574,20 @@ void SynchedVault::updateBestHeader(uint32_t bestHeight, const bytes_t& bestHash
 
 void SynchedVault::updateSyncHeader(uint32_t syncHeight, const bytes_t& syncHash)
 {
-    if (m_syncHeight != syncHeight || m_syncHash != syncHash)
+    if (m_syncHeight >= syncHeight && m_syncHash != syncHash)
     {
         m_syncHeight = syncHeight;
         m_syncHash = syncHash;
         m_notifySyncHeaderChanged(syncHeight, syncHash);
+    }
+}
+
+void SynchedVault::updateHorizonHeader(uint32_t horizonHeight, const bytes_t& horizonHash)
+{
+    if (m_horizonHeight <= horizonHeight && m_horizonHash != horizonHash)
+    {
+        m_horizonHeight = horizonHeight;
+        m_horizonHash = horizonHash;
+        m_notifyHorizonHeaderChanged(horizonHeight, horizonHash);
     }
 }

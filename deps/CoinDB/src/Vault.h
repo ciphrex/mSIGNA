@@ -193,6 +193,7 @@ public:
     std::shared_ptr<BlockHeader>            getBlockHeader(const bytes_t& hash) const;
     std::shared_ptr<BlockHeader>            getBlockHeader(uint32_t height) const;
     std::shared_ptr<BlockHeader>            getBestBlockHeader() const;
+    std::shared_ptr<BlockHeader>            getHorizonBlockHeader() const;
     std::shared_ptr<MerkleBlock>            insertMerkleBlock(std::shared_ptr<MerkleBlock> merkleblock);
     unsigned int                            deleteMerkleBlock(const bytes_t& hash);
     unsigned int                            deleteMerkleBlock(uint32_t height);
@@ -325,6 +326,7 @@ protected:
     std::shared_ptr<BlockHeader>            getBlockHeader_unwrapped(const bytes_t& hash) const;
     std::shared_ptr<BlockHeader>            getBlockHeader_unwrapped(uint32_t height) const;
     std::shared_ptr<BlockHeader>            getBestBlockHeader_unwrapped() const;
+    std::shared_ptr<BlockHeader>            getHorizonBlockHeader_unwrapped() const;
     std::shared_ptr<MerkleBlock>            insertMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
     unsigned int                            deleteMerkleBlock_unwrapped(std::shared_ptr<MerkleBlock> merkleblock);
     unsigned int                            deleteMerkleBlock_unwrapped(uint32_t height);
