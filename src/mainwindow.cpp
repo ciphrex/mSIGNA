@@ -83,8 +83,9 @@ MainWindow::MainWindow() :
     licenseAccepted(false),
     synchedVault(getCoinParams()),
     //networkSync(getCoinParams()),
-    syncHeight(0),
     bestHeight(0),
+    syncHeight(0),
+    horizonHeight(0),
     networkState(NETWORK_STATE_STOPPED),
     accountModel(nullptr),
     keychainModel(nullptr),
@@ -132,8 +133,9 @@ MainWindow::MainWindow() :
 
     connect(accountModel, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
 
-    synchedVault.subscribeBestHeaderChanged([this](uint32_t height, const bytes_t& /*hash*/) { emit updateBestHeight((int)height); });
-    synchedVault.subscribeSyncHeaderChanged([this](uint32_t height, const bytes_t& /*hash*/) { emit updateSyncHeight((int)height); });
+    synchedVault.subscribeBestHeaderChanged([this](uint32_t height, const bytes_t& /*hash*/)    { emit updateBestHeight((int)height);    });
+    synchedVault.subscribeSyncHeaderChanged([this](uint32_t height, const bytes_t& /*hash*/)    { emit updateSyncHeight((int)height);    });
+    synchedVault.subscribeHorizonHeaderChanged([this](uint32_t height, const bytes_t& /*hash*/) { emit updateHorizonHeight((int)height); });
 
     synchedVault.subscribeStatusChanged([this](CoinDB::SynchedVault::status_t status) {
         switch (status)
@@ -236,15 +238,21 @@ MainWindow::MainWindow() :
 
     // status updates
     connect(this, &MainWindow::status, [this](const QString& message) { updateStatusMessage(message); });
-    connect(this, &MainWindow::updateSyncHeight, [this](int height) {
-        LOGGER(debug) << "MainWindow::updateBestHeight emitted. New best height: " << height << std::endl;
-        syncHeight = height;
-        updateSyncLabel();
-    });
     connect(this, &MainWindow::updateBestHeight, [this](int height) {
         LOGGER(debug) << "MainWindow::updateBestHeight emitted. New best height: " << height << std::endl;
         bestHeight = height;
         updateSyncLabel();
+    });
+    connect(this, &MainWindow::updateSyncHeight, [this](int height) {
+        LOGGER(debug) << "MainWindow::updateSyncHeight emitted. New sync height: " << height << std::endl;
+        syncHeight = height;
+        updateSyncLabel();
+    });
+    connect(this, &MainWindow::updateHorizonHeight, [this](int height) {
+        LOGGER(debug) << "MainWindow::updateHorizonHeight emitted. New horizon height: " << height << std::endl;
+        horizonHeight = height;
+        updateSyncLabel();
+        backscanBlock();
     });
 
     connect(this, &MainWindow::signal_currencyUnitChanged, [this]() {
@@ -345,7 +353,7 @@ void MainWindow::updateFonts(int fontSize)
 
 void MainWindow::updateSyncLabel()
 {
-    syncLabel->setText(QString::number(syncHeight) + "/" + QString::number(bestHeight));
+    syncLabel->setText(QString::number(horizonHeight) + " - " + QString::number(syncHeight) + "/" + QString::number(bestHeight));
 }
 
 void MainWindow::updateNetworkState(network_state_t newState)
@@ -1485,6 +1493,11 @@ void MainWindow::newTx()
 void MainWindow::newBlock()
 {
     if (isSynched() || syncHeight % 10 == 0) { refreshAccounts(); }
+}
+
+void MainWindow::backscanBlock()
+{
+    if (horizonHeight % 10 == 0) { refreshAccounts(); }
 }
 
 void MainWindow::syncBlocks()

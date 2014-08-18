@@ -72,8 +72,9 @@ public:
 signals:
     void status(const QString& message);
     void headersLoadProgress(const QString& message);
-    void updateSyncHeight(int height);
     void updateBestHeight(int height);
+    void updateSyncHeight(int height);
+    void updateHorizonHeight(int height);
 
     void signal_error(const QString& message);
 
@@ -89,6 +90,7 @@ signals:
 
     void signal_newTx();
     void signal_newBlock();
+    void signal_backscanBlock();
     void signal_refreshAccounts();
 
     void signal_addBestChain(const chain_header_t& header);
@@ -178,6 +180,7 @@ private slots:
     void addBestChain(const chain_header_t& header);
     void removeBestChain(const chain_header_t& header);
     void newBlock();
+    void backscanBlock();
 
     /////////////////////
     // NETWORK OPERATIONS
@@ -306,8 +309,9 @@ private:
     QAction* sendRawTxAction;
 
     // network actions
-    int syncHeight;
     int bestHeight;
+    int syncHeight;
+    int horizonHeight;
     QLabel* syncLabel;
     QLabel* networkStateLabel;
     QString blockTreeFile;
