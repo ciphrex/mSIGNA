@@ -27,7 +27,7 @@ public:
     void update();
 
     void exportKeychain(const QString& keychainName, const QString& fileName, bool exportPrivate) const;
-    void importKeychain(const QString& keychainName, const QString& fileName, bool& importPrivate);
+    QString importKeychain(const QString& fileName, bool& importPrivate);
     bool exists(const QString& keychainName) const;
     bool isPrivate(const QString& keychainName) const;
     bool isLocked(const QString& keychainName) const;

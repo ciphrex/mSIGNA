@@ -87,14 +87,15 @@ void KeychainModel::exportKeychain(const QString& keychainName, const QString& f
     vault->exportKeychain(keychainName.toStdString(), fileName.toStdString(), exportPrivate);
 }
 
-void KeychainModel::importKeychain(const QString& /*keychainName*/, const QString& fileName, bool& importPrivate)
+QString KeychainModel::importKeychain(const QString& fileName, bool& importPrivate)
 {
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
     }
 
-    vault->importKeychain(fileName.toStdString(), importPrivate);
+    std::shared_ptr<Keychain> keychain = vault->importKeychain(fileName.toStdString(), importPrivate);
     update();
+    return QString::fromStdString(keychain->name());
 }
 
 void KeychainModel::unlockKeychain(const QString& keychainName, const secure_bytes_t& unlockKey)

@@ -747,6 +747,7 @@ void MainWindow::importKeychain(QString fileName)
     setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
+/*
     bool ok;
     QString name = QFileInfo(fileName).baseName();
     while (true) {
@@ -763,14 +764,15 @@ void MainWindow::importKeychain(QString fileName)
         }
         break;
     }
+*/
 
     try {
         updateStatusMessage(tr("Importing keychain..."));
-        bool isPrivate = importPrivate; // importPrivate is a user setting. isPrivate is whether or not this particular keychain is private.
-        keychainModel->importKeychain(name, fileName, isPrivate);
+        bool isPrivate = true; //importPrivate; // importPrivate is a user setting. isPrivate is whether or not this particular keychain is private.
+        QString keychainName = keychainModel->importKeychain(fileName, isPrivate);
         keychainView->updateColumns();
         tabWidget->setCurrentWidget(keychainView);
-        updateStatusMessage(tr("Imported ") + (isPrivate ? tr("private") : tr("public")) + tr(" keychain ") + name);
+        updateStatusMessage(tr("Imported ") + (isPrivate ? tr("private") : tr("public")) + tr(" keychain ") + keychainName);
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::importKeychain - " << e.what() << std::endl;
@@ -1978,9 +1980,11 @@ void MainWindow::createMenus()
     keychainMenu->addAction(lockKeychainAction);
     keychainMenu->addAction(lockAllKeychainsAction);
     keychainMenu->addAction(setKeychainPassphraseAction);
+/*
     keychainMenu->addSeparator()->setText(tr("Import Mode"));
     keychainMenu->addAction(importPrivateAction);
     keychainMenu->addAction(importPublicAction);
+*/
     keychainMenu->addSeparator();
     keychainMenu->addAction(importKeychainAction);
     keychainMenu->addAction(exportPrivateKeychainAction);
