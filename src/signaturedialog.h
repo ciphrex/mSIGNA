@@ -38,6 +38,7 @@ public slots:
     void updateKeychains();
 
 signals:
+    void error(const QString& error);
     void keychainsUpdated();
     void txUpdated();
 

@@ -150,6 +150,8 @@ void TxActions::showSignatureDialog()
     try
     {
         SignatureDialog dlg(*m_synchedVault, m_txModel->getTxHash(currentRow), m_parent);
+        connect(&dlg, &SignatureDialog::error, [this](const QString& msg) { emit error(msg); });
+
         if (m_txModel)
         {
             connect(&dlg, &SignatureDialog::txUpdated, [this]() { m_txModel->update(); });

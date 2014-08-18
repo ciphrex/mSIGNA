@@ -19,7 +19,7 @@ KeychainModel::KeychainModel()
     : vault(NULL)
 {
     QStringList columns;
-    columns << tr("Keychain") << tr("Type") << tr("Unlocked") << tr("Encrypted") << tr("Hash");
+    columns << tr("Keychain") << tr("") << tr("") << tr("Hash");
     setHorizontalHeaderLabels(columns);
 
     connect(this, &KeychainModel::dataChanged, [this]() { emit keychainChanged(); });
@@ -40,21 +40,39 @@ void KeychainModel::update()
     for (auto& keychain: keychains)
     {
         QList<QStandardItem*> row;
+
         row.append(new QStandardItem(QString::fromStdString(keychain.name)));
 
-        QStandardItem* typeItem = new QStandardItem(
-            keychain.is_private  ? tr("Private") : tr("Public"));
-        typeItem->setData(((int)keychain.is_private << 1) | (int)keychain.is_locked, Qt::UserRole);
-        row.append(typeItem);
-
-        QStandardItem* lockedItem = new QStandardItem(
-            keychain.is_private ? (keychain.is_locked ? tr("No") : tr("Yes")) : tr(""));
-        row.append(lockedItem);
-
-        QStandardItem* encryptedItem = new QStandardItem(
-            keychain.is_private ? (keychain.is_encrypted ? tr("Yes") : tr("No")) : tr(""));
+        QStandardItem* encryptedItem = new QStandardItem();
+        if (keychain.is_encrypted)
+        {
+            encryptedItem->setIcon(QIcon("encrypted.png"));
+            encryptedItem->setData(true, Qt::UserRole);
+        }
+        else
+        {
+            encryptedItem->setData(false, Qt::UserRole);
+        }
         row.append(encryptedItem);
         
+        QStandardItem* statusItem = new QStandardItem();
+        if (!keychain.is_private)
+        {
+            statusItem->setIcon(QIcon("shared.png"));
+            statusItem->setData(PUBLIC, Qt::UserRole);
+        }
+        else if (keychain.is_locked)
+        {
+            statusItem->setIcon(QIcon("locked.png"));
+            statusItem->setData(LOCKED, Qt::UserRole);
+        }
+        else
+        {
+            statusItem->setIcon(QIcon("unlocked.png"));
+            statusItem->setData(UNLOCKED, Qt::UserRole);
+        }
+        row.append(statusItem);
+
         row.append(new QStandardItem(QString::fromStdString(uchar_vector(keychain.hash).getHex())));
         appendRow(row);
     }
@@ -85,8 +103,15 @@ void KeychainModel::unlockKeychain(const QString& keychainName, const secure_byt
         throw std::runtime_error("No vault is loaded.");
     }
 
-    vault->unlockKeychain(keychainName.toStdString(), unlockKey);
-    update();
+    try
+    {
+        vault->unlockKeychain(keychainName.toStdString(), unlockKey);
+        update();
+    }
+    catch (const std::exception& e)
+    {
+        emit error(QString::fromStdString(e.what()));
+    } 
 }
 
 void KeychainModel::lockKeychain(const QString& keychainName)
@@ -133,6 +158,20 @@ bool KeychainModel::isEncrypted(const QString& keychainName) const
 
     std::shared_ptr<Keychain> keychain = vault->getKeychain(keychainName.toStdString());
     return keychain->isEncrypted();
+}
+
+int KeychainModel::getStatus(int row) const
+{
+    if (row < 0 || row >= rowCount()) throw std::runtime_error("Invalid row.");
+
+    return item(row, 2)->data(Qt::UserRole).toInt();
+}
+
+bool KeychainModel::isEncrypted(int row) const
+{
+    if (row < 0 || row >= rowCount()) throw std::runtime_error("Invalid row.");
+
+    return item(row, 1)->data(Qt::UserRole).toBool();
 }
 
 bytes_t KeychainModel::getExtendedKeyBytes(const QString& keychainName, bool getPrivate, const bytes_t& /*decryptionKey*/) const

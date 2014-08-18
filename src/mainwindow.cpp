@@ -68,6 +68,9 @@
 // File System
 #include "docdir.h"
 
+// Passphrases
+#include <CoinDB/Passphrase.h>
+
 boost::mutex repaintMutex;
 
 using namespace CoinQ::Script;
@@ -629,18 +632,10 @@ void MainWindow::unlockKeychain()
         PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
         if (!dlg.exec()) return;
 
-        // TODO: proper hash
-        hash = sha256_2(dlg.getPassphrase().toStdString());
+        hash = passphraseHash(dlg.getPassphrase().toStdString());
     }
 
-    try
-    {
-        keychainModel->unlockKeychain(name, hash);
-    }
-    catch (const CoinDB::KeychainPrivateKeyUnlockFailedException& e)
-    {
-        throw std::runtime_error(tr("Invalid passphrase.").toStdString());
-    }
+    keychainModel->unlockKeychain(name, hash);
 }
 
 void MainWindow::lockKeychain()
@@ -826,14 +821,11 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
         backupKeychainAction->setEnabled(false);
     }
     else {
-        QStandardItem* typeItem = keychainModel->item(row, 1);
-        int lockFlags = typeItem->data(Qt::UserRole).toInt();
-        bool isPrivate = lockFlags & (1 << 1);
-        bool isLocked = lockFlags & 1;
+        int status = keychainModel->getStatus(row);
 
-        unlockKeychainAction->setEnabled(isPrivate && isLocked);
-        lockKeychainAction->setEnabled(isPrivate && !isLocked);
-        exportPrivateKeychainAction->setEnabled(isPrivate);
+        unlockKeychainAction->setEnabled(status == KeychainModel::LOCKED);
+        lockKeychainAction->setEnabled(status == KeychainModel::UNLOCKED);
+        exportPrivateKeychainAction->setEnabled(status == KeychainModel::LOCKED || status == KeychainModel::UNLOCKED);
         exportPublicKeychainAction->setEnabled(true);
         backupKeychainAction->setEnabled(true);
     }

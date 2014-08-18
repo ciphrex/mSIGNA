@@ -30,10 +30,15 @@ public:
     void importKeychain(const QString& keychainName, const QString& fileName, bool& importPrivate);
     bool exists(const QString& keychainName) const;
     bool isPrivate(const QString& keychainName) const;
+    bool isLocked(const QString& keychainName) const;
     bool isEncrypted(const QString& keychainName) const;
     void unlockKeychain(const QString& keychainName, const secure_bytes_t& unlockKey);
     void lockKeychain(const QString& keychainName);
     void lockAllKeychains();
+
+    enum Status { PUBLIC, UNLOCKED, LOCKED };
+    int getStatus(int row) const;
+    bool isEncrypted(int row) const;
 
     bytes_t getExtendedKeyBytes(const QString& keychainName, bool getPrivate = false, const bytes_t& decryptionKey = bytes_t()) const;
 

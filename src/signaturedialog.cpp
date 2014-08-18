@@ -33,6 +33,7 @@ SignatureDialog::SignatureDialog(CoinDB::SynchedVault& synchedVault, const bytes
     m_view->updateColumns();
 
     m_actions = new SignatureActions(m_synchedVault, *this);
+    connect(m_actions, &SignatureActions::error, [this](const QString& msg) { emit error(msg); });
     m_view->setMenu(m_actions->getMenu());
 
     if (m_actions) { m_view->setMenu(m_actions->getMenu()); }
