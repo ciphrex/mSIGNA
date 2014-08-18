@@ -80,8 +80,8 @@ public:
     void setBloomFilter(const Coin::BloomFilter& bloomFilter);
     void clearBloomFilter();
 
-    void syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t startTime);
-    void syncBlocks(int startHeight);
+    void syncBlocks(const std::vector<bytes_t>& locatorHashes, uint32_t startTime, int backscanHeight = -1);
+    void syncBlocks(int startHeight, int backscanHeight = -1);
     void stopSynchingBlocks(bool bClearFilter = true);
 
     // TRANSACTIONS PUSHED OFF CHAIN MUST BE ADDED BACK TO MEMPOOL
@@ -157,14 +157,17 @@ private:
     mutable boost::mutex m_syncMutex;
     std::string m_blockTreeFile;
     CoinQBlockTreeMem m_blockTree;
+    int m_backscanHeight;
     bool m_blockTreeLoaded;
     bool m_bHeadersSynched;
+    bool m_bBlocksSynched;
 
+    uchar_vector m_lastBackscanRequestedMerkleBlockHash;
     uchar_vector m_lastRequestedBlockHash;
     uchar_vector m_lastRequestedMerkleBlockHash;
     uchar_vector m_lastSynchedMerkleBlockHash;
 
-    void do_syncBlocks(int startHeight);
+    void do_syncBlocks(int startHeight, int backscanHeight);
 
     Coin::BloomFilter m_bloomFilter;
 
@@ -182,6 +185,8 @@ private:
     void syncMerkleBlock(const ChainMerkleBlock& merkleBlock, const Coin::PartialMerkleTree& merkleTree);
     void processBlockTx(const Coin::Transaction& tx);
     void processMempoolConfirmations();
+
+    void startBackscan();
 
     // Sync signals
     CoinQSignal<void> notifyStarted;
