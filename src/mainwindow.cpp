@@ -633,8 +633,10 @@ void MainWindow::unlockKeychain()
         if (keychainModel->isEncrypted(name))
         {
             PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
-            while (dlg.exec())
+            while (true)
             {
+                if (!dlg.exec()) return;
+
                 try
                 {
                     hash = passphraseHash(dlg.getPassphrase().toStdString());
