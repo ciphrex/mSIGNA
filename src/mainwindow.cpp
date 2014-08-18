@@ -787,23 +787,21 @@ void MainWindow::exportKeychain(bool exportPrivate)
         return;
     }
 
-    QStandardItem* typeItem = keychainModel->item(row, 1);
-    int lockFlags = typeItem->data(Qt::UserRole).toInt();
-    bool isPrivate = lockFlags & (1 << 1);
-    bool isLocked = lockFlags & 1;
-
-    if (exportPrivate && !isPrivate) {
-        showError(tr("Cannot export private keys for public keychain."));
+    int status = keychainModel->getStatus(row);
+    if (exportPrivate && status == KeychainModel::PUBLIC)
+    {
+        showError(tr("Keychain is nonprivate."));
         return;
     }
 
-    if (exportPrivate && isLocked) {
-        showError(tr("Cannot export private keys for locked keychain."));
+    if (exportPrivate && status == KeychainModel::LOCKED)
+    {
+        // TODO: prompt for unlock
+        showError(tr("Keychain is locked."));
         return;
     }
 
-    QStandardItem* nameItem = keychainModel->item(row, 0);
-    QString name = nameItem->data(Qt::DisplayRole).toString();
+    QString name = keychainModel->getName(row);
 
     QString fileName = name + (exportPrivate ? ".priv" : ".pub");
 

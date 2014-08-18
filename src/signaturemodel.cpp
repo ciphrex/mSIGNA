@@ -52,7 +52,7 @@ void SignatureModel::updateAll()
         QStandardItem* encryptedItem = new QStandardItem();
         if (vault->isKeychainEncrypted(keychain.name()))
         {
-            encryptedItem->setIcon(QIcon("encrypted.png"));
+            encryptedItem->setIcon(QIcon(":/icons/encrypted.png"));
             encryptedItem->setData(true, Qt::UserRole);
         }
         else
@@ -65,17 +65,17 @@ void SignatureModel::updateAll()
         QStandardItem* stateItem = new QStandardItem();
         if (!vault->isKeychainPrivate(keychain.name()))
         {
-            stateItem->setIcon(QIcon("shared.png"));
+            stateItem->setIcon(QIcon(":/icons/shared.png"));
             stateItem->setData(PUBLIC, Qt::UserRole);
         }
         else if (vault->isKeychainLocked(keychain.name()))
         {
-            stateItem->setIcon(QIcon("locked.png"));
+            stateItem->setIcon(QIcon(":/icons/locked.png"));
             stateItem->setData(LOCKED, Qt::UserRole);
         }
         else
         {
-            stateItem->setIcon(QIcon("unlocked.png"));
+            stateItem->setIcon(QIcon(":/icons/unlocked.png"));
             stateItem->setData(UNLOCKED, Qt::UserRole);
         }
         row.append(stateItem);

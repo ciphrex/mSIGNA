@@ -46,7 +46,7 @@ void KeychainModel::update()
         QStandardItem* encryptedItem = new QStandardItem();
         if (keychain.is_encrypted)
         {
-            encryptedItem->setIcon(QIcon("encrypted.png"));
+            encryptedItem->setIcon(QIcon(":/icons/encrypted.png"));
             encryptedItem->setData(true, Qt::UserRole);
         }
         else
@@ -58,17 +58,17 @@ void KeychainModel::update()
         QStandardItem* statusItem = new QStandardItem();
         if (!keychain.is_private)
         {
-            statusItem->setIcon(QIcon("shared.png"));
+            statusItem->setIcon(QIcon(":/icons/shared.png"));
             statusItem->setData(PUBLIC, Qt::UserRole);
         }
         else if (keychain.is_locked)
         {
-            statusItem->setIcon(QIcon("locked.png"));
+            statusItem->setIcon(QIcon(":/icons/locked.png"));
             statusItem->setData(LOCKED, Qt::UserRole);
         }
         else
         {
-            statusItem->setIcon(QIcon("unlocked.png"));
+            statusItem->setIcon(QIcon(":/icons/unlocked.png"));
             statusItem->setData(UNLOCKED, Qt::UserRole);
         }
         row.append(statusItem);
@@ -210,6 +210,13 @@ bool KeychainModel::isEncrypted(const QString& keychainName) const
 
     std::shared_ptr<Keychain> keychain = vault->getKeychain(keychainName.toStdString());
     return keychain->isEncrypted();
+}
+
+QString KeychainModel::getName(int row) const
+{
+    if (row < 0 || row >= rowCount()) throw std::runtime_error("Invalid row.");
+
+    return item(row, 0)->text();
 }
 
 int KeychainModel::getStatus(int row) const
