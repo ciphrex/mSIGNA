@@ -251,6 +251,15 @@ QVariant KeychainModel::data(const QModelIndex& index, int role) const
         return Qt::AlignRight;
     }
 */
+    if (role == Qt::FontRole)
+    {
+        QFont font;
+        if (index.column() == 0)
+        {
+            font.setBold(true);
+            return font;
+        }
+    }
 
     return QStandardItemModel::data(index, role);
 }
