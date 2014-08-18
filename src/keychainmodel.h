@@ -35,6 +35,8 @@ public:
     void unlockKeychain(const QString& keychainName, const secure_bytes_t& unlockKey);
     void lockKeychain(const QString& keychainName);
     void lockAllKeychains();
+    void encryptKeychain(const QString& keychainName, const secure_bytes_t& lockKey = secure_bytes_t());
+    void decryptKeychain(const QString& keychainName);
 
     enum Status { PUBLIC, UNLOCKED, LOCKED };
     int getStatus(int row) const;

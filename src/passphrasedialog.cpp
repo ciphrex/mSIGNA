@@ -46,5 +46,8 @@ PassphraseDialog::PassphraseDialog(const QString& prompt, QWidget* parent)
 
 QString PassphraseDialog::getPassphrase() const
 {
+    if (passphraseEdit->text().isEmpty())
+        throw std::runtime_error("Passphrase is empty.");
+
     return passphraseEdit->text();
 }

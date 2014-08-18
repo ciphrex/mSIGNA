@@ -108,9 +108,13 @@ void KeychainModel::unlockKeychain(const QString& keychainName, const secure_byt
         vault->unlockKeychain(keychainName.toStdString(), unlockKey);
         update();
     }
+    catch (const CoinDB::KeychainPrivateKeyUnlockFailedException& e)
+    {
+        emit error(tr("Keychain decryption failed."));
+    }
     catch (const std::exception& e)
     {
-        emit error(QString::fromStdString(e.what()));
+        emit error(e.what());
     } 
 }
 
@@ -120,8 +124,15 @@ void KeychainModel::lockKeychain(const QString& keychainName)
         throw std::runtime_error("No vault is loaded.");
     }
 
-    vault->lockKeychain(keychainName.toStdString());
-    update();
+    try
+    {
+        vault->lockKeychain(keychainName.toStdString());
+        update();
+    }
+    catch (const std::exception& e)
+    {
+        emit error(e.what());
+    }
 }
 
 void KeychainModel::lockAllKeychains()
@@ -130,8 +141,49 @@ void KeychainModel::lockAllKeychains()
         throw std::runtime_error("No vault is loaded.");
     }
 
-    vault->lockAllKeychains();
-    update();
+    try
+    {
+        vault->lockAllKeychains();
+        update();
+    }
+    catch (const std::exception& e)
+    {
+        emit error(e.what());
+    }
+}
+
+void KeychainModel::encryptKeychain(const QString& keychainName, const secure_bytes_t& lockKey)
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    try
+    {
+        vault->encryptKeychain(keychainName.toStdString(), lockKey);
+        update();
+    }
+    catch (const std::exception& e)
+    {
+        emit error(e.what());
+    }
+}
+
+void KeychainModel::decryptKeychain(const QString& keychainName)
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    try
+    {
+        vault->decryptKeychain(keychainName.toStdString());
+        update();
+    }
+    catch (const std::exception& e)
+    {
+        emit error(e.what());
+    }
 }
 
 bool KeychainModel::exists(const QString& keychainName) const

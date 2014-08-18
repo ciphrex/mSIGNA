@@ -147,6 +147,10 @@ void SignatureActions::unlockKeychain()
         refreshCurrentKeychain();
         m_dialog.updateKeychains();
     }
+    catch (const CoinDB::KeychainPrivateKeyUnlockFailedException& e)
+    {
+        emit error(tr("Keychain decryption failed."));
+    }
     catch (const std::exception& e)
     {
         emit error(e.what());

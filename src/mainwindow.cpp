@@ -56,6 +56,7 @@
 #include "networksettingsdialog.h"
 #include "keychainbackupdialog.h"
 #include "passphrasedialog.h"
+#include "setpassphrasedialog.h"
 #include "currencyunitdialog.h"
 //#include "resyncdialog.h"
 
@@ -624,18 +625,34 @@ void MainWindow::unlockKeychain()
         return;
     }
 
-    QStandardItem* nameItem = keychainModel->item(row, 0);
-    QString name = nameItem->data(Qt::DisplayRole).toString();
-    secure_bytes_t hash;
-    if (keychainModel->isEncrypted(name))
+    try
     {
-        PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
-        if (!dlg.exec()) return;
+        QStandardItem* nameItem = keychainModel->item(row, 0);
+        QString name = nameItem->data(Qt::DisplayRole).toString();
+        secure_bytes_t hash;
+        if (keychainModel->isEncrypted(name))
+        {
+            PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
+            while (dlg.exec())
+            {
+                try
+                {
+                    hash = passphraseHash(dlg.getPassphrase().toStdString());
+                    break;
+                }
+                catch (const std::exception& e)
+                {
+                    showError(e.what());
+                }
+            }
+        }
 
-        hash = passphraseHash(dlg.getPassphrase().toStdString());
+        keychainModel->unlockKeychain(name, hash);
     }
-
-    keychainModel->unlockKeychain(name, hash);
+    catch (const std::exception& e)
+    {
+        showError(e.what());
+    }
 }
 
 void MainWindow::lockKeychain()
@@ -675,10 +692,42 @@ void MainWindow::setKeychainPassphrase()
         return;
     }
 
-    QStandardItem* nameItem = keychainModel->item(row, 0);
-    QString name = nameItem->data(Qt::DisplayRole).toString();
+    if (keychainModel->getStatus(row) != KeychainModel::UNLOCKED)
+    {
+        showError(tr("Keychain is not unlocked."));
+        return;
+    }
 
-//    keychainModel->setKeychainPassphrase(name); 
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->text();
+
+    SetPassphraseDialog dlg(tr("Enter encryption passphrase for keychain ") + name + ":", this);
+    while (dlg.exec())
+    {
+        try
+        {
+            QString passphrase = dlg.getPassphrase();
+            if (passphrase.isEmpty())
+            {
+                if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"),
+                    tr("You did not enter a passphrase. Are you sure you want to remove keychain encryption from ") + name + "?"))
+                {
+                    keychainModel->decryptKeychain(name);
+                    return;
+                }
+            }
+            else
+            {
+                secure_bytes_t hash = passphraseHash(dlg.getPassphrase().toStdString());
+                keychainModel->encryptKeychain(name, hash); 
+                return;
+            }
+        }
+        catch (const std::exception& e)
+        {
+            showError(e.what());
+        }
+    }
 }
 
 void MainWindow::importKeychain(QString fileName)
@@ -825,7 +874,8 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
 
         unlockKeychainAction->setEnabled(status == KeychainModel::LOCKED);
         lockKeychainAction->setEnabled(status == KeychainModel::UNLOCKED);
-        exportPrivateKeychainAction->setEnabled(status == KeychainModel::LOCKED || status == KeychainModel::UNLOCKED);
+        setKeychainPassphraseAction->setEnabled(status == KeychainModel::UNLOCKED);
+        exportPrivateKeychainAction->setEnabled(status == KeychainModel::UNLOCKED);
         exportPublicKeychainAction->setEnabled(true);
         backupKeychainAction->setEnabled(true);
     }
@@ -1927,7 +1977,7 @@ void MainWindow::createMenus()
     keychainMenu->addAction(unlockKeychainAction);
     keychainMenu->addAction(lockKeychainAction);
     keychainMenu->addAction(lockAllKeychainsAction);
-    //keychainMenu->addAction(setKeychainPassphraseAction);
+    keychainMenu->addAction(setKeychainPassphraseAction);
     keychainMenu->addSeparator()->setText(tr("Import Mode"));
     keychainMenu->addAction(importPrivateAction);
     keychainMenu->addAction(importPublicAction);

@@ -94,7 +94,8 @@ HEADERS = \
     src/requestpaymentdialog.h \
     src/networksettingsdialog.h \
     src/keychainbackupdialog.h \
-    src/passphrasedialog.h
+    src/passphrasedialog.h \
+    src/setpassphrasedialog.h
                 
 SOURCES = \
     src/settings.cpp \
@@ -144,7 +145,8 @@ SOURCES = \
     src/requestpaymentdialog.cpp \
     src/networksettingsdialog.cpp \
     src/keychainbackupdialog.cpp \
-    src/passphrasedialog.cpp
+    src/passphrasedialog.cpp \
+    src/setpassphrasedialog.cpp
 
 RESOURCES = \
     res/coinvault.qrc \
