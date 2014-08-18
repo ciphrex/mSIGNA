@@ -32,6 +32,8 @@
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include <CoinCore/random.h>
+
 const int MINIMUM_SPLASH_SECS = 5;
 
 void selectNetwork(const std::string& networkName)
@@ -61,13 +63,13 @@ void setCurrencyUnit()
 
 int main(int argc, char* argv[])
 {
+    secure_random_bytes(32);
+
     Q_INIT_RESOURCE(coinvault);
 
     QApplication app(argc, argv);
     app.setOrganizationName("Ciphrex");
     app.setOrganizationDomain("ciphrex.com");
-
-    seedEntropySource();
 
     // Check whether another instance is already running. If so, send it commands and exit.    
     CommandServer commandServer(&app);
@@ -103,6 +105,8 @@ int main(int argc, char* argv[])
     INIT_LOGGER((getDefaultSettings().getDataDir() + "/debug.log").toStdString().c_str());
     LOGGER(debug) << std::endl << std::endl << std::endl << std::endl << QDateTime::currentDateTime().toString().toStdString() << std::endl;
     LOGGER(debug) << "Vault started." << std::endl;
+
+    //seedEntropySource();
 
     SplashScreen splash;
 

@@ -11,6 +11,8 @@
 #include "entropysource.h"
 #include "entropydialog.h"
 
+#include <logger/logger.h>
+
 #include <CoinCore/random.h>
 
 #include <QApplication>
@@ -28,7 +30,7 @@ public:
 
     bool isSeeded() const { return m_bSeeded; }
     void seed(bool reseed = false);
-    void join() { if (m_thread.joinable()) m_thread.join(); }
+    void join();
 
 private:
     bool m_bSeeded;
@@ -41,10 +43,25 @@ void EntropySource::seed(bool reseed)
 
     if (!m_thread.joinable())
     {
+        LOGGER(trace) << "Starting entropy thread." << std::endl;
         m_thread = thread([&]() {
             secure_random_bytes(32);
             m_bSeeded = true;
         });
+    }
+}
+
+void EntropySource::join()
+{
+    if (m_thread.joinable())
+    {
+        LOGGER(trace) << "Joining entropy thread (2)..." << std::endl;
+        m_thread.join();
+        LOGGER(trace) << "Entropy thread has exited (2)." << std::endl;
+    }
+    else
+    {
+        LOGGER(trace) << "Entropy thread has already exited." << std::endl;
     }
 }
 
@@ -72,7 +89,9 @@ void seedEntropySource(bool reseed, bool showDialog, QWidget* parent)
         this_thread::sleep_for(std::chrono::microseconds(200)); 
     }
 
+    LOGGER(trace) << "Joining entropy thread (1)..." << std::endl;
     entropySource.join();
+    LOGGER(trace) << "Entropy thread has exited (1)." << std::endl;
 
     if (showDialog)
     {
