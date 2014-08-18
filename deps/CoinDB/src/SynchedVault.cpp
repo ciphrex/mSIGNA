@@ -323,20 +323,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         std::lock_guard<std::mutex> lock(m_vaultMutex);
         m_notifyVaultClosed();
         if (m_vault) delete m_vault;
-        try
-        {
-            m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate, version, network);
-        }
-        catch (const VaultException& e)
-        {
-            m_vault = nullptr;
-            throw e;
-        }
-        catch (const std::exception& e)
-        {
-            m_vault = nullptr;
-            throw e;
-        }
+        m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate, version, network);
 
         std::shared_ptr<BlockHeader> blockheader = m_vault->getBestBlockHeader();
         if (blockheader)    { updateSyncHeader(blockheader->height(), blockheader->hash()); }
