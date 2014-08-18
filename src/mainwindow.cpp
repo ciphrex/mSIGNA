@@ -72,6 +72,8 @@
 // Passphrases
 #include <CoinDB/Passphrase.h>
 
+#include <typeinfo>
+
 boost::mutex repaintMutex;
 
 using namespace CoinQ::Script;
@@ -474,8 +476,13 @@ void MainWindow::newVault(QString fileName)
 
     try
     {
-        synchedVault.openVault(fileName.toStdString(), true);
+        synchedVault.openVault(fileName.toStdString(), true, SCHEMA_VERSION, getCoinParams().network_name());
         updateVaultStatus(fileName);
+    }
+    catch (const CoinDB::VaultFailedToOpenDatabaseException& e)
+    {
+        LOGGER(error) << "MainWindow::newVault - VaultFailedToOpenDatabaseException: " << e.dberror() << std::endl;
+        showError(tr("Error creating database: ") + QString::fromStdString(e.dberror()));
     }
     catch (const exception& e)
     {
@@ -522,14 +529,31 @@ void MainWindow::openVault(QString fileName)
 
     try
     {
-        synchedVault.openVault(fileName.toStdString(), false);
+        synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name());
         updateVaultStatus(fileName);
         updateStatusMessage(tr("Opened ") + fileName);
         //if (synchedVault.isConnected()) { synchedVault.syncBlocks(); }
         //promptSync();
     }
-    catch (const exception& e) {
-        LOGGER(debug) << "MainWindow::openVault - " << e.what() << std::endl;
+    catch (const CoinDB::VaultWrongSchemaVersionException& e)
+    {
+        LOGGER(error) << "MainWindow::openVault - VaultWrongSchemaVersionException." << std::endl;
+        showError(tr("This vault file was created using schema version ") + QString::number(e.schema_version()) +
+            tr(". You are currently using schema version ") + QString::number(SCHEMA_VERSION) + tr(". Please export the account using a compatible version of this program and import it into a newly created vault."));
+    }
+    catch (const CoinDB::VaultWrongNetworkException& e)
+    {
+        LOGGER(error) << "MainWindow::openVault - VaultWrongNetworkException." << std::endl;
+        showError(tr("This vault file was created for the ") + QString::fromStdString(e.network()) + tr(" network.")); 
+    }
+    catch (const CoinDB::VaultFailedToOpenDatabaseException& e)
+    {
+        LOGGER(error) << "MainWindow::openVault - VaultFailedToOpenDatabaseException: " << e.dberror() << std::endl;
+        showError(tr("Error opening database: ") + QString::fromStdString(e.dberror()) + tr(". Either this is an unsupported filetype or the file is corrupt."));
+    }
+    catch (const exception& e)
+    {
+        LOGGER(error) << "MainWindow::openVault - " << e.what() << " " << typeid(e).name() << std::endl;
         showError(e.what());
     }
 }
@@ -2116,6 +2140,6 @@ void MainWindow::clearSettings()
 
 void MainWindow::loadVault(const QString &fileName)
 {
-    synchedVault.openVault(fileName.toStdString(), false);
+    synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name());
 }
 
