@@ -72,7 +72,7 @@ void setCurrencyUnitPrefix(const QString& unitPrefix)
     }
 }
 
-QString getFormattedCurrencyAmount(uint64_t value)
+QString getFormattedCurrencyAmount(int64_t value)
 {
     if (currencyDivisor == 0) throw std::runtime_error("Invalid currency unit.");
 
