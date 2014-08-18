@@ -311,7 +311,16 @@ void Peer::stop()
         if (!bRunning) return;
 
         bRunning = false;
-//        socket_.cancel();
+
+        boost::system::error_code ec;
+        socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        if (ec)
+        {
+            stringstream err;
+            err << "Peer shutdown error: " << ec.message();
+            notifyConnectionError(*this, err.str(), ec.value());
+        }
+
         socket_.close();
         do_clearSendQueue();
         bHandshakeComplete = false;
