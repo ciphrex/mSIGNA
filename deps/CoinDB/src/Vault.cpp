@@ -2408,7 +2408,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
 
 std::shared_ptr<Tx> Vault::insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs, bool isCoinbase)
 {
-    LOGGER(trace) << "Vault::insertMerkleTx(" << chainmerkleblock.hash().getHex() << ", " << cointx.hash().getHex() << ", " << txindex << ", " << txcount << ", " << (verifysigs ? "true" : "false") << ")" << std::endl;
+    LOGGER(trace) << "Vault::insertMerkleTx(" << chainmerkleblock.hash().getHex() << ", " << cointx.hash().getHex() << ", " << txindex << ", " << txcount << ", " << (verifysigs ? "true" : "false") << ") - height: " << chainmerkleblock.hash().getHex() << std::endl;
 
     std::shared_ptr<Tx> tx;
     {
@@ -2441,44 +2441,55 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
             // Connect to chain
             if (txindex != 0) throw MerkleTxBadInsertionOrderException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
 
-            odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.prevBlockHash()));
+            odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.prevBlockHash() && odb::query<MerkleBlock>::txsinserted == true));
             if (r.empty())
             {
-                odb::result<BlockCountView> r(db_->query<BlockCountView>());
-                if (!r.empty() && r.begin()->count > 0) throw MerkleTxFailedToConnectException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+                // Try inserting backwards
+                odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->prevhash == chainmerkleblock.hash()));
+                if (r.empty())
+                {
+                    odb::result<BlockCountView> r(db_->query<BlockCountView>());
+                    if (!r.empty() && r.begin()->count > 0) throw MerkleTxFailedToConnectException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+                }
+                else
+                {
+                    if (chainmerkleblock.height != (int)(r.begin().load()->blockheader()->height()) - 1)
+                        throw MerkleTxInvalidHeightException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
+                }
             }
             else
             {
-                if ((unsigned int)chainmerkleblock.height != r.begin().load()->blockheader()->height() + 1)
+                // Try inserting forwards
+                if (chainmerkleblock.height != (int)(r.begin().load()->blockheader()->height()) + 1)
                     throw MerkleTxInvalidHeightException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
-            }
 
-            {
-                // Unconfirm any transactions with equal or larger height
-                odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::blockheader->height >= (unsigned int)chainmerkleblock.height));
-                for (odb::result<Tx>::iterator it = r.begin(); it != r.end(); ++it)
                 {
-                    std::shared_ptr<Tx> tx(it.load());
-                    tx->blockheader(nullptr);
-                    db_->update(tx);
-                    signalQueue.push(notifyTxUpdated.bind(tx));
+                    // Unconfirm any transactions with equal or larger height
+                    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::blockheader->height >= (unsigned int)chainmerkleblock.height));
+                    for (odb::result<Tx>::iterator it = r.begin(); it != r.end(); ++it)
+                    {
+                        std::shared_ptr<Tx> tx(it.load());
+                        tx->blockheader(nullptr);
+                        db_->update(tx);
+                        signalQueue.push(notifyTxUpdated.bind(tx));
+                    }
                 }
-            }
 
-            {
-                // Delete any merkleblocks with equal or larger height
-                odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->height >= (unsigned int)chainmerkleblock.height));
-                for (auto& merkleblock: r) { db_->erase(merkleblock); }
-            }
+                {
+                    // Delete any merkleblocks with equal or larger height
+                    odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->height >= (unsigned int)chainmerkleblock.height));
+                    for (auto& merkleblock: r) { db_->erase(merkleblock); }
+                }
 
-            {
-                // Delete any blockheaders with equal or larger height
-                odb::result<BlockHeader> r(db_->query<BlockHeader>(odb::query<BlockHeader>::height >= (unsigned int)chainmerkleblock.height));
-                for (auto& blockheader: r) { db_->erase(blockheader); }
-            }
+                {
+                    // Delete any blockheaders with equal or larger height
+                    odb::result<BlockHeader> r(db_->query<BlockHeader>(odb::query<BlockHeader>::height >= (unsigned int)chainmerkleblock.height));
+                    for (auto& blockheader: r) { db_->erase(blockheader); }
+                }
 
-            // TODO: test and use the following instead of the above three code blocks
-            //deleteMerkleBlock_unwrapped((uint32_t)chainmerkleblock.height);
+                // TODO: test and use the following instead of the above three code blocks
+                //deleteMerkleBlock_unwrapped((uint32_t)chainmerkleblock.height);
+            }
 
             // Instantiate the new merkle block and store
             merkleblock = std::make_shared<MerkleBlock>(chainmerkleblock);
