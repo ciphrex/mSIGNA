@@ -910,7 +910,7 @@ cli::result_t cmd_bestheight(const cli::params_t& params)
 cli::result_t cmd_horizonheight(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
-    uint32_t horizon_height = vault.getHorizonHeight();
+    int32_t horizon_height = vault.getHorizonHeight();
 
     stringstream ss;
     ss << horizon_height;

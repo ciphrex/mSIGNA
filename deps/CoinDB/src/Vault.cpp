@@ -342,7 +342,7 @@ uint32_t Vault::getMaxFirstBlockTimestamp_unwrapped() const
     return maxFirstBlockTimestamp;
 }
 
-uint32_t Vault::getHorizonHeight() const
+int32_t Vault::getHorizonHeight() const
 {
     LOGGER(trace) << "Vault::getHorizonHeight()" << std::endl;
 
@@ -353,10 +353,10 @@ uint32_t Vault::getHorizonHeight() const
     return getHorizonHeight_unwrapped();
 }
 
-uint32_t Vault::getHorizonHeight_unwrapped() const
+int32_t Vault::getHorizonHeight_unwrapped() const
 {
     odb::result<HorizonHeightView> r(db_->query<HorizonHeightView>());
-    return r.empty() ? 0 : r.begin()->height;
+    return r.empty() ? -1 : (int32_t)r.begin()->height;
 }
 
 std::vector<bytes_t> Vault::getLocatorHashes() const

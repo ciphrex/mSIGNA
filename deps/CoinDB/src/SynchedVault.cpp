@@ -426,7 +426,7 @@ void SynchedVault::syncBlocks()
     std::vector<bytes_t> locatorHashes = m_vault->getLocatorHashes();
     m_bGotMempool = false;
     m_bInsertMerkleBlocks = true;
-    m_networkSync.syncBlocks(locatorHashes, startTime);
+    m_networkSync.syncBlocks(locatorHashes, startTime, m_vault->getHorizonHeight());
 }
 
 void SynchedVault::setFilterParams(double falsePositiveRate, uint32_t nTweak, uint8_t nFlags)
