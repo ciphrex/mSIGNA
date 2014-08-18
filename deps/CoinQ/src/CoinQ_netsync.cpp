@@ -572,9 +572,9 @@ void NetworkSync::syncBlocks(int startHeight, int backscanHeight)
 void NetworkSync::do_syncBlocks(int startHeight, int backscanHeight)
 {
     // backscanHeight of -1 is used when synching the first time
-    if (backscanHeight == -1) { backscanHeight = startHeight - 1; }
+    if (backscanHeight == -1) { backscanHeight = startHeight; }
 
-    m_backscanHeight = backscanHeight;
+    m_backscanHeight = backscanHeight - 1;
     m_bBlocksSynched = false;
 
     m_lastSynchedMerkleBlockHash.clear();
