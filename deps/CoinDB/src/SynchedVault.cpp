@@ -310,14 +310,14 @@ void SynchedVault::loadHeaders(const std::string& blockTreeFile, bool bCheckProo
 }
 
 // Vault operations
-void SynchedVault::openVault(const std::string& dbname, bool bCreate)
+void SynchedVault::openVault(const std::string& dbname, bool bCreate, uint32_t version, const std::string& network)
 {
-    openVault("", "", dbname, bCreate);
+    openVault("", "", dbname, bCreate, version, network);
 }
 
-void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate)
+void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate, uint32_t version, const std::string& network)
 {
-    LOGGER(trace) << "SynchedVault::openVault(" << dbuser << ", ..., " << dbname << ", " << (bCreate ? "true" : "false") << ")" << std::endl;
+    LOGGER(trace) << "SynchedVault::openVault(" << dbuser << ", ..., " << dbname << ", " << (bCreate ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
 
     {
         std::lock_guard<std::mutex> lock(m_vaultMutex);
@@ -325,7 +325,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
         if (m_vault) delete m_vault;
         try
         {
-            m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate);
+            m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate, version, network);
         }
         catch (const VaultException& e)
         {

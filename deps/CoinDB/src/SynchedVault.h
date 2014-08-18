@@ -40,8 +40,8 @@ public:
     void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = false, CoinQBlockTreeMem::callback_t callback = nullptr);
     bool areHeadersLoaded() const { return m_bBlockTreeLoaded; }
 
-    void openVault(const std::string& dbname, bool bCreate = false);
-    void openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate = false);
+    void openVault(const std::string& dbname, bool bCreate = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
+    void openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
     void closeVault();
     bool isVaultOpen() const { return (m_vault != nullptr); }
     Vault* getVault() const { return m_vault; }
