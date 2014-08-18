@@ -21,7 +21,7 @@ class SignatureModel : public QStandardItemModel
     Q_OBJECT
 
 public:
-    enum { PUBLIC, LOCKED, UNLOCKED };
+    enum { PUBLIC, UNLOCKED, LOCKED };
 
     SignatureModel(QObject* parent = nullptr);
     SignatureModel(CoinDB::SynchedVault& synchedVault, const bytes_t& txHash, QObject* parent = nullptr);
@@ -33,6 +33,7 @@ public:
 
     unsigned int getSigsNeeded() const { return m_sigsNeeded; }
 
+    bool isKeychainEncrypted(int row) const;
     int getKeychainState(int row) const;
     bool getKeychainHasSigned(int row) const;
 

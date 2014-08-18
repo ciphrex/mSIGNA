@@ -27,10 +27,8 @@ void SignatureView::setModel(SignatureModel* model)
 
 void SignatureView::updateColumns()
 {
-    resizeColumnToContents(0);
-    resizeColumnToContents(1);
-    resizeColumnToContents(2);
-    QTreeView::update();
+    if (!m_model) return;
+    for (int i = 0; i < m_model->columnCount(); i++) { resizeColumnToContents(i); }
 }
 
 void SignatureView::contextMenuEvent(QContextMenuEvent* event)

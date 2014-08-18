@@ -26,7 +26,7 @@ SignatureModel::SignatureModel(CoinDB::SynchedVault& synchedVault, const bytes_t
 void SignatureModel::initColumns()
 {
     QStringList columns;
-    columns << tr("Keychain Name") << tr("State") << tr("Keychain Hash") << "";
+    columns << tr("Keychain Name") << tr("") << tr("") << tr("Keychain Hash") << "";
     setHorizontalHeaderLabels(columns);
 }
 
@@ -48,22 +48,36 @@ void SignatureModel::updateAll()
         QStandardItem* nameItem = new QStandardItem(name);
         row.append(nameItem);
 
-        // Keychain state
-        int state;
-        QString stateStr;
-        if (vault->isKeychainPrivate(keychain.name()))
+        // Keychain encryption
+        QStandardItem* encryptedItem = new QStandardItem();
+        if (vault->isKeychainEncrypted(keychain.name()))
         {
-            bool isLocked = vault->isKeychainLocked(keychain.name());
-            state = isLocked ? LOCKED : UNLOCKED;
-            stateStr = isLocked ? tr("Locked") : tr("Unlocked");
+            encryptedItem->setIcon(QIcon("encrypted.png"));
+            encryptedItem->setData(true, Qt::UserRole);
         }
         else
         {
-            state = PUBLIC;
-            stateStr = tr("Public");
+            encryptedItem->setData(false, Qt::UserRole);
         }
-        QStandardItem* stateItem = new QStandardItem(stateStr);
-        stateItem->setData(state, Qt::UserRole);
+        row.append(encryptedItem);
+
+        // Keychain state
+        QStandardItem* stateItem = new QStandardItem();
+        if (!vault->isKeychainPrivate(keychain.name()))
+        {
+            stateItem->setIcon(QIcon("shared.png"));
+            stateItem->setData(PUBLIC, Qt::UserRole);
+        }
+        else if (vault->isKeychainLocked(keychain.name()))
+        {
+            stateItem->setIcon(QIcon("locked.png"));
+            stateItem->setData(LOCKED, Qt::UserRole);
+        }
+        else
+        {
+            stateItem->setIcon(QIcon("unlocked.png"));
+            stateItem->setData(UNLOCKED, Qt::UserRole);
+        }
         row.append(stateItem);
 
         // Keychain hash
@@ -81,20 +95,25 @@ void SignatureModel::updateAll()
     }
 }
 
+bool SignatureModel::isKeychainEncrypted(int row) const
+{
+    if (row < 0 || row > rowCount()) throw std::runtime_error("Invalid row.");
+
+    return item(row, 1)->data(Qt::UserRole).toBool();
+}
+
 int SignatureModel::getKeychainState(int row) const
 {
     if (row < 0 || row > rowCount()) throw std::runtime_error("Invalid row.");
 
-    QStandardItem* stateItem = item(row, 1);
-    return stateItem->data(Qt::UserRole).toInt();
+    return item(row, 2)->data(Qt::UserRole).toInt();
 }
 
 bool SignatureModel::getKeychainHasSigned(int row) const
 {
     if (row < 0 || row > rowCount()) throw std::runtime_error("Invalid row.");
 
-    QStandardItem* hasSignedItem = item(row, 3);
-    return hasSignedItem->data(Qt::UserRole).toBool();
+    return item(row, 4)->data(Qt::UserRole).toBool();
 }
 
 Qt::ItemFlags SignatureModel::flags(const QModelIndex& /*index*/) const
