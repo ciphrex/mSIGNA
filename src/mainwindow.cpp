@@ -556,6 +556,11 @@ void MainWindow::openVault(QString fileName)
         LOGGER(error) << "MainWindow::openVault - " << e.what() << " " << typeid(e).name() << std::endl;
         showError(e.what());
     }
+    catch (...)
+    {
+        LOGGER(error) << "MainWindow::openVault - exception type not known." << std::endl;
+        showError(tr("Error opening database. Either this is an unsupported filetype or the file is corrupt."));
+    } 
 }
 
 void MainWindow::importVault(QString /* fileName */)
