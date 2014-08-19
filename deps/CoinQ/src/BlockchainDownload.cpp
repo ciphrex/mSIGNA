@@ -39,16 +39,17 @@ BlockchainDownload::BlockchainDownload(const CoinQ::CoinParams& coinParams, bool
         {
             if (m_blockTree.isEmpty())
             {
-                m_peer.getHeaders(m_locatorHashes, m_hashStop);
+                m_blockTree.setGenesisBlock(m_coinParams.genesis_block());
+                m_peer.getBlocks(m_locatorHashes, m_hashStop);
             }
             else
             {
-                m_peer.getHeaders(m_blockTree.getLocatorHashes(-1));
+                m_peer.getBlocks(m_blockTree.getLocatorHashes(-1));
             }
         }
         catch (const std::exception& e)
         {
-            LOGGER(error) << "BlockchainDownload - Peer::getHeaders error - " << e.what();
+            LOGGER(error) << "BlockchainDownload - Peer::getBlocks error - " << e.what();
             // TODO: propagate code
             notifyBlockTreeError(e.what(), -1);
         }
@@ -169,6 +170,8 @@ void BlockchainDownload::start(const string& host, const string& port, const vec
         {
             m_locatorHashes = locatorHashes;
         }
+
+        m_hashStop = hashStop;
 
         LOGGER(trace) << "Starting peer " << host << ":" << port_ << "..." << endl;
         m_peer.start();
