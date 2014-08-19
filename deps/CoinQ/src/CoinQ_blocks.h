@@ -95,6 +95,8 @@ public:
 
     virtual void setGenesisBlock(const Coin::CoinBlockHeader& header) = 0;
 
+    virtual bool isEmpty() const = 0;
+
     // returns true if new header added, false if header already exists
     // throws runtime_error if header invalid or parent not known
 //    virtual bool insertHeader(const Coin::CoinBlockHeader& header) = 0;
@@ -168,6 +170,7 @@ public:
     void clearReorg() { notifyReorg.clear();; }
 
     void setGenesisBlock(const Coin::CoinBlockHeader& header);
+    bool isEmpty() const { return pHead == nullptr; }
     bool insertHeader(const Coin::CoinBlockHeader& header, bool bCheckProofOfWork = true, bool bReplaceTip = false);
     bool deleteHeader(const uchar_vector& hash);
 
