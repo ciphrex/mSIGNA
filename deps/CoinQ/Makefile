@@ -11,7 +11,8 @@ OBJS = \
     obj/CoinQ_blocks.o \
     obj/CoinQ_txs.o \
     obj/CoinQ_keys.o \
-    obj/CoinQ_filter.o
+    obj/CoinQ_filter.o \
+    obj/BlockchainDownload.o
 
 LIBS = \
     -lCoinQ \
@@ -27,7 +28,8 @@ LIBS = \
 
 EXAMPLES = \
     examples/build/peer$(EXE_EXT) \
-    examples/build/netsync$(EXE_EXT)
+    examples/build/netsync$(EXE_EXT) \
+    examples/build/blockchain$(EXE_EXT)
 
 lib: lib/libCoinQ.a
 
