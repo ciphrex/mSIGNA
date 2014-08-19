@@ -54,14 +54,14 @@ int main(int argc, char* argv[])
              << "  protocol version: " << dec << coinParams.protocol_version() << endl
              << endl;
 
-        download.subscribeStart([&]()           { cout << "Blockchain download started." << endl; });
-        download.subscribeStop([&]()            { cout << "Blockchain download stopped." << endl; });
+        download.subscribeStarted([&]()         { cout << "Blockchain download started." << endl; });
+        download.subscribeStopped([&]()         { cout << "Blockchain download stopped." << endl; });
         download.subscribeOpen([&]()            { cout << "Peer connection opened." << endl; });
         download.subscribeClose([&]()           { cout << "Peer connection closed." << endl; });
         download.subscribeTimeout([&]()         { cout << "Peer timed out." << endl; });
         download.subscribeConnectionError([&](const string& error, int /*code*/) { cout << "Connection error: " << error << endl; });
 
-        download.subscribeBlock([&](const Coin:CoinBlock& block)    { cout << "Block - hash: " << block.hash().getHex() << " height: " << download.getBestHeight() << end; });
+        download.subscribeBlock([&](const Coin::CoinBlock& block)    { cout << "Block - hash: " << block.hash().getHex() << " height: " << download.getBestHeight() << endl; });
         download.subscribeProtocolError([&](const string& error, int /*code*/)   { cout << "Protocol error:" << error << endl; });
 
         INIT_LOGGER("blockchain.log");
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
         download.start(host, port);
 
         while (!g_bShutdown) { usleep(200); }
-        peer.stop();
+        download.stop();
     }
     catch (const exception& e)
     {
