@@ -39,7 +39,7 @@ BlockchainDownload::BlockchainDownload(const CoinQ::CoinParams& coinParams, bool
         {
             if (m_blockTree.isEmpty())
             {
-                m_blockTree.setGenesisBlock(m_coinParams.genesis_block());
+  //              m_blockTree.setGenesisBlock(m_coinParams.genesis_block());
                 m_peer.getBlocks(m_locatorHashes, m_hashStop);
             }
             else
@@ -119,6 +119,7 @@ BlockchainDownload::BlockchainDownload(const CoinQ::CoinParams& coinParams, bool
 
         try
         {
+            if (m_blockTree.isEmpty()) { m_blockTree.setGenesisBlock(block.blockHeader); }
             m_blockTree.insertHeader(block.blockHeader);
         }
         catch (const exception& e)
