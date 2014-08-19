@@ -17,6 +17,7 @@
 #include <boost/thread.hpp>
 
 #include "CoinQ_coinparams.h"
+#include "CoinQ_blocks.h"
 
 #include <CoinCore/typedefs.h>
 #include <CoinCore/CoinNodeData.h>
@@ -42,11 +43,11 @@ public:
 
     void enableCheckProofOfWork(bool bCheckProofOfWork = true) { m_bCheckProofOfWork = bCheckProofOfWork; }
 
-    int getBestHeight() const { return m_blockTree.getBestHeight; }
+    int getBestHeight() const { return m_blockTree.getBestHeight(); }
     const bytes_t& getBestHash() const { return m_blockTree.getBestHash(); }
 
-    void start(const std::string& host, const std::string& port = std::string(), const std::vector<bytes_t>& locatorHashes, const bytes_t& hashStop = bytes_t(32, 0));
-    void start(const std::string& host, int port, const std::vector<bytes_t>& locatorHashes, const bytes_t& hashStop = bytes_t(32, 0));
+    void start(const std::string& host, const std::string& port = std::string(), const std::vector<uchar_vector>& locatorHashes = std::vector<uchar_vector>(), const uchar_vector& hashStop = uchar_vector(32, 0));
+    void start(const std::string& host, int port, const std::vector<uchar_vector>& locatorHashes = std::vector<uchar_vector>(), const uchar_vector& hashStop = uchar_vector(32, 0));
     void stop();
     bool connected() const { return m_bConnected; }
 
@@ -74,11 +75,11 @@ private:
     CoinQ::CoinParams m_coinParams;
     bool m_bCheckProofOfWork;
 
-    std::vector<bytes_t> m_locatorHashes;
-    bytes_t m_hashStop;
+    std::vector<uchar_vector> m_locatorHashes;
+    uchar_vector m_hashStop;
 
-    bytes_t m_lastRequestedBlockHash;
-    bytes_t m_lastReceivedBlockHash;
+    uchar_vector m_lastRequestedBlockHash;
+    uchar_vector m_lastReceivedBlockHash;
     CoinQBlockTreeMem m_blockTree;
  
     bool m_bStarted;

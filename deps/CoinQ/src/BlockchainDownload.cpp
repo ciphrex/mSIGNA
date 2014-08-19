@@ -39,7 +39,7 @@ BlockchainDownload::BlockchainDownload(const CoinQ::CoinParams& coinParams, bool
         {
             if (m_blockTree.isEmpty())
             {
-                m_peer.getHeaders(m_locatorHashes, hashStop);
+                m_peer.getHeaders(m_locatorHashes, m_hashStop);
             }
             else
             {
@@ -98,14 +98,15 @@ BlockchainDownload::BlockchainDownload(const CoinQ::CoinParams& coinParams, bool
         {
             try
             {
-                m_lastRequestedBlockHash = getData.items[getData.items.size() - 1];
+                const unsigned char* hash = getData.items[getData.items.size() - 1].hash;
+                m_lastRequestedBlockHash = bytes_t(hash, hash + 32);
                 m_peer.send(getData);
             }
             catch (const exception& e)
             {
                 LOGGER(error) << "BlockchainDownload - Peer::send() failed: " << e.what() << endl;
                 m_lastRequestedBlockHash.clear();
-                notifyConnectionError(e.what, -1);
+                notifyConnectionError(e.what(), -1);
             }
         }
     });
@@ -113,15 +114,16 @@ BlockchainDownload::BlockchainDownload(const CoinQ::CoinParams& coinParams, bool
     m_peer.subscribeBlock([&](CoinQ::Peer& /*peer*/, const Coin::CoinBlock& block)
     {
         m_lastReceivedBlockHash = block.hash();
-        LOGGER(trace) << "BlockchainDownload - Received block: " << m_lastReceivedBlock.getHex() << endl;
+        LOGGER(trace) << "BlockchainDownload - Received block: " << m_lastReceivedBlockHash.getHex() << endl;
 
         try
         {
-            m_blockTree.insertHeader(block.blockHeader());
+            m_blockTree.insertHeader(block.blockHeader);
         }
         catch (const exception& e)
         {
-            LOGGER(error) << "BlockchainDownload  Failed to insert header: " << e.what() << endl;
+            LOGGER(error) << "BlockchainDownload - Failed to insert header: " << e.what() << endl;
+            notifyBlockTreeError(e.what(), -1);
         }
 
         notifyBlock(block);
@@ -129,6 +131,11 @@ BlockchainDownload::BlockchainDownload(const CoinQ::CoinParams& coinParams, bool
         try
         {
             m_peer.getBlocks(m_blockTree.getLocatorHashes(-1));
+        }
+        catch (const exception& e)
+        {
+            LOGGER(error) << "BlockchainDownload - Failed to request blocks: " << e.what() << endl;
+            notifyConnectionError(e.what(), -1);
         }
     });
 }
@@ -138,7 +145,7 @@ BlockchainDownload::~BlockchainDownload()
     stop();
 }
 
-void BlockchainDownload::start(const string& host, const string& port, const vector<bytes_t>& locatorHashes, const bytes_t& hashStop)
+void BlockchainDownload::start(const string& host, const string& port, const vector<uchar_vector>& locatorHashes, const uchar_vector& hashStop)
 {
     {
         if (m_bStarted) throw runtime_error("BlockchainDownload - already started.");
@@ -153,6 +160,16 @@ void BlockchainDownload::start(const string& host, const string& port, const vec
         string port_ = port.empty() ? m_coinParams.default_port() : port;
         m_peer.set(host, port_, m_coinParams.magic_bytes(), m_coinParams.protocol_version(), "Wallet v0.1", 0, false);
 
+        if (locatorHashes.empty())
+        {
+            m_locatorHashes.clear();
+            m_locatorHashes.push_back(uchar_vector(32, 0));
+        }
+        else
+        {
+            m_locatorHashes = locatorHashes;
+        }
+
         LOGGER(trace) << "Starting peer " << host << ":" << port_ << "..." << endl;
         m_peer.start();
         LOGGER(trace) << "Peer started." << endl;
@@ -161,7 +178,7 @@ void BlockchainDownload::start(const string& host, const string& port, const vec
     notifyStarted();
 }
 
-void BlockchainDownload::start(const string& host, int port, const vector<bytes_t>& locatorHashes, const bytes_t& hashStop)
+void BlockchainDownload::start(const string& host, int port, const vector<uchar_vector>& locatorHashes, const uchar_vector& hashStop)
 {
     std::stringstream ssport;
     ssport << port;
@@ -180,9 +197,6 @@ void BlockchainDownload::stop()
         stopIOServiceThread();
 
         m_bStarted = false;
-        m_bHeadersSynched = false;
-        m_lastRequestedMerkleBlockHash.clear();
-        while (!m_currentMerkleTxHashes.empty()) { m_currentMerkleTxHashes.pop(); }
     }
 
     notifyStopped();
