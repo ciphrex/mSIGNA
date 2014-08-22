@@ -2286,25 +2286,40 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
         if (!signer.isSigned()) throw TxNotSignedException(cointx.hash());
     }
 
+    std::shared_ptr<Tx> tx(new Tx());
+    tx->set(cointx, time(NULL), Tx::PROPAGATED);
+
     // If we already have it but it is unsent update to propagated and update confirmations.
-    bytes_t txhash = cointx.hash();
-    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
+    odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == tx->hash() || odb::query<Tx>::unsigned_hash == tx->unsigned_hash()));
     if (!r.empty())
     {
-        std::shared_ptr<Tx> tx(r.begin().load());
-        if (tx->status() < Tx::PROPAGATED)
+        std::shared_ptr<Tx> stored_tx(r.begin().load());
+        if (stored_tx->status() < Tx::CONFIRMED)
         {
-            tx->status(Tx::PROPAGATED);
-            db_->update(tx);
-            updateConfirmations_unwrapped(tx);
-            signalQueue.push(notifyTxUpdated.bind(tx));
-            return tx; 
+            LOGGER(debug) << "Vault::insertNewTx_unwrapped - ADDING/REPLACING SIGNATURES, UPDATING CONFIRMATIONS AND STATUS. hash: " << uchar_vector(tx->hash()).getHex() << std::endl;
+
+            // Sanity check - the following condition should never be true, but using out-of-bounds indices will crash the program
+            if (stored_tx->txins().size() != cointx.inputs.size())
+                throw std::runtime_error("Transaction input mismatch.");
+
+            // Replace stored tx signatures since this transaction is signed
+            txins_t::size_type i = 0;
+            txins_t txins = tx->txins();
+            for (auto& txin: stored_tx->txins())
+            {
+                txin->script(txins[i++]->script());
+                db_->update(txin);
+            }
+
+            stored_tx->updateStatus(tx->status());
+            stored_tx->blockheader(blockheader);
+            db_->update(stored_tx);
+            signalQueue.push(notifyTxUpdated.bind(stored_tx));
+            return stored_tx; 
         }
         return nullptr;
     }
 
-    std::shared_ptr<Tx> tx(new Tx());
-    tx->set(cointx, time(NULL), Tx::PROPAGATED);
     tx->blockheader(blockheader);
 
     std::set<std::shared_ptr<SigningScript>>    updated_scripts;
@@ -2511,6 +2526,8 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
             if (!r.empty())
             {
                 // We have an unsigned version of the transaction
+                LOGGER(debug) << "Vault::insertMerkleTx_unwrapped - ADDING/REPLACING SIGNATURES, UPDATING CONFIRMATIONS AND STATUS. hash: " << uchar_vector(tx->hash()).getHex() << std::endl;
+
                 tx = r.begin().load();
 
                 // Sanity check - the following condition should never be true, but using out-of-bounds indices will crash the program
