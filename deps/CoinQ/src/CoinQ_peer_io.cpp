@@ -179,6 +179,7 @@ void Peer::do_read()
             {
                 std::stringstream err;
                 err << "Message decode error: " << e.what();
+                LOGGER(error) << "Peer read handler error: " << err.str() << std::endl;
                 notifyProtocolError(*this, err.str(), -1);
             }
 
