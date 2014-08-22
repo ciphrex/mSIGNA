@@ -2067,6 +2067,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool repla
 
         if (!updated) return nullptr;
 
+        updateConfirmations_unwrapped(stored_tx);
         signalQueue.push(notifyTxUpdated.bind(stored_tx));
         return stored_tx;
     }
@@ -2285,7 +2286,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
         if (!signer.isSigned()) throw TxNotSignedException(cointx.hash());
     }
 
-    // If we already have it but it is unsent update to propagated
+    // If we already have it but it is unsent update to propagated and update confirmations.
     bytes_t txhash = cointx.hash();
     odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
     if (!r.empty())
@@ -2295,6 +2296,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
         {
             tx->status(Tx::PROPAGATED);
             db_->update(tx);
+            updateConfirmations_unwrapped(tx);
             signalQueue.push(notifyTxUpdated.bind(tx));
             return tx; 
         }
