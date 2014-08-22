@@ -28,7 +28,8 @@ LIBS = \
     -lboost_serialization$(BOOST_SUFFIX) \
     -lcrypto \
     -lodb-$(DB) \
-    -lodb
+    -lodb \
+    $(DB_LIBS)
 
 OBJS = \
     obj/Schema-odb-$(DB).o \
