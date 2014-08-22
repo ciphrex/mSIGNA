@@ -15,6 +15,7 @@ ifeq ($(DB), mysql)
     ODB_DB = -DDATABASE_MYSQL
 else ifeq ($(DB), sqlite)
     ODB_DB = -DDATABASE_SQLITE
+    DB_LIBS = -lsqlite3
 else
     $(error DB must be set to sqlite or mysql)
 endif
