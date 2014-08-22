@@ -162,7 +162,8 @@ win32 {
 
     LIBS += \
         -L/usr/x86_64-w64-mingw32/plugins/platforms \
-        -static-libgcc -static-libstdc++ \
+        -static -static-libgcc -static-libstdc++ \
+        -lpthread \
         -lws2_32 \
         -lmswsock
 }
@@ -188,4 +189,5 @@ LIBS += \
     -lboost_serialization$$BOOST_LIB_SUFFIX \
     -lcrypto \
     -lodb-sqlite \
-    -lodb
+    -lodb \
+    -lsqlite3
