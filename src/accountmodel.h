@@ -44,8 +44,6 @@ public:
     AccountModel(CoinDB::SynchedVault& synchedVault);
     ~AccountModel() { };
 
-    void update();
-
     CoinDB::Vault* getVault() const;
     bool isOpen() const { return m_synchedVault.isVaultOpen(); }
 
@@ -91,6 +89,9 @@ signals:
     void updateSyncHeight(int height);
 
     void error(const QString& message);
+
+public slots:
+    void update();
 
 private:
     void setColumns();
