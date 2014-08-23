@@ -361,15 +361,16 @@ cli::result_t cmd_accountinfo(const cli::params_t& params)
 
     using namespace stdutils;
     stringstream ss;
-    ss << "id:                " << accountInfo.id() << endl
-       << "name:              " << accountInfo.name() << endl
-       << "minsigs:           " << accountInfo.minsigs() << endl
-       << "keychains:         " << delimited_list(accountInfo.keychain_names(), ", ") << endl
-       << "unused_pool_size:  " << accountInfo.unused_pool_size() << endl
-       << "time_created:      " << accountInfo.time_created() << endl
-       << "bins:              " << delimited_list(accountInfo.bin_names(), ", ") << endl
-       << "balance:           " << balance << endl
-       << "confirmed balance: " << confirmed_balance;
+    ss << "id:                  " << accountInfo.id() << endl
+       << "name:                " << accountInfo.name() << endl
+       << "minsigs:             " << accountInfo.minsigs() << endl
+       << "keychains:           " << delimited_list(accountInfo.keychain_names(), ", ") << endl
+       << "issued_script_count: " << accountInfo.issued_script_count() << endl
+       << "unused_pool_size:    " << accountInfo.unused_pool_size() << endl
+       << "time_created:        " << accountInfo.time_created() << endl
+       << "bins:                " << delimited_list(accountInfo.bin_names(), ", ") << endl
+       << "balance:             " << balance << endl
+       << "confirmed balance:   " << confirmed_balance;
     return ss.str();
 }
 

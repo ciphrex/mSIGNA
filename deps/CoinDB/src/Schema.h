@@ -483,6 +483,7 @@ public:
         const std::string& name,
         unsigned int minsigs,
         const std::vector<std::string>& keychain_names,
+        uint32_t issued_script_count,
         uint32_t unused_pool_size,
         uint32_t time_created,
         const std::vector<std::string>& bin_names
@@ -491,6 +492,7 @@ public:
         name_(name),
         minsigs_(minsigs),
         keychain_names_(keychain_names),
+        issued_script_count_(issued_script_count),
         unused_pool_size_(unused_pool_size),
         time_created_(time_created),
         bin_names_(bin_names)
@@ -503,6 +505,7 @@ public:
         name_(source.name_),
         minsigs_(source.minsigs_),
         keychain_names_(source.keychain_names_),
+        issued_script_count_(source.issued_script_count_),
         unused_pool_size_(source.unused_pool_size_),
         time_created_(source.time_created_),
         bin_names_(source.bin_names_)
@@ -514,6 +517,7 @@ public:
         name_ = source.name_;
         minsigs_ = source.minsigs_;
         keychain_names_ = source.keychain_names_;
+        issued_script_count_ = source.issued_script_count_;
         unused_pool_size_ = source.unused_pool_size_;
         time_created_ = source.time_created_;
         bin_names_ = source.bin_names_;
@@ -524,6 +528,7 @@ public:
     const std::string&                  name() const { return name_; }
     unsigned int                        minsigs() const { return minsigs_; }
     const std::vector<std::string>&     keychain_names() const { return keychain_names_; }
+    uint32_t                            issued_script_count() const { return issued_script_count_; }
     uint32_t                            unused_pool_size() const { return unused_pool_size_; }
     uint32_t                            time_created() const { return time_created_; }
     const std::vector<std::string>&     bin_names() const { return bin_names_; }
@@ -533,6 +538,7 @@ private:
     std::string                 name_;
     unsigned int                minsigs_;
     std::vector<std::string>    keychain_names_;
+    uint32_t                    issued_script_count_;
     uint32_t                    unused_pool_size_;
     uint32_t                    time_created_;
     std::vector<std::string>    bin_names_;

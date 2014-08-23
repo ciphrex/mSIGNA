@@ -334,9 +334,17 @@ AccountInfo Account::accountInfo() const
     for (auto& keychain: keychains_) { keychain_names.push_back(keychain->name()); }
 
     std::vector<std::string> bin_names;
-    for (auto& bin: bins_) { bin_names.push_back(bin->name()); }
+    uint32_t issued_script_count = 0;
+    for (auto& bin: bins_)
+    {
+        bin_names.push_back(bin->name());
+        if (bin->next_script_index() > 0)
+        {
+            issued_script_count += (bin->next_script_index() - 1);
+        }
+    }
 
-    return AccountInfo(id_, name_, minsigs_, keychain_names, unused_pool_size_, time_created_, bin_names);
+    return AccountInfo(id_, name_, minsigs_, keychain_names, issued_script_count, unused_pool_size_, time_created_, bin_names);
 }
 
 std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
