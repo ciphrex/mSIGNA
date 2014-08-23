@@ -106,7 +106,7 @@ void joinEntropyThread()
 
 secure_bytes_t getRandomBytes(int n, QWidget* parent)
 {
-    seedEntropySource(false, parent);
+    //seedEntropySource(false, parent);
     return secure_random_bytes(n);
 }
 
