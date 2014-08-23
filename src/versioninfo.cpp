@@ -19,7 +19,7 @@
 const int VERSIONPADDINGRIGHT = 20;
 const int VERSIONPADDINGBOTTOM = 30;
  
-const QString VERSIONTEXT("0.6.9 beta");
+const QString VERSIONTEXT("0.7.0 beta");
 
 const QString commitHash(COMMIT_HASH);
 const QString shortCommitHash(QString(COMMIT_HASH).left(7));
