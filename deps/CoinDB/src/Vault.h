@@ -128,7 +128,7 @@ public:
     std::vector<AccountInfo>                getAllAccountInfo() const;
     uint64_t                                getAccountBalance(const std::string& account_name, unsigned int min_confirmations = 1, int tx_flags = Tx::ALL) const;
     std::shared_ptr<AccountBin>             addAccountBin(const std::string& account_name, const std::string& bin_name);
-    std::shared_ptr<SigningScript>          issueSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "");
+    std::shared_ptr<SigningScript>          issueSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "", uint32_t index = 0);
     void                                    refillAccountPool(const std::string& account_name);
 
     // empty account_name or bin_name means do not filter on those fields
@@ -286,8 +286,8 @@ protected:
     // ACCOUNT BIN OPERATIONS //
     ////////////////////////////
     std::shared_ptr<AccountBin>             getAccountBin_unwrapped(const std::string& account_name, const std::string& bin_name) const;
-    std::shared_ptr<SigningScript>          issueAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> account_bin, const std::string& label = "");
-    void                                    refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin);
+    std::shared_ptr<SigningScript>          issueAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> account_bin, const std::string& label = "", uint32_t index = 0);
+    void                                    refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin, uint32_t index = 0);
     void                                    exportAccountBin_unwrapped(const std::shared_ptr<AccountBin> account_bin, const std::string& export_name, const std::string& filepath) const;
     std::shared_ptr<AccountBin>             importAccountBin_unwrapped(const std::string& filepath); 
 

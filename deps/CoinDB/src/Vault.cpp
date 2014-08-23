@@ -1423,29 +1423,37 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
     return bin;
 }
 
-std::shared_ptr<SigningScript> Vault::issueSigningScript(const std::string& account_name, const std::string& bin_name, const std::string& label)
+std::shared_ptr<SigningScript> Vault::issueSigningScript(const std::string& account_name, const std::string& bin_name, const std::string& label, uint32_t index)
 {
-    LOGGER(trace) << "Vault::issueSigningScript(" << account_name << ", " << bin_name << ", " << label << ")" << std::endl;
+    LOGGER(trace) << "Vault::issueSigningScript(" << account_name << ", " << bin_name << ", " << label << ", " << index << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
     std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
     if (bin->isChange()) throw AccountCannotIssueChangeScriptException(account_name);
-    std::shared_ptr<SigningScript> script = issueAccountBinSigningScript_unwrapped(bin, label);
+    std::shared_ptr<SigningScript> script = issueAccountBinSigningScript_unwrapped(bin, label, index);
     t.commit();
     return script;
 }
 
-std::shared_ptr<SigningScript> Vault::issueAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> bin, const std::string& label)
+std::shared_ptr<SigningScript> Vault::issueAccountBinSigningScript_unwrapped(std::shared_ptr<AccountBin> bin, const std::string& label, uint32_t index)
 {
-    refillAccountBinPool_unwrapped(bin);
+    refillAccountBinPool_unwrapped(bin, index);
 
-    // Get the next available unused signing script
-    typedef odb::query<SigningScriptView> view_query;
+    // Get either the specified script or the next available unused signing script if index = 0
+    typedef odb::query<SigningScriptView> view_query_t;
+    view_query_t view_query(view_query_t::AccountBin::id == bin->id());
+    if (index > 0)  { view_query = view_query && view_query_t::SigningScript::index == index; }
+    else            { view_query = (view_query && view_query_t::SigningScript::status == SigningScript::UNUSED) + "ORDER BY" + view_query_t::SigningScript::index + "LIMIT 1"; }
+
+    odb::result<SigningScriptView> view_result(db_->query<SigningScriptView>(view_query));
+
+/*
     odb::result<SigningScriptView> view_result(db_->query<SigningScriptView>(
         (view_query::AccountBin::id == bin->id() && view_query::SigningScript::status == SigningScript::UNUSED) +
         "ORDER BY" + view_query::SigningScript::index + "LIMIT 1"));
+*/
     if (view_result.empty()) throw AccountBinOutOfScriptsException(bin->account_name(), bin->name());
 
     std::shared_ptr<SigningScriptView> view(view_result.begin().load());
@@ -1461,24 +1469,39 @@ std::shared_ptr<SigningScript> Vault::issueAccountBinSigningScript_unwrapped(std
     return script;
 }
 
-void Vault::refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin)
+void Vault::refillAccountBinPool_unwrapped(std::shared_ptr<AccountBin> bin, uint32_t index)
 {
     // get largest signing script index that is not unused
     typedef odb::query<ScriptCountView> count_query_t;
     odb::result<ScriptCountView> count_result(db_->query<ScriptCountView>(count_query_t::AccountBin::id == bin->id() && count_query_t::SigningScript::status != SigningScript::UNUSED));
-    unsigned long max_index = count_result.empty() ? 0 : count_result.begin()->max_index;
+    uint32_t max_index = count_result.empty() ? 0 : count_result.begin()->max_index;
+    uint32_t max_unused_index = (index > max_index) ? index : max_index;
 
-    if (max_index > 0)
+    if (max_unused_index > 0)
     {
         // update any unused signing scripts with smaller index to issued status
         typedef odb::query<SigningScriptView> script_query_t;
         odb::result<SigningScriptView> script_result(db_->query<SigningScriptView>(script_query_t::AccountBin::id == bin->id() &&
-            script_query_t::SigningScript::status == SigningScript::UNUSED && script_query_t::SigningScript::index < max_index));
+            script_query_t::SigningScript::status == SigningScript::UNUSED && script_query_t::SigningScript::index < max_unused_index));
         for (auto& script_view: script_result)
         {
             std::shared_ptr<SigningScript> script(db_->load<SigningScript>(script_view.id));
             script->status(SigningScript::ISSUED);
             db_->update(script);
+        }
+    }
+
+    // create any additional scripts to have all up to specified index issued
+    if (index > max_index)
+    {
+        count_result = db_->query<ScriptCountView>();
+        uint32_t count = count_result.empty() ? 0 : count_result.begin().load()->count;
+        for (uint32_t i = count + 1; i < index; i++)
+        {
+            std::shared_ptr<SigningScript> script = bin->newSigningScript();
+            script->status(SigningScript::ISSUED);
+            for (auto& key: script->keys()) { db_->persist(key); }
+            db_->persist(script); 
         }
     }
 

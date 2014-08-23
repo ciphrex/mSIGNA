@@ -32,7 +32,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-const std::string COINDB_VERSION = "v0.5.1";
+const std::string COINDB_VERSION = "v0.5.2";
 
 using namespace std;
 using namespace odb::core;
@@ -440,13 +440,15 @@ cli::result_t cmd_issuescript(const cli::params_t& params)
     if (params[1] != "@null") account_name = params[1];
     std::string label = params.size() > 2 ? params[2] : std::string("");
     std::string bin_name = params.size() > 3 ? params[3] : std::string(DEFAULT_BIN_NAME);
-    std::shared_ptr<SigningScript> script = vault.issueSigningScript(account_name, bin_name, label);
+    uint32_t index = params.size() > 4 ? strtoull(params[4].c_str(), NULL, 10) : 0;
+    std::shared_ptr<SigningScript> script = vault.issueSigningScript(account_name, bin_name, label, index);
 
     std::string address = getAddressFromScript(script->txoutscript());
 
     stringstream ss;
     ss << "account:     " << params[1] << endl
        << "account bin: " << bin_name << endl
+       << "index:       " << script->index() << endl
        << "label:       " << label << endl
        << "script:      " << uchar_vector(script->txoutscript()).getHex() << endl
        << "address:     " << address;
@@ -1199,7 +1201,7 @@ int main(int argc, char* argv[])
         "issuescript",
         "issue a new signing script",
         command::params(2, "db file", "account name"),
-        command::params(2, "label", (std::string("bin name = ") + DEFAULT_BIN_NAME).c_str())));
+        command::params(3, "label", (std::string("bin name = ") + DEFAULT_BIN_NAME).c_str(), "index = 0")));
     shell.add(command(
         &cmd_listscripts,
         "listscripts",
