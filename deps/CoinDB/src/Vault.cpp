@@ -2526,7 +2526,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
             if (!r.empty())
             {
                 // We have an unsigned version of the transaction
-                LOGGER(debug) << "Vault::insertMerkleTx_unwrapped - ADDING/REPLACING SIGNATURES, UPDATING CONFIRMATIONS AND STATUS. hash: " << uchar_vector(tx->hash()).getHex() << std::endl;
+                LOGGER(debug) << "Vault::insertMerkleTx_unwrapped - ADDING/REPLACING SIGNATURES, UPDATING CONFIRMATIONS AND STATUS. hash: " << uchar_vector(txhash).getHex() << " unsigned hash: " << uchar_vector(txunsignedhash).getHex() << std::endl;
 
                 tx = r.begin().load();
 
