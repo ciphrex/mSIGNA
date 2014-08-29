@@ -9,13 +9,13 @@
 
 #pragma once
 
-#include <vector>
 #include <string>
 
 namespace stdutils
 {
 
-inline std::string delimited_list(const std::vector<std::string>& items, const std::string& delimiter)
+template<class C>
+inline std::string delimited_list(const C& items, const std::string& delimiter)
 {
     std::string rval;
     bool addDelimiter = false;
