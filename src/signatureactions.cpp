@@ -104,7 +104,8 @@ void SignatureActions::addSignature()
         keychainNames.push_back(currentKeychain.toStdString());
 
         seedEntropySource(false, &m_dialog);
-        vault->signTx(m_dialog.getModel()->getTxHash(), keychainNames, true);
+        bytes_t txhash = m_dialog.getModel()->getTxHash();
+        vault->signTx(txhash, keychainNames, true);
 
         if (keychainNames.empty())
         {
@@ -113,6 +114,24 @@ void SignatureActions::addSignature()
         }
 
         m_dialog.updateTx();
+        if (m_synchedVault.isConnected() && m_dialog.getModel()->getSigsNeeded() == 0)
+        {
+            QMessageBox sendPrompt;
+            sendPrompt.setText(tr("Transaction is fully signed. Would you like to send?"));
+            sendPrompt.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+            sendPrompt.setDefaultButton(QMessageBox::Yes);
+            if (sendPrompt.exec() == QMessageBox::Yes)
+            {
+                if (!m_synchedVault.isConnected())
+                {
+                    QMessageBox::critical(nullptr, tr("Error"), tr("Connection was lost."));
+                    return;
+                }
+                std::shared_ptr<CoinDB::Tx> tx = vault->getTx(txhash);
+                Coin::Transaction coin_tx = tx->toCoinCore();
+                m_synchedVault.sendTx(coin_tx);
+            }
+        }
     }
     catch (const std::exception& e)
     {
