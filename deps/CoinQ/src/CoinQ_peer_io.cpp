@@ -49,6 +49,7 @@ void Peer::do_handshake()
 
 void Peer::do_read()
 {
+    LOGGER(trace) << "Peer::do_read() - waiting for " << min_read_bytes << " bytes..." << endl;
     boost::asio::async_read(socket_, boost::asio::buffer(read_buffer, READ_BUFFER_SIZE),
         //boost::asio::transfer_at_least(MIN_MESSAGE_HEADER_SIZE),
         boost::asio::transfer_at_least(min_read_bytes),
@@ -302,6 +303,7 @@ void Peer::start()
     bRunning = true;
     bHandshakeComplete = false;
     bWriteReady = false;
+    read_message.clear();
     min_read_bytes = MIN_MESSAGE_HEADER_SIZE;
 
     tcp::resolver::query query(host_, port_);
