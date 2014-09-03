@@ -788,7 +788,7 @@ void NetworkSync::fileFlushLoop()
 
 void NetworkSync::syncMerkleBlock(const ChainMerkleBlock& merkleBlock, const Coin::PartialMerkleTree& merkleTree)
 {
-    LOGGER(trace) << "Synchronizing merkle block: " << merkleBlock.hash().getHex() << endl;
+    LOGGER(trace) << "Synchronizing merkle block: " << merkleBlock.hash().getHex() << " height: " << merkleBlock.height << endl;
 
     while (!m_currentMerkleTxHashes.empty()) { m_currentMerkleTxHashes.pop(); }
 
@@ -820,6 +820,8 @@ void NetworkSync::syncMerkleBlock(const ChainMerkleBlock& merkleBlock, const Coi
 
 void NetworkSync::processBlockTx(const Coin::Transaction& tx)
 {
+    string txHashHex = tx.hash().getHex();
+    LOGGER(trace) << "NetworkSync::processBlockTx(" << txHashHex << ")" << endl;
     try
     {
         boost::unique_lock<boost::mutex> syncLock(m_syncMutex);
@@ -830,7 +832,7 @@ void NetworkSync::processBlockTx(const Coin::Transaction& tx)
         {
             if (tx.hash() == m_currentMerkleTxHashes.front())
             {
-                LOGGER(trace) << "New merkle transaction (" << (m_currentMerkleTxIndex + 1) << " of " << m_currentMerkleTxCount << "): " << tx.hash().getHex() << endl;
+                LOGGER(trace) << "NetworkSync::processBlockTx - New merkle transaction (" << (m_currentMerkleTxIndex + 1) << " of " << m_currentMerkleTxCount << "): " << txHashHex << endl;
                 notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex++, m_currentMerkleTxCount);
                 m_currentMerkleTxHashes.pop();
             }
