@@ -49,7 +49,9 @@ void Peer::do_handshake()
 
 void Peer::do_read()
 {
-    boost::asio::async_read(socket_, boost::asio::buffer(read_buffer, READ_BUFFER_SIZE), boost::asio::transfer_at_least(MIN_MESSAGE_HEADER_SIZE),
+    boost::asio::async_read(socket_, boost::asio::buffer(read_buffer, READ_BUFFER_SIZE),
+        //boost::asio::transfer_at_least(MIN_MESSAGE_HEADER_SIZE),
+        boost::asio::transfer_at_least(min_read_bytes),
     strand_.wrap([this](const boost::system::error_code& ec, std::size_t bytes_read) {
         if (!bRunning) return;
 
@@ -68,8 +70,14 @@ void Peer::do_read()
 
         read_message += uchar_vector(read_buffer, bytes_read);
 
-        while (read_message.size() >= MIN_MESSAGE_HEADER_SIZE)
+        while (true)
         {
+            if (read_message.size() < MIN_MESSAGE_HEADER_SIZE)
+            {
+                min_read_bytes = MIN_MESSAGE_HEADER_SIZE - read_message.size();
+                break;
+            }
+
             // Find the first occurrence of the magic bytes, discard anything before it.
             // If magic bytes are not found, read new buffer. 
             // TODO: detect misbehaving node and disconnect.
@@ -77,21 +85,33 @@ void Peer::do_read()
             if (it == read_message.end())
             {
                 read_message.clear();
+                min_read_bytes = MIN_MESSAGE_HEADER_SIZE;
                 break;
             }
 
             read_message.assign(it, read_message.end());
-            if (read_message.size() < MIN_MESSAGE_HEADER_SIZE) break;
+            if (read_message.size() < MIN_MESSAGE_HEADER_SIZE)
+            {
+                min_read_bytes = MIN_MESSAGE_HEADER_SIZE - read_message.size();
+                break;
+            }
 
             // Get command
             unsigned char command[13];
             command[12] = 0;
             uchar_vector(read_message.begin() + 4, read_message.begin() + 16).copyToArray(command);
+            LOGGER(debug) << "Peer read handler - command: " << command << endl;
 
             // Get payload size
             unsigned int payloadSize = vch_to_uint<uint32_t>(uchar_vector(read_message.begin() + 16, read_message.begin() + 20), _BIG_ENDIAN);
+            LOGGER(debug) << "Peer read handler - payload size: " << payloadSize << endl;
+            LOGGER(debug) << "Peer read handler - read_message size: " << read_message.size() << endl;
 
-            if (read_message.size() < MIN_MESSAGE_HEADER_SIZE  + payloadSize) break;
+            if (read_message.size() < MIN_MESSAGE_HEADER_SIZE  + payloadSize)
+            {
+                min_read_bytes = MIN_MESSAGE_HEADER_SIZE + payloadSize - read_message.size();
+                break;
+            }
 
             try
             {
@@ -181,9 +201,11 @@ void Peer::do_read()
                 err << "Message decode error: " << e.what();
                 LOGGER(error) << "Peer read handler error: " << err.str() << std::endl;
                 notifyProtocolError(*this, err.str(), -1);
+                min_read_bytes = MIN_MESSAGE_HEADER_SIZE;
             }
 
             read_message.assign(read_message.begin() + MIN_MESSAGE_HEADER_SIZE + payloadSize, read_message.end());
+            LOGGER(debug) << "Peer read handler - remaining message bytes: " << read_message.size() << endl;
         }
 
         do_read();
@@ -280,6 +302,7 @@ void Peer::start()
     bRunning = true;
     bHandshakeComplete = false;
     bWriteReady = false;
+    min_read_bytes = MIN_MESSAGE_HEADER_SIZE;
 
     tcp::resolver::query query(host_, port_);
 

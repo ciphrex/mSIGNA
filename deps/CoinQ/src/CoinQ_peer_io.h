@@ -246,6 +246,7 @@ private:
 
     static const unsigned int READ_BUFFER_SIZE = 1024;
     unsigned char read_buffer[READ_BUFFER_SIZE];
+    std::size_t min_read_bytes;
 
     uchar_vector read_message;
     uchar_vector write_message;
