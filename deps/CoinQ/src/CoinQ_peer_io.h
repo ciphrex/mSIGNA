@@ -244,7 +244,7 @@ private:
 
     CoinQSignal<Peer&>                                  notifyTimeout;
 
-    static const unsigned int READ_BUFFER_SIZE = 16384;
+    static const unsigned int READ_BUFFER_SIZE = 262144;
     unsigned char read_buffer[READ_BUFFER_SIZE];
     std::size_t min_read_bytes;
 
