@@ -82,7 +82,7 @@ using namespace std;
 MainWindow::MainWindow() :
     licenseAccepted(false),
     synchedVault(getCoinParams()),
-    //networkSync(getCoinParams()),
+    bQuitting(false),
     syncHeight(0),
     bestHeight(0),
     networkState(NETWORK_STATE_STOPPED),
@@ -224,6 +224,7 @@ MainWindow::MainWindow() :
         selectAccount(0);
     });
     connect(this, &MainWindow::vaultClosed, [this]() {
+        if (bQuitting) return;
         keychainModel->setVault(nullptr);
         keychainModel->update();
 
@@ -289,6 +290,7 @@ void MainWindow::updateStatusMessage(const QString& message)
 
 void MainWindow::closeEvent(QCloseEvent * /*event*/)
 {
+    bQuitting = true;
     synchedVault.stopSync();
     saveSettings();
     joinEntropyThread();
@@ -989,6 +991,8 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
 void MainWindow::refreshAccounts()
 {
     LOGGER(trace) << "MainWindow::refreshAccounts()" << std::endl;
+
+    if (bQuitting) return;
 
     QString prevSelectedAccount = selectedAccount;
     accountModel->update();

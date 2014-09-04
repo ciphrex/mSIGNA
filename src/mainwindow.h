@@ -269,6 +269,7 @@ private:
     // application actions
     QAction* selectCurrencyUnitAction;
     QAction* quitAction;
+    bool bQuitting;
 
     // vault actions
     QAction* newVaultAction;
