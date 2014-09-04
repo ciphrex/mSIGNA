@@ -739,7 +739,7 @@ void MainWindow::setKeychainPassphrase()
     QStandardItem* nameItem = keychainModel->item(row, 0);
     QString name = nameItem->text();
 
-    SetPassphraseDialog dlg(tr("Enter encryption passphrase for keychain ") + name + ":", this);
+    SetPassphraseDialog dlg(tr("Enter encryption passphrase for keychain ") + name + ":", tr("WARNING: IF YOU FORGET THIS PASSPHRASE THERE IS NO WAY TO RECOVER IT!!!"), this);
     while (dlg.exec())
     {
         try

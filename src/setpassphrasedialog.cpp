@@ -16,7 +16,7 @@
 #include <QLineEdit>
 #include <QLabel>
 
-SetPassphraseDialog::SetPassphraseDialog(const QString& prompt, QWidget* parent)
+SetPassphraseDialog::SetPassphraseDialog(const QString& prompt, const QString& additionalText, QWidget* parent)
     : QDialog(parent)
 {
     // Buttons
@@ -36,11 +36,16 @@ SetPassphraseDialog::SetPassphraseDialog(const QString& prompt, QWidget* parent)
     passphrase2Edit = new QLineEdit();
     passphrase2Edit->setEchoMode(QLineEdit::Password);
 
+    // Additional Text
+    QLabel* additionalTextLabel = new QLabel();
+    additionalTextLabel->setText(additionalText);
+
     QVBoxLayout* mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
     mainLayout->addWidget(promptLabel);
     mainLayout->addWidget(passphrase1Edit);
     mainLayout->addWidget(passphrase2Edit);
+    mainLayout->addWidget(additionalTextLabel);
     mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
 
