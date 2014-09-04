@@ -218,6 +218,13 @@ private:
     void createToolBars();
     void createStatusBar();
 
+    const int MAX_RECENTS = 4; 
+    QList<QString> recents;
+    void addToRecents(const QString& filename);
+    void loadRecents();
+    void saveRecents();
+    void updateRecentsMenu();
+
     bool maybeSave();
 
     void loadVault(const QString &fileName);
@@ -242,6 +249,7 @@ private:
 
     // menus
     QMenu* fileMenu;
+    QMenu* recentsMenu;
     QMenu* keychainMenu;
     QMenu* accountMenu;
     QMenu* txMenu;

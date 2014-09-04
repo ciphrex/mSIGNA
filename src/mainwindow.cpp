@@ -91,6 +91,7 @@ MainWindow::MainWindow() :
     txActions(nullptr)
 {
     loadSettings();
+    loadRecents();
     createActions();
     createToolBars();
     createStatusBar();
@@ -189,6 +190,7 @@ MainWindow::MainWindow() :
 
     // Menus
     createMenus();
+    updateRecentsMenu();
     accountView->setMenu(accountMenu);
     txView->setMenu(txActions->getMenu());
     keychainView->setMenu(keychainMenu);
@@ -232,6 +234,7 @@ MainWindow::MainWindow() :
         txView->updateColumns();
 
         updateStatusMessage(tr("Closed vault"));
+        updateRecentsMenu();
     });
 
     // status updates
@@ -478,6 +481,7 @@ void MainWindow::newVault(QString fileName)
     {
         synchedVault.openVault(fileName.toStdString(), true, SCHEMA_VERSION, getCoinParams().network_name());
         updateVaultStatus(fileName);
+        addToRecents(fileName);
     }
     catch (const CoinDB::VaultFailedToOpenDatabaseException& e)
     {
@@ -532,6 +536,7 @@ void MainWindow::openVault(QString fileName)
         synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name());
         updateVaultStatus(fileName);
         updateStatusMessage(tr("Opened ") + fileName);
+        addToRecents(fileName);
         //if (synchedVault.isConnected()) { synchedVault.syncBlocks(); }
         //promptSync();
     }
@@ -1961,6 +1966,8 @@ void MainWindow::createMenus()
     fileMenu = menuBar()->addMenu(tr("&File"));
     fileMenu->addAction(newVaultAction);
     fileMenu->addAction(openVaultAction);
+    recentsMenu = fileMenu->addMenu(tr("Open Recent"));
+
     fileMenu->addAction(closeVaultAction);
     fileMenu->addSeparator();
     fileMenu->addAction(importVaultAction);
@@ -2149,5 +2156,54 @@ void MainWindow::clearSettings()
 void MainWindow::loadVault(const QString &fileName)
 {
     synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name());
+}
+
+void MainWindow::addToRecents(const QString& fileName)
+{
+    while (recents.removeOne(fileName));
+    recents.prepend(fileName);
+    while (recents.size() > MAX_RECENTS) { recents.removeLast(); }
+    saveRecents();
+}
+
+void MainWindow::loadRecents()
+{
+    QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
+
+    recents.clear();
+    int nRecents = settings.beginReadArray("recents");
+    for (int i = 0; i < nRecents && recents.size() <= MAX_RECENTS; i++)
+    {
+        settings.setArrayIndex(i);
+        QString filename = settings.value("recentfile").toString();
+        if (recents.count(filename)) continue;
+        recents.append(filename);
+    }
+    settings.endArray();
+}
+
+void MainWindow::saveRecents()
+{
+    QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
+
+    settings.beginWriteArray("recents");
+    for (int i = 0; i < recents.size(); i++)
+    {
+        settings.setArrayIndex(i);
+        settings.setValue("recentfile", recents.at(i)); 
+    }
+    settings.endArray();
+}
+
+// createMenus() must be called before calling updateRecentsMenu()
+void MainWindow::updateRecentsMenu()
+{
+    recentsMenu->clear();
+    for (auto& recent: recents)
+    {
+        QFileInfo fileInfo(recent);
+        QAction* action = recentsMenu->addAction(fileInfo.fileName());
+        connect(action, &QAction::triggered, [=]() { openVault(recent); });
+    } 
 }
 
