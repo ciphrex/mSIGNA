@@ -2054,15 +2054,18 @@ void MainWindow::createToolBars()
     // TODO: rename toolbars more appropriately
 
     fileToolBar = addToolBar(tr("File"));
+    fileToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     fileToolBar->addAction(newVaultAction);
     fileToolBar->addAction(openVaultAction);
     fileToolBar->addAction(closeVaultAction);
 
     accountToolBar = addToolBar(tr("Accounts"));
+    accountToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     accountToolBar->addAction(requestPaymentAction);
     accountToolBar->addAction(sendPaymentAction);
 
     keychainToolBar = addToolBar(tr("Keychains"));
+    keychainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     keychainToolBar->addAction(quickNewAccountAction);
     keychainToolBar->addAction(newKeychainAction);
     keychainToolBar->addAction(newAccountAction);
