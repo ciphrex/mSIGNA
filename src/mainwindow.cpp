@@ -8,6 +8,8 @@
 //
 // All Rights Reserved.
 
+#include "mainwindow.h"
+
 #include <QtWidgets>
 #include <QDir>
 #include <QTreeWidgetItem>
@@ -22,8 +24,6 @@
 //#include "copyrightinfo.h"
 
 #include "stylesheets.h"
-
-#include "mainwindow.h"
 
 // Random
 #include "entropysource.h"
