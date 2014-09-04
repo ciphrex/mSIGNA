@@ -32,7 +32,7 @@ public:
     bool isPrivate(const QString& keychainName) const;
     bool isLocked(const QString& keychainName) const;
     bool isEncrypted(const QString& keychainName) const;
-    void unlockKeychain(const QString& keychainName, const secure_bytes_t& unlockKey);
+    void unlockKeychain(const QString& keychainName, const secure_bytes_t& unlockKey = secure_bytes_t());
     void lockKeychain(const QString& keychainName);
     void lockAllKeychains();
     void encryptKeychain(const QString& keychainName, const secure_bytes_t& lockKey = secure_bytes_t());

@@ -730,14 +730,23 @@ void MainWindow::setKeychainPassphrase()
         return;
     }
 
-    if (keychainModel->getStatus(row) != KeychainModel::UNLOCKED)
+    int status = keychainModel->getStatus(row);
+
+    if (status == KeychainModel::PUBLIC)
     {
-        showError(tr("Keychain is not unlocked."));
+        showError(tr("Keychain is public."));
         return;
     }
 
     QStandardItem* nameItem = keychainModel->item(row, 0);
     QString name = nameItem->text();
+
+    bool bLocked = status == KeychainModel::LOCKED;
+    if (bLocked && keychainModel->isEncrypted(row))
+    {
+        showError(tr("Keychain must first be unlocked."));
+        return;
+    }
 
     SetPassphraseDialog dlg(tr("keychain \"") + name + "\"", tr("WARNING: IF YOU FORGET THIS PASSPHRASE THERE IS NO WAY TO RECOVER IT!!!"), this);
     while (dlg.exec())
@@ -750,14 +759,18 @@ void MainWindow::setKeychainPassphrase()
                 if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"),
                     tr("You did not enter a passphrase. Are you sure you want to remove keychain encryption from ") + name + "?"))
                 {
+                    if (bLocked) { keychainModel->unlockKeychain(name); }
                     keychainModel->decryptKeychain(name);
+                    if (bLocked) { keychainModel->lockKeychain(name); }
                     return;
                 }
             }
             else
             {
                 secure_bytes_t hash = passphraseHash(dlg.getPassphrase().toStdString());
+                if (bLocked) { keychainModel->unlockKeychain(name); }
                 keychainModel->encryptKeychain(name, hash); 
+                if (bLocked) { keychainModel->lockKeychain(name); }
                 return;
             }
         }
@@ -912,7 +925,7 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
 
         unlockKeychainAction->setEnabled(status == KeychainModel::LOCKED);
         lockKeychainAction->setEnabled(status == KeychainModel::UNLOCKED);
-        setKeychainPassphraseAction->setEnabled(status == KeychainModel::UNLOCKED);
+        setKeychainPassphraseAction->setEnabled(status == KeychainModel::UNLOCKED || (status == KeychainModel::LOCKED && !keychainModel->isEncrypted(row)));
         exportPrivateKeychainAction->setEnabled(status == KeychainModel::UNLOCKED);
         exportPublicKeychainAction->setEnabled(true);
         backupKeychainAction->setEnabled(true);
