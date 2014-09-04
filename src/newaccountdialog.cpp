@@ -15,6 +15,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QComboBox>
 #include <QLabel>
 #include <QDateTimeEdit>
@@ -48,6 +49,9 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& keychainNames, QWidget*
     nameLayout->setSizeConstraint(QLayout::SetNoConstraint);
     nameLayout->addWidget(nameLabel);
     nameLayout->addWidget(nameEdit);
+
+    // Keychain List Widget
+    keychainListWidget = new QListWidget();
 
     // Keychain Names
     minSigComboBox = new QComboBox();
@@ -100,6 +104,7 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& keychainNames, QWidget*
     QVBoxLayout *mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
     mainLayout->addLayout(nameLayout);
+    mainLayout->addWidget(keychainListWidget);
     mainLayout->addLayout(keychainLayout);
     mainLayout->addLayout(minSigLayout);
     mainLayout->addLayout(creationTimeLayout);

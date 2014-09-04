@@ -11,6 +11,7 @@
 #pragma once
 
 class QLineEdit;
+class QListWidget;
 class QComboBox;
 class QDateTimeEdit;
 class QCalendarWidget;
@@ -33,6 +34,7 @@ public:
 
 private:
     QLineEdit* nameEdit;
+    QListWidget* keychainListWidget;
     QLineEdit* keychainEdit;
     QComboBox* minSigComboBox;
     QLineEdit* minSigLineEdit;
