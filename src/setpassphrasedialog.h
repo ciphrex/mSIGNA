@@ -21,7 +21,7 @@ class SetPassphraseDialog : public QDialog
     Q_OBJECT
 
 public:
-    SetPassphraseDialog(const QString& prompt, const QString& additionalText, QWidget* parent = NULL);
+    SetPassphraseDialog(const QString& objectName, const QString& additionalText, QWidget* parent = NULL);
 
     QString getPassphrase() const;
 

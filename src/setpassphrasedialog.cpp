@@ -16,7 +16,7 @@
 #include <QLineEdit>
 #include <QLabel>
 
-SetPassphraseDialog::SetPassphraseDialog(const QString& prompt, const QString& additionalText, QWidget* parent)
+SetPassphraseDialog::SetPassphraseDialog(const QString& objectName, const QString& additionalText, QWidget* parent)
     : QDialog(parent)
 {
     // Buttons
@@ -26,9 +26,9 @@ SetPassphraseDialog::SetPassphraseDialog(const QString& prompt, const QString& a
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
 
-    // Prompt
-    QLabel* promptLabel = new QLabel();
-    promptLabel->setText(prompt);
+    // Prompts
+    QLabel* promptLabel = new QLabel(tr("Enter passphrase for ") + objectName + ":");
+    QLabel* repromptLabel = new QLabel(tr("Enter it again:"));
 
     // Text Edits
     passphrase1Edit = new QLineEdit();
@@ -44,12 +44,13 @@ SetPassphraseDialog::SetPassphraseDialog(const QString& prompt, const QString& a
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
     mainLayout->addWidget(promptLabel);
     mainLayout->addWidget(passphrase1Edit);
+    mainLayout->addWidget(repromptLabel);
     mainLayout->addWidget(passphrase2Edit);
     mainLayout->addWidget(additionalTextLabel);
     mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
 
-    resize(500, 140);
+    setMinimumWidth(500);
 }
 
 QString SetPassphraseDialog::getPassphrase() const
