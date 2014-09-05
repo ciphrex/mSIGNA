@@ -17,28 +17,35 @@ class QDateTimeEdit;
 class QCalendarWidget;
 
 #include <QDialog>
+#include <QSet>
+#include <QList>
+#include <QString>
 
 class NewAccountDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    NewAccountDialog(const QList<QString>& keychainNames, QWidget* parent = NULL);
+    NewAccountDialog(const QList<QString>& allKeychains, const QList<QString>& selectedKeychains, QWidget* parent = nullptr);
     ~NewAccountDialog();
 
     QString getName() const;
-    const QList<QString>& getKeychainNames() const { return keychainNames; }
+    QList<QString> getKeychainNames() const { return keychainSet.toList(); }
     int getMinSigs() const;
 
     qint64 getCreationTime() const;
 
 private:
+    void updateSelection(const QString& keychain, int state);
+    void updateMinSigs();
+    void updateEnabled();
+
     QLineEdit* nameEdit;
     QListWidget* keychainListWidget;
+    QSet<QString> keychainSet;
     QLineEdit* keychainEdit;
     QComboBox* minSigComboBox;
     QLineEdit* minSigLineEdit;
-    QList<QString> keychainNames;
 
     QDateTimeEdit* creationTimeEdit;
     QCalendarWidget* calendarWidget;

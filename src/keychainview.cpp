@@ -18,6 +18,34 @@ KeychainView::KeychainView(QWidget* parent)
 {
 }
 
+QList<QString> KeychainView::getAllKeychains() const
+{
+    QList<QString> keychainNames;
+    if (model())
+    {
+        for (int i = 0; i < model()->rowCount(); i++)
+        {
+            keychainNames << model()->data(model()->index(i, 0)).toString();
+        }
+    }
+    return keychainNames;
+}
+
+QList<QString> KeychainView::getSelectedKeychains() const
+{
+    QList<QString> keychainNames;
+    if (model())
+    {
+        QModelIndexList indexes = selectionModel()->selectedRows(0);
+
+        for (auto& index: indexes)
+        {
+            keychainNames << model()->data(index).toString();
+        }
+    }
+    return keychainNames;
+}
+
 void KeychainView::updateColumns()
 {
     if (!model()) return;

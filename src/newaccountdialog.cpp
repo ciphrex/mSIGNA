@@ -12,10 +12,12 @@
 
 #include <QtAlgorithms>
 #include <QDialogButtonBox>
+#include <QPushButton>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QLabel>
 #include <QDateTimeEdit>
@@ -23,19 +25,22 @@
 
 #include <stdexcept>
 
-NewAccountDialog::NewAccountDialog(const QList<QString>& keychainNames, QWidget* parent)
+NewAccountDialog::NewAccountDialog(const QList<QString>& allKeychains, const QList<QString>& selectedKeychains, QWidget* parent)
     : QDialog(parent)
 {
-    if (keychainNames.isEmpty()) {
+    if (allKeychains.isEmpty()) {
         throw std::runtime_error("Names list cannot be empty.");
     }
 
-    this->keychainNames = keychainNames;
-    qSort(this->keychainNames.begin(), this->keychainNames.end());
+    keychainSet = selectedKeychains.toSet();
+
+    QList<QString> keychains = allKeychains;
+    qSort(keychains.begin(), keychains.end());
 
     // Buttons
     QDialogButtonBox* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok
                                      | QDialogButtonBox::Cancel);
+    buttonBox->button(QDialogButtonBox::Ok)->setEnabled(false);
 
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
@@ -51,7 +56,17 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& keychainNames, QWidget*
     nameLayout->addWidget(nameEdit);
 
     // Keychain List Widget
+    QLabel* selectionLabel = new QLabel(tr("Select keychains:"));
     keychainListWidget = new QListWidget();
+    for (auto& keychain: keychains)
+    {
+        QCheckBox* checkBox = new QCheckBox(keychain);
+        checkBox->setCheckState(selectedKeychains.count(keychain) ? Qt::Checked : Qt::Unchecked);
+        connect(checkBox, &QCheckBox::stateChanged, [=](int state) { updateSelection(keychain, state); });
+        QListWidgetItem* item = new QListWidgetItem();
+        keychainListWidget->addItem(item);
+        keychainListWidget->setItemWidget(item, checkBox);
+    }
 
     // Keychain Names
     minSigComboBox = new QComboBox();
@@ -63,9 +78,9 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& keychainNames, QWidget*
     keychainLabel->setText(tr("Keychains:"));
 
     QString keychainText;
-    for (int i = 0; i < keychainNames.size(); i++) {
+    for (int i = 0; i < keychains.size(); i++) {
         if (i != 0) { keychainText += ", "; }
-        keychainText += keychainNames.at(i);
+        keychainText += keychains.at(i);
         minSigComboBox->addItem(QString::number(i + 1));        
     }
     keychainEdit = new QLineEdit();
@@ -104,6 +119,7 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& keychainNames, QWidget*
     QVBoxLayout *mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
     mainLayout->addLayout(nameLayout);
+    mainLayout->addWidget(selectionLabel);
     mainLayout->addWidget(keychainListWidget);
     mainLayout->addLayout(keychainLayout);
     mainLayout->addLayout(minSigLayout);
@@ -130,5 +146,28 @@ int NewAccountDialog::getMinSigs() const
 qint64 NewAccountDialog::getCreationTime() const
 {
     return creationTimeEdit->dateTime().toMSecsSinceEpoch();
+}
+
+void NewAccountDialog::updateSelection(const QString& keychain, int state)
+{
+    if (state == Qt::Checked)
+    {
+        keychainSet.insert(keychain);
+    }
+    else
+    {
+        keychainSet.remove(keychain);
+    }
+
+    updateMinSigs();
+    updateEnabled();
+}
+
+void NewAccountDialog::updateMinSigs()
+{
+}
+
+void NewAccountDialog::updateEnabled()
+{
 }
 

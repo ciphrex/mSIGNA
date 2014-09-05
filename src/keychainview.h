@@ -13,6 +13,8 @@
 class QMenu;
 
 #include <QTreeView>
+#include <QList>
+#include <QString>
 
 class KeychainView : public QTreeView
 {
@@ -22,6 +24,9 @@ public:
     KeychainView(QWidget* parent = NULL);
 
     void setMenu(QMenu* menu) { this->menu = menu; }
+
+    QList<QString> getAllKeychains() const;
+    QList<QString> getSelectedKeychains() const;
 
 public slots:
     void updateColumns();

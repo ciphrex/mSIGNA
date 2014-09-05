@@ -1086,16 +1086,8 @@ void MainWindow::quickNewAccount()
 
 void MainWindow::newAccount()
 {
-    QItemSelectionModel* selectionModel = keychainView->selectionModel();
-    QModelIndexList indexes = selectionModel->selectedRows(0);
-
-    QList<QString> keychainNames;
-    for (auto& index: indexes) {
-        keychainNames << keychainModel->data(index).toString();
-    }
-
     try {
-        NewAccountDialog dlg(keychainNames, this);
+        NewAccountDialog dlg(keychainView->getAllKeychains(), keychainView->getSelectedKeychains(), this);
         if (dlg.exec()) {
             accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames(), dlg.getCreationTime());
             accountView->updateColumns();
