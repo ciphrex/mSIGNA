@@ -15,6 +15,7 @@ class QListWidget;
 class QComboBox;
 class QDateTimeEdit;
 class QCalendarWidget;
+class QPushButton;
 
 #include <QDialog>
 #include <QSet>
@@ -49,5 +50,7 @@ private:
 
     QDateTimeEdit* creationTimeEdit;
     QCalendarWidget* calendarWidget;
+
+    QPushButton* okButton;
 };
 
