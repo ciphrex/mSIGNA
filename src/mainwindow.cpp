@@ -780,7 +780,7 @@ void MainWindow::setKeychainPassphrase()
                 secure_bytes_t hash = passphraseHash(dlg.getPassphrase().toStdString());
                 if (bLocked) { keychainModel->unlockKeychain(name); }
                 keychainModel->encryptKeychain(name, hash); 
-                if (bLocked) { keychainModel->lockKeychain(name); }
+                keychainModel->lockKeychain(name);
                 return;
             }
         }
