@@ -742,7 +742,8 @@ void MainWindow::setKeychainPassphrase()
     QString name = nameItem->text();
 
     bool bLocked = status == KeychainModel::LOCKED;
-    if (bLocked && keychainModel->isEncrypted(row))
+    bool bEncrypted = keychainModel->isEncrypted(row);
+    if (bLocked && bEncrypted)
     {
         showError(tr("Keychain must first be unlocked."));
         return;
@@ -756,8 +757,17 @@ void MainWindow::setKeychainPassphrase()
             QString passphrase = dlg.getPassphrase();
             if (passphrase.isEmpty())
             {
-                if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"),
-                    tr("You did not enter a passphrase. Are you sure you want to remove keychain encryption from ") + name + "?"))
+                QString prompt(tr("You did not enter a passphrase."));
+                if (bEncrypted)
+                {
+                    prompt += tr(" Are you sure you want to remove keychain encryption from ") + name + "?";
+                }
+                else
+                {
+                    prompt += tr(" Leave keychain ") + name + tr(" unencrypted?");
+                } 
+                    
+                if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"), prompt))
                 {
                     if (bLocked) { keychainModel->unlockKeychain(name); }
                     keychainModel->decryptKeychain(name);
