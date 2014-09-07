@@ -1848,7 +1848,7 @@ void MainWindow::createActions()
     quickNewAccountAction->setEnabled(false);
     connect(quickNewAccountAction, SIGNAL(triggered()), this, SLOT(quickNewAccount()));
 
-    newAccountAction = new QAction(QIcon(":/icons/money.png"), tr("Create &Account..."), this);
+    newAccountAction = new QAction(QIcon(":/icons/money.png"), tr("New &Account..."), this);
     newAccountAction->setStatusTip(tr("Create a new account with selected keychains"));
     newAccountAction->setEnabled(false);
     connect(newAccountAction, SIGNAL(triggered()), this, SLOT(newAccount()));
@@ -2094,9 +2094,9 @@ void MainWindow::createToolBars()
 
     keychainToolBar = addToolBar(tr("Keychains"));
     keychainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    keychainToolBar->addAction(quickNewAccountAction);
     keychainToolBar->addAction(newKeychainAction);
     keychainToolBar->addAction(newAccountAction);
+    keychainToolBar->addAction(quickNewAccountAction);
 
     networkToolBar = addToolBar(tr("Network"));
     networkToolBar->addAction(connectAction);
