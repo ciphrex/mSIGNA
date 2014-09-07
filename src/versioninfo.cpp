@@ -19,7 +19,7 @@
 const int VERSIONPADDINGRIGHT = 20;
 const int VERSIONPADDINGBOTTOM = 30;
  
-const QString VERSIONTEXT("0.7.3 beta");
+const QString VERSIONTEXT("0.7.4 beta");
 
 const QString commitHash(COMMIT_HASH);
 const QString shortCommitHash(QString(COMMIT_HASH).left(7));
@@ -42,6 +42,6 @@ const QString& getShortCommitHash() { return shortCommitHash; }
 uint32_t getSchemaVersion() { return schemaVersion; }
 const QString& getSchemaVersionText() { return schemaVersionText; } 
 
-uint32_t getOpenSSLVersionNumber() { return OPENSSL_VERSION_NUMBER; }
+uint32_t getOpenSSLVersionNumber() { return openSSLVersionNumber; }
 const QString& getOpenSSLVersionText() { return openSSLVersionText; }
 
