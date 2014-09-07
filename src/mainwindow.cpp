@@ -2000,8 +2000,8 @@ void MainWindow::createMenus()
     fileMenu->addAction(quitAction);    
 
     accountMenu = menuBar()->addMenu(tr("&Accounts"));
-    accountMenu->addAction(requestPaymentAction);
     accountMenu->addAction(sendPaymentAction);
+    accountMenu->addAction(requestPaymentAction);
     accountMenu->addSeparator();
     //accountMenu->addAction(deleteAccountAction);
     //accountMenu->addSeparator();
@@ -2089,8 +2089,8 @@ void MainWindow::createToolBars()
 
     accountToolBar = addToolBar(tr("Accounts"));
     accountToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    accountToolBar->addAction(requestPaymentAction);
     accountToolBar->addAction(sendPaymentAction);
+    accountToolBar->addAction(requestPaymentAction);
 
     keychainToolBar = addToolBar(tr("Keychains"));
     keychainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
