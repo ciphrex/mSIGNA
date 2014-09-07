@@ -29,7 +29,7 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& allKeychains, const QLi
     : QDialog(parent)
 {
     if (allKeychains.isEmpty()) {
-        throw std::runtime_error("Names list cannot be empty.");
+        throw std::runtime_error(tr("You must first create at least one keychain.").toStdString());
     }
 
     keychainSet = selectedKeychains.toSet();

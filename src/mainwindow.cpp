@@ -944,9 +944,11 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
 
 void MainWindow::updateSelectedKeychains(const QItemSelection& /*selected*/, const QItemSelection& /*deselected*/)
 {
+/*
     int selectionCount = keychainView->selectionModel()->selectedRows(0).size();
     bool isSelected = selectionCount > 0;
     newAccountAction->setEnabled(isSelected);
+*/
 }
 
 bool MainWindow::selectAccount(int i)
@@ -1100,7 +1102,7 @@ void MainWindow::newAccount()
     }
     catch (const exception& e) {
         // TODO: Handle other possible errors.
-        showError(tr("No keychains selected."));
+        showError(e.what());
     }
 }
 
