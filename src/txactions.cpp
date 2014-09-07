@@ -420,11 +420,11 @@ void TxActions::deleteTx()
 
 void TxActions::createActions()
 {
-    searchTxAction = new QAction(tr("Search For Transaction..."), this);
+    searchTxAction = new QAction(QIcon(":/icons/search_32x32.png"), tr("Search For Transaction..."), this);
     searchTxAction->setEnabled(false);
     connect(searchTxAction, SIGNAL(triggered()), this, SLOT(searchTx()));
 
-    signaturesAction = new QAction(tr("Signatures..."), this);
+    signaturesAction = new QAction(QIcon(":/icons/glossy-black-signature_32x32.png"), tr("Signatures..."), this);
     signaturesAction->setEnabled(false);
     connect(signaturesAction, SIGNAL(triggered()), this, SLOT(showSignatureDialog()));
 
@@ -432,7 +432,7 @@ void TxActions::createActions()
     signTxAction->setEnabled(false);
     connect(signTxAction, SIGNAL(triggered()), this, SLOT(signTx()));
 
-    sendTxAction = new QAction(tr("Send Transaction"), this);
+    sendTxAction = new QAction(QIcon(":/icons/send_32x32.png"), tr("Send Transaction"), this);
     sendTxAction->setEnabled(false);
     connect(sendTxAction, SIGNAL(triggered()), this, SLOT(sendTx()));
 
@@ -480,8 +480,8 @@ void TxActions::createActions()
 void TxActions::createMenus()
 {
     menu = new QMenu(tr("&Transactions"));
-    menu->addAction(sendTxAction);
     menu->addAction(signaturesAction);
+    menu->addAction(sendTxAction);
     menu->addSeparator();
     //menu->addAction(signTxAction);
     menu->addAction(exportTxToFileAction);

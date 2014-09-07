@@ -1858,7 +1858,7 @@ void MainWindow::createActions()
     quickNewAccountAction->setEnabled(false);
     connect(quickNewAccountAction, SIGNAL(triggered()), this, SLOT(quickNewAccount()));
 
-    newAccountAction = new QAction(QIcon(":/icons/money.png"), tr("New &Account..."), this);
+    newAccountAction = new QAction(QIcon(":/icons/account_32x32.png"), tr("New &Account..."), this);
     newAccountAction->setStatusTip(tr("Create a new account with selected keychains"));
     newAccountAction->setEnabled(false);
     connect(newAccountAction, SIGNAL(triggered()), this, SLOT(newAccount()));
@@ -1997,7 +1997,7 @@ void MainWindow::createMenus()
     fileMenu = menuBar()->addMenu(tr("&File"));
     fileMenu->addAction(newVaultAction);
     fileMenu->addAction(openVaultAction);
-    recentsMenu = fileMenu->addMenu(tr("Open Recent"));
+    recentsMenu = fileMenu->addMenu(QIcon(":/icons/open_recent_32x32.png"), tr("Open Recent"));
 
     fileMenu->addAction(closeVaultAction);
     fileMenu->addSeparator();
@@ -2038,8 +2038,6 @@ void MainWindow::createMenus()
 */
 
     keychainMenu = menuBar()->addMenu(tr("&Keychains"));
-    keychainMenu->addAction(quickNewAccountAction);
-    keychainMenu->addSeparator();
     keychainMenu->addAction(newAccountAction);
     keychainMenu->addAction(newKeychainAction);
     keychainMenu->addSeparator();
@@ -2057,7 +2055,11 @@ void MainWindow::createMenus()
     keychainMenu->addAction(exportPrivateKeychainAction);
     keychainMenu->addAction(exportPublicKeychainAction);
     keychainMenu->addSeparator();
+    keychainMenu->addAction(quickNewAccountAction);
+/*
+    keychainMenu->addSeparator();
     keychainMenu->addAction(backupKeychainAction);
+*/
 
     networkMenu = menuBar()->addMenu(tr("&Network"));
     networkMenu->addAction(connectAction);
