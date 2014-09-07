@@ -1089,7 +1089,17 @@ void MainWindow::quickNewAccount()
 void MainWindow::newAccount()
 {
     try {
-        NewAccountDialog dlg(keychainView->getAllKeychains(), keychainView->getSelectedKeychains(), this);
+        QList<QString> allKeychains = keychainView->getAllKeychains();
+        if (allKeychains.size() == 0)
+        {
+            QMessageBox msgBox;
+            msgBox.setText(tr("No keychains exist in this vault. In order to create an account you need to have at least one keychain. Would you like to create one now?"));
+            msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+            msgBox.setDefaultButton(QMessageBox::Yes);
+            if (msgBox.exec() == QMessageBox::Yes) { newKeychain(); }
+            return;
+        }
+        NewAccountDialog dlg(allKeychains, keychainView->getSelectedKeychains(), this);
         if (dlg.exec()) {
             accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames(), dlg.getCreationTime());
             accountView->updateColumns();
@@ -2030,8 +2040,8 @@ void MainWindow::createMenus()
     keychainMenu = menuBar()->addMenu(tr("&Keychains"));
     keychainMenu->addAction(quickNewAccountAction);
     keychainMenu->addSeparator();
-    keychainMenu->addAction(newKeychainAction);
     keychainMenu->addAction(newAccountAction);
+    keychainMenu->addAction(newKeychainAction);
     keychainMenu->addSeparator();
     keychainMenu->addAction(unlockKeychainAction);
     keychainMenu->addAction(lockKeychainAction);
@@ -2094,8 +2104,8 @@ void MainWindow::createToolBars()
 
     keychainToolBar = addToolBar(tr("Keychains"));
     keychainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
-    keychainToolBar->addAction(newKeychainAction);
     keychainToolBar->addAction(newAccountAction);
+    keychainToolBar->addAction(newKeychainAction);
     keychainToolBar->addAction(quickNewAccountAction);
 
     networkToolBar = addToolBar(tr("Network"));
