@@ -13,7 +13,10 @@
 #include <iostream>
 #include <istream>
 #include <ostream>
-//#include <boost/asio.hpp>
+#include <sstream>
+#include <iostream>
+#include <boost/asio.hpp>
+//#include <boost/asio/ssl.hpp>
 
 void UrlParser::parse(const std::string& url)
 {
@@ -78,16 +81,20 @@ void UrlParser::parse(const std::string& url)
 
 void LatestVersionInfo::download(const std::string& url)
 {
-/*
-    using namespace boost::asio::ip::tcp;
+    UrlParser urlParser(url);
 
+    using boost::asio::ip::tcp;
+
+    //boost::asio::ssl::context ctx(boost::asio::ssl::context::sslv23);
+    
     boost::asio::io_service io_service;
 
     tcp::resolver resolver(io_service);
-    tcp::resolver::query query(url, "https");
+    tcp::resolver::query query(urlParser.getHost(), urlParser.getService());
     tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
     tcp::resolver::iterator end;
 
+    //boost::asio::ssl::stream<boost::asio::ip::tcp::socket> socket(io_service, ctx);
     tcp::socket socket(io_service);
     boost::system::error_code error = boost::asio::error::host_not_found;
     while (error && endpoint_iterator != end)
@@ -99,8 +106,45 @@ void LatestVersionInfo::download(const std::string& url)
 
     boost::asio::streambuf request;
     std::ostream request_stream(&request);
-    request_stream << "GET " 
+    request_stream << "GET " << urlParser.getPath() << " HTTP/1.1\r\n";
+    request_stream << "Host: " << urlParser.getHost() << "\r\n";
+    request_stream << "Accept: */*\r\n";
+    request_stream << "Connection: close\r\n\r\n";
+
+    boost::asio::write(socket, request);
+
+    boost::asio::streambuf response;
+/*
+    boost::asio::read_until(socket, response, "\r\n");
+    std::cout << &response << std::endl;
+
+    std::istream response_stream(&response);
+    std::string http_version;
+    response_stream >> http_version;
+    unsigned int status_code;
+    response_stream >> status_code;
+    std::string status_message;
+    std::getline(response_stream, status_message);
+    if (!response_stream || http_version.substr(0, 5) != "HTTP/") throw std::runtime_error("Invalid response.");
+    if (status_code != 200)
+    {
+        std::stringstream err;
+        err << "Response return with status code " << status_code << ".";
+        throw std::runtime_error(err.str());
+    }
 */
+    //boost::asio::read_until(socket, response, "\r\n\r\n");
+
+    // Ignore headers
+
+    std::stringstream content;
+    while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error))
+    {
+        content << &response;
+    }
+    if (error != boost::asio::error::eof) throw boost::system::system_error(error);
+
+    std::cout << content.str();
 }
 
 /*

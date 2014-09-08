@@ -12,6 +12,7 @@
 
 #include <string>
 #include <stdexcept>
+#include <boost/asio/error.hpp>
 
 class UrlParser
 {
