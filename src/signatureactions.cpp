@@ -95,10 +95,7 @@ void SignatureActions::addSignature()
         }
 
         QString currentKeychain = m_currentKeychain;
-        if (vault->isKeychainLocked(m_currentKeychain.toStdString()))
-        { 
-            unlockKeychain();
-        }
+        if (vault->isKeychainLocked(m_currentKeychain.toStdString()) && !unlockKeychain()) return;
 
         std::vector<std::string> keychainNames;
         keychainNames.push_back(currentKeychain.toStdString());
@@ -139,7 +136,7 @@ void SignatureActions::addSignature()
     }
 }
 
-void SignatureActions::unlockKeychain()
+bool SignatureActions::unlockKeychain()
 {
     try
     {
@@ -151,14 +148,14 @@ void SignatureActions::unlockKeychain()
         if (!vault->isKeychainLocked(keychainName))
         {
             QMessageBox::critical(nullptr, tr("Error"), tr("Keychain is already unlocked."));
-            return;
+            return true;
         }
 
         secure_bytes_t lockKey;
         if (vault->isKeychainEncrypted(keychainName))
         {
             PassphraseDialog dlg(tr("Please enter the decryption passphrase for ") + m_currentKeychain + ":");
-            if (!dlg.exec()) return;
+            if (!dlg.exec()) return false;
             lockKey = passphraseHash(dlg.getPassphrase().toStdString());
         }
 
@@ -169,11 +166,15 @@ void SignatureActions::unlockKeychain()
     catch (const CoinDB::KeychainPrivateKeyUnlockFailedException& e)
     {
         emit error(tr("Keychain decryption failed."));
+	return false;
     }
     catch (const std::exception& e)
     {
         emit error(e.what());
+        return false;
     }
+
+    return true;
 }
 
 void SignatureActions::lockKeychain()

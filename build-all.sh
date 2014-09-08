@@ -123,7 +123,7 @@ make install
 
 cd ../CoinDB
 make lib $OPTIONS
-make install_lib
+make install_lib $OPTIONS
 
 if [ $libs_only ]
 then

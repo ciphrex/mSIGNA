@@ -42,7 +42,7 @@ signals:
 private slots:
     void updateCurrentKeychain(const QModelIndex& current, const QModelIndex& previous);
     void addSignature();
-    void unlockKeychain();
+    bool unlockKeychain();
     void lockKeychain();
 
 private:

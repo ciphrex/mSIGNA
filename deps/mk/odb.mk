@@ -20,6 +20,10 @@ else
     $(error DB must be set to sqlite or mysql)
 endif
 
+ifdef SYSROOT
+    ODB_INCLUDE_PATH += -I$(SYSROOT)/include
+endif
+
 ifdef LOCAL_SYSROOT
     ODB_INCLUDE_PATH += -I$(LOCAL_SYSROOT)/include
 endif
