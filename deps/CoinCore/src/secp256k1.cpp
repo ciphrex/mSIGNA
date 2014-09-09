@@ -26,6 +26,7 @@
 //      Copyright (c) 2009-2013 Satoshi Nakamoto, the Bitcoin developers
 
 #include "secp256k1.h"
+#include "hash.h"
 
 #include <string>
 #include <cassert>
@@ -157,6 +158,26 @@ bytes_t CoinCrypto::secp256k1_sign(const secp256k1_key& key, const bytes_t& data
 bool CoinCrypto::secp256k1_verify(const secp256k1_key& key, const bytes_t& data, const bytes_t& signature)
 {
     return (ECDSA_verify(0, (const unsigned char*)&data[0], data.size(), (const unsigned char*)&signature[0], signature.size(), key.getKey()) != 0);
+}
+
+bytes_t CoinCrypto::secp256k1_rfc6979_k(const secp256k1_key& key, const bytes_t& data)
+{
+    uchar_vector hash = sha256(data);
+    uchar_vector v("0101010101010101010101010101010101010101010101010101010101010101");
+    uchar_vector k("0000000000000000000000000000000000000000000000000000000000000000");
+    uchar_vector privkey = key.getPrivKey();
+    k = hmac_sha256(k, v + uchar_vector("00") + privkey + hash);
+    v = hmac_sha256(k, v);
+    k = hmac_sha256(k, v + uchar_vector("01") + privkey + hash);
+    v = hmac_sha256(k, v);
+    v = hmac_sha256(k, v);
+
+    return v; 
+}
+
+bytes_t secp256k1_sign_rfc6979(const secp256k1_key& key, const bytes_t& data)
+{
+    return bytes_t();
 }
 
 secp256k1_point::secp256k1_point(const secp256k1_point& source)

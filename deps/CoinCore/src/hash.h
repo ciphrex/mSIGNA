@@ -88,6 +88,12 @@ inline uchar_vector sha1(const uchar_vector& data)
     return rval;
 }
 
+inline uchar_vector hmac_sha256(const uchar_vector& key, const uchar_vector& data)
+{
+    unsigned char* digest = HMAC(EVP_sha256(), (unsigned char*)&key[0], key.size(), (unsigned char*)&data[0], data.size(), NULL, NULL);
+    return uchar_vector(digest, 32);
+}
+
 inline uchar_vector hmac_sha512(const uchar_vector& key, const uchar_vector& data)
 {
     unsigned char* digest = HMAC(EVP_sha512(), (unsigned char*)&key[0], key.size(), (unsigned char*)&data[0], data.size(), NULL, NULL);
