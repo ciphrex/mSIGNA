@@ -38,6 +38,11 @@ int main(int argc, char* argv[])
 
         uchar_vector k = secp256k1_rfc6979_k(key, data);
         cout << "k = " << k.getHex() << endl;
+
+        cout << "Signing..." << endl;
+        uchar_vector sig = secp256k1_sign_rfc6979(key, data);
+        cout << "Signature: " << sig.getHex() << endl;
+        cout << "Valid: " << (secp256k1_verify(key, data, sig) ? "TRUE" : "FALSE") << endl << endl;
     }
     catch (const exception& e)
     {

@@ -143,42 +143,6 @@ EC_KEY* secp256k1_key::setPubKey(const bytes_t& pubkey)
 }
 
 
-// Signing function
-bytes_t CoinCrypto::secp256k1_sign(const secp256k1_key& key, const bytes_t& data)
-{
-    unsigned char signature[1024];
-    unsigned int nSize = 0;
-    if (!ECDSA_sign(0, (const unsigned char*)&data[0], data.size(), signature, &nSize, key.getKey())) {
-        throw std::runtime_error("secp256k1_sign(): ECDSA_sign failed.");
-    }
-    return bytes_t(signature, signature + nSize);
-}
-
-// Verification function
-bool CoinCrypto::secp256k1_verify(const secp256k1_key& key, const bytes_t& data, const bytes_t& signature)
-{
-    return (ECDSA_verify(0, (const unsigned char*)&data[0], data.size(), (const unsigned char*)&signature[0], signature.size(), key.getKey()) != 0);
-}
-
-bytes_t CoinCrypto::secp256k1_rfc6979_k(const secp256k1_key& key, const bytes_t& data)
-{
-    uchar_vector hash = sha256(data);
-    uchar_vector v("0101010101010101010101010101010101010101010101010101010101010101");
-    uchar_vector k("0000000000000000000000000000000000000000000000000000000000000000");
-    uchar_vector privkey = key.getPrivKey();
-    k = hmac_sha256(k, v + uchar_vector("00") + privkey + hash);
-    v = hmac_sha256(k, v);
-    k = hmac_sha256(k, v + uchar_vector("01") + privkey + hash);
-    v = hmac_sha256(k, v);
-    v = hmac_sha256(k, v);
-
-    return v; 
-}
-
-bytes_t secp256k1_sign_rfc6979(const secp256k1_key& key, const bytes_t& data)
-{
-    return bytes_t();
-}
 
 secp256k1_point::secp256k1_point(const secp256k1_point& source)
 {
@@ -340,3 +304,75 @@ finish:
     throw std::runtime_error(std::string("secp256k1_point::init() - ") + err);
 }
 
+// Signing function
+bytes_t CoinCrypto::secp256k1_sign(const secp256k1_key& key, const bytes_t& data)
+{
+    unsigned char signature[1024];
+    unsigned int nSize = 0;
+    if (!ECDSA_sign(0, (const unsigned char*)&data[0], data.size(), signature, &nSize, key.getKey())) {
+        throw std::runtime_error("secp256k1_sign(): ECDSA_sign failed.");
+    }
+    return bytes_t(signature, signature + nSize);
+}
+
+// Verification function
+bool CoinCrypto::secp256k1_verify(const secp256k1_key& key, const bytes_t& data, const bytes_t& signature)
+{
+    return (ECDSA_verify(0, (const unsigned char*)&data[0], data.size(), (const unsigned char*)&signature[0], signature.size(), key.getKey()) != 0);
+}
+
+bytes_t CoinCrypto::secp256k1_rfc6979_k(const secp256k1_key& key, const bytes_t& data)
+{
+    uchar_vector hash = sha256(data);
+    uchar_vector v("0101010101010101010101010101010101010101010101010101010101010101");
+    uchar_vector k("0000000000000000000000000000000000000000000000000000000000000000");
+    uchar_vector privkey = key.getPrivKey();
+    k = hmac_sha256(k, v + uchar_vector("00") + privkey + hash);
+    v = hmac_sha256(k, v);
+    k = hmac_sha256(k, v + uchar_vector("01") + privkey + hash);
+    v = hmac_sha256(k, v);
+    v = hmac_sha256(k, v);
+
+    return v; 
+}
+
+const uchar_vector SECP256K1_FIELD_MOD("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F");
+//const uchar_vector SECP256K1_FIELD_MOD("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
+
+bytes_t CoinCrypto::secp256k1_sign_rfc6979(const secp256k1_key& key, const bytes_t& data)
+{
+    bytes_t k = secp256k1_rfc6979_k(key, data); 
+    BIGNUM* bn = BN_bin2bn(&k[0], k.size(), NULL);
+    if (!bn) throw std::runtime_error("secp256k1_sign_rfc6979() : BN_bin2bn failed for k.");
+
+    BIGNUM* q = BN_bin2bn(&SECP256K1_FIELD_MOD[0], SECP256K1_FIELD_MOD.size(), NULL);
+    if (!q)
+    {
+        BN_clear_free(bn);
+        throw std::runtime_error("secp256k1_sign_rfc6979() : BN_bin2bn failed for field modulus.");
+    }
+
+    BN_CTX* ctx = BN_CTX_new();
+    if (!ctx)
+    {
+        BN_clear_free(bn);
+        BN_clear_free(q);
+        throw std::runtime_error("secp256k1_sign_rfc6979() : BN_CTX_new failed.");
+    }
+
+    BIGNUM* kinv = BN_mod_inverse(NULL, bn, q, ctx);
+    BN_clear_free(bn);
+    BN_clear_free(q);
+    BN_CTX_free(ctx);
+
+    if (!kinv) throw std::runtime_error("secp256k1_sign_rfc6979() : BN_mod_inverse failed.");
+
+    unsigned char signature[1024];
+    unsigned int nSize = 0;
+    int res = ECDSA_sign_ex(0, (const unsigned char*)&data[0], data.size(), signature, &nSize, kinv, NULL, key.getKey());
+    BN_clear_free(kinv);
+    if (!res) throw std::runtime_error("secp256k1_sign_rfc6979(): ECDSA_sign_ex failed.");
+
+    return bytes_t(signature, signature + nSize);
+}
+    
