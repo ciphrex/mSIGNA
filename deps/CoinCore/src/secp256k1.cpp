@@ -31,6 +31,8 @@
 #include <string>
 #include <cassert>
 
+#include <iostream>
+
 using namespace CoinCrypto;
 
 bool static EC_KEY_regenerate_key(EC_KEY* eckey, BIGNUM* priv_key)
@@ -367,10 +369,21 @@ bytes_t CoinCrypto::secp256k1_sign_rfc6979(const secp256k1_key& key, const bytes
 
     if (!kinv) throw std::runtime_error("secp256k1_sign_rfc6979() : BN_mod_inverse failed.");
 
+    unsigned char kinvbytes[32];
+    assert(BN_num_bytes(kinv) <= 32);
+    BN_bn2bin(kinv, kinvbytes);
+    bytes_t kinv_(kinvbytes, kinvbytes + 32);
+    std::cout << "--------------------" << std::endl << uchar_vector(kinv_).getHex() << std::endl;
+
     unsigned char signature[1024];
     unsigned int nSize = 0;
     int res = ECDSA_sign_ex(0, (const unsigned char*)&data[0], data.size(), signature, &nSize, kinv, NULL, key.getKey());
+    assert(BN_num_bytes(kinv) <= 32);
+    BN_bn2bin(kinv, kinvbytes);
+    kinv_.assign(kinvbytes, kinvbytes + 32);
+    std::cout << "--------------------" << std::endl << uchar_vector(kinv_).getHex() << std::endl;
     BN_clear_free(kinv);
+
     if (!res) throw std::runtime_error("secp256k1_sign_rfc6979(): ECDSA_sign_ex failed.");
 
     return bytes_t(signature, signature + nSize);
