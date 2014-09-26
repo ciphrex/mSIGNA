@@ -428,11 +428,11 @@ QVariant TxModel::data(const QModelIndex& index, int role) const
             switch (txOutType)
             {
             case RECEIVE:
-                brush.setColor(QColor(200, 200, 200)); // light gray
+                brush.setColor(QColor(230, 230, 230)); // light gray
                 break;
 
             case SEND:
-                brush.setColor(QColor(177, 177, 250)); // blue
+                brush.setColor(QColor(184, 207, 233)); // light blue
                 break;
             }
 

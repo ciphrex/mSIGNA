@@ -125,7 +125,7 @@ QVariant SignatureModel::data(const QModelIndex& index, int role) const
 {
     if (role == Qt::BackgroundRole)
     {
-        if (getKeychainHasSigned(index.row())) return QBrush(QColor(100, 225, 255)); // light blue
+        if (getKeychainHasSigned(index.row())) return QBrush(QColor(184, 207, 233)); // light blue
     }
 
     return QStandardItemModel::data(index, role);
