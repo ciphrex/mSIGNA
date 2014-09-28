@@ -1863,12 +1863,12 @@ void MainWindow::createActions()
     newAccountAction->setEnabled(false);
     connect(newAccountAction, SIGNAL(triggered()), this, SLOT(newAccount()));
 
-    requestPaymentAction = new QAction(QIcon(":/icons/cashregister.png"), tr("Receive..."), this);
+    requestPaymentAction = new QAction(QIcon(":/icons/left-arrow-icon.png"), tr("Receive..."), this);
     requestPaymentAction->setStatusTip(tr("Create an invoice"));
     requestPaymentAction->setEnabled(false);
     connect(requestPaymentAction, SIGNAL(triggered()), this, SLOT(requestPayment()));
 
-    sendPaymentAction = new QAction(QIcon(":/icons/payment.png"), tr("Send..."), this);
+    sendPaymentAction = new QAction(QIcon(":/icons/right-arrow-icon.png"), tr("Send..."), this);
     sendPaymentAction->setStatusTip(tr("Create a new transaction to send payment"));
     sendPaymentAction->setEnabled(false);
     connect(sendPaymentAction, SIGNAL(triggered()), this, SLOT(createTx()));
