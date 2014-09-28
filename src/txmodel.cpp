@@ -419,7 +419,7 @@ QVariant TxModel::data(const QModelIndex& index, int role) const
 
         if (txStatus == Tx::UNSIGNED && txOutType == SEND)
         {
-            return QBrush(QColor(255, 200, 100), Qt::SolidPattern); // light orange
+            return QBrush(QColor(190, 220, 200), Qt::SolidPattern); // teal
         }
         else
         {

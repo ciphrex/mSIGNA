@@ -16,8 +16,8 @@
 
 void DefaultSettings::load()
 {
-    m_appName = getCoinParams().network_name();
-    m_appName += "Vault";
+    m_appName = "mSIGNA for ";
+    m_appName += getCoinParams().network_name();
     m_settingsRoot = "CoinVault";
     m_networkSettingsPath = m_settingsRoot + "/" + getCoinParams().network_name();
     m_dataDir = QString::fromStdString(getDefaultDataDir(m_appName.toStdString()));
