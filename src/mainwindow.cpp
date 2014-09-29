@@ -378,7 +378,9 @@ void MainWindow::updateNetworkState(network_state_t newState)
         }
 
         connectAction->setEnabled(!isConnected());
+        shortConnectAction->setEnabled(!isConnected());
         disconnectAction->setEnabled(isConnected());
+        shortDisconnectAction->setEnabled(isConnected());
         sendRawTxAction->setEnabled(isConnected());
     }
 }
@@ -1619,6 +1621,7 @@ void MainWindow::startNetworkSync()
 void MainWindow::stopNetworkSync()
 {
     disconnectAction->setEnabled(false);
+    shortDisconnectAction->setEnabled(false);
     try
     {
         updateStatusMessage(tr("Disconnecting..."));
@@ -1939,12 +1942,22 @@ void MainWindow::createActions()
     connectAction->setStatusTip(tr("Connect to a p2p node"));
     connectAction->setEnabled(true);
 
+    shortConnectAction = new QAction(QIcon(":/icons/connect.png"), tr("Connect"), this);
+    shortConnectAction->setStatusTip(tr("Connect to a p2p node"));
+    shortConnectAction->setEnabled(true);
+
     disconnectAction = new QAction(QIcon(":/icons/disconnect.png"), tr("Disconnect from ") + host, this);
     disconnectAction->setStatusTip(tr("Disconnect from p2p node"));
     disconnectAction->setEnabled(false);
 
+    shortDisconnectAction = new QAction(QIcon(":/icons/disconnect.png"), tr("Disconnect"), this);
+    shortDisconnectAction->setStatusTip(tr("Disconnect from p2p node"));
+    shortDisconnectAction->setEnabled(false);
+
     connect(connectAction, SIGNAL(triggered()), this, SLOT(startNetworkSync()));
+    connect(shortConnectAction, SIGNAL(triggered()), this, SLOT(startNetworkSync()));
     connect(disconnectAction, SIGNAL(triggered()), this, SLOT(stopNetworkSync()));
+    connect(shortDisconnectAction, SIGNAL(triggered()), this, SLOT(stopNetworkSync()));
 
     networkSettingsAction = new QAction(tr("Settings..."), this);
     networkSettingsAction->setStatusTip(tr("Configure network settings"));
@@ -2111,8 +2124,9 @@ void MainWindow::createToolBars()
     keychainToolBar->addAction(quickNewAccountAction);
 
     networkToolBar = addToolBar(tr("Network"));
-    networkToolBar->addAction(connectAction);
-    networkToolBar->addAction(disconnectAction);
+    networkToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    networkToolBar->addAction(shortConnectAction);
+    networkToolBar->addAction(shortDisconnectAction);
 }
 
 void MainWindow::createStatusBar()

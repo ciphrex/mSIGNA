@@ -324,7 +324,9 @@ private:
     int port;
     bool autoConnect;
     QAction* connectAction;
+    QAction* shortConnectAction;
     QAction* disconnectAction;
+    QAction* shortDisconnectAction;
     QAction* networkSettingsAction;
 
     // network sync state
