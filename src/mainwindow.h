@@ -100,6 +100,13 @@ signals:
 
     void unsignedTx();
 
+public slots:
+    //////////////////////////////
+    // URL/FILE/COMMAND OPERATIONS
+    void processUrl(const QUrl& url);
+    void processFile(const QString& fileName);
+    void processCommand(const QString& command, const std::vector<QString>& args);
+
 protected:
     void closeEvent(QCloseEvent* event);
     void dragEnterEvent(QDragEnterEvent* event);
@@ -202,12 +209,6 @@ private slots:
     /////////////////
     // STATUS UPDATES
     void errorStatus(const QString& message);
-
-    //////////////////////////////
-    // URL/FILE/COMMAND OPERATIONS
-    void processUrl(const QUrl& url);
-    void processFile(const QString& fileName);
-    void processCommand(const QString& command, const std::vector<QString>& args);
 
 private:
     int fontSize;
