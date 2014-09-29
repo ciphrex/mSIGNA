@@ -39,6 +39,8 @@ class RequestPaymentDialog;
 
 #include <QMainWindow>
 
+#include <vector>
+
 enum fontsize_t { SMALL_FONTS , MEDIUM_FONTS , LARGE_FONTS };
 
 class MainWindow : public QMainWindow
@@ -205,7 +207,7 @@ private slots:
     // URL/FILE/COMMAND OPERATIONS
     void processUrl(const QUrl& url);
     void processFile(const QString& fileName);
-    void processCommand(const QString& command);
+    void processCommand(const QString& command, const std::vector<QString>& args);
 
 private:
     int fontSize;

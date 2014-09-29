@@ -71,12 +71,13 @@ bool CommandServer::processArgs(int argc, char* argv[])
     socket.connectToServer(COMMAND_SERVER_NAME, QIODevice::WriteOnly);
     if (!socket.waitForConnected(COMMAND_SERVER_TIMEOUT)) {
          // This is the only instance running
-        for (int i = 1; i < argc; i++) { args.push_back(QString(argv[i])); }
+        if (argc > 1) { command = QString(argv[1]); }
+        for (int i = 2; i < argc; i++) { args.push_back(QString(argv[i])); }
         return false;
     }
 
     if (argc > 1) {
-        // Send args to main instance
+        // Send command and args to main instance
         QByteArray block;
         QDataStream out(&block, QIODevice::WriteOnly);
 
@@ -98,9 +99,12 @@ bool CommandServer::processArgs(int argc, char* argv[])
 
 void CommandServer::uiReady()
 {
+    emitCommand(command, args);
+/*
     for (auto& arg: args) {
         processArg(arg);
-    }    
+    }
+*/
 }
 
 void CommandServer::handleConnection()
@@ -108,25 +112,36 @@ void CommandServer::handleConnection()
     QLocalSocket* client = server->nextPendingConnection();
     QDataStream in(client);
 
+    bool bReadArgs = false;
+    QString command;
     std::vector<QString> args;
-    while (client->waitForReadyRead(COMMAND_SERVER_TIMEOUT)) {
-        QString arg;
-        in >> arg;
-        args.push_back(arg);
+    while (client->waitForReadyRead(COMMAND_SERVER_TIMEOUT))
+    {
+        if (bReadArgs)
+        {
+            QString arg;
+            in >> arg;
+            args.push_back(arg);
+        }
+        else
+        {
+            in >> command;
+            bReadArgs = true;
+        }
     }
 
-    for (auto& arg: args) { processArg(arg); }
+    emitCommand(command, args);
 }
 
-void CommandServer::processArg(const QString& arg)
+void CommandServer::emitCommand(const QString& command, const std::vector<QString>& args)
 {
-    if (arg.startsWith(COMMAND_SERVER_URL_PREFIX, Qt::CaseInsensitive)) {
-        emit gotUrl(QUrl(arg));
+    if (command.startsWith(COMMAND_SERVER_URL_PREFIX, Qt::CaseInsensitive)) {
+        emit gotUrl(QUrl(command));
     }
-    else if (QFile::exists(arg)) {
-        emit gotFile(arg);
+    else if (QFile::exists(command)) {
+        emit gotFile(command);
     }
     else {
-        emit gotCommand(arg);
+        emit gotCommand(command, args);
     }
 }

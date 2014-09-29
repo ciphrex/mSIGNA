@@ -32,16 +32,17 @@ public:
 signals:
     void gotUrl(const QUrl& url);
     void gotFile(const QString& fileName);
-    void gotCommand(const QString& command);
+    void gotCommand(const QString& command, const std::vector<QString>& args);
 
 private slots:
     void handleConnection();
 
 private:
-    void processArg(const QString& arg);
+    void emitCommand(const QString& command, const std::vector<QString>& args);
 
     QLocalServer* server;
 
+    QString command;
     std::vector<QString> args;
 };
 

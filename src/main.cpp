@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
     else {
         app.connect(&commandServer, SIGNAL(gotUrl(const QUrl&)), &mainWin, SLOT(processUrl(const QUrl&)));
         app.connect(&commandServer, SIGNAL(gotFile(const QString&)), &mainWin, SLOT(processFile(const QString&)));
-        app.connect(&commandServer, SIGNAL(gotCommand(const QString&)), &mainWin, SLOT(processCommand(const QString&)));
+        app.connect(&commandServer, SIGNAL(gotCommand(const QString&, const std::vector<QString>&)), &mainWin, SLOT(processCommand(const QString&, const std::vector<QString&>)));
     }
 
     splash.showMessage("\n  Loading block headers...");

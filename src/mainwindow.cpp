@@ -1735,17 +1735,30 @@ void MainWindow::processFile(const QString& fileName)
     }
 }
 
-void MainWindow::processCommand(const QString& command)
+void MainWindow::processCommand(const QString& command, const std::vector<QString>& args)
 {
     LOGGER(trace) << "MainWindow::processCommand - " << command.toStdString() << std::endl;
-    if (command == "clearsettings") {
+    if (command == "clearsettings")
+    {
         clearSettings();
     }
-    else if (command == "unlicense") {
+    else if (command == "unlicense")
+    {
         licenseAccepted = false;
         saveSettings();
     }
-    else {
+    else if (command == "resize")
+    {
+        if (args.size() != 2)
+        {
+            LOGGER(error) << "MainWindow::processCommand - invalid args for command resize." << std::endl;
+            return;
+        }
+
+        resize(args[0].toInt(), args[1].toInt());
+    }
+    else
+    {
         LOGGER(trace) << "MainWindow::processCommand - unhandled command: " << command.toStdString() << std::endl;
     }
 }
