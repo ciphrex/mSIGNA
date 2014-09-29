@@ -20,7 +20,9 @@ void DefaultSettings::load()
     m_appName += getCoinParams().network_name();
     m_settingsRoot = "CoinVault";
     m_networkSettingsPath = m_settingsRoot + "/" + getCoinParams().network_name();
-    m_dataDir = QString::fromStdString(getDefaultDataDir(m_appName.toStdString()));
+    QString dataDirName = "mSIGNA_";
+    dataDirName += getCoinParams().network_name();
+    m_dataDir = QString::fromStdString(getDefaultDataDir(dataDirName.toStdString()));
     m_documentDir = QDir::homePath();
     m_base58Versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     m_base58Versions[1] = getCoinParams().pay_to_script_hash_version();
