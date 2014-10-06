@@ -1,9 +1,9 @@
-                               C O I N V A U L T (TM)
+                                 m S I G N A (TM)
 ===============================================================================
 Copyright (c) 2013-2014 Ciphrex Corporation, All Rights Reserved.
 
 
-CoinVault is an interactive desktop application for transacting on the bitcoin network
+mSIGNA is an interactive desktop application for transacting on the bitcoin network
 supporting m-of-n signature policies and multiuser/multidevice account management.
 While the current release builds only support bitcoin, it is possible to compile it 
 to support other bitcoin-like blockchain-based cryptocurrencies. 
@@ -14,10 +14,10 @@ handling persistent storage.
 
     -CoinCore is licensed under the MIT license.
 
-    -CoinQ and CoinDB are licensed under the GPLv2 license.
+    -CoinQ and CoinDB are licensed under the AGPLv3 license.
 
 
-In addition, CoinVault depends on the following:
+In addition, mSIGNA depends on the following:
 
     - Qt5 application and UI framework          http://qt-project.org/
         * Qt5Core
@@ -46,7 +46,7 @@ In addition, CoinVault depends on the following:
     - qrencode QR Code C library                http://fukuchi.org/works/qrencode/
         * qrencode (distribution provided in deps directory)
 
-CoinVault has been built in Linux using gcc 4.6.3 and greater for both 64-bit Linux
+mSIGNA has been built in Linux using gcc 4.6.3 and greater for both 64-bit Linux
 and 64-bit Windows (cross-build, mingw64). It has also been built using
 clang (Xcode 4.1 and greater) in OS X (10.7 and greater).
 
