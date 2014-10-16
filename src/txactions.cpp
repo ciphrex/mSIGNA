@@ -112,7 +112,7 @@ void TxActions::searchTx()
         if (!m_txModel) throw std::runtime_error("No transaction model loaded.");
         if (!m_txView) throw std::runtime_error("No transaction view loaded.");
 
-        TxSearchDialog dlg(m_txModel);
+        TxSearchDialog dlg(m_txModel, m_parent);
         if (dlg.exec())
         {
             QString txhash = dlg.getTxHash();

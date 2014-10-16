@@ -185,7 +185,7 @@ MainWindow::MainWindow() :
 
     txView = new TxView();
     txView->setModel(txModel);
-    txActions = new TxActions(txModel, txView, accountModel, keychainModel, &synchedVault);
+    txActions = new TxActions(txModel, txView, accountModel, keychainModel, &synchedVault, this);
     connect(txActions, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
 
     // Menus
@@ -203,7 +203,7 @@ MainWindow::MainWindow() :
 
     connect(txActions, SIGNAL(setCurrentWidget(QWidget*)), tabWidget, SLOT(setCurrentWidget(QWidget*))); 
 
-    requestPaymentDialog = new RequestPaymentDialog(accountModel, accountView);
+    requestPaymentDialog = new RequestPaymentDialog(accountModel, accountView, this);
 
     // Vault open and close
     synchedVault.subscribeVaultOpened([this](CoinDB::Vault* vault) { emit vaultOpened(vault); });
@@ -288,12 +288,13 @@ void MainWindow::updateStatusMessage(const QString& message)
 //    statusBar()->showMessage(message);
 }
 
-void MainWindow::closeEvent(QCloseEvent * /*event*/)
+void MainWindow::closeEvent(QCloseEvent* event)
 {
     bQuitting = true;
     synchedVault.stopSync();
     saveSettings();
     joinEntropyThread();
+    event->accept();
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent* event)
@@ -1394,7 +1395,7 @@ void MainWindow::createRawTx()
  
     QString accountName = accountModel->data(indexes.at(0)).toString();
 
-    CreateTxDialog dlg(accountModel->getVault(), accountName);
+    CreateTxDialog dlg(accountModel->getVault(), accountName, PaymentRequest(), this);
     while (dlg.exec()) {
         try {
             std::vector<TaggedOutput> outputs = dlg.getOutputs();
@@ -1429,7 +1430,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
  
     QString accountName = accountModel->data(indexes.at(0)).toString();
 
-    CreateTxDialog dlg(accountModel->getVault(), accountName, paymentRequest);
+    CreateTxDialog dlg(accountModel->getVault(), accountName, paymentRequest, this);
     bool saved = false;
     while (!saved && dlg.exec()) {
         try {
@@ -1668,7 +1669,7 @@ void MainWindow::networkTimeout()
 void MainWindow::networkSettings()
 {
     // TODO: Add a connect button to dialog.
-    NetworkSettingsDialog dlg(host, port, autoConnect);
+    NetworkSettingsDialog dlg(host, port, autoConnect, this);
     if (dlg.exec()) {
         host = dlg.getHost();
         port = dlg.getPort();
