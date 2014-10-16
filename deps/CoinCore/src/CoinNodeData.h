@@ -32,6 +32,7 @@
 
 #include <stdutils/uchar_vector.h>
 
+#include <functional>
 #include <list>
 #include <queue>
 
