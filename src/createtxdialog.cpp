@@ -205,10 +205,10 @@ CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName,
     : QDialog(parent), status(SAVE_ONLY)
 {
     // Coin parameters
-    currencyDivisor = getCoinParams().currency_divisor();
-    currencySymbol = getCoinParams().currency_symbol();
-    currencyMax = getCoinParams().currency_max();
-    currencyDecimals = getCoinParams().currency_decimals();
+    currencyDivisor = getCurrencyDivisor(); //getCoinParams().currency_divisor();
+    currencySymbol = getCurrencySymbol(); //getCoinParams().currency_symbol();
+    currencyMax = getCurrencyMax(); //getCoinParams().currency_max();
+    currencyDecimals = getCurrencyDecimals(); //getCoinParams().currency_decimals();
 
     // Buttons
     signAndSendButton = new QPushButton(tr("Sign and Send"));
@@ -244,9 +244,9 @@ CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName,
     accountLayout->addWidget(accountComboBox);
 
     // Fee
-    QLabel* feeLabel = new QLabel(tr("Fee") + " (" + getCurrencySymbol() + "):");
+    QLabel* feeLabel = new QLabel(tr("Fee") + " (" + currencySymbol + "):");
     feeEdit = new QLineEdit();
-    feeEdit->setValidator(new CurrencyValidator(getCurrencyMax(), getCurrencyDecimals(), this));
+    feeEdit->setValidator(new CurrencyValidator(currencyMax, currencyDecimals, this));
     feeEdit->setText("0.0005"); // TODO: suggest more intelligently
 
     QHBoxLayout* feeLayout = new QHBoxLayout();
@@ -357,7 +357,7 @@ void CreateTxDialog::switchCoinControl(int state)
 
 void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
 {
-    TxOutLayout* txOutLayout = new TxOutLayout(getCurrencyDivisor(), getCurrencySymbol(), getCurrencyMax(), getCurrencyDecimals());
+    TxOutLayout* txOutLayout = new TxOutLayout(currencyDivisor, currencySymbol, currencyMax, currencyDecimals);
     txOutLayouts.insert(txOutLayout);
     setRemoveEnabled(txOutLayouts.size() > 1);
     QPushButton* removeButton = txOutLayout->getRemoveButton();
