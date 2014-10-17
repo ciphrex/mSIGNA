@@ -106,7 +106,7 @@ uint64_t decimalStringToInteger(const string& decimalString, uint64_t maxAmount,
         }
     }
     if (frac > 0) {
-        while (decimals < 8) {
+        while (decimals < maxDecimals) {
             decimals++;
             frac *= 10;
         }
