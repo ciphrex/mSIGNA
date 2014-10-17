@@ -411,7 +411,8 @@ void TxActions::deleteTx()
     try {
         m_txModel->deleteTx(currentRow);
         m_txView->updateColumns();
-        m_accountModel->update();
+        emit txsChanged();
+        //m_accountModel->update();
     }
     catch (const std::exception& e) {
         emit error(e.what());

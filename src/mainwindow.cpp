@@ -186,6 +186,7 @@ MainWindow::MainWindow() :
     txView = new TxView();
     txView->setModel(txModel);
     txActions = new TxActions(txModel, txView, accountModel, keychainModel, &synchedVault, this);
+    connect(txActions, SIGNAL(txsChanged()), this, SLOT(refreshAccounts()));
     connect(txActions, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
 
     // Menus
@@ -252,10 +253,7 @@ MainWindow::MainWindow() :
     });
 
     connect(this, &MainWindow::signal_currencyUnitChanged, [this]() {
-        accountModel->update();
-        accountView->updateColumns();
-        txModel->update();
-        txView->updateColumns();
+        refreshAccounts();
     });
 
     setAcceptDrops(true);
@@ -1024,7 +1022,7 @@ void MainWindow::refreshAccounts()
 
     QString prevSelectedAccount = selectedAccount;
     accountModel->update();
-    //accountView->updateColumns();
+    accountView->updateColumns();
 
     if (prevSelectedAccount != selectedAccount)
     {
