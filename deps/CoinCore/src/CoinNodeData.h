@@ -930,5 +930,41 @@ public:
     FilterClearMessage() : BlankMessage("filterclear") { }
 };
 
+class PingMessage : public CoinNodeStructure
+{
+public:
+    uint64_t nonce;
+
+    PingMessage();
+    PingMessage(const uchar_vector& bytes) { setSerialized(bytes); }
+
+    const char* getCommand() const { return "ping"; }
+    uint64_t getSize() const { return sizeof(uint64_t); }
+
+    uchar_vector getSerialized() const;
+    void setSerialized(const uchar_vector& bytes);
+
+    std::string toString() const;
+    std::string toIndentedString(uint spaces = 0) const;
+};
+
+class PongMessage : public CoinNodeStructure
+{
+public:
+    uint64_t nonce;
+
+    PongMessage(uint64_t nonce_) : nonce(nonce_) { }
+    PongMessage(const uchar_vector& bytes) { setSerialized(bytes); }
+
+    const char* getCommand() const { return "pong"; }
+    uint64_t getSize() const { return sizeof(uint64_t); }
+
+    uchar_vector getSerialized() const;
+    void setSerialized(const uchar_vector& bytes);
+
+    std::string toString() const;
+    std::string toIndentedString(uint spaces = 0) const;
+};
+
 } // namespace Coin
 

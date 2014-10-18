@@ -477,6 +477,16 @@ void CoinNodeMessage::setMessage(uint32_t magic, CoinNodeStructure* pPayload)
         this->header = MessageHeader(magic, command.c_str(), pPayload->getSize(), pPayload->getChecksum());
         this->pPayload = new BlankMessage("filterclear");
     }
+    else if (command == "ping") {
+        this->header = MessageHeader(magic, command.c_str(), pPayload->getSize(), pPayload->getChecksum());
+        PingMessage* pMessage = static_cast<PingMessage*>(pPayload);
+        this->pPayload = new PingMessage(*pMessage);
+    }
+    else if (command == "pong") {
+        this->header = MessageHeader(magic, command.c_str(), pPayload->getSize(), pPayload->getChecksum());
+        PongMessage* pMessage = static_cast<PongMessage*>(pPayload);
+        this->pPayload = new PongMessage(*pMessage);
+    }
     else {
         string error_msg = "Unrecognized command: ";
         error_msg += command;
@@ -582,6 +592,14 @@ void CoinNodeMessage::setSerialized(const uchar_vector& bytes)
     }
     else if (command == "filterclear") {
         this->pPayload = new BlankMessage("filterclear");
+    }
+    else if (command == "ping") {
+        this->pPayload =
+            new PingMessage(uchar_vector(bytes.begin() + header.getSize(), bytes.begin() + header.getSize() + header.length));
+    }
+    else if (command == "pong") {
+        this->pPayload =
+            new PongMessage(uchar_vector(bytes.begin() + header.getSize(), bytes.begin() + header.getSize() + header.length));
     }
     else {
         string error_msg = "Unrecognized command: ";
@@ -2002,6 +2020,67 @@ std::string FilterAddMessage::toString() const
 }
 
 std::string FilterAddMessage::toIndentedString(uint spaces) const
+{
+    return "";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// class PingMessage implementation
+//
+PingMessage::PingMessage()
+{
+    nonce = 0; // TODO: set to random value
+}
+
+uchar_vector PingMessage::getSerialized() const
+{
+    return uint_to_vch(nonce, _BIG_ENDIAN);
+}
+
+void PingMessage::setSerialized(const uchar_vector& bytes)
+{
+    if (bytes.size() < sizeof(uint64_t)) {
+        throw std::runtime_error("Invalid data - PingMessage too small.");
+    }
+
+    nonce = vch_to_uint<uint64_t>(uchar_vector(bytes.begin(), bytes.begin() + 8), _BIG_ENDIAN);
+}
+
+std::string PingMessage::toString() const
+{
+    return "";
+}
+
+std::string PingMessage::toIndentedString(uint spaces) const
+{
+    return "";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// class PongMessage implementation
+//
+uchar_vector PongMessage::getSerialized() const
+{
+    return uint_to_vch(nonce, _BIG_ENDIAN);
+}
+
+void PongMessage::setSerialized(const uchar_vector& bytes)
+{
+    if (bytes.size() < sizeof(uint64_t)) {
+        throw std::runtime_error("Invalid data - PongMessage too small.");
+    }
+
+    nonce = vch_to_uint<uint64_t>(uchar_vector(bytes.begin(), bytes.begin() + 8), _BIG_ENDIAN);
+}
+
+std::string PongMessage::toString() const
+{
+    return "";
+}
+
+std::string PongMessage::toIndentedString(uint spaces) const
 {
     return "";
 }
