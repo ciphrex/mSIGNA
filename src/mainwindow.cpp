@@ -159,7 +159,8 @@ MainWindow::MainWindow() :
         }
     });
 
-    synchedVault.subscribeConnectionError([this](const std::string& error, int /*code*/) { emit signal_error(tr("Connection error: ") + QString::fromStdString(error)); });
+    synchedVault.subscribeConnectionError([this](const std::string& error, int /*code*/) { emit signal_connectionClosed(); emit signal_error(tr("Connection error: ") + QString::fromStdString(error)); });
+    connect(this, SIGNAL(signal_connectionClosed()), this, SLOT(stopNetworkSync()));
     //synchedVault.subscribeVaultError([this](const std::string& error, int /*code*/) { emit signal_error(tr("Vault error: ") + QString::fromStdString(error)); });
     connect(this, SIGNAL(signal_error(const QString&)), this, SLOT(showError(const QString&)));
 
