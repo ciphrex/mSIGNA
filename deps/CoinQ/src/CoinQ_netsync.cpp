@@ -720,7 +720,11 @@ void NetworkSync::stopIOServiceThread()
 
     LOGGER(trace) << "Stopping IO service thread..." << endl;
     m_ioService.stop();
-    m_ioServiceThread.join();
+    LOGGER(trace) << "Waiting for io_service::run() to exit..." << endl;
+    while (!m_ioService.stopped()) { std::this_thread::sleep_for(std::chrono::microseconds(200)); }
+    //LOGGER(trace) << "Joining IO service thread..." << endl;
+    //m_ioServiceThread.join();
+    LOGGER(trace) << "Resetting IO service..." << endl;
     m_ioService.reset();
     m_bIOServiceStarted = false;
     LOGGER(trace) << "IO service thread stopped." << endl; 

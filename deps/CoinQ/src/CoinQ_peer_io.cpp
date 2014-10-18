@@ -65,6 +65,7 @@ void Peer::do_read()
 
             stringstream err;
             err << "Peer read error: " << ec.message();
+            LOGGER(debug) << "Peer::do_read() handler - " << err.str() << std::endl;
             notifyConnectionError(*this, err.str(), ec.value());
             return;
         }
