@@ -186,6 +186,15 @@ void Peer::do_read()
                     Coin::HeadersMessage* pHeaders = static_cast<Coin::HeadersMessage*>(peerMessage.getPayload());
                     notifyHeaders(*this, *pHeaders);
                 }
+                else if (command == "ping")
+                {
+                    LOGGER(trace) << "Peer read handler - PING" << std::endl;
+
+                    Coin::PingMessage* pPing = static_cast<Coin::PingMessage*>(peerMessage.getPayload());
+                    Coin::PongMessage pongMessage(pPing->nonce);
+                    Coin::CoinNodeMessage msg(magic_bytes_, &pongMessage);
+                    do_send(msg);
+                }
                 else
                 {
                     LOGGER(error) << "Peer read handler - command not implemented: " << command << std::endl;
