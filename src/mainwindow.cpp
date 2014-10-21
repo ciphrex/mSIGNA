@@ -55,6 +55,7 @@
 #include "requestpaymentdialog.h"
 #include "networksettingsdialog.h"
 #include "keychainbackupdialog.h"
+#include "viewbip32dialog.h"
 #include "passphrasedialog.h"
 #include "setpassphrasedialog.h"
 #include "currencyunitdialog.h"
@@ -399,6 +400,7 @@ void MainWindow::updateVaultStatus(const QString& name)
     newKeychainAction->setEnabled(isOpen);
     lockAllKeychainsAction->setEnabled(keychainModel && keychainModel->rowCount());
     importKeychainAction->setEnabled(isOpen);
+    importBIP32Action->setEnabled(isOpen);
 
     // account actions
     quickNewAccountAction->setEnabled(isOpen);
@@ -891,6 +893,53 @@ void MainWindow::exportKeychain(bool exportPrivate)
     }
 }
 
+void MainWindow::importBIP32()
+{
+    showError(tr("Not implemented yet."));
+}
+
+void MainWindow::viewBIP32(bool viewPrivate)
+{
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0) {
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+
+    try {
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        secure_bytes_t extendedKey = synchedVault.getVault()->exportBIP32(name.toStdString(), viewPrivate);
+/*
+        if (viewPrivate)
+        {
+            if (!keychainModel->isPrivate(name)) throw std::runtime_error("Keychain is not private.");
+            bool isLocked = keychainModel->isLocked(name);
+            if (isLocked) { unlockKeychain(); }
+            extendedKey = keychainModel->getExtendedKeyBytes(name, true);
+            if (isLocked) { lockKeychain(); }
+        }
+        else
+        {
+            extendedKey = keychainModel->getExtendedKeyBytes(name);
+        }
+*/
+
+        ViewBIP32Dialog dlg(extendedKey, this);
+        dlg.exec();
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::viewBIP32 - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
 void MainWindow::backupKeychain()
 {
     QModelIndex index = keychainSelectionModel->currentIndex();
@@ -930,6 +979,8 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
     if (row == -1) {
         exportPrivateKeychainAction->setEnabled(false);
         exportPublicKeychainAction->setEnabled(false);
+        viewPrivateBIP32Action->setEnabled(false);
+        viewPublicBIP32Action->setEnabled(false);
         backupKeychainAction->setEnabled(false);
     }
     else {
@@ -940,6 +991,8 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
         setKeychainPassphraseAction->setEnabled(status == KeychainModel::UNLOCKED || (status == KeychainModel::LOCKED && !keychainModel->isEncrypted(row)));
         exportPrivateKeychainAction->setEnabled(status == KeychainModel::UNLOCKED);
         exportPublicKeychainAction->setEnabled(true);
+        viewPrivateBIP32Action->setEnabled(status == KeychainModel::UNLOCKED);
+        viewPublicBIP32Action->setEnabled(true);
         backupKeychainAction->setEnabled(true);
     }
 }
@@ -1863,6 +1916,21 @@ void MainWindow::createActions()
     exportPublicKeychainAction->setEnabled(false);
     connect(exportPublicKeychainAction, &QAction::triggered, [=]() { this->exportKeychain(false); });
 
+    importBIP32Action = new QAction(tr("Import BIP32 Master Key..."), this);
+    importBIP32Action->setStatusTip(tr("Import keychain from BIP32 master key"));
+    importBIP32Action->setEnabled(false);
+    connect(importBIP32Action, SIGNAL(triggered()), this, SLOT(importBIP32()));
+
+    viewPrivateBIP32Action = new QAction(tr("View Private BIP32 Master Key..."), this);
+    viewPrivateBIP32Action->setStatusTip(tr("View private BIP32 master key"));
+    viewPrivateBIP32Action->setEnabled(false);
+    connect(viewPrivateBIP32Action, &QAction::triggered, [=]() { this->viewBIP32(true); });
+
+    viewPublicBIP32Action = new QAction(tr("View Public BIP32 Master Key..."), this);
+    viewPublicBIP32Action->setStatusTip(tr("View public BIP32 master key"));
+    viewPublicBIP32Action->setEnabled(false);
+    connect(viewPublicBIP32Action, &QAction::triggered, [=]() { this->viewBIP32(false); });
+
     backupKeychainAction = new QAction(tr("Backup Keychain..."), this);
     backupKeychainAction->setStatusTip(tr("Make paper backup"));
     backupKeychainAction->setEnabled(false);
@@ -2080,6 +2148,10 @@ void MainWindow::createMenus()
     keychainMenu->addAction(importKeychainAction);
     keychainMenu->addAction(exportPrivateKeychainAction);
     keychainMenu->addAction(exportPublicKeychainAction);
+    keychainMenu->addSeparator();
+    //keychainMenu->addAction(importBIP32Action);
+    keychainMenu->addAction(viewPrivateBIP32Action);
+    keychainMenu->addAction(viewPublicBIP32Action);
     keychainMenu->addSeparator();
     keychainMenu->addAction(quickNewAccountAction);
 /*

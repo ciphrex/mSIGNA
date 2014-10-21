@@ -143,6 +143,8 @@ private slots:
     void setKeychainPassphrase();
     void importKeychain(QString fileName = QString());
     void exportKeychain(bool exportPrivate);
+    void importBIP32();
+    void viewBIP32(bool viewPrivate);
     void backupKeychain();
 //    void mergeKeychains();
 //    void removeKeychain();
@@ -295,6 +297,9 @@ private:
     QAction* importKeychainAction;
     QAction* exportPrivateKeychainAction;
     QAction* exportPublicKeychainAction;
+    QAction* importBIP32Action;
+    QAction* viewPrivateBIP32Action;
+    QAction* viewPublicBIP32Action;
     QAction* backupKeychainAction;
 
     // account actions

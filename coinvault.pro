@@ -94,6 +94,7 @@ HEADERS = \
     src/requestpaymentdialog.h \
     src/networksettingsdialog.h \
     src/keychainbackupdialog.h \
+    src/viewbip32dialog.h \
     src/passphrasedialog.h \
     src/setpassphrasedialog.h
                 
@@ -145,6 +146,7 @@ SOURCES = \
     src/requestpaymentdialog.cpp \
     src/networksettingsdialog.cpp \
     src/keychainbackupdialog.cpp \
+    src/viewbip32dialog.cpp \
     src/passphrasedialog.cpp \
     src/setpassphrasedialog.cpp
 

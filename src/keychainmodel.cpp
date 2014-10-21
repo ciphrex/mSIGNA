@@ -203,6 +203,16 @@ bool KeychainModel::isPrivate(const QString& keychainName) const
     return keychain->isPrivate();
 }
 
+bool KeychainModel::isLocked(const QString& keychainName) const
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    std::shared_ptr<Keychain> keychain = vault->getKeychain(keychainName.toStdString());
+    return keychain->isLocked();
+}
+
 bool KeychainModel::isEncrypted(const QString& keychainName) const
 {
     if (!vault) {
