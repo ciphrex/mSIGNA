@@ -56,6 +56,7 @@
 #include "networksettingsdialog.h"
 #include "keychainbackupdialog.h"
 #include "viewbip32dialog.h"
+#include "importbip32dialog.h"
 #include "passphrasedialog.h"
 #include "setpassphrasedialog.h"
 #include "currencyunitdialog.h"
@@ -895,7 +896,21 @@ void MainWindow::exportKeychain(bool exportPrivate)
 
 void MainWindow::importBIP32()
 {
-    showError(tr("Not implemented yet."));
+    ImportBIP32Dialog dlg(this);
+    while (true)
+    {
+        if (dlg.exec() != QDialog::Accepted) break;
+
+        try
+        {
+            if (dlg.getName() != "Finished") throw runtime_error("Use name \"Finished\" to exit.");
+            break;
+        }
+        catch (const exception& e)
+        {
+            showError(e.what());
+        }        
+    }
 }
 
 void MainWindow::viewBIP32(bool viewPrivate)
@@ -2149,7 +2164,7 @@ void MainWindow::createMenus()
     keychainMenu->addAction(exportPrivateKeychainAction);
     keychainMenu->addAction(exportPublicKeychainAction);
     keychainMenu->addSeparator();
-    //keychainMenu->addAction(importBIP32Action);
+    keychainMenu->addAction(importBIP32Action);
     keychainMenu->addAction(viewPrivateBIP32Action);
     keychainMenu->addAction(viewPublicBIP32Action);
     keychainMenu->addSeparator();

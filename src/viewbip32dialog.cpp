@@ -28,7 +28,7 @@ ViewBIP32Dialog::ViewBIP32Dialog(const secure_bytes_t& extendedKey, QWidget* par
 
     QTextEdit* base58Edit = new QTextEdit();
     base58Edit->setReadOnly(true);
-    base58Edit->setText(toBase58Check(extendedKey).c_str());
+    base58Edit->setPlainText(toBase58Check(extendedKey).c_str());
 
     QVBoxLayout* mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
