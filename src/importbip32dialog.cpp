@@ -24,6 +24,8 @@
 ImportBIP32Dialog::ImportBIP32Dialog(QWidget* parent)
     : QDialog(parent)
 {
+    setWindowTitle(tr("Import BIP32 Master Key"));
+
     // Buttons
     QDialogButtonBox* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok
                                      | QDialogButtonBox::Cancel);
@@ -48,7 +50,7 @@ ImportBIP32Dialog::ImportBIP32Dialog(QWidget* parent)
     mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
 
-    resize(1000, 300);
+    resize(1000, 150);
 }
 
 QString ImportBIP32Dialog::getName() const

@@ -21,9 +21,11 @@
 
 #include <stdexcept>
 
-ViewBIP32Dialog::ViewBIP32Dialog(const secure_bytes_t& extendedKey, QWidget* parent)
+ViewBIP32Dialog::ViewBIP32Dialog(const QString& name, const secure_bytes_t& extendedKey, QWidget* parent)
     : QDialog(parent)
 {
+    setWindowTitle(tr("Extended Master Key for ") + name);
+
     QLabel* promptLabel = new QLabel(tr("BIP32 Extended Key:"));
 
     QLineEdit* base58Edit = new QLineEdit();

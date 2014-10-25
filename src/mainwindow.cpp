@@ -915,6 +915,7 @@ void MainWindow::importBIP32()
         }
         catch (const exception& e)
         {
+            LOGGER(error) << "MainWindow::importBIP32 - " << e.what() << std::endl;
             showError(e.what());
         }        
     }
@@ -953,11 +954,11 @@ void MainWindow::viewBIP32(bool viewPrivate)
         }
 */
 
-        ViewBIP32Dialog dlg(extendedKey, this);
+        ViewBIP32Dialog dlg(name, extendedKey, this);
         dlg.exec();
     }
     catch (const exception& e) {
-        LOGGER(debug) << "MainWindow::viewBIP32 - " << e.what() << std::endl;
+        LOGGER(error) << "MainWindow::viewBIP32 - " << e.what() << std::endl;
         showError(e.what());
     }
 }

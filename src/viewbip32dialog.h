@@ -19,6 +19,6 @@ class ViewBIP32Dialog : public QDialog
     Q_OBJECT
 
 public:
-    ViewBIP32Dialog(const secure_bytes_t& extendedKey, QWidget* parent = NULL);
+    ViewBIP32Dialog(const QString& name, const secure_bytes_t& extendedKey, QWidget* parent = NULL);
 };
 
