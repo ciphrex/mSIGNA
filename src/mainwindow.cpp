@@ -897,13 +897,20 @@ void MainWindow::exportKeychain(bool exportPrivate)
 void MainWindow::importBIP32()
 {
     ImportBIP32Dialog dlg(this);
-    while (true)
+    while (dlg.exec() == QDialog::Accepted)
     {
-        if (dlg.exec() != QDialog::Accepted) break;
-
         try
         {
-            if (dlg.getName() != "Finished") throw runtime_error("Use name \"Finished\" to exit.");
+            secure_bytes_t extkey = dlg.getExtendedKey();
+            string name = dlg.getName().toStdString();
+
+            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+            CoinDB::VaultLock lock(synchedVault);
+            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+            /*std::shared_ptr<Keychain> keychain =*/ synchedVault.getVault()->importBIP32(name, extkey);
+            keychainModel->update();
+            keychainView->updateColumns();
+            tabWidget->setCurrentWidget(keychainView);
             break;
         }
         catch (const exception& e)

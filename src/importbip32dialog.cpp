@@ -58,6 +58,8 @@ QString ImportBIP32Dialog::getName() const
 
 secure_bytes_t ImportBIP32Dialog::getExtendedKey() const
 {
-    return secure_bytes_t();
+    secure_bytes_t extkey;
+    if (!fromBase58Check(m_base58Edit->text().toStdString(), extkey)) throw std::runtime_error("Invalid BIP32.");
+    return extkey;
 }
 
