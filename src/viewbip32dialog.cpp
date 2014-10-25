@@ -16,7 +16,7 @@
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
-#include <QTextEdit>
+#include <QLineEdit>
 #include <QLabel>
 
 #include <stdexcept>
@@ -26,9 +26,9 @@ ViewBIP32Dialog::ViewBIP32Dialog(const secure_bytes_t& extendedKey, QWidget* par
 {
     QLabel* promptLabel = new QLabel(tr("BIP32 Extended Key:"));
 
-    QTextEdit* base58Edit = new QTextEdit();
+    QLineEdit* base58Edit = new QLineEdit();
     base58Edit->setReadOnly(true);
-    base58Edit->setPlainText(toBase58Check(extendedKey).c_str());
+    base58Edit->setText(toBase58Check(extendedKey).c_str());
 
     QVBoxLayout* mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);

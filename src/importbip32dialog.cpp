@@ -16,7 +16,7 @@
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
-#include <QTextEdit>
+#include <QLineEdit>
 #include <QLabel>
 
 #include <stdexcept>
@@ -32,13 +32,13 @@ ImportBIP32Dialog::ImportBIP32Dialog(QWidget* parent)
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
 
     QLabel* nameLabel = new QLabel(tr("Name:"));
-    m_nameEdit = new QTextEdit();
+    m_nameEdit = new QLineEdit();
     QHBoxLayout* nameLayout = new QHBoxLayout();
     nameLayout->addWidget(nameLabel);
     nameLayout->addWidget(m_nameEdit);
 
     QLabel* base58Label = new QLabel(tr("BIP32 Extended Key:"));
-    m_base58Edit = new QTextEdit();
+    m_base58Edit = new QLineEdit();
 
     QVBoxLayout* mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
@@ -53,7 +53,7 @@ ImportBIP32Dialog::ImportBIP32Dialog(QWidget* parent)
 
 QString ImportBIP32Dialog::getName() const
 {
-    return m_nameEdit->toPlainText();
+    return m_nameEdit->text();
 }
 
 secure_bytes_t ImportBIP32Dialog::getExtendedKey() const

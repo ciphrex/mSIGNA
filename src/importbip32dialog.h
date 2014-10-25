@@ -14,7 +14,7 @@
 
 #include <QDialog>
 
-class QTextEdit;
+class QLineEdit;
 
 class ImportBIP32Dialog : public QDialog
 {
@@ -27,7 +27,7 @@ public:
     secure_bytes_t getExtendedKey() const;
 
 private:
-    QTextEdit* m_nameEdit;
-    QTextEdit* m_base58Edit;
+    QLineEdit* m_nameEdit;
+    QLineEdit* m_base58Edit;
 };
 
