@@ -93,7 +93,7 @@ Keychain& Keychain::operator=(const Keychain& source)
 
 std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private, const secure_bytes_t& lock_key)
 {
-        if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private child from nonprivate keychain.");
+    if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private child from nonprivate keychain.");
     if (get_private)
     {
         if (privkey_.empty()) throw std::runtime_error("Private key is locked.");
@@ -225,11 +225,18 @@ void Keychain::importBIP32(const secure_bytes_t& extkey, const secure_bytes_t& l
     child_num_ = hdKeychain.child_num();
     chain_code_ = hdKeychain.chain_code();
     privkey_.clear();
-    if (!lock_key.empty())
+    if (hdKeychain.isPrivate())
     {
-        if (!hdKeychain.isPrivate()) throw std::runtime_error("Keychain is nonprivate.");
-        privkey_salt_ = AES::random_salt();
-        privkey_ciphertext_ = AES::encrypt(lock_key, hdKeychain.key(), true, privkey_salt_);
+        if (!lock_key.empty())
+        {
+            privkey_salt_ = AES::random_salt();
+            privkey_ciphertext_ = AES::encrypt(lock_key, hdKeychain.key(), true, privkey_salt_);
+        }
+        else
+        {
+            privkey_salt_ = 0;
+            privkey_ciphertext_ = hdKeychain.key();
+        }
     }
     else
     {

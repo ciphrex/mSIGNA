@@ -798,7 +798,8 @@ std::shared_ptr<Keychain> Vault::importBIP32(const std::string& keychain_name, c
     odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
     if (!r.empty()) throw KeychainAlreadyExistsException(keychain_name);
 
-    std::shared_ptr<Keychain> keychain(new Keychain(keychain_name, secure_bytes_t()));
+    std::shared_ptr<Keychain> keychain(new Keychain());
+    keychain->name(keychain_name);
     keychain->importBIP32(extkey, lock_key);
     persistKeychain_unwrapped(keychain);
     t.commit();
