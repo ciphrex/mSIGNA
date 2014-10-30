@@ -186,6 +186,11 @@ public:
     void                                    exportTxs(const std::string& filepath, uint32_t minheight = 0) const;
     void                                    importTxs(const std::string& filepath);
 
+    //////////////////////////////
+    // SIGNINGSCRIPT OPERATIONS //
+    //////////////////////////////
+    std::shared_ptr<SigningScript>          getSigningScript(const bytes_t& script) const;
+
     //////////////////////
     // BLOCK OPERATIONS //
     //////////////////////
@@ -317,6 +322,11 @@ protected:
 
     void                                    exportTxs_unwrapped(boost::archive::text_oarchive& oa, uint32_t minheight) const;
     void                                    importTxs_unwrapped(boost::archive::text_iarchive& ia);
+
+    //////////////////////////////
+    // SIGNINGSCRIPT OPERATIONS //
+    //////////////////////////////
+    std::shared_ptr<SigningScript>          getSigningScript_unwrapped(const bytes_t& script) const;
 
     ///////////////////////////
     // BLOCKCHAIN OPERATIONS //

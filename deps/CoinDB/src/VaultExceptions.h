@@ -68,7 +68,10 @@ enum ErrorCodes
     MERKLETX_BAD_INSERTION_ORDER = 901,
     MERKLETX_MISMATCH,
     MERKLETX_FAILED_TO_CONNECT,
-    MERKLETX_INVALID_HEIGHT
+    MERKLETX_INVALID_HEIGHT,
+
+    // SigningScript errors
+    SIGNINGSCRIPT_NOT_FOUND = 1001
 };
 
 // VAULT EXCEPTIONS
@@ -443,6 +446,22 @@ class MerkleTxInvalidHeightException : public MerkleTxException
 {
 public:
     explicit MerkleTxInvalidHeightException(const bytes_t& blockhash, uint32_t height, const bytes_t& txhash, unsigned int txindex, unsigned int txtotal) : MerkleTxException("Merkleblock has invalid height.", MERKLETX_INVALID_HEIGHT, blockhash, height, txhash, txindex, txtotal) { }
+};
+
+// SIGNING SCRIPT EXCEPTIONS
+class SigningScriptException : public stdutils::custom_error
+{
+public:
+    virtual ~SigningScriptException() throw() { }
+
+protected:
+    explicit SigningScriptException(const std::string& what, int code) : stdutils::custom_error(what, code) { }
+};
+
+class SigningScriptNotFoundException : public SigningScriptException
+{
+public:
+    explicit SigningScriptNotFoundException() : SigningScriptException("Signing script not found.", SIGNINGSCRIPT_NOT_FOUND) { }
 };
 
 

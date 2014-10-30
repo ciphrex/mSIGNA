@@ -3469,6 +3469,29 @@ void Vault::importTxs_unwrapped(boost::archive::text_iarchive& ia)
     }
 }
 
+//////////////////////////////
+// SIGNINGSCRIPT OPERATIONS //
+//////////////////////////////
+std::shared_ptr<SigningScript> Vault::getSigningScript(const bytes_t& script) const
+{
+    LOGGER(trace) << "Vault::getSigningScript(" << uchar_vector(script).getHex() << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::session s;
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<SigningScript> signingscript = getSigningScript_unwrapped(script);
+    return signingscript; 
+}
+
+std::shared_ptr<SigningScript> Vault::getSigningScript_unwrapped(const bytes_t& script) const
+{
+    typedef odb::query<SigningScript> query_t;
+    odb::result<SigningScript> r(db_->query<SigningScript>(query_t::txoutscript == script));
+    if (r.empty()) throw SigningScriptNotFoundException();
+    return r.begin().load(); 
+}
 
 ///////////////////////////
 // BLOCKCHAIN OPERATIONS //
