@@ -117,6 +117,13 @@ payee_t getScriptPubKeyPayee(const uchar_vector& scriptPubKey)
     return std::make_pair(SCRIPT_PUBKEY_UNKNOWN_TYPE, uchar_vector());
 }
 
+bool isValidAddress(const std::string& address, const unsigned char addressVersions[])
+{
+    uchar_vector hash;
+    unsigned int version;
+    return fromBase58Check(address, hash, version) && (hash.size() == 20) && (version == addressVersions[0] || version == addressVersions[1]);
+}
+
 uchar_vector getTxOutScriptForAddress(const std::string& address, const unsigned char addressVersions[])
 {
     uchar_vector hash;

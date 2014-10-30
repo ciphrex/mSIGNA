@@ -58,6 +58,11 @@ typedef std::pair<ScriptType, uchar_vector> payee_t;
 payee_t getScriptPubKeyPayee(const uchar_vector& scriptPubKey);
 
 /*
+ * isValidAddress - check whether address is valid
+*/
+bool isValidAddress(const std::string& address, const unsigned char addressVersions[]);
+
+/*
  * getTxOutForAddress - create a txout script from a base58check address
 */
 uchar_vector getTxOutScriptForAddress(const std::string& address, const unsigned char addressVersions[]);
