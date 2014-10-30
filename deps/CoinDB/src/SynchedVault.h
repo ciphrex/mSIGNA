@@ -37,6 +37,8 @@ public:
     SynchedVault(const CoinQ::CoinParams& coinParams = CoinQ::getBitcoinParams());
     ~SynchedVault();
 
+    const CoinQ::CoinParams& getCoinParams() const { return m_networkSync.getCoinParams(); }
+
     void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = false, CoinQBlockTreeMem::callback_t callback = nullptr);
     bool areHeadersLoaded() const { return m_bBlockTreeLoaded; }
 
