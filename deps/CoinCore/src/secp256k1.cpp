@@ -339,7 +339,7 @@ bytes_t CoinCrypto::secp256k1_rfc6979_k(const secp256k1_key& key, const bytes_t&
 }
 
 const uchar_vector SECP256K1_FIELD_MOD("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F");
-//const uchar_vector SECP256K1_FIELD_MOD("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
+const uchar_vector SECP256K1_GROUP_ORDER("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
 
 bytes_t CoinCrypto::secp256k1_sign_rfc6979(const secp256k1_key& key, const bytes_t& data)
 {
@@ -347,7 +347,7 @@ bytes_t CoinCrypto::secp256k1_sign_rfc6979(const secp256k1_key& key, const bytes
     BIGNUM* bn = BN_bin2bn(&k[0], k.size(), NULL);
     if (!bn) throw std::runtime_error("secp256k1_sign_rfc6979() : BN_bin2bn failed for k.");
 
-    BIGNUM* q = BN_bin2bn(&SECP256K1_FIELD_MOD[0], SECP256K1_FIELD_MOD.size(), NULL);
+    BIGNUM* q = BN_bin2bn(&SECP256K1_GROUP_ORDER[0], SECP256K1_GROUP_ORDER.size(), NULL);
     if (!q)
     {
         BN_clear_free(bn);
