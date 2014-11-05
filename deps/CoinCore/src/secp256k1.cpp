@@ -265,7 +265,7 @@ void secp256k1_point::generator_mul(const bytes_t& n)
     BIGNUM* bn = BN_bin2bn(&n[0], n.size(), NULL);
     if (!bn) throw std::runtime_error("secp256k1_point::generator_mul  - BN_bin2bn failed."); 
 
-    int rval = EC_POINT_mul(group, point, bn, point, BN_value_one(), ctx);
+    int rval = EC_POINT_mul(group, point, bn, (is_at_infinity() ? NULL : point), BN_value_one(), ctx);
     BN_clear_free(bn);
 
     if (rval == 0) throw std::runtime_error("secp256k1_point::generator_mul - EC_POINT_mul failed.");
