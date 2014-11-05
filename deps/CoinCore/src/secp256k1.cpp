@@ -373,16 +373,38 @@ bytes_t CoinCrypto::secp256k1_sign_rfc6979(const secp256k1_key& key, const bytes
     assert(BN_num_bytes(kinv) <= 32);
     BN_bn2bin(kinv, kinvbytes);
     bytes_t kinv_(kinvbytes, kinvbytes + 32);
-    std::cout << "--------------------" << std::endl << uchar_vector(kinv_).getHex() << std::endl;
+    std::cout << "--------------------" << std::endl << "kinv = " << uchar_vector(kinv_).getHex() << std::endl;
+
+    secp256k1_point point;
+    point.set_to_infinity();
+    point.generator_mul(k);
+    BIGNUM* rp = BN_new();
+    BIGNUM* y = BN_new();
+    if (!EC_POINT_get_affine_coordinates_GFp(point.getGroup(), point.getPoint(), rp, y, NULL))
+    {
+        BN_clear_free(rp);
+        BN_clear_free(y);
+        throw std::runtime_error("secp256k1_sign_rfc6979() : EC_POINT_get_affine_coordinates_GFp failed.");
+    }
+    BN_clear_free(y);
+
+    unsigned char rpbytes[32];
+    assert(BN_num_bytes(rp) <= 32);
+    BN_bn2bin(rp, rpbytes);
+    bytes_t rp_(rpbytes, rpbytes + 32);
+    std::cout << "--------------------" << std::endl << "rp = " << uchar_vector(rp_).getHex() << std::endl;
 
     unsigned char signature[1024];
     unsigned int nSize = 0;
-    int res = ECDSA_sign_ex(0, (const unsigned char*)&data[0], data.size(), signature, &nSize, kinv, NULL, key.getKey());
+    int res = ECDSA_sign_ex(0, (const unsigned char*)&data[0], data.size(), signature, &nSize, kinv, rp, key.getKey());
+/*
     assert(BN_num_bytes(kinv) <= 32);
     BN_bn2bin(kinv, kinvbytes);
     kinv_.assign(kinvbytes, kinvbytes + 32);
     std::cout << "--------------------" << std::endl << uchar_vector(kinv_).getHex() << std::endl;
+*/
     BN_clear_free(kinv);
+    BN_clear_free(rp);
 
     if (!res) throw std::runtime_error("secp256k1_sign_rfc6979(): ECDSA_sign_ex failed.");
 
