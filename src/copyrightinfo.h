@@ -12,8 +12,5 @@
 
 #include <QString>
 
-int getCopyrightPaddingRight();
-int getCopyrightPaddingBottom();
-
 const QString& getCopyrightText();
 

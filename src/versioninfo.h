@@ -12,9 +12,6 @@
 
 #include <QString>
 
-int getVersionPaddingRight();
-int getVersionPaddingBottom();
-
 const QString& getVersionText();
 
 const QString& getCommitHash();

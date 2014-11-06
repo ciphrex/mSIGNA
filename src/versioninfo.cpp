@@ -16,9 +16,6 @@
 #include <openssl/opensslv.h>
 
 // Definitions
-const int VERSIONPADDINGRIGHT = 20;
-const int VERSIONPADDINGBOTTOM = 30;
- 
 const QString VERSIONTEXT("0.8.5 beta");
 
 const QString commitHash(COMMIT_HASH);
@@ -31,9 +28,6 @@ const uint32_t openSSLVersionNumber(OPENSSL_VERSION_NUMBER);
 const QString openSSLVersionText(OPENSSL_VERSION_TEXT);
 
 // Accessors
-int getVersionPaddingRight() { return VERSIONPADDINGRIGHT; }
-int getVersionPaddingBottom() { return VERSIONPADDINGBOTTOM; }
-
 const QString& getVersionText() { return VERSIONTEXT; }
 
 const QString& getCommitHash() { return commitHash; }

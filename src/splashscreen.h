@@ -19,6 +19,9 @@ class SplashScreen : public QSplashScreen
 
 public:
     explicit SplashScreen();
+
+public slots:
+    void showProgressMessage(const QString& message);
 };
 
 #endif // VAULT_SPLASHSCREEN_H
