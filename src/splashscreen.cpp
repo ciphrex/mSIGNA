@@ -55,5 +55,5 @@ SplashScreen::SplashScreen()
 
 void SplashScreen::showProgressMessage(const QString& message)
 {
-    showMessage(message, Qt::AlignLeft, TEXTCOLOR);
+    showMessage(QString("\n    ") + message, Qt::AlignLeft, TEXTCOLOR);
 }
