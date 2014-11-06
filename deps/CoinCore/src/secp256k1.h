@@ -79,6 +79,10 @@ public:
 
     // Computes n*G + K where K is this and G is the group generator
     void generator_mul(const bytes_t& n);
+
+    // Sets to n*G
+    void set_generator_mul(const bytes_t& n);
+
     bool is_at_infinity() const { return EC_POINT_is_at_infinity(group, point); }
     void set_to_infinity() { EC_POINT_set_to_infinity(group, point); }
 

@@ -271,6 +271,18 @@ void secp256k1_point::generator_mul(const bytes_t& n)
     if (rval == 0) throw std::runtime_error("secp256k1_point::generator_mul - EC_POINT_mul failed.");
 }
 
+// Sets to n*G
+void secp256k1_point::set_generator_mul(const bytes_t& n)
+{
+    BIGNUM* bn = BN_bin2bn(&n[0], n.size(), NULL);
+    if (!bn) throw std::runtime_error("secp256k1_point::set_generator_mul  - BN_bin2bn failed."); 
+
+    int rval = EC_POINT_mul(group, point, bn, NULL, NULL, ctx);
+    BN_clear_free(bn);
+
+    if (rval == 0) throw std::runtime_error("secp256k1_point::set_generator_mul - EC_POINT_mul failed.");
+}
+
 void secp256k1_point::init()
 {
     std::string err;
@@ -376,17 +388,13 @@ bytes_t CoinCrypto::secp256k1_sign_rfc6979(const secp256k1_key& key, const bytes
     std::cout << "--------------------" << std::endl << "kinv = " << uchar_vector(kinv_).getHex() << std::endl;
 
     secp256k1_point point;
-    point.set_to_infinity();
-    point.generator_mul(k);
+    point.set_generator_mul(k);
     BIGNUM* rp = BN_new();
-    BIGNUM* y = BN_new();
-    if (!EC_POINT_get_affine_coordinates_GFp(point.getGroup(), point.getPoint(), rp, y, NULL))
+    if (!EC_POINT_get_affine_coordinates_GFp(point.getGroup(), point.getPoint(), rp, NULL, NULL))
     {
         BN_clear_free(rp);
-        BN_clear_free(y);
         throw std::runtime_error("secp256k1_sign_rfc6979() : EC_POINT_get_affine_coordinates_GFp failed.");
     }
-    BN_clear_free(y);
 
     unsigned char rpbytes[32];
     assert(BN_num_bytes(rp) <= 32);
