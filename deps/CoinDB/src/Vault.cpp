@@ -2311,7 +2311,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
     }
 
     std::shared_ptr<Tx> tx(new Tx());
-    tx->set(cointx, time(NULL), Tx::PROPAGATED);
+    tx->set(cointx, blockheader ? blockheader->timestamp() : time(NULL), Tx::PROPAGATED);
 
     // If we already have it but it is unsent update to propagated and update confirmations.
     odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == tx->hash() || odb::query<Tx>::unsigned_hash == tx->unsigned_hash()));
@@ -2571,6 +2571,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
                     throw MerkleTxMismatchException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
 
                 tx->blockheader(merkleblock->blockheader());
+                tx->timestamp(merkleblock->blockheader()->timestamp());
                 tx->hash(txhash);
                 tx->status(Tx::CONFIRMED);
                 tx->conflicting(false);
