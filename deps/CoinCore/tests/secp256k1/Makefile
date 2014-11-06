@@ -1,8 +1,8 @@
-CXX = g++
+PROJECT_SYSROOT = ../../../../sysroot
 
-CXXFLAGS += -Wall -O3 -std=c++0x
+include ../../../mk/os.mk ../../../mk/cxx_flags.mk
 
-INCLUDE_PATH = \
+INCLUDE_PATH += \
     -I../../src
 
 OBJS = \
@@ -11,13 +11,13 @@ OBJS = \
 LIBS = \
     -lcrypto
 
-all: build/secp256k1_test build/secp256k1_rfc6979_test build/ascii2hex
+all: build/secp256k1_test${EXE_EXT} build/secp256k1_rfc6979_test${EXE_EXT} build/ascii2hex${EXE_EXT}
 
-build/secp256k1_test: src/secp256k1_test.cpp $(OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDE_PATH) $^ -o $@ $(LIBS)
+build/secp256k1_test${EXE_EXT}: src/secp256k1_test.cpp $(OBJS)
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $^ -o $@ $(LIBS)
 
-build/secp256k1_rfc6979_test: src/secp256k1_rfc6979_test.cpp $(OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDE_PATH) $^ -o $@ $(LIBS)
+build/secp256k1_rfc6979_test${EXE_EXT}: src/secp256k1_rfc6979_test.cpp $(OBJS)
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $^ -o $@ $(LIBS)
 
-build/ascii2hex: src/ascii2hex.cpp $(OBJS)
-	$(CXX) $(CXXFLAGS) $(INCLUDE_PATH) $^ -o $@ $(LIBS)
+build/ascii2hex${EXE_EXT}: src/ascii2hex.cpp $(OBJS)
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $^ -o $@ $(LIBS)
