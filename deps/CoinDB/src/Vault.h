@@ -63,7 +63,7 @@ public:
     // GLOBAL OPERATIONS //
     ///////////////////////
     void                                    open(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
-    void                                    open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
+    void                                    open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = true);
     void                                    close();
 
     const std::string&                      getName() const { return name_; }

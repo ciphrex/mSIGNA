@@ -166,7 +166,7 @@ void Vault::open(int argc, char** argv, bool create, uint32_t version, const std
     }
 }
 
-void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version, const std::string& network)
+void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version, const std::string& network, bool migrate)
 {
     LOGGER(trace) << "Vault::open(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
 
@@ -183,17 +183,32 @@ void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const s
         throw VaultFailedToOpenDatabaseException(name_, e.what());
     }
 
+    odb::schema_version v(db_->schema_version());
+    odb::schema_version bv(odb::schema_catalog::base_version(*db_));
+    odb::schema_version cv(odb::schema_catalog::current_version(*db_));
+
+    if (v < bv)
+    {
+        throw VaultFailedToOpenDatabaseException(name_, "Schema version is no longer supported.");
+    }
+
+    if (v > cv)
+    {
+        throw VaultFailedToOpenDatabaseException(name_, "Schema version is newer than program supports. Please upgrade.");
+    }
+
     odb::core::transaction t(db_->begin());
+
     if (create)
     {
-        setSchemaVersion_unwrapped(version);
+        setSchemaVersion_unwrapped(cv);
         setNetwork_unwrapped(network);
         t.commit();
     }
     else
     {
-        uint32_t schemaVersion = getSchemaVersion_unwrapped();
-        if (schemaVersion != version) throw VaultWrongSchemaVersionException(name_, schemaVersion);
+//        uint32_t schemaVersion = getSchemaVersion_unwrapped();
+//        if (schemaVersion != version) throw VaultWrongSchemaVersionException(name_, schemaVersion);
 
         if (!network.empty())
         {
@@ -205,6 +220,15 @@ void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const s
                 if (dbNetwork != lowerNetwork) throw VaultWrongNetworkException(name_, dbNetwork);
             }
         }
+
+        if (v < cv)
+        {
+            if (!migrate) throw VaultWrongSchemaVersionException(name_, v);
+            odb::schema_catalog::migrate(*db_);
+            setSchemaVersion_unwrapped(version);
+            t.commit();
+        }
+
     }
 }
 
