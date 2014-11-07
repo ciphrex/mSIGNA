@@ -585,6 +585,7 @@ std::shared_ptr<Contact> Vault::newContact(const std::string& username)
 
 std::shared_ptr<Contact> Vault::newContact_unwrapped(const std::string& username)
 {
+    if (username.empty()) throw ContactInvalidUsernameException(username);
     if (contactExists_unwrapped(username)) throw ContactAlreadyExistsException(username);
 
     std::shared_ptr<Contact> contact = std::make_shared<Contact>(username);
@@ -605,6 +606,8 @@ std::shared_ptr<Contact> Vault::getContact(const std::string& username) const
 
 std::shared_ptr<Contact> Vault::getContact_unwrapped(const std::string& username) const
 {
+    if (username.empty()) throw ContactInvalidUsernameException(username);
+
     odb::result<Contact> r(db_->query<Contact>(odb::query<Contact>::username == username));
     if (r.empty()) throw ContactNotFoundException(username);
 
@@ -646,6 +649,8 @@ bool Vault::contactExists(const std::string& username) const
 
 bool Vault::contactExists_unwrapped(const std::string& username) const
 {
+    if (username.empty()) throw ContactInvalidUsernameException(username);
+
     odb::result<Contact> r(db_->query<Contact>(odb::query<Contact>::username == username));
     return !r.empty();
 }
@@ -663,6 +668,9 @@ std::shared_ptr<Contact> Vault::renameContact(const std::string& old_username, c
 
 std::shared_ptr<Contact> Vault::renameContact_unwrapped(const std::string& old_username, const std::string& new_username)
 {
+    if (old_username.empty()) throw ContactInvalidUsernameException(old_username);
+    if (new_username.empty()) throw ContactInvalidUsernameException(new_username);
+
     std::shared_ptr<Contact> contact = getContact_unwrapped(old_username);
     if (old_username == new_username) return contact;
 

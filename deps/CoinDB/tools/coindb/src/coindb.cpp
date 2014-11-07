@@ -533,6 +533,30 @@ cli::result_t cmd_issuescript(const cli::params_t& params)
     return ss.str(); 
 }
 
+cli::result_t cmd_invoicecontact(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    std::string account_name;
+    if (params[1] != "@null") account_name = params[1];
+    std::string username = params[2];
+    std::string label = params.size() > 3 ? params[3] : std::string("");
+    std::string bin_name = params.size() > 4 ? params[4] : std::string(DEFAULT_BIN_NAME);
+    uint32_t index = params.size() > 5 ? strtoull(params[5].c_str(), NULL, 10) : 0;
+    std::shared_ptr<SigningScript> script = vault.issueSigningScript(account_name, bin_name, label, index, username);
+
+    std::string address = getAddressFromScript(script->txoutscript());
+
+    stringstream ss;
+    ss << "account:     " << params[1] << endl
+       << "account bin: " << bin_name << endl
+       << "index:       " << script->index() << endl
+       << "label:       " << label << endl
+       << "script:      " << uchar_vector(script->txoutscript()).getHex() << endl
+       << "address:     " << address << endl
+       << "username:    " << username;
+    return ss.str(); 
+}
+
 cli::result_t cmd_listscripts(const cli::params_t& params)
 {
     std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
@@ -1306,6 +1330,12 @@ int main(int argc, char* argv[])
         "issuescript",
         "issue a new signing script",
         command::params(2, "db file", "account name"),
+        command::params(3, "label", (std::string("bin name = ") + DEFAULT_BIN_NAME).c_str(), "index = 0")));
+    shell.add(command(
+        &cmd_invoicecontact,
+        "invoicecontact",
+        "create an invoice for a contact ",
+        command::params(3, "db file", "account name", "username"),
         command::params(3, "label", (std::string("bin name = ") + DEFAULT_BIN_NAME).c_str(), "index = 0")));
     shell.add(command(
         &cmd_listscripts,

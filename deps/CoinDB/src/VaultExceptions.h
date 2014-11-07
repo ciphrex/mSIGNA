@@ -76,7 +76,8 @@ enum ErrorCodes
 
     // Contact errors
     CONTACT_NOT_FOUND = 1101,
-    CONTACT_ALREADY_EXISTS
+    CONTACT_ALREADY_EXISTS,
+    CONTACT_INVALID_USERNAME
 };
 
 // VAULT EXCEPTIONS
@@ -505,6 +506,12 @@ class ContactAlreadyExistsException : public ContactException
 {
 public:
     explicit ContactAlreadyExistsException(const std::string& username) : ContactException("Contact already exists.", CONTACT_ALREADY_EXISTS, username) { }
+};
+
+class ContactInvalidUsernameException : public ContactException
+{
+public:
+    explicit ContactInvalidUsernameException(const std::string& username) : ContactException("Invalid contact username.", CONTACT_INVALID_USERNAME, username) { }
 };
 
 }
