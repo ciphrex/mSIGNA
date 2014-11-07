@@ -128,9 +128,10 @@ cli::result_t cmd_newcontact(const cli::params_t& params)
 
     shared_ptr<Contact> contact = vault.newContact(params[1]);
     stringstream ss;
-    ss << "New Contact Information" << endl
-       << "-----------------------" << endl
-       << "  username: " << contact->username();
+    ss << endl << "New Contact Information"
+       << endl << "-----------------------"
+       << endl << "  username: " << contact->username()
+       << endl;
     return ss.str(); 
 }
 
@@ -140,9 +141,10 @@ cli::result_t cmd_renamecontact(const cli::params_t& params)
 
     shared_ptr<Contact> contact = vault.renameContact(params[1], params[2]);
     stringstream ss;
-    ss << "Renamed Contact Information" << endl
-       << "---------------------------" << endl
-       << "  username: " << contact->username();
+    ss << endl << "Renamed Contact Information"
+       << endl << "---------------------------"
+       << endl << "  username: " << contact->username()
+       << endl;
     return ss.str(); 
 }
 
@@ -154,13 +156,15 @@ cli::result_t cmd_listcontacts(const cli::params_t& params)
 
     // TODO: format output
     stringstream ss;
-    ss << "Contacts" << endl
-       << "--------" << endl;
+    ss << endl << "Contacts"
+       << endl << "--------";
 
     for (auto& contact: contacts)
     {
-        ss << contact->username() << endl;
+        ss << endl << contact->username();
     }
+    ss << endl;
+
     return ss.str();
 }
 
