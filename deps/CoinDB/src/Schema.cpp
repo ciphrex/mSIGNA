@@ -817,8 +817,14 @@ std::string TxOut::toJson() const
        << "\"value\":" << value_ << ","
        << "\"script\":\"" << uchar_vector(script_).getHex() << "\","
        << "\"sending_label\":\"" << sending_label_ << "\","
-       << "\"receiving_label\":\"" << receiving_label_ << "\""
-       << "}";
+       << "\"receiving_label\":\"" << receiving_label_ << "\"";
+
+    if (signingscript_ && signingscript_->contact())
+    {
+        ss << ",\"sender_username\":\"" << signingscript_->contact()->username() << "\"";
+    }
+
+    ss << "}";
     return ss.str(); 
 }
 
