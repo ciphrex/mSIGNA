@@ -101,6 +101,8 @@ void TxActions::updateVaultStatus()
     bool bEnabled = (m_accountModel && m_accountModel->isOpen());
     searchTxAction->setEnabled(bEnabled);
     importTxFromFileAction->setEnabled(bEnabled);
+    importTxsFromFileAction->setEnabled(bEnabled);
+    exportAllTxsToFileAction->setEnabled(bEnabled);
     insertRawTxFromFileAction->setEnabled(bEnabled);
 }
 
@@ -239,6 +241,10 @@ void TxActions::exportTxToFile()
     }
 }
 
+void TxActions::exportAllTxsToFile()
+{
+}
+
 void TxActions::importTxFromFile()
 {
     try {
@@ -268,6 +274,10 @@ void TxActions::importTxFromFile()
     catch (const std::exception& e) {
         emit error(e.what());
     } 
+}
+
+void TxActions::importTxsFromFile()
+{
 }
 
 void TxActions::viewRawTx()
@@ -444,6 +454,14 @@ void TxActions::createActions()
     importTxFromFileAction = new QAction(tr("Import Transaction From File..."), this);
     importTxFromFileAction->setEnabled(false);
     connect(importTxFromFileAction, SIGNAL(triggered()), this, SLOT(importTxFromFile()));
+
+    exportAllTxsToFileAction = new QAction(tr("Export All Transactions To File..."), this);
+    exportAllTxsToFileAction->setEnabled(false);
+    connect(exportAllTxsToFileAction, SIGNAL(triggered()), this, SLOT(exportAllTxsToFile()));
+
+    importTxsFromFileAction = new QAction(tr("Import Multiple Transactions From File..."), this);
+    importTxsFromFileAction->setEnabled(false);
+    connect(importTxsFromFileAction, SIGNAL(triggered()), this, SLOT(importTxsFromFile()));
 
     viewRawTxAction = new QAction(tr("View Raw Transaction"), this);
     viewRawTxAction->setEnabled(false);

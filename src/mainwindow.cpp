@@ -2005,12 +2005,12 @@ void MainWindow::createActions()
     viewAccountHistoryAction->setEnabled(false);
     connect(viewAccountHistoryAction, SIGNAL(triggered()), this, SLOT(viewAccountHistory()));
 
-    viewScriptsAction = new QAction(tr("View Scripts"), this);
+    viewScriptsAction = new QAction(tr("View Scripts..."), this);
     viewScriptsAction->setStatusTip(tr("View scripts for active account"));
     viewScriptsAction->setEnabled(false);
     connect(viewScriptsAction, SIGNAL(triggered()), this, SLOT(viewScripts()));
     
-    viewUnsignedTxsAction = new QAction(tr("View Unsigned Transactions"), this);
+    viewUnsignedTxsAction = new QAction(tr("View Unsigned Transactions..."), this);
     viewUnsignedTxsAction->setStatusTip(tr("View transactions pending signature"));
     viewUnsignedTxsAction->setEnabled(false);
     connect(viewUnsignedTxsAction, SIGNAL(triggered()), this, SLOT(viewUnsignedTxs()));
@@ -2138,8 +2138,8 @@ void MainWindow::createMenus()
     accountMenu->addSeparator();
     //accountMenu->addAction(viewAccountHistoryAction);
     accountMenu->addAction(viewScriptsAction);
-    accountMenu->addSeparator();
-    accountMenu->addAction(viewUnsignedTxsAction);
+    //accountMenu->addSeparator();
+    //accountMenu->addAction(viewUnsignedTxsAction);
 
     menuBar()->addMenu(txActions->getMenu());
 /*
