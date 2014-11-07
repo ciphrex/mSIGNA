@@ -32,7 +32,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-const std::string COINDB_VERSION = "v0.5.2";
+const std::string COINDB_VERSION = "v0.6.0";
 
 using namespace std;
 using namespace odb::core;
@@ -64,6 +64,24 @@ cli::result_t cmd_info(const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_migrate(const cli::params_t& params)
+{
+    Vault vault;
+    try
+    {
+        vault.open(g_dbuser, g_dbpasswd, params[0], false, SCHEMA_VERSION, string(), false);
+    }
+    catch (const VaultNeedsSchemaMigrationException& e)
+    {
+        vault.open(g_dbuser, g_dbpasswd, params[0], false, SCHEMA_VERSION, string(), true);
+        stringstream ss;
+        ss << "Vault " << params[0] << " migrated from schema " << e.schema_version() << " to schema " << e.current_version() << ".";
+        return ss.str();
+    }
+
+    return "Schema is already current.";
+}
+
 cli::result_t cmd_exportvault(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
@@ -88,6 +106,61 @@ cli::result_t cmd_importvault(const cli::params_t& params)
 
     stringstream ss;
     ss << "Vault " << params[0] << " imported from " << params[1] << ".";
+    return ss.str();
+}
+
+// Contact operations
+cli::result_t cmd_contactinfo(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    shared_ptr<Contact> contact = vault.getContact(params[1]);
+    stringstream ss;
+    ss << "Contact Information" << endl
+       << "-------------------" << endl
+       << "  username: " << contact->username();
+    return ss.str(); 
+}
+
+cli::result_t cmd_newcontact(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    shared_ptr<Contact> contact = vault.newContact(params[1]);
+    stringstream ss;
+    ss << "New Contact Information" << endl
+       << "-----------------------" << endl
+       << "  username: " << contact->username();
+    return ss.str(); 
+}
+
+cli::result_t cmd_renamecontact(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    shared_ptr<Contact> contact = vault.renameContact(params[1], params[2]);
+    stringstream ss;
+    ss << "Renamed Contact Information" << endl
+       << "---------------------------" << endl
+       << "  username: " << contact->username();
+    return ss.str(); 
+}
+
+cli::result_t cmd_listcontacts(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    ContactVector contacts = vault.getAllContacts();
+
+    // TODO: format output
+    stringstream ss;
+    ss << "Contacts" << endl
+       << "--------" << endl;
+
+    for (auto& contact: contacts)
+    {
+        ss << contact->username() << endl;
+    }
     return ss.str();
 }
 
@@ -1074,6 +1147,11 @@ int main(int argc, char* argv[])
         "display general information about file",
         command::params(1, "db file")));
     shell.add(command(
+        &cmd_migrate,
+        "migrate",
+        "migrate schema version",
+        command::params(1, "db file")));
+    shell.add(command(
         &cmd_exportvault,
         "exportvault",
         "export vault contents to portable file",
@@ -1085,6 +1163,28 @@ int main(int argc, char* argv[])
         "import vault contents from portable file",
         command::params(2, "db file", "portable file"),
         command::params(1, "import private keys = true")));
+
+    // Contact operations
+    shell.add(command(
+        &cmd_contactinfo,
+        "contactinfo",
+        "display contact information",
+        command::params(2,"db file", "username")));
+    shell.add(command(
+        &cmd_newcontact,
+        "newcontact",
+        "add a new contact",
+        command::params(2, "db file", "username")));
+    shell.add(command(
+        &cmd_renamecontact,
+        "renamecontact",
+        "change a contact's username",
+        command::params(3, "db file", "old username", "new username")));
+    shell.add(command(
+        &cmd_listcontacts,
+        "listcontacts",
+        "display list of contacts",
+        command::params(1, "db file")));
 
     // Keychain operations
     shell.add(command(

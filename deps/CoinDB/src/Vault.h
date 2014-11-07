@@ -89,8 +89,9 @@ public:
     ////////////////////////
     std::shared_ptr<Contact>                newContact(const std::string& username);
     std::shared_ptr<Contact>                getContact(const std::string& username) const;
+    ContactVector                           getAllContacts() const;
     bool                                    contactExists(const std::string& username) const;
-    std::shared_ptr<Contact>                updateContactUsername(const std::string& old_username, const std::string& new_username);
+    std::shared_ptr<Contact>                renameContact(const std::string& old_username, const std::string& new_username);
 
     /////////////////////////
     // KEYCHAIN OPERATIONS //
@@ -264,8 +265,9 @@ protected:
     ////////////////////////
     std::shared_ptr<Contact>                newContact_unwrapped(const std::string& username);
     std::shared_ptr<Contact>                getContact_unwrapped(const std::string& username) const;
+    ContactVector                           getAllContacts_unwrapped() const;
     bool                                    contactExists_unwrapped(const std::string& username) const;
-    std::shared_ptr<Contact>                updateContactUsername_unwrapped(const std::string& old_username, const std::string& new_username);
+    std::shared_ptr<Contact>                renameContact_unwrapped(const std::string& old_username, const std::string& new_username);
 
     /////////////////////////
     // KEYCHAIN OPERATIONS //

@@ -119,6 +119,8 @@ class Contact : public std::enable_shared_from_this<Contact>
 public:
     Contact(const std::string& username) : username_(username) { }
 
+    std::shared_ptr<Contact> get_shared_ptr() { return shared_from_this(); }
+
     unsigned int id() const { return id_; }
 
     const std::string& username() const { return username_; }
@@ -135,6 +137,9 @@ private:
     #pragma db unique
     std::string username_;
 };
+
+typedef std::vector<std::shared_ptr<Contact>> ContactVector;
+
 
 ////////////////////////////
 // KEYCHAINS AND ACCOUNTS //

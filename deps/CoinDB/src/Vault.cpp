@@ -612,6 +612,27 @@ std::shared_ptr<Contact> Vault::getContact_unwrapped(const std::string& username
     return contact;
 }
 
+ContactVector Vault::getAllContacts() const
+{
+    LOGGER(trace) << "Vault::getAllContacts()" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::transaction t(db_->begin());
+    return getAllContacts_unwrapped();
+}
+
+ContactVector Vault::getAllContacts_unwrapped() const
+{
+    odb::query<Contact> query(1 == 1);
+    odb::result<Contact> r(db_->query<Contact>(query + "ORDER BY" + odb::query<Contact>::username));
+
+    ContactVector contacts;
+    for (auto& contact: r) { contacts.push_back(contact.get_shared_ptr()); }
+    return contacts;
+}
+
 bool Vault::contactExists(const std::string& username) const
 {
     LOGGER(trace) << "Vault::contactExists(" << username << ")" << std::endl;
@@ -629,18 +650,18 @@ bool Vault::contactExists_unwrapped(const std::string& username) const
     return !r.empty();
 }
 
-std::shared_ptr<Contact> Vault::updateContactUsername(const std::string& old_username, const std::string& new_username)
+std::shared_ptr<Contact> Vault::renameContact(const std::string& old_username, const std::string& new_username)
 {
-    LOGGER(trace) << "Vault::updateContactUsername(" << old_username << ", " << new_username << ")" << std::endl;
+    LOGGER(trace) << "Vault::renameContact(" << old_username << ", " << new_username << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::transaction t(db_->begin());
-    std::shared_ptr<Contact> contact = updateContactUsername_unwrapped(old_username, new_username);
+    std::shared_ptr<Contact> contact = renameContact_unwrapped(old_username, new_username);
     t.commit();
     return contact;
 }
 
-std::shared_ptr<Contact> Vault::updateContactUsername_unwrapped(const std::string& old_username, const std::string& new_username)
+std::shared_ptr<Contact> Vault::renameContact_unwrapped(const std::string& old_username, const std::string& new_username)
 {
     std::shared_ptr<Contact> contact = getContact_unwrapped(old_username);
     if (old_username == new_username) return contact;
