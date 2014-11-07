@@ -1,4 +1,26 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="sqlite" version="1">
+  <changeset version="13">
+    <add-table name="Contact" kind="object">
+      <column name="id" type="INTEGER" null="false"/>
+      <column name="username" type="TEXT" null="false"/>
+      <primary-key auto="true">
+        <column name="id"/>
+      </primary-key>
+      <index name="Contact_username_i" type="UNIQUE">
+        <column name="username"/>
+      </index>
+    </add-table>
+    <alter-table name="SigningScript">
+      <add-column name="contact" type="INTEGER" null="true"/>
+      <add-foreign-key name="contact_fk" deferrable="DEFERRED">
+        <column name="contact"/>
+        <references table="Contact">
+          <column name="id"/>
+        </references>
+      </add-foreign-key>
+    </alter-table>
+  </changeset>
+
   <model version="12">
     <table name="Version" kind="object">
       <column name="id" type="INTEGER" null="false"/>

@@ -45,9 +45,9 @@ class Vault
 {
 public:
     Vault() : db_(nullptr) { }
-    Vault(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
-    Vault(const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
-    Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
+    Vault(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = false);
+    Vault(const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = false);
+    Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = false);
 
     virtual ~Vault();
 
@@ -62,8 +62,8 @@ public:
     ///////////////////////
     // GLOBAL OPERATIONS //
     ///////////////////////
-    void                                    open(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
-    void                                    open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = true);
+    void                                    open(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = false);
+    void                                    open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = false);
     void                                    close();
 
     const std::string&                      getName() const { return name_; }

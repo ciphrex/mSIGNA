@@ -45,29 +45,29 @@ using namespace CoinDB;
 /*
  * class Vault implementation
 */
-Vault::Vault(int argc, char** argv, bool create, uint32_t version, const std::string& network)
+Vault::Vault(int argc, char** argv, bool create, uint32_t version, const std::string& network, bool migrate)
 {
-    LOGGER(trace) << "Vault::Vault(..., " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
+    LOGGER(trace) << "Vault::Vault(..., " << (create ? "true" : "false") << ", " << version << ", " << network << ", " << (migrate ? "true" : "false") << ")" << std::endl;
 
-    open(argc, argv, create, version, network);
+    open(argc, argv, create, version, network, migrate);
 //    if (argc >= 2) name_ = argv[1];
 //    if (create) setSchemaVersion(version);
 }
 
-Vault::Vault(const std::string& dbname, bool create, uint32_t version, const std::string& network)
+Vault::Vault(const std::string& dbname, bool create, uint32_t version, const std::string& network, bool migrate)
 {
-    LOGGER(trace) << "Vault::Vault(" << dbname << ", " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
+    LOGGER(trace) << "Vault::Vault(" << dbname << ", " << (create ? "true" : "false") << ", " << version << ", " << network << ", " << (migrate ? "true" : "false") << ")" << std::endl;
 
-    open("", "", dbname, create, version, network);
+    open("", "", dbname, create, version, network, migrate);
 //    name_ = dbname;
 //    if (create) setSchemaVersion(version);
 }
 
-Vault::Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version, const std::string& network)
+Vault::Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version, const std::string& network, bool migrate)
 {
-    LOGGER(trace) << "Vault::Vault(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
+    LOGGER(trace) << "Vault::Vault(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ", " << network << ", " << (migrate ? "true" : "false") << ")" << std::endl;
 
-    open(dbuser, dbpasswd, dbname, create, version, network);
+    open(dbuser, dbpasswd, dbname, create, version, network, migrate);
 //    name_ = dbname;
 //    if (create) setSchemaVersion(version);
 }
@@ -124,9 +124,9 @@ Vault::split_name_t Vault::getSplitObjectName(const std::string& name)
 ///////////////////////
 // GLOBAL OPERATIONS //
 ///////////////////////
-void Vault::open(int argc, char** argv, bool create, uint32_t version, const std::string& network)
+void Vault::open(int argc, char** argv, bool create, uint32_t version, const std::string& network, bool migrate)
 {
-    LOGGER(trace) << "Vault::open(..., " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
+    LOGGER(trace) << "Vault::open(..., " << (create ? "true" : "false") << ", " << version << ", " << network << ", " << (migrate ? "true" : "false") << ")" << std::endl;
 
     if (argc >= 2) name_ = argv[1];
 
@@ -141,7 +141,22 @@ void Vault::open(int argc, char** argv, bool create, uint32_t version, const std
         throw VaultFailedToOpenDatabaseException(name_, e.what());
     }
 
+    odb::schema_version v(db_->schema_version());
+    odb::schema_version bv(odb::schema_catalog::base_version(*db_));
+    odb::schema_version cv(odb::schema_catalog::current_version(*db_));
+
+    if (v < bv)
+    {
+        throw VaultFailedToOpenDatabaseException(name_, "Schema version is no longer supported.");
+    }
+
+    if (v > cv)
+    {
+        throw VaultFailedToOpenDatabaseException(name_, "Schema version is newer than program supports. Please upgrade.");
+    }
+
     odb::core::transaction t(db_->begin());
+
     if (create)
     {
         setSchemaVersion_unwrapped(version);
@@ -150,8 +165,8 @@ void Vault::open(int argc, char** argv, bool create, uint32_t version, const std
     }
     else
     {
-        uint32_t schemaVersion = getSchemaVersion_unwrapped();
-        if (schemaVersion != version) throw VaultWrongSchemaVersionException(name_, schemaVersion);
+        //uint32_t schemaVersion = getSchemaVersion_unwrapped();
+        //if (schemaVersion != version) throw VaultWrongSchemaVersionException(name_, schemaVersion);
 
         if (!network.empty())
         {
@@ -163,12 +178,22 @@ void Vault::open(int argc, char** argv, bool create, uint32_t version, const std
                 if (dbNetwork != lowerNetwork) throw VaultWrongNetworkException(name_, dbNetwork);
             }
         }
+
+        if (v < cv)
+        {
+            if (!migrate) throw VaultNeedsSchemaMigrationException(name_, v, cv);
+
+            LOGGER(info) << "Migrating database from schema " << v << " to schema " << cv << "." << std::endl;
+            odb::schema_catalog::migrate(*db_);
+            setSchemaVersion_unwrapped(version);
+            t.commit();
+        }
     }
 }
 
 void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create, uint32_t version, const std::string& network, bool migrate)
 {
-    LOGGER(trace) << "Vault::open(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
+    LOGGER(trace) << "Vault::open(" << dbuser << ", ..., " << dbname << ", " << (create ? "true" : "false") << ", " << version << ", " << network << ", " << (migrate ? "true" : "false") << ")" << std::endl;
 
     name_ = dbname;
 
@@ -223,7 +248,9 @@ void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const s
 
         if (v < cv)
         {
-            if (!migrate) throw VaultWrongSchemaVersionException(name_, v);
+            if (!migrate) throw VaultNeedsSchemaMigrationException(name_, v, cv);
+
+            LOGGER(info) << "Migrating database from schema " << v << " to schema " << cv << "." << std::endl;
             odb::schema_catalog::migrate(*db_);
             setSchemaVersion_unwrapped(version);
             t.commit();

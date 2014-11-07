@@ -55,7 +55,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 12
-#define SCHEMA_VERSION      12
+#define SCHEMA_VERSION      13
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -109,6 +109,32 @@ private:
     std::string network_;
 };
 
+//////////////
+// CONTACTS //
+//////////////
+
+#pragma db object pointer(std::shared_ptr)
+class Contact : public std::enable_shared_from_this<Contact>
+{
+public:
+    Contact(const std::string& username) : username_(username) { }
+
+    unsigned int id() const { return id_; }
+
+    const std::string& username() const { return username_; }
+    void username(const std::string& username) { username_ = username; }
+
+private:
+    Contact() { }
+
+    friend class odb::access;
+
+    #pragma db id auto
+    unsigned long id_;
+
+    #pragma db unique
+    std::string username_;
+};
 
 ////////////////////////////
 // KEYCHAINS AND ACCOUNTS //
@@ -695,6 +721,9 @@ public:
 
     KeyVector& keys() { return keys_; }
 
+    void contact(std::shared_ptr<Contact> contact) { contact_ = contact; }
+    std::shared_ptr<Contact> contact() const { return contact_; }
+
 private:
     friend class odb::access;
     SigningScript() { }
@@ -718,6 +747,8 @@ private:
     bytes_t txoutscript_;
 
     KeyVector keys_;
+
+    std::shared_ptr<Contact> contact_;
 };
 
 

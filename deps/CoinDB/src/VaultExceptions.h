@@ -23,6 +23,7 @@ enum ErrorCodes
     VAULT_WRONG_NETWORK,
     VAULT_FAILED_TO_OPEN_DATABASE,
     VAULT_MISSING_TXS,
+    VAULT_NEEDS_SCHEMA_MIGRATION,
 
     // Chain code errors
     CHAINCODE_LOCKED = 201,
@@ -129,6 +130,19 @@ public:
 
 private:
     hashvector_t txhashes_;
+};
+
+class VaultNeedsSchemaMigrationException : public VaultException
+{
+public:
+    explicit VaultNeedsSchemaMigrationException(const std::string& vault_name, uint32_t schema_version, uint32_t current_version) : VaultException("Schema migration required.", VAULT_NEEDS_SCHEMA_MIGRATION, vault_name), schema_version_(schema_version), current_version_(current_version) { }
+
+    uint32_t schema_version() const { return schema_version_; }
+    uint32_t current_version() const { return current_version_; }
+
+private:
+    uint32_t schema_version_;
+    uint32_t current_version_;
 };
 
 // CHAIN CODE EXCEPTIONS

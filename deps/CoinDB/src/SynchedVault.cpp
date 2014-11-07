@@ -310,20 +310,30 @@ void SynchedVault::loadHeaders(const std::string& blockTreeFile, bool bCheckProo
 }
 
 // Vault operations
-void SynchedVault::openVault(const std::string& dbname, bool bCreate, uint32_t version, const std::string& network)
+void SynchedVault::openVault(const std::string& dbname, bool bCreate, uint32_t version, const std::string& network, bool migrate)
 {
-    openVault("", "", dbname, bCreate, version, network);
+    openVault("", "", dbname, bCreate, version, network, migrate);
 }
 
-void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate, uint32_t version, const std::string& network)
+void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate, uint32_t version, const std::string& network, bool migrate)
 {
-    LOGGER(trace) << "SynchedVault::openVault(" << dbuser << ", ..., " << dbname << ", " << (bCreate ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
+    LOGGER(trace) << "SynchedVault::openVault(" << dbuser << ", ..., " << dbname << ", " << (bCreate ? "true" : "false") << ", " << version << ", " << network << ", " << (migrate ? "true" : "false") << ")" << std::endl;
 
     {
         std::lock_guard<std::mutex> lock(m_vaultMutex);
         m_notifyVaultClosed();
         if (m_vault) delete m_vault;
-        m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate, version, network);
+        m_vault = new Vault;
+        try
+        {
+            m_vault->open(dbuser, dbpasswd, dbname, bCreate, version, network, migrate);
+        }
+        catch (const std::exception& e)
+        {
+            delete m_vault;
+            m_vault = nullptr;
+            throw;
+        }
 
         std::shared_ptr<BlockHeader> blockheader = m_vault->getBestBlockHeader();
         if (blockheader)    { updateSyncHeader(blockheader->height(), blockheader->hash()); }

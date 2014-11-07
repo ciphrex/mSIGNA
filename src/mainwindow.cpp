@@ -540,7 +540,23 @@ void MainWindow::openVault(QString fileName)
 
     try
     {
-        synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name());
+        try
+        {
+            synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name(), false);
+        }
+        catch (const CoinDB::VaultNeedsSchemaMigrationException& e)
+        {
+            QMessageBox msgBox;
+            msgBox.setText(tr("File was created using schema ") + QString::number(e.schema_version()) + tr(". Current schema version is ") + QString::number(e.current_version())
+                + tr("."));
+            msgBox.setInformativeText(tr("Would you like to migrate the file to the new schema?"));
+            msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+            msgBox.setDefaultButton(QMessageBox::Cancel);
+            if (msgBox.exec() != QMessageBox::Ok) return;
+
+            synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name(), true);
+        }
+            
         updateVaultStatus(fileName);
         updateStatusMessage(tr("Opened ") + fileName);
         addToRecents(fileName);
@@ -561,7 +577,7 @@ void MainWindow::openVault(QString fileName)
     catch (const CoinDB::VaultFailedToOpenDatabaseException& e)
     {
         LOGGER(error) << "MainWindow::openVault - VaultFailedToOpenDatabaseException: " << e.dberror() << std::endl;
-        showError(tr("Error opening database: ") + QString::fromStdString(e.dberror()) + tr(". Either this is an unsupported filetype or the file is corrupt."));
+        showError(tr("Error opening database: \n") + QString::fromStdString(e.dberror()));
     }
     catch (const exception& e)
     {
