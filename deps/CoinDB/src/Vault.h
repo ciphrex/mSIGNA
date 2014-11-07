@@ -84,6 +84,14 @@ public:
 
     void                                    importVault(const std::string& filepath, bool importprivkeys = true);
 
+    ////////////////////////
+    // CONTACT OPERATIONS //
+    ////////////////////////
+    std::shared_ptr<Contact>                newContact(const std::string& username);
+    std::shared_ptr<Contact>                getContact(const std::string& username) const;
+    bool                                    contactExists(const std::string& username) const;
+    std::shared_ptr<Contact>                updateContactUsername(const std::string& old_username, const std::string& new_username);
+
     /////////////////////////
     // KEYCHAIN OPERATIONS //
     /////////////////////////
@@ -128,7 +136,7 @@ public:
     std::vector<AccountInfo>                getAllAccountInfo() const;
     uint64_t                                getAccountBalance(const std::string& account_name, unsigned int min_confirmations = 1, int tx_flags = Tx::ALL) const;
     std::shared_ptr<AccountBin>             addAccountBin(const std::string& account_name, const std::string& bin_name);
-    std::shared_ptr<SigningScript>          issueSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "", uint32_t index = 0);
+    std::shared_ptr<SigningScript>          issueSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "", uint32_t index = 0, const std::string& username = std::string());
     void                                    refillAccountPool(const std::string& account_name);
 
     // empty account_name or bin_name means do not filter on those fields
@@ -250,6 +258,14 @@ protected:
     std::vector<bytes_t>                    getLocatorHashes_unwrapped() const;
     Coin::BloomFilter                       getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
     hashvector_t                            getIncompleteBlockHashes_unwrapped() const;
+
+    ////////////////////////
+    // CONTACT OPERATIONS //
+    ////////////////////////
+    std::shared_ptr<Contact>                newContact_unwrapped(const std::string& username);
+    std::shared_ptr<Contact>                getContact_unwrapped(const std::string& username) const;
+    bool                                    contactExists_unwrapped(const std::string& username) const;
+    std::shared_ptr<Contact>                updateContactUsername_unwrapped(const std::string& old_username, const std::string& new_username);
 
     /////////////////////////
     // KEYCHAIN OPERATIONS //

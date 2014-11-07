@@ -569,6 +569,90 @@ void Vault::importVault(const std::string& filepath, bool importprivkeys)
 }
 
 
+////////////////////////
+// CONTACT OPERATIONS //
+////////////////////////
+std::shared_ptr<Contact> Vault::newContact(const std::string& username)
+{
+    LOGGER(trace) << "Vault::newContact(" << username << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Contact> contact = newContact_unwrapped(username);
+    t.commit();
+    return contact;
+}
+
+std::shared_ptr<Contact> Vault::newContact_unwrapped(const std::string& username)
+{
+    if (contactExists_unwrapped(username)) throw ContactAlreadyExistsException(username);
+
+    std::shared_ptr<Contact> contact = std::make_shared<Contact>(username);
+    db_->persist(contact);
+    return contact;
+}
+
+std::shared_ptr<Contact> Vault::getContact(const std::string& username) const
+{
+    LOGGER(trace) << "Vault::getContact(" << username << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::transaction t(db_->begin());
+    return getContact_unwrapped(username);
+}
+
+std::shared_ptr<Contact> Vault::getContact_unwrapped(const std::string& username) const
+{
+    odb::result<Contact> r(db_->query<Contact>(odb::query<Contact>::username == username));
+    if (r.empty()) throw ContactNotFoundException(username);
+
+    std::shared_ptr<Contact> contact(r.begin().load());
+    return contact;
+}
+
+bool Vault::contactExists(const std::string& username) const
+{
+    LOGGER(trace) << "Vault::contactExists(" << username << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::transaction t(db_->begin());
+    return contactExists_unwrapped(username);
+}
+
+bool Vault::contactExists_unwrapped(const std::string& username) const
+{
+    odb::result<Contact> r(db_->query<Contact>(odb::query<Contact>::username == username));
+    return !r.empty();
+}
+
+std::shared_ptr<Contact> Vault::updateContactUsername(const std::string& old_username, const std::string& new_username)
+{
+    LOGGER(trace) << "Vault::updateContactUsername(" << old_username << ", " << new_username << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Contact> contact = updateContactUsername_unwrapped(old_username, new_username);
+    t.commit();
+    return contact;
+}
+
+std::shared_ptr<Contact> Vault::updateContactUsername_unwrapped(const std::string& old_username, const std::string& new_username)
+{
+    std::shared_ptr<Contact> contact = getContact_unwrapped(old_username);
+    if (old_username == new_username) return contact;
+
+    if (contactExists_unwrapped(new_username)) throw ContactAlreadyExistsException(new_username);
+
+    contact->username(new_username);
+    db_->update(contact);
+    return contact;
+}
+
+
 /////////////////////////
 // KEYCHAIN OPERATIONS //
 /////////////////////////
@@ -1475,7 +1559,7 @@ std::shared_ptr<AccountBin> Vault::addAccountBin(const std::string& account_name
     return bin;
 }
 
-std::shared_ptr<SigningScript> Vault::issueSigningScript(const std::string& account_name, const std::string& bin_name, const std::string& label, uint32_t index)
+std::shared_ptr<SigningScript> Vault::issueSigningScript(const std::string& account_name, const std::string& bin_name, const std::string& label, uint32_t index, const std::string& username)
 {
     LOGGER(trace) << "Vault::issueSigningScript(" << account_name << ", " << bin_name << ", " << label << ", " << index << ")" << std::endl;
 
@@ -1485,6 +1569,24 @@ std::shared_ptr<SigningScript> Vault::issueSigningScript(const std::string& acco
     std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
     if (bin->isChange()) throw AccountCannotIssueChangeScriptException(account_name);
     std::shared_ptr<SigningScript> script = issueAccountBinSigningScript_unwrapped(bin, label, index);
+
+    if (!username.empty())
+    {
+        std::shared_ptr<Contact> contact;
+        odb::result<Contact> r(db_->query<Contact>(odb::query<Contact>::username == username));
+        if (r.empty())
+        {
+            contact = std::make_shared<Contact>(username);
+            db_->persist(contact);
+        }
+        else
+        {
+            contact = r.begin().load();
+        }
+
+        script->contact(contact);
+        db_->update(script);
+    }
     t.commit();
     return script;
 }

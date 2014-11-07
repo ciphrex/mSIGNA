@@ -72,7 +72,11 @@ enum ErrorCodes
     MERKLETX_INVALID_HEIGHT,
 
     // SigningScript errors
-    SIGNINGSCRIPT_NOT_FOUND = 1001
+    SIGNINGSCRIPT_NOT_FOUND = 1001,
+
+    // Contact errors
+    CONTACT_NOT_FOUND = 1101,
+    CONTACT_ALREADY_EXISTS
 };
 
 // VAULT EXCEPTIONS
@@ -478,5 +482,29 @@ public:
     explicit SigningScriptNotFoundException() : SigningScriptException("Signing script not found.", SIGNINGSCRIPT_NOT_FOUND) { }
 };
 
+// CONTACT EXCEPTIONS
+class ContactException : public stdutils::custom_error
+{
+public:
+    virtual ~ContactException() throw() { }
+    const std::string& username() const { return username_; }
+
+protected:
+    explicit ContactException(const std::string& what, int code, const std::string& username) : stdutils::custom_error(what, code), username_(username) { }
+
+    std::string username_;
+};
+
+class ContactNotFoundException : public ContactException
+{
+public:
+    explicit ContactNotFoundException(const std::string& username) : ContactException("Contact not found.", CONTACT_NOT_FOUND, username) { }
+};
+
+class ContactAlreadyExistsException : public ContactException
+{
+public:
+    explicit ContactAlreadyExistsException(const std::string& username) : ContactException("Contact already exists.", CONTACT_ALREADY_EXISTS, username) { }
+};
 
 }
