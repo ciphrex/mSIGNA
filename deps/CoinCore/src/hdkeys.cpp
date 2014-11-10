@@ -186,6 +186,13 @@ bytes_t HDKeychain::privkey() const
     }
 }
 
+bytes_t HDKeychain::uncompressed_pubkey() const
+{
+    secp256k1_key key;
+    key.setPubKey(pubkey_);
+    return key.getPubKey(false);
+}
+
 bytes_t HDKeychain::hash() const
 {
     return ripemd160(sha256(pubkey_));

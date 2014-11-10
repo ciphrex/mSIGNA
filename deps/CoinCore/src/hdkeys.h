@@ -98,6 +98,7 @@ public:
 
     bytes_t privkey() const;
     const bytes_t& pubkey() const { return pubkey_; }
+    bytes_t uncompressed_pubkey() const;
 
     bool isPrivate() const { return (key_.size() == 33 && key_[0] == 0x00); }
     bytes_t hash() const; // hash is ripemd160(sha256(pubkey))

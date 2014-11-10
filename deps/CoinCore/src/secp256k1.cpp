@@ -117,22 +117,27 @@ EC_KEY* secp256k1_key::setPrivKey(const bytes_t& privkey)
     return pKey;
 }
 
-bytes_t secp256k1_key::getPubKey() const
+bytes_t secp256k1_key::getPubKey(bool bCompressed) const
 {
     if (!bSet) {
         throw std::runtime_error("secp256k1_key::getPubKey() : key is not set.");
     }
 
+    if (!bCompressed) EC_KEY_set_conv_form(pKey, POINT_CONVERSION_UNCOMPRESSED);
     int nSize = i2o_ECPublicKey(pKey, NULL);
     if (nSize == 0) {
+        if (!bCompressed) EC_KEY_set_conv_form(pKey, POINT_CONVERSION_COMPRESSED);
         throw std::runtime_error("secp256k1_key::getPubKey() : i2o_ECPublicKey failed.");
     }
 
     bytes_t pubKey(nSize, 0);
     unsigned char* pBegin = &pubKey[0];
     if (i2o_ECPublicKey(pKey, &pBegin) != nSize) {
+        if (!bCompressed) EC_KEY_set_conv_form(pKey, POINT_CONVERSION_COMPRESSED);
         throw std::runtime_error("secp256k1_key::getPubKey() : i2o_ECPublicKey returned unexpected size.");
     }
+
+    if (!bCompressed) EC_KEY_set_conv_form(pKey, POINT_CONVERSION_COMPRESSED);
     return pubKey;
 }
 

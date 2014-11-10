@@ -49,7 +49,7 @@ public:
     EC_KEY* newKey();
     bytes_t getPrivKey() const;
     EC_KEY* setPrivKey(const bytes_t& privkey);
-    bytes_t getPubKey() const;
+    bytes_t getPubKey(bool bCompressed = true) const;
     EC_KEY* setPubKey(const bytes_t& pubkey);
 
 private:
