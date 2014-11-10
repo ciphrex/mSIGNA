@@ -39,13 +39,14 @@ OBJS = \
 
 TOOLS = \
     tools/coindb/build/coindb$(EXE_EXT) \
-    tools/syncdb/build/syncdb$(EXE_EXT)
+    tools/syncdb/build/syncdb$(EXE_EXT) \
+    tools/multibip32/build/multibip32$(EXE_EXT)
 
 all: lib tools
 
 lib: lib/libCoinDB.a
 
-tools: coindb syncdb
+tools: coindb syncdb multibip32
 
 lib/libCoinDB.a: $(OBJS)
 	$(ARCHIVER) rcs $@ $^
@@ -98,6 +99,14 @@ syncdb: lib tools/syncdb/build/syncdb$(EXE_EXT)
 tools/syncdb/build/syncdb$(EXE_EXT): tools/syncdb/src/syncdb.cpp src/CoinDBConfig.h lib/libCoinDB.a
 	$(CXX) $(CXX_FLAGS) $(ODB_DB) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS) $(PLATFORM_LIBS)
 
+#
+# multibip32 command line tool
+#
+multibip32: tools/multibip32/build/multibip32$(EXE_EXT)
+
+tools/multibip32/build/multibip32$(EXE_EXT): tools/multibip32/src/multibip32.cpp
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $< -o $@ $(LIB_PATH) $(LIBS) $(PLATFORM_LIBS)
+
 install: install_lib install_tools
 
 install_lib:
@@ -119,6 +128,7 @@ remove_lib:
 remove_tools:
 	-rm $(SYSROOT)/bin/coindb$(EXE_EXT)
 	-rm $(SYSROOT)/bin/syncdb$(EXE_EXT)
+	-rm $(SYSROOT)/bin/multibip32$(EXE_EXT)
 
 clean: clean_lib
 
