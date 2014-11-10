@@ -1,22 +1,28 @@
+SYSROOT = ../../../../sysroot
 CXX = g++
 CXXFLAGS = -std=c++0x -Wall -g
 
 SRCDIR = ../../src
-INCPATH = -I$(SRCDIR)
+OBJDIR = ../../obj
+INCPATH += \
+    -I$(SRCDIR) \
+    -I$(SYSROOT)/include
+
+OBJS = \
+    $(OBJDIR)/hdkeys.o \
+    $(OBJDIR)/secp256k1.o
 
 HEADERS = \
     $(SRCDIR)/hdkeys.h \
     $(SRCDIR)/hash.h \
     $(SRCDIR)/secp256k1.h \
-    $(SRCDIR)/BigInt.h \
-    $(SRCDIR)/uchar_vector.h
+    $(SRCDIR)/BigInt.h
 
-build/hdwallets: hdwallets.cpp $(SRCDIR)/obj/hdkeys.o $(SRCDIR)/Base58Check.h
-	$(CXX) $(CXXFLAGS)  -o $@ $< $(SRCDIR)/obj/hdkeys.o $(INCPATH) -lcrypto
+build/hdwallets: hdwallets.cpp $(OBJS) $(SRCDIR)/Base58Check.h
+	$(CXX) $(CXXFLAGS) $(INCPATH) -o $@ $< $(OBJS) -lcrypto
 
-$(SRCDIR)/obj/hdkeys.o: $(SRCDIR)/hdkeys.cpp $(HEADERS) 
-	$(CXX) $(CXXFLAGS) -o $@ -c $<
-
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp $(SRCDIR)/%.h $(HEADERS) 
+	$(CXX) $(CXXFLAGS) $(INCPATH) -o $@ -c $<
 
 clean:
 	-rm -rf build/* $(SRCDIR)/obj/hdkeys.o
