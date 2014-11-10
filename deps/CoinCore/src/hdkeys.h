@@ -62,6 +62,13 @@ public:
         : std::runtime_error("Keychain is invalid.") { }
 };
 
+class InvalidHDKeychainPathException : public std::runtime_error
+{
+public:
+    InvalidHDKeychainPathException()
+        : std::runtime_error("Keychain path is invalid.") { }
+};
+
 class HDKeychain
 {
 public:
@@ -99,6 +106,7 @@ public:
 
     HDKeychain getPublic() const;
     HDKeychain getChild(uint32_t i) const;
+    HDKeychain getChild(const std::string& path) const;
     HDKeychain getChildNode(uint32_t i, bool private_derivation = false) const
     {
         uint32_t mask = private_derivation ? 0x80000000ull : 0x00000000ull;

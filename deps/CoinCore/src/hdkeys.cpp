@@ -278,6 +278,59 @@ HDKeychain HDKeychain::getChild(uint32_t i) const
     return child;
 }
 
+HDKeychain HDKeychain::getChild(const std::string& path) const
+{
+    if (path.empty()) throw InvalidHDKeychainPathException();
+
+    std::vector<uint32_t> path_vector;
+
+    size_t i = 0;
+    uint64_t n = 0;
+    while (i < path.size())
+    {
+        char c = path[i];
+        if (c >= '0' && c <= '9')
+        {
+            n *= 10;
+            n += (uint32_t)(c - '0');
+            if (n >= 0x80000000) throw InvalidHDKeychainPathException();
+            i++;
+            if (i >= path.size()) { path_vector.push_back((uint32_t)n); }
+        }
+        else if (c == '\'')
+        {
+            if (i + 1 < path.size())
+            {
+                if ((i + 2 >= path.size()) || (path[i + 1] != '/') || (path[i + 2] < '0') || (path[i + 2] > '9'))
+                    throw InvalidHDKeychainPathException();
+            }
+            n |= 0x80000000;
+            path_vector.push_back((uint32_t)n);
+            n = 0;
+            i += 2;
+        }
+        else if (c == '/')
+        {
+            if (i + 1 >= path.size() || path[i + 1] < '0' || path[i + 1] > '9')
+                throw InvalidHDKeychainPathException();
+            path_vector.push_back((uint32_t)n);
+            n = 0;
+            i++;
+        }
+        else
+        {
+            throw InvalidHDKeychainPathException();
+        }
+    }
+
+    HDKeychain child(*this);
+    for (auto n: path_vector)
+    {
+        child = child.getChild(n);
+    }
+    return child;
+}
+
 std::string HDKeychain::toString() const
 {
     std::stringstream ss;
