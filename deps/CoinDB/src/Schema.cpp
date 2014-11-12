@@ -196,11 +196,11 @@ secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vector<uint
     return hdkeychain.getPrivateSigningKey(i);
 }
 
-bytes_t Keychain::getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path) const
+bytes_t Keychain::getSigningPublicKey(uint32_t i, bool get_compressed, const std::vector<uint32_t>& derivation_path) const
 {
     Coin::HDKeychain hdkeychain(pubkey_, chain_code_, child_num_, parent_fp_, depth_);
     for (auto k: derivation_path) { hdkeychain = hdkeychain.getChild(k); }
-    return hdkeychain.getPublicSigningKey(i);
+    return hdkeychain.getPublicSigningKey(i, get_compressed);
 }
 
 secure_bytes_t Keychain::privkey() const
@@ -280,13 +280,13 @@ void Keychain::clearPrivateKey()
  * class Key
  */
 
-Key::Key(const std::shared_ptr<Keychain>& keychain, uint32_t index)
+Key::Key(const std::shared_ptr<Keychain>& keychain, uint32_t index, bool compressed)
 {
     root_keychain_ = keychain->root();
     derivation_path_ = keychain->derivation_path();
     index_ = index;
 
-    pubkey_ = keychain->getSigningPublicKey(index_);
+    pubkey_ = keychain->getSigningPublicKey(index_, compressed);
     updatePrivate();
 }
 
@@ -310,8 +310,8 @@ secure_bytes_t Key::try_privkey() const
  * class Account
  */
 
-Account::Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size, uint32_t time_created)
-    : name_(name), minsigs_(minsigs), keychains_(keychains), unused_pool_size_(unused_pool_size), time_created_(time_created)
+Account::Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size, uint32_t time_created, bool compressed_keys)
+    : name_(name), minsigs_(minsigs), keychains_(keychains), unused_pool_size_(unused_pool_size), time_created_(time_created), compressed_keys_(compressed_keys)
 {
     // TODO: Use exception classes
     if (name_.empty() || name[0] == '@') throw std::runtime_error("Invalid account name.");
@@ -332,6 +332,8 @@ void Account::updateHash()
     data.push_back((unsigned char)minsigs_);
     for (auto& keychain_hash: keychain_hashes) { data += keychain_hash; }
 
+    if (!compressed_keys_) { data.push_back(0x00); }
+
     hash_ = ripemd160(sha256(data));
 }
 
@@ -351,7 +353,7 @@ AccountInfo Account::accountInfo() const
         }
     }
 
-    return AccountInfo(id_, name_, minsigs_, keychain_names, issued_script_count, unused_pool_size_, time_created_, bin_names);
+    return AccountInfo(id_, name_, minsigs_, keychain_names, issued_script_count, unused_pool_size_, time_created_, bin_names, compressed_keys_);
 }
 
 std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
@@ -509,10 +511,12 @@ std::vector<SigningScript::status_t> SigningScript::getStatusFlags(int status)
 SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index, const std::string& label, status_t status)
     : account_(account_bin->account()), account_bin_(account_bin), index_(index), label_(label), status_(status)
 {
+    if (!account_) throw std::runtime_error("SigningScript::SigningScript() - account is null.");
+
     auto& keychains = account_bin_->keychains();
     for (auto& keychain: keychains)
     {
-        std::shared_ptr<Key> key(new Key(keychain, index));
+        std::shared_ptr<Key> key(new Key(keychain, index, account_->compressed_keys()));
         keys_.push_back(key);
     }
 

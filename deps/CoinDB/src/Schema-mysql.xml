@@ -1,4 +1,10 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="mysql" version="1">
+  <changeset version="14">
+    <alter-table name="Account">
+      <add-column name="compressed_keys" type="TINYINT(1)" null="false"/>
+    </alter-table>
+  </changeset>
+
   <changeset version="13">
     <add-table name="Contact" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>

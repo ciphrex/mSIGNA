@@ -55,7 +55,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 12
-#define SCHEMA_VERSION      13
+#define SCHEMA_VERSION      14
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -187,7 +187,7 @@ public:
     void decrypt();
 
     secure_bytes_t getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
-    bytes_t getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
+    bytes_t getSigningPublicKey(uint32_t i, bool get_compressed = true, const std::vector<uint32_t>& derivation_path = std::vector<uint32_t>()) const;
 
     uint32_t depth() const { return depth_; }
     uint32_t parent_fp() const { return parent_fp_; }
@@ -309,14 +309,13 @@ typedef std::set<std::shared_ptr<Keychain>> KeychainSet;
 class Key
 {
 public:
-    Key(const std::shared_ptr<Keychain>& keychain, uint32_t index);
+    Key(const std::shared_ptr<Keychain>& keychain, uint32_t index, bool compressed = true);
 
     unsigned long id() const { return id_; }
     const bytes_t& pubkey() const { return pubkey_; }
     secure_bytes_t privkey() const;
     secure_bytes_t try_privkey() const;
     bool isPrivate() const { return is_private_; }
-
 
     std::shared_ptr<Keychain> root_keychain() const { return root_keychain_; }
     std::vector<uint32_t> derivation_path() const { return derivation_path_; }
@@ -436,7 +435,7 @@ private:
     mutable KeychainSet keychains__;
 
     #pragma db unique
-    bytes_t hash_; // ripemd160(sha256(data)) where data = concat(first byte(minsigs), keychain hash 1, keychain hash 2, ...) and keychain hashes are sorted lexically
+    bytes_t hash_; // ripemd160(sha256(data)) where data = concat(first byte(minsigs), keychain hash 1, keychain hash 2, ...) and keychain hashes are sorted lexically. Byte 0x00 is appended to data before hashing if public keys are uncompressed.
 
     friend class boost::serialization::access;
     template<class Archive>
@@ -517,7 +516,8 @@ public:
         uint32_t issued_script_count,
         uint32_t unused_pool_size,
         uint32_t time_created,
-        const std::vector<std::string>& bin_names
+        const std::vector<std::string>& bin_names,
+        bool compressed_keys = true
     ) :
         id_(id),
         name_(name),
@@ -526,7 +526,8 @@ public:
         issued_script_count_(issued_script_count),
         unused_pool_size_(unused_pool_size),
         time_created_(time_created),
-        bin_names_(bin_names)
+        bin_names_(bin_names),
+        compressed_keys_(compressed_keys)
     {
         std::sort(keychain_names_.begin(), keychain_names_.end());
     }
@@ -539,7 +540,8 @@ public:
         issued_script_count_(source.issued_script_count_),
         unused_pool_size_(source.unused_pool_size_),
         time_created_(source.time_created_),
-        bin_names_(source.bin_names_)
+        bin_names_(source.bin_names_),
+        compressed_keys_(source.compressed_keys_)
     { }
 
     AccountInfo& operator=(const AccountInfo& source)
@@ -552,6 +554,7 @@ public:
         unused_pool_size_ = source.unused_pool_size_;
         time_created_ = source.time_created_;
         bin_names_ = source.bin_names_;
+        compressed_keys_ = source.compressed_keys_;
         return *this;
     }
 
@@ -563,6 +566,7 @@ public:
     uint32_t                            unused_pool_size() const { return unused_pool_size_; }
     uint32_t                            time_created() const { return time_created_; }
     const std::vector<std::string>&     bin_names() const { return bin_names_; }
+    bool                                compressed_keys() const { return compressed_keys_; }
 
 private:
     unsigned long               id_;
@@ -573,6 +577,7 @@ private:
     uint32_t                    unused_pool_size_;
     uint32_t                    time_created_;
     std::vector<std::string>    bin_names_;
+    bool                        compressed_keys_;
 };
 
 const uint32_t DEFAULT_UNUSED_POOL_SIZE = 25;
@@ -582,7 +587,7 @@ class Account : public std::enable_shared_from_this<Account>
 {
 public:
     Account() { }
-    Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = DEFAULT_UNUSED_POOL_SIZE, uint32_t time_created = time(NULL));
+    Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = DEFAULT_UNUSED_POOL_SIZE, uint32_t time_created = time(NULL), bool compressed_keys = true);
 
     void updateHash();
 
@@ -600,6 +605,7 @@ public:
 
     uint32_t unused_pool_size() const { return unused_pool_size_; }
     uint32_t time_created() const { return time_created_; }
+    bool compressed_keys() const { return compressed_keys_; }
     const bytes_t& hash() const { return hash_; }
     AccountBinVector bins() const { return bins_; }
 
@@ -630,9 +636,11 @@ private:
     #pragma db value_not_null inverse(account_)
     AccountBinVector bins_;
 
+    bool compressed_keys_;
+
     friend class boost::serialization::access;
     template<class Archive>
-    void save(Archive& ar, const unsigned int /*version*/) const
+    void save(Archive& ar, const unsigned int version) const
     {
         ar & name_;
         ar & minsigs_;
@@ -644,12 +652,17 @@ private:
         ar & unused_pool_size_;
         ar & time_created_;
 
+        if (version >= 2)
+        {
+            ar & compressed_keys_;
+        }
+
         n = bins_.size();
         ar & n;
         for (auto& bin: bins_)              { ar & *bin; }
     }
     template<class Archive>
-    void load(Archive& ar, const unsigned int /*version*/)
+    void load(Archive& ar, const unsigned int version)
     {
         ar & name_;
         ar & minsigs_;
@@ -666,6 +679,15 @@ private:
 
         ar & unused_pool_size_;
         ar & time_created_;
+
+        if (version < 2)
+        {
+            compressed_keys_ = true;
+        }
+        else
+        {
+            ar & compressed_keys_;
+        }
 
         // TODO: validate bins
         ar & n;
@@ -1780,6 +1802,6 @@ BOOST_CLASS_VERSION(CoinDB::Tx, 1)
 
 BOOST_CLASS_VERSION(CoinDB::Keychain, 2)
 BOOST_CLASS_VERSION(CoinDB::AccountBin, 2)
-BOOST_CLASS_VERSION(CoinDB::Account, 1)
+BOOST_CLASS_VERSION(CoinDB::Account, 2)
 
 #endif // COINDB_SCHEMA_H
