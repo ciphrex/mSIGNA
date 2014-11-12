@@ -122,10 +122,10 @@ public:
     }
 
     // Precondition: i >= 1
-    bytes_t getPublicSigningKey(uint32_t i) const
+    bytes_t getPublicSigningKey(uint32_t i, bool bCompressed = true) const
     {
 //        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
-        return getChild(i).pubkey();
+        return bCompressed ? getChild(i).pubkey() : getChild(i).uncompressed_pubkey();
     }
 
     static void setVersions(uint32_t priv_version, uint32_t pub_version) { priv_version_ = priv_version; pub_version_ = pub_version; }
