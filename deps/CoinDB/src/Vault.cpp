@@ -207,6 +207,18 @@ void Vault::open(int argc, char** argv, bool create, uint32_t version, const std
             LOGGER(info) << "Migrating database from schema " << v << " to schema " << cv << "." << std::endl;
             odb::schema_catalog::migrate(*db_);
             setSchemaVersion_unwrapped(version);
+
+            if (v < 14 && cv >= 14)
+            {
+                LOGGER(info) << "Migrating account data..." << std::endl;
+                odb::core::session s;
+                for (auto& account: db_->query<Account>())
+                {
+                    account.compressed_keys(true);
+                    db_->update(account);
+                }
+            }
+                
             t.commit();
         }
     }
@@ -274,6 +286,18 @@ void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const s
             LOGGER(info) << "Migrating database from schema " << v << " to schema " << cv << "." << std::endl;
             odb::schema_catalog::migrate(*db_);
             setSchemaVersion_unwrapped(version);
+
+            if (v < 14 && cv >= 14)
+            {
+                LOGGER(info) << "Migrating account data..." << std::endl;
+                odb::core::session s;
+                for (auto& account: db_->query<Account>())
+                {
+                    account.compressed_keys(true);
+                    db_->update(account);
+                }
+            }
+
             t.commit();
         }
 
