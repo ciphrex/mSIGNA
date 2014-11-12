@@ -3389,7 +3389,9 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
             // TODO: Better exception handling with secp256kl_key class
             secp256k1_key signingKey;
             signingKey.setPrivKey(privkey);
-            if (signingKey.getPubKey() != key.pubkey()) throw KeychainInvalidPrivateKeyException(key.root_keychain()->name(), key.pubkey());
+
+            // Try checking both compressed and uncompressed pubkeys
+            if (signingKey.getPubKey() != key.pubkey() && signingKey.getPubKey(false) != key.pubkey()) throw KeychainInvalidPrivateKeyException(key.root_keychain()->name(), key.pubkey());
 
             bytes_t signature = secp256k1_sign(signingKey, signingHash);
             signature.push_back(SIGHASH_ALL);
