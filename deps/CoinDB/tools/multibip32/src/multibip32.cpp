@@ -46,8 +46,6 @@ int main(int argc, char* argv[])
             HDKeychain keychain(extkey);
             keychain = keychain.getChild(string(argv[2]));
 
-            cout << endl;
-
             {
                 uchar_vector pubkey = keychain.pubkey();
                 vector<bytes_t> pubkeys;
@@ -74,8 +72,12 @@ int main(int argc, char* argv[])
                 cout << endl;
             }
 
+            cout << "Public BIP32 master key:   " << toBase58Check(keychain.getPublic().extkey()) << endl;
+            cout << endl;
+
             if (keychain.isPrivate())
             {
+                cout << "Private BIP32 master key:  " << toBase58Check(keychain.extkey()) << endl;
                 cout << "Private key:               " << uchar_vector(keychain.privkey()).getHex() << endl;
                 cout << endl;
             }
