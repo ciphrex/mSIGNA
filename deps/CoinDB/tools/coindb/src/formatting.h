@@ -402,6 +402,7 @@ inline std::string formattedAccountHeader()
     ss << " ";
     ss << left  << setw(15) << "account name" << " | "
        << right << setw(5)  << "id" << " | "
+       << left  << setw(15) << "compressed keys" << " | "
        << left  << setw(64) << "policy";
     ss << " ";
 
@@ -423,6 +424,7 @@ inline std::string formattedAccount(const CoinDB::AccountInfo& info)
     ss << " ";
     ss << left  << setw(15) << info.name() << " | "
        << right << setw(5)  << info.id() << " | "
+       << left  << setw(15) << (info.compressed_keys() ? "TRUE" : "FALSE") << " | "
        << left  << setw(64) << policy.str();
     ss << " ";
     return ss.str();

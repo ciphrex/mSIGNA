@@ -32,7 +32,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-const std::string COINDB_VERSION = "v0.6.0";
+const std::string COINDB_VERSION = "v0.6.1";
 
 using namespace std;
 using namespace odb::core;
@@ -405,7 +405,26 @@ cli::result_t cmd_newaccount(const cli::params_t& params)
         keychain_names.push_back(params[i]);
 
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
-    vault.newAccount(params[1], minsigs, keychain_names);
+    vault.newAccount(params[1], minsigs, keychain_names, 25, time(NULL));
+
+    stringstream ss;
+    ss << "Added account " << params[1] << " to vault " << params[0] << ".";
+    return ss.str();
+}
+
+cli::result_t cmd_newuncompressedaccount(const cli::params_t& params)
+{
+    uint32_t minsigs = strtoull(params[2].c_str(), NULL, 10);
+    size_t keychain_count = params.size() - 3;
+    if (keychain_count > 15) throw std::runtime_error("Maximum number of keychains supported is 15.");
+    if (minsigs > keychain_count) throw std::runtime_error("Minimum signatures cannot exceed number of keychains.");
+
+    std::vector<std::string> keychain_names;
+    for (size_t i = 3; i < params.size(); i++)
+        keychain_names.push_back(params[i]);
+
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    vault.newAccount(params[1], minsigs, keychain_names, 25, time(NULL), false);
 
     stringstream ss;
     ss << "Added account " << params[1] << " to vault " << params[0] << ".";
@@ -1285,6 +1304,12 @@ int main(int argc, char* argv[])
         &cmd_newaccount,
         "newaccount",
         "create a new account using specified keychains",
+        command::params(4, "db file", "account name", "minsigs", "keychain 1"),
+        command::params(3, "keychain 2", "keychain 3", "...")));
+    shell.add(command(
+        &cmd_newuncompressedaccount,
+        "newuncompressedaccount",
+        "create a new account with uncompressed public keys using specified keychains",
         command::params(4, "db file", "account name", "minsigs", "keychain 1"),
         command::params(3, "keychain 2", "keychain 3", "...")));
     shell.add(command(
