@@ -605,13 +605,15 @@ public:
 
     uint32_t unused_pool_size() const { return unused_pool_size_; }
     uint32_t time_created() const { return time_created_; }
-    bool compressed_keys() const { return compressed_keys_; }
     const bytes_t& hash() const { return hash_; }
     AccountBinVector bins() const { return bins_; }
 
     std::shared_ptr<AccountBin> addBin(const std::string& name);
 
     uint32_t bin_count() const { return bins_.size(); }
+
+    void compressed_keys(bool compressed_keys) { compressed_keys_ = compressed_keys; }
+    bool compressed_keys() const { return compressed_keys_; }
 
 private:
     friend class odb::access;

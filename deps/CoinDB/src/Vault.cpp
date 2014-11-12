@@ -43,6 +43,27 @@
 using namespace CoinDB;
 
 /*
+ * data migration
+*/
+/*
+template <odb::schema_version v>
+using migration_entry = odb::data_migration_entry<v, SCHEMA_BASE_VERSION>;
+
+static void migrate_compressed_keys(odb::database& db)
+{
+    LOGGER(trace) << "Migrating accounts to schema 14..." << std::endl;
+
+    for (auto& account: db.query<CoinDB::Account>())
+    {
+        account.compressed_keys(true);
+        db.update(account);
+    }
+}
+
+static const migration_entry<14> migrate_compressed_keys_entry(&migrate_compressed_keys);
+*/
+
+/*
  * class Vault implementation
 */
 Vault::Vault(int argc, char** argv, bool create, uint32_t version, const std::string& network, bool migrate)
