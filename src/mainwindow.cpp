@@ -549,7 +549,7 @@ void MainWindow::openVault(QString fileName)
             QMessageBox msgBox;
             msgBox.setText(tr("File was created using schema ") + QString::number(e.schema_version()) + tr(". Current schema version is ") + QString::number(e.current_version())
                 + tr("."));
-            msgBox.setInformativeText(tr("Would you like to migrate the file to the new schema?"));
+            msgBox.setInformativeText(tr("Schema can be upgraded. It is highly recommended you make backups of all your important files before migrating. Would you like to migrate the file to the new schema now?"));
             msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
             msgBox.setDefaultButton(QMessageBox::Cancel);
             if (msgBox.exec() != QMessageBox::Ok) return;
