@@ -542,6 +542,7 @@ void MainWindow::openVault(QString fileName)
     {
         try
         {
+            closeVault();
             synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name(), false);
         }
         catch (const CoinDB::VaultNeedsSchemaMigrationException& e)
@@ -549,12 +550,38 @@ void MainWindow::openVault(QString fileName)
             QMessageBox msgBox;
             msgBox.setText(tr("File was created using schema ") + QString::number(e.schema_version()) + tr(". Current schema version is ") + QString::number(e.current_version())
                 + tr("."));
-            msgBox.setInformativeText(tr("Schema can be upgraded. It is highly recommended you make backups of all your important files before migrating. Would you like to migrate the file to the new schema now?"));
+            msgBox.setInformativeText(tr("Schema can be upgraded. Would you like to make a backup and migrate the file to the new schema now?"));
             msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
             msgBox.setDefaultButton(QMessageBox::Cancel);
             if (msgBox.exec() != QMessageBox::Ok) return;
 
+            // Construct backup file name. xxxxx.vault will be copied to xxxxx.<schema version>.vault - if file already exists, then xxxxx1.<schema version>.vault will be tried, etc...
+            QString baseFileName;
+            QString extension;
+            QString backupFileName;
+            if (fileName.right(6).toLower() == ".vault")
+            {
+                baseFileName = fileName.left(fileName.size() - 6);
+                extension = ".vault";
+            }
+            else
+            {
+                baseFileName = fileName;
+                extension = "";
+            }
+
+            int n = 0;
+            while (true)
+            {
+                QString nString = (n > 0 ? QString::number(n) : QString());
+                backupFileName = baseFileName + nString + ".schema" + QString::number(e.schema_version()) + extension;
+                if (QFile::copy(fileName, backupFileName)) break;
+
+                n++;
+            }
+
             synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name(), true);
+            QMessageBox::information(this, tr("Backup Made"), tr("Your vault file has been backed up to ") + backupFileName);
         }
             
         updateVaultStatus(fileName);
