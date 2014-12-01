@@ -209,6 +209,7 @@ CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName,
     currencySymbol = getCurrencySymbol(); //getCoinParams().currency_symbol();
     currencyMax = getCurrencyMax(); //getCoinParams().currency_max();
     currencyDecimals = getCurrencyDecimals(); //getCoinParams().currency_decimals();
+    defaultFee = getDefaultFee(); // getCoinParams().default_fee();
 
     // Buttons
     signAndSendButton = new QPushButton(tr("Sign and Send"));
@@ -247,7 +248,7 @@ CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName,
     QLabel* feeLabel = new QLabel(tr("Fee") + " (" + currencySymbol + "):");
     feeEdit = new QLineEdit();
     feeEdit->setValidator(new CurrencyValidator(currencyMax, currencyDecimals, this));
-    feeEdit->setText("0.0005"); // TODO: suggest more intelligently
+    feeEdit->setText(getFormattedCurrencyAmount(defaultFee, true)); // TODO: suggest more intelligently
 
     QHBoxLayout* feeLayout = new QHBoxLayout();
     feeLayout->addWidget(feeLabel);

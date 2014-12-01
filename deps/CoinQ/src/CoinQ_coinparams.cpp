@@ -73,6 +73,7 @@ const CoinParams bitcoinParams(
     100000000,
     "BTC",
     21000000,
+    50000,
     &sha256_2,
     &sha256_2,
     Coin::CoinBlockHeader(
@@ -97,6 +98,7 @@ const CoinParams testnet3Params(
     100000000,
     "testBTC",
     21000000,
+    0,
     &sha256_2,
     &sha256_2,
     Coin::CoinBlockHeader(
@@ -121,6 +123,7 @@ const CoinParams litecoinParams(
     100000000,
     "LTC",
     84000000,
+    100000,
     &sha256_2,
     &scrypt_1024_1_1_256,
     Coin::CoinBlockHeader(
@@ -145,6 +148,7 @@ const CoinParams quarkcoinParams(
     100000,
     "QRK",
     0xffffffffffffffffull / 100000,
+    0,
     &hash9,
     &hash9,
     Coin::CoinBlockHeader(

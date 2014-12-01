@@ -136,5 +136,6 @@ private:
     QString currencySymbol;
     uint64_t currencyMax;
     unsigned int currencyDecimals;
+    uint64_t defaultFee;
 };
 

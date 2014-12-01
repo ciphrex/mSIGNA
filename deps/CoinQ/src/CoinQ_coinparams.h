@@ -33,6 +33,7 @@ public:
         uint64_t currency_divisor,
         const char* currency_symbol,
         uint64_t currency_max,
+        uint64_t default_fee,
         Coin::hashfunc_t block_header_hash_function,
         Coin::hashfunc_t block_header_pow_hash_function,
         const Coin::CoinBlockHeader& genesis_block) :
@@ -46,6 +47,7 @@ public:
     currency_divisor_(currency_divisor),
     currency_symbol_(currency_symbol),
     currency_max_(currency_max),
+    default_fee_(default_fee),
     block_header_hash_function_(block_header_hash_function),
     block_header_pow_hash_function_(block_header_pow_hash_function),
     genesis_block_(genesis_block)
@@ -73,6 +75,7 @@ public:
     uint64_t                        currency_divisor() const { return currency_divisor_; }
     const char*                     currency_symbol() const { return currency_symbol_; }
     uint64_t                        currency_max() const { return currency_max_; }
+    uint64_t                        default_fee() const { return default_fee_; }
     unsigned int                    currency_decimals() const { return currency_decimals_; }
     Coin::hashfunc_t                block_header_hash_function() const { return block_header_hash_function_; }
     Coin::hashfunc_t                block_header_pow_hash_function() const { return block_header_pow_hash_function_; }
@@ -90,6 +93,7 @@ private:
     uint64_t                currency_divisor_;
     const char*             currency_symbol_;
     uint64_t                currency_max_;
+    uint64_t                default_fee_;
     unsigned int            currency_decimals_;
     Coin::hashfunc_t        block_header_hash_function_;
     Coin::hashfunc_t        block_header_pow_hash_function_;

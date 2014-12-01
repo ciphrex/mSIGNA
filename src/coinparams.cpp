@@ -26,6 +26,7 @@ QString currencySymbol;
 uint64_t currencyDivisor;
 int currencyDecimals;
 uint64_t currencyMax;
+uint64_t defaultFee;
 
 QStringList getValidCurrencyPrefixes()
 {
@@ -72,11 +73,20 @@ void setCurrencyUnitPrefix(const QString& unitPrefix)
     }
 }
 
-QString getFormattedCurrencyAmount(int64_t value)
+QString getFormattedCurrencyAmount(int64_t value, bool trimTrailingZeros)
 {
     if (currencyDivisor == 0) throw std::runtime_error("Invalid currency unit.");
 
-    return QString::number(value/(1.0 * currencyDivisor), 'f', currencyDecimals);
+    QString formattedAmount = QString::number(value/(1.0 * currencyDivisor), 'f', currencyDecimals);
+    if (currencyDecimals > 0 && trimTrailingZeros)
+    {
+        int newLength = formattedAmount.length();
+        while (newLength > 0 && formattedAmount[newLength - 1] == '0') { newLength--; }
+        if (newLength > 0 && formattedAmount[newLength - 1] == '.') { newLength--; }
+        formattedAmount = formattedAmount.left(newLength);
+    }
+
+    return formattedAmount;
 }
 
 const QString& getCurrencySymbol()
@@ -99,3 +109,7 @@ uint64_t getCurrencyMax()
     return currencyMax;
 }
 
+uint64_t getDefaultFee()
+{
+    return getCoinParams().default_fee();
+}

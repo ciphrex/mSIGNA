@@ -20,9 +20,10 @@ const CoinQ::CoinParams& getCoinParams(const std::string& network_name = "");
 
 QStringList getValidCurrencyPrefixes();
 void setCurrencyUnitPrefix(const QString& unitPrefix);
-QString getFormattedCurrencyAmount(int64_t value);
+QString getFormattedCurrencyAmount(int64_t value, bool trimTrailingZeros = false);
 
 uint64_t getCurrencyDivisor();
 const QString& getCurrencySymbol();
 int getCurrencyDecimals();
 uint64_t getCurrencyMax();
+uint64_t getDefaultFee();
