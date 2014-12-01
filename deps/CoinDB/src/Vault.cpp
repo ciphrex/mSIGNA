@@ -2969,7 +2969,7 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
 
     // TODO: Better coin selection
     typedef odb::query<TxOutView> query_t;
-    odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id()));
+    odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(query_t::Tx::status > Tx::UNSIGNED && query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id()));
     std::vector<TxOutView> utxoviews;
     for (auto& utxoview: utxoview_r) { utxoviews.push_back(utxoview); }
    
@@ -3038,7 +3038,7 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
     for (auto& txout: txouts) { desired_total += txout->value(); }
 
     typedef odb::query<TxOutView> query_t;
-    query_t base_query(query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id());
+    query_t base_query(query_t::Tx::status > Tx::UNSIGNED && query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id());
 
     if (min_confirmations > 0)
     {
