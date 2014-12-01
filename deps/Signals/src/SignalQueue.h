@@ -21,6 +21,7 @@ class SignalQueue
 public:
     void push(std::function<void()> f);
     void flush();
+    void clear();
 
 private:
     std::mutex mutex_;
@@ -41,6 +42,15 @@ inline void SignalQueue::flush()
         queue_.front()();
         queue_.pop();
     } 
+}
+
+inline void SignalQueue::clear()
+{
+    std::queue<std::function<void()>> empty;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::swap(queue_, empty);
+    }
 }
 
 }
