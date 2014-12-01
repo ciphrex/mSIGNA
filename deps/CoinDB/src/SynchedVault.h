@@ -95,6 +95,7 @@ public:
     // P2P network state events
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
     Signals::Connection subscribeTxUpdated(TxSignal::Slot slot) { return m_notifyTxUpdated.connect(slot); }
+    Signals::Connection subscribeTxDeleted(TxSignal::Slot slot) { return m_notifyTxDeleted.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return m_notifyMerkleBlockInserted.connect(slot); }
     Signals::Connection subscribeTxInsertionError(TxErrorSignal::Slot slot) { return m_notifyTxInsertionError.connect(slot); }
     Signals::Connection subscribeMerkleBlockInsertionError(MerkleBlockErrorSignal::Slot slot) { return m_notifyMerkleBlockInsertionError.connect(slot); }
@@ -154,6 +155,7 @@ private:
     // P2P network state events
     TxSignal                    m_notifyTxInserted;
     TxSignal                    m_notifyTxUpdated;
+    TxSignal                    m_notifyTxDeleted;
     MerkleBlockSignal           m_notifyMerkleBlockInserted;
     TxErrorSignal               m_notifyTxInsertionError;
     MerkleBlockErrorSignal      m_notifyMerkleBlockInsertionError;

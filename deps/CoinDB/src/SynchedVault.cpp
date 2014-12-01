@@ -347,6 +347,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
             if (tx->status() == Tx::PROPAGATED) { m_networkSync.addToMempool(tx->hash()); }
             m_notifyTxUpdated(tx);
         });
+        m_vault->subscribeTxDeleted([this](std::shared_ptr<Tx> tx) { m_notifyTxDeleted(tx); });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
         {
             updateSyncHeader(merkleblock->blockheader()->height(), merkleblock->blockheader()->hash());
@@ -550,6 +551,7 @@ void SynchedVault::clearAllSlots()
 
     m_notifyTxInserted.clear();
     m_notifyTxUpdated.clear();
+    m_notifyTxDeleted.clear();
     m_notifyMerkleBlockInserted.clear();
     m_notifyTxInsertionError.clear();
     m_notifyMerkleBlockInsertionError.clear();

@@ -221,6 +221,7 @@ public:
 
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return notifyTxInserted.connect(slot); }
     Signals::Connection subscribeTxUpdated(TxSignal::Slot slot) { return notifyTxUpdated.connect(slot); }
+    Signals::Connection subscribeTxDeleted(TxSignal::Slot slot) { return notifyTxDeleted.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return notifyMerkleBlockInserted.connect(slot); }
 
     Signals::Connection subscribeTxInsertionError(TxErrorSignal::Slot slot) { return notifyTxInsertionError.connect(slot); }
@@ -235,6 +236,7 @@ public:
 
         notifyTxInserted.clear();
         notifyTxUpdated.clear();
+        notifyTxDeleted.clear();
         notifyMerkleBlockInserted.clear();
 
         notifyTxInsertionError.clear();
@@ -372,6 +374,7 @@ protected:
 
     TxSignal                                notifyTxInserted;
     TxSignal                                notifyTxUpdated;
+    TxSignal                                notifyTxDeleted;
     MerkleBlockSignal                       notifyMerkleBlockInserted;
 
     TxErrorSignal                           notifyTxInsertionError;

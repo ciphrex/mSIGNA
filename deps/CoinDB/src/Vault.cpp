@@ -3133,6 +3133,8 @@ void Vault::deleteTx(const bytes_t& tx_hash)
     std::shared_ptr<Tx> tx(r.begin().load());
     deleteTx_unwrapped(tx);
     t.commit();
+
+    signalQueue.flush();
 }
 
 void Vault::deleteTx(unsigned long tx_id)
@@ -3148,6 +3150,8 @@ void Vault::deleteTx(unsigned long tx_id)
     std::shared_ptr<Tx> tx(r.begin().load());
     deleteTx_unwrapped(tx);
     t.commit();
+
+    signalQueue.flush();
 }
 
 void Vault::deleteTx_unwrapped(std::shared_ptr<Tx> tx)
@@ -3178,6 +3182,7 @@ void Vault::deleteTx_unwrapped(std::shared_ptr<Tx> tx)
 
     // delete tx
     db_->erase(tx);
+    signalQueue.push(notifyTxDeleted.bind(tx));
 }
 
 SigningRequest Vault::getSigningRequest(const bytes_t& hash, bool include_raw_tx) const
