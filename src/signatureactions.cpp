@@ -204,15 +204,15 @@ void SignatureActions::lockKeychain()
 
 void SignatureActions::createActions()
 {
-    addSignatureAction = new QAction(QIcon(":/icons/glossy-black-signature_32x32.png"), tr("Add signature..."), this);
+    addSignatureAction = new QAction(QIcon(":/icons/glossy-black-signature_32x32.png"), tr("Add Signature..."), this);
     addSignatureAction->setEnabled(false);
     connect(addSignatureAction, SIGNAL(triggered()), this, SLOT(addSignature()));
 
-    unlockKeychainAction = new QAction(QIcon(":/icons/unlocked.png"), tr("Unlock keychain..."), this);
+    unlockKeychainAction = new QAction(QIcon(":/icons/unlocked.png"), tr("Unlock Keychain..."), this);
     unlockKeychainAction->setEnabled(false);
     connect(unlockKeychainAction, SIGNAL(triggered()), this, SLOT(unlockKeychain()));
 
-    lockKeychainAction = new QAction(QIcon(":/icons/locked.png"), tr("Lock keychain"), this);
+    lockKeychainAction = new QAction(QIcon(":/icons/locked.png"), tr("Lock Keychain"), this);
     lockKeychainAction->setEnabled(false);
     connect(lockKeychainAction, SIGNAL(triggered()), this, SLOT(lockKeychain()));
 }

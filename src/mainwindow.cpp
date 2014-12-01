@@ -1886,7 +1886,7 @@ void MainWindow::createActions()
 {
     // application actions
     selectCurrencyUnitAction = new QAction(tr("Select Currency Units..."), this);
-    selectCurrencyUnitAction->setStatusTip(tr("Select the curr3ncy unit"));
+    selectCurrencyUnitAction->setStatusTip(tr("Select the currency unit"));
     connect(selectCurrencyUnitAction, SIGNAL(triggered()), this, SLOT(selectCurrencyUnit()));
 
     quitAction = new QAction(tr("&Quit ") + getDefaultSettings().getAppName(), this);
@@ -1931,22 +1931,22 @@ void MainWindow::createActions()
     newKeychainAction->setEnabled(false);
     connect(newKeychainAction, SIGNAL(triggered()), this, SLOT(newKeychain()));
 
-    unlockKeychainAction = new QAction(tr("Unlock keychain..."), this);
+    unlockKeychainAction = new QAction(tr("Unlock Keychain..."), this);
     unlockKeychainAction->setStatusTip(tr("Unlock keychain"));
     unlockKeychainAction->setEnabled(false);
     connect(unlockKeychainAction, SIGNAL(triggered()), this, SLOT(unlockKeychain()));
 
-    lockKeychainAction = new QAction(tr("Lock keychain"), this);
+    lockKeychainAction = new QAction(tr("Lock Keychain"), this);
     lockKeychainAction->setStatusTip(tr("Lock keychain"));
     lockKeychainAction->setEnabled(false);
     connect(lockKeychainAction, SIGNAL(triggered()), this, SLOT(lockKeychain()));
 
-    lockAllKeychainsAction = new QAction(tr("Lock all keychains"), this);
+    lockAllKeychainsAction = new QAction(tr("Lock All Keychains"), this);
     lockAllKeychainsAction->setStatusTip(tr("Lock all keychains"));
     lockAllKeychainsAction->setEnabled(false);
     connect(lockAllKeychainsAction, SIGNAL(triggered()), this, SLOT(lockAllKeychains()));
 
-    setKeychainPassphraseAction = new QAction(tr("Set keychain passphrase..."), this);
+    setKeychainPassphraseAction = new QAction(tr("Set Keychain Passphrase..."), this);
     setKeychainPassphraseAction->setStatusTip(tr("Set the encryption passphrase for the keychain"));
     setKeychainPassphraseAction->setEnabled(false);
     connect(setKeychainPassphraseAction, SIGNAL(triggered()), this, SLOT(setKeychainPassphrase()));
@@ -2085,7 +2085,7 @@ void MainWindow::createActions()
     connect(sendRawTxAction, SIGNAL(triggered()), this, SLOT(sendRawTx()));
 
     // network actions
-    connectAction = new QAction(QIcon(":/icons/connect.png"), tr("Connect to ") + host, this);
+    connectAction = new QAction(QIcon(":/icons/connect.png"), tr("Connect To ") + host, this);
     connectAction->setStatusTip(tr("Connect to a p2p node"));
     connectAction->setEnabled(true);
 
@@ -2093,7 +2093,7 @@ void MainWindow::createActions()
     shortConnectAction->setStatusTip(tr("Connect to a p2p node"));
     shortConnectAction->setEnabled(true);
 
-    disconnectAction = new QAction(QIcon(":/icons/disconnect.png"), tr("Disconnect from ") + host, this);
+    disconnectAction = new QAction(QIcon(":/icons/disconnect.png"), tr("Disconnect From ") + host, this);
     disconnectAction->setStatusTip(tr("Disconnect from p2p node"));
     disconnectAction->setEnabled(false);
 
