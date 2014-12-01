@@ -469,6 +469,17 @@ void MainWindow::selectCurrencyUnit(const QString& newCurrencyUnitPrefix)
     }
 }
 
+void MainWindow::selectTrailingDecimals(bool newShowTrailingDecimals)
+{
+    if (newShowTrailingDecimals != showTrailingDecimals)
+    {
+        showTrailingDecimals = newShowTrailingDecimals;
+        saveSettings();
+        setTrailingDecimals(showTrailingDecimals);
+        emit signal_currencyUnitChanged();
+    }
+}
+
 void MainWindow::newVault(QString fileName)
 {
     if (fileName.isEmpty()) {
@@ -2144,6 +2155,12 @@ void MainWindow::createActions()
         currencyUnitActions << currencyUnitAction;
     }
 
+    showTrailingDecimalsAction = new QAction(tr("Show Trailing Decimals"), this);
+    showTrailingDecimalsAction->setCheckable(true);
+    showTrailingDecimalsAction->setStatusTip(tr("Show trailing zeros in decimals"));
+    connect(showTrailingDecimalsAction, &QAction::toggled, [this]() { selectTrailingDecimals(showTrailingDecimalsAction->isChecked()); });
+    showTrailingDecimalsAction->setChecked(showTrailingDecimals);
+
     // about/help actions
     aboutAction = new QAction(tr("About..."), this);
     aboutAction->setStatusTip(tr("About ") + getDefaultSettings().getAppName());
@@ -2245,6 +2262,8 @@ void MainWindow::createMenus()
     {
         currencyUnitMenu->addAction(currencyUnitAction);
     }
+    currencyUnitMenu->addSeparator();
+    currencyUnitMenu->addAction(showTrailingDecimalsAction);
 
     menuBar()->addSeparator();
 
@@ -2315,6 +2334,8 @@ void MainWindow::loadSettings()
     {
         QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
         currencyUnitPrefix = settings.value("currencyunitprefix", "").toString();
+        showTrailingDecimals = settings.value("showtrailingdecimals", true).toBool();
+        setTrailingDecimals(showTrailingDecimals);
         blockTreeFile = settings.value("blocktreefile", getDefaultSettings().getDataDir() + "/blocktree.dat").toString();
         host = settings.value("host", "localhost").toString();
         port = settings.value("port", getCoinParams().default_port()).toInt();
@@ -2336,6 +2357,7 @@ void MainWindow::saveSettings()
     {
         QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
         settings.setValue("currencyunitprefix", currencyUnitPrefix);
+        settings.setValue("showtrailingdecimals", showTrailingDecimals);
         settings.setValue("blocktreefile", blockTreeFile);
         settings.setValue("host", host);
         settings.setValue("port", port);

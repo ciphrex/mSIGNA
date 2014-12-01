@@ -124,7 +124,8 @@ private slots:
     ////////////////////
     // GLOBAL OPERATIONS
     void selectCurrencyUnit();
-    void selectCurrencyUnit(const QString& prefix);
+    void selectCurrencyUnit(const QString& newCurrencyUnitPrefix);
+    void selectTrailingDecimals(bool newShowTrailingDecimals);
 
     ///////////////////
     // VAULT OPERATIONS
@@ -239,6 +240,7 @@ private:
 
     QString curFile;
     QString currencyUnitPrefix;
+    bool showTrailingDecimals;
 
     //void updateBestHeight(int newHeight);
 
@@ -354,6 +356,7 @@ private:
     // currency unit actions
     QActionGroup* currencyUnitGroup;
     QList<QAction*> currencyUnitActions;
+    QAction* showTrailingDecimalsAction;
 
     // about/help actions
     QAction* aboutAction;

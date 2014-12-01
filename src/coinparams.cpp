@@ -22,6 +22,7 @@ const CoinQ::CoinParams& getCoinParams(const std::string& network_name)
     return selector.getCoinParams(network_name);
 }
 
+bool userTrailingDecimals = true;
 QString currencySymbol;
 uint64_t currencyDivisor;
 int currencyDecimals;
@@ -73,12 +74,18 @@ void setCurrencyUnitPrefix(const QString& unitPrefix)
     }
 }
 
-QString getFormattedCurrencyAmount(int64_t value, bool trimTrailingZeros)
+void setTrailingDecimals(bool show)
+{
+    userTrailingDecimals = show;
+}
+
+QString getFormattedCurrencyAmount(int64_t value, TrailingDecimalsFlag flag)
 {
     if (currencyDivisor == 0) throw std::runtime_error("Invalid currency unit.");
 
     QString formattedAmount = QString::number(value/(1.0 * currencyDivisor), 'f', currencyDecimals);
-    if (currencyDecimals > 0 && trimTrailingZeros)
+
+    if ((flag == HIDE_TRAILING_DECIMALS || (flag == USER_TRAILING_DECIMALS && !userTrailingDecimals)) && currencyDecimals > 0)
     {
         int newLength = formattedAmount.length();
         while (newLength > 0 && formattedAmount[newLength - 1] == '0') { newLength--; }

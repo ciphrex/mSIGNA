@@ -20,7 +20,11 @@ const CoinQ::CoinParams& getCoinParams(const std::string& network_name = "");
 
 QStringList getValidCurrencyPrefixes();
 void setCurrencyUnitPrefix(const QString& unitPrefix);
-QString getFormattedCurrencyAmount(int64_t value, bool trimTrailingZeros = false);
+void setTrailingDecimals(bool show = true);
+
+enum TrailingDecimalsFlag { USER_TRAILING_DECIMALS, SHOW_TRAILING_DECIMALS, HIDE_TRAILING_DECIMALS };
+
+QString getFormattedCurrencyAmount(int64_t value, TrailingDecimalsFlag flag = USER_TRAILING_DECIMALS);
 
 uint64_t getCurrencyDivisor();
 const QString& getCurrencySymbol();

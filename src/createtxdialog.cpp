@@ -248,7 +248,7 @@ CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName,
     QLabel* feeLabel = new QLabel(tr("Fee") + " (" + currencySymbol + "):");
     feeEdit = new QLineEdit();
     feeEdit->setValidator(new CurrencyValidator(currencyMax, currencyDecimals, this));
-    feeEdit->setText(getFormattedCurrencyAmount(defaultFee, true)); // TODO: suggest more intelligently
+    feeEdit->setText(getFormattedCurrencyAmount(defaultFee, HIDE_TRAILING_DECIMALS)); // TODO: suggest more intelligently
 
     QHBoxLayout* feeLayout = new QHBoxLayout();
     feeLayout->addWidget(feeLabel);
