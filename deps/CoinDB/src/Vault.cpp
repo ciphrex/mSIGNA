@@ -1526,7 +1526,7 @@ std::vector<TxOutView> Vault::getUnspentTxOutViews(const std::string& account_na
 std::vector<TxOutView> Vault::getUnspentTxOutViews_unwrapped(std::shared_ptr<Account> account, uint32_t min_confirmations) const
 {
     typedef odb::query<TxOutView> query_t;
-    query_t query(query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id());
+    query_t query(query_t::Tx::status > Tx::UNSIGNED && query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id());
 
     std::vector<TxOutView> utxoviews;
     if (min_confirmations > 0)
