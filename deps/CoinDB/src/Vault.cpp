@@ -3677,7 +3677,7 @@ std::shared_ptr<Tx> Vault::importTxFromString(const std::string& txstr)
     return tx;
 }
 
-void Vault::exportTxs(const std::string& filepath, uint32_t minheight) const
+unsigned int Vault::exportTxs(const std::string& filepath, uint32_t minheight) const
 {
     LOGGER(trace) << "Vault::exportTxs(" << filepath << ", " << minheight << ")" << std::endl;
 
@@ -3691,10 +3691,10 @@ void Vault::exportTxs(const std::string& filepath, uint32_t minheight) const
 
     odb::core::session s;
     odb::core::transaction t(db_->begin());
-    exportTxs_unwrapped(oa, minheight);
+    return exportTxs_unwrapped(oa, minheight);
 }
 
-void Vault::exportTxs_unwrapped(boost::archive::text_oarchive& oa, uint32_t minheight) const
+unsigned int Vault::exportTxs_unwrapped(boost::archive::text_oarchive& oa, uint32_t minheight) const
 {
     typedef odb::query<Tx> tx_query_t;
     odb::result<Tx> r;
@@ -3712,26 +3712,29 @@ void Vault::exportTxs_unwrapped(boost::archive::text_oarchive& oa, uint32_t minh
     uint32_t n = txs.size();
     oa << n;
     for (auto& tx: txs) { oa << *tx; }
+    return n;
 }
 
-void Vault::importTxs(const std::string& filepath)
+unsigned int Vault::importTxs(const std::string& filepath)
 {
     LOGGER(trace) << "Vault::importTxs(" << filepath << ")" << std::endl;
 
     std::ifstream ifs(filepath);
     boost::archive::text_iarchive ia(ifs);
 
+    uint32_t n;
     {
         boost::lock_guard<boost::mutex> lock(mutex);
         odb::core::transaction t(db_->begin());
-        importTxs_unwrapped(ia);
+        n = importTxs_unwrapped(ia);
         t.commit();
     }
 
     signalQueue.flush();
+    return n;
 }
 
-void Vault::importTxs_unwrapped(boost::archive::text_iarchive& ia)
+unsigned int Vault::importTxs_unwrapped(boost::archive::text_iarchive& ia)
 {
     uint32_t n;
     ia >> n;
@@ -3742,6 +3745,7 @@ void Vault::importTxs_unwrapped(boost::archive::text_iarchive& ia)
         odb::core::session s;
         insertTx_unwrapped(tx);
     }
+    return n;
 }
 
 //////////////////////////////

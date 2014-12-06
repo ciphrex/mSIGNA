@@ -192,8 +192,8 @@ public:
     std::string                             exportTx(std::shared_ptr<Tx> tx) const;
     std::shared_ptr<Tx>                     importTx(const std::string& filepath);
     std::shared_ptr<Tx>                     importTxFromString(const std::string& txstr);
-    void                                    exportTxs(const std::string& filepath, uint32_t minheight = 0) const;
-    void                                    importTxs(const std::string& filepath);
+    unsigned int                            exportTxs(const std::string& filepath, uint32_t minheight = 0) const;
+    unsigned int                            importTxs(const std::string& filepath);
 
     //////////////////////////////
     // SIGNINGSCRIPT OPERATIONS //
@@ -340,8 +340,8 @@ protected:
     std::shared_ptr<TxOut>                  setSendingLabel_unwrapped(const bytes_t& outhash, uint32_t outindex, const std::string& label);
     std::shared_ptr<TxOut>                  setReceivingLabel_unwrapped(const bytes_t& outhash, uint32_t outindex, const std::string& label);
 
-    void                                    exportTxs_unwrapped(boost::archive::text_oarchive& oa, uint32_t minheight) const;
-    void                                    importTxs_unwrapped(boost::archive::text_iarchive& ia);
+    unsigned int                            exportTxs_unwrapped(boost::archive::text_oarchive& oa, uint32_t minheight) const;
+    unsigned int                            importTxs_unwrapped(boost::archive::text_iarchive& ia);
 
     //////////////////////////////
     // SIGNINGSCRIPT OPERATIONS //
