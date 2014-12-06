@@ -243,6 +243,35 @@ void TxActions::exportTxToFile()
 
 void TxActions::exportAllTxsToFile()
 {
+    try {
+        if (!m_synchedVault || !m_synchedVault->isVaultOpen()) throw std::runtime_error("You must create a vault or open an existing vault before exporting transactions.");
+
+        CoinDB::Vault* vault = m_synchedVault->getVault();
+        QString fileName = QString::fromStdString(vault->getName());
+
+        // Strip .vault extension and add .txs extension
+        if (fileName.endsWith(".vault", Qt::CaseInsensitive)) { fileName = fileName.left(fileName.size() - 6); }
+        fileName += ".txs";
+
+        fileName = QFileDialog::getSaveFileName(
+            nullptr,
+            tr("Export All Transactions"),
+            getDocDir() + "/" + fileName,
+            tr("Transaction Set (*.txs)"));
+        if (fileName.isEmpty()) return;
+
+        fileName = QFileInfo(fileName).absoluteFilePath();
+
+        QFileInfo fileInfo(fileName);
+        setDocDir(fileInfo.dir().absolutePath());
+
+        // TODO: emit settings changed signal
+
+        m_accountModel->getVault()->exportTxs(fileName.toStdString()); 
+    }
+    catch (const std::exception& e) {
+        emit error(e.what());
+    }
 }
 
 void TxActions::importTxFromFile()
@@ -278,6 +307,33 @@ void TxActions::importTxFromFile()
 
 void TxActions::importTxsFromFile()
 {
+    try
+    {
+        if (!m_accountModel || !m_accountModel->isOpen()) throw std::runtime_error("You must create a vault or open an existing vault before importing transactions.");
+
+        QString fileName = QFileDialog::getOpenFileName(
+            nullptr,
+            tr("Import Transactions"),
+            getDocDir(),
+            tr("Transaction Set (*.txs)"));
+        if (fileName.isEmpty()) return;
+
+        fileName = QFileInfo(fileName).absoluteFilePath();
+
+        QFileInfo fileInfo(fileName);
+        setDocDir(fileInfo.dir().absolutePath());
+
+        // TODO: emit settings changed signal
+
+        if (m_accountModel->getVault()->importTxs(fileName.toStdString()) == 0) throw std::runtime_error("No transactions imported.");
+        m_accountModel->update();
+        m_txModel->update();
+        m_txView->updateColumns();
+        emit setCurrentWidget(m_txView);
+    }
+    catch (const std::exception& e) {
+        emit error(e.what());
+    } 
 }
 
 void TxActions::viewRawTx()
@@ -505,6 +561,8 @@ void TxActions::createMenus()
     //menu->addAction(signTxAction);
     menu->addAction(exportTxToFileAction);
     menu->addAction(importTxFromFileAction);
+    menu->addAction(exportAllTxsToFileAction);
+    menu->addAction(importTxsFromFileAction);
     menu->addSeparator();
     //menu->addAction(viewRawTxAction);
     menu->addAction(copyAddressToClipboardAction);
