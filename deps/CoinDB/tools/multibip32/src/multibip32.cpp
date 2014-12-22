@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
         vector<bytes_t> pubkeys;
         vector<bytes_t> uncompressed_pubkeys;
 
-        for (size_t i = 2; i < argc; i+=2)
+        for (int i = 2; i < argc; i+=2)
         {
             bytes_t extkey;
             if (!fromBase58Check(string(argv[i]), extkey))
