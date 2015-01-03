@@ -124,7 +124,7 @@ MainWindow::MainWindow() :
     accountView->setModel(accountModel);
     accountView->updateColumns();
     connect(accountView, SIGNAL(updateModel()), accountModel, SLOT(update()));
-    connect(keychainModel, SLOT(keychainChanged()), accountModel, SLOT(update()));
+    connect(keychainModel, SIGNAL(keychainChanged()), accountModel, SLOT(update()));
 
 /*
     qRegisterMetaType<bytes_t>("bytes_t");
