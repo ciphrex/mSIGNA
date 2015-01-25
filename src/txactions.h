@@ -60,6 +60,7 @@ private slots:
     void copyAddressToClipboard();
     void copyTxHashToClipboard();
     void copyRawTxToClipboard();
+    void insertRawTxFromClipboard();
     void saveRawTxToFile();
     void insertRawTxFromFile();
     void viewTxOnWeb();
@@ -94,6 +95,7 @@ private:
     QAction* copyAddressToClipboardAction;
     QAction* copyTxHashToClipboardAction;
     QAction* copyRawTxToClipboardAction;
+    QAction* insertRawTxFromClipboardAction;
     QAction* saveRawTxToFileAction;
     QAction* insertRawTxFromFileAction;
     QAction* viewTxOnWebAction;

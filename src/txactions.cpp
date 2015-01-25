@@ -103,6 +103,7 @@ void TxActions::updateVaultStatus()
     importTxFromFileAction->setEnabled(bEnabled);
     importTxsFromFileAction->setEnabled(bEnabled);
     exportAllTxsToFileAction->setEnabled(bEnabled);
+    insertRawTxFromClipboardAction->setEnabled(bEnabled);
     insertRawTxFromFileAction->setEnabled(bEnabled);
 }
 
@@ -413,6 +414,26 @@ void TxActions::saveRawTxToFile()
     }
 }
 
+void TxActions::insertRawTxFromClipboard()
+{
+    try {
+        if (!m_accountModel || !m_accountModel->isOpen()) throw std::runtime_error("You must create a vault or open an existing vault before inserting transactions.");
+
+        QClipboard* clipboard = QApplication::clipboard();
+        std::string rawhex = clipboard->text().toStdString();
+
+        std::shared_ptr<CoinDB::Tx> tx(new CoinDB::Tx());
+        tx->set(uchar_vector(rawhex));
+        tx = m_accountModel->insertTx(tx);
+        m_txModel->update();
+        m_txView->updateColumns();
+        emit setCurrentWidget(m_txView);
+    }
+    catch (const std::exception& e) {
+        emit error(e.what());
+    } 
+}
+
 void TxActions::insertRawTxFromFile()
 {
     try {
@@ -535,6 +556,10 @@ void TxActions::createActions()
     copyRawTxToClipboardAction->setEnabled(false);
     connect(copyRawTxToClipboardAction, SIGNAL(triggered()), this, SLOT(copyRawTxToClipboard()));
 
+    insertRawTxFromClipboardAction = new QAction(tr("Insert Raw Transaction From Clipboard"), this);
+    insertRawTxFromClipboardAction->setEnabled(false);
+    connect(insertRawTxFromClipboardAction, SIGNAL(triggered()), this, SLOT(insertRawTxFromClipboard()));
+
     saveRawTxToFileAction = new QAction(tr("Save Raw Transaction To File..."), this);
     saveRawTxToFileAction->setEnabled(false);
     connect(saveRawTxToFileAction, SIGNAL(triggered()), this, SLOT(saveRawTxToFile()));
@@ -568,8 +593,11 @@ void TxActions::createMenus()
     menu->addAction(copyAddressToClipboardAction);
     menu->addAction(copyTxHashToClipboardAction);
     menu->addAction(copyRawTxToClipboardAction);
+    menu->addAction(insertRawTxFromClipboardAction);
+    menu->addSeparator();
     menu->addAction(saveRawTxToFileAction);
     menu->addAction(insertRawTxFromFileAction);
+    menu->addSeparator();
     menu->addAction(viewTxOnWebAction);
     menu->addSeparator();
     menu->addAction(searchTxAction);
