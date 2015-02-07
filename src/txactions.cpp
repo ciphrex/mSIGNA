@@ -101,6 +101,7 @@ void TxActions::updateVaultStatus()
     bool bEnabled = (m_accountModel && m_accountModel->isOpen());
     searchTxAction->setEnabled(bEnabled);
     importTxFromFileAction->setEnabled(bEnabled);
+    importTxFromClipboardAction->setEnabled(bEnabled);
     importTxsFromFileAction->setEnabled(bEnabled);
     exportAllTxsToFileAction->setEnabled(bEnabled);
     insertRawTxFromClipboardAction->setEnabled(bEnabled);
@@ -302,6 +303,28 @@ void TxActions::importTxFromFile()
         emit setCurrentWidget(m_txView);
     }
     catch (const std::exception& e) {
+        emit error(e.what());
+    } 
+}
+
+void TxActions::importTxFromClipboard()
+{
+    try
+    {
+        if (!m_accountModel || !m_accountModel->isOpen()) throw std::runtime_error("You must create a vault or open an existing vault before importing transactions.");
+
+        QClipboard* clipboard = QApplication::clipboard();
+        std::string serializedTx = clipboard->text().toStdString();
+
+        std::shared_ptr<CoinDB::Tx> tx = m_accountModel->getVault()->importTxFromString(serializedTx);
+        if (!tx) throw std::runtime_error("Transaction not inserted.");
+        m_accountModel->update();
+        m_txModel->update();
+        m_txView->updateColumns();
+        emit setCurrentWidget(m_txView);
+    }
+    catch (const std::exception& e)
+    {
         emit error(e.what());
     } 
 }
@@ -532,6 +555,10 @@ void TxActions::createActions()
     importTxFromFileAction->setEnabled(false);
     connect(importTxFromFileAction, SIGNAL(triggered()), this, SLOT(importTxFromFile()));
 
+    importTxFromClipboardAction = new QAction(tr("Import Transaction From Clipboard"), this);
+    importTxFromClipboardAction->setEnabled(false);
+    connect(importTxFromClipboardAction, SIGNAL(triggered()), this, SLOT(importTxFromClipboard()));
+
     exportAllTxsToFileAction = new QAction(tr("Export All Transactions To File..."), this);
     exportAllTxsToFileAction->setEnabled(false);
     connect(exportAllTxsToFileAction, SIGNAL(triggered()), this, SLOT(exportAllTxsToFile()));
@@ -586,6 +613,8 @@ void TxActions::createMenus()
     //menu->addAction(signTxAction);
     menu->addAction(exportTxToFileAction);
     menu->addAction(importTxFromFileAction);
+    menu->addAction(importTxFromClipboardAction);
+    menu->addSeparator();
     menu->addAction(exportAllTxsToFileAction);
     menu->addAction(importTxsFromFileAction);
     menu->addSeparator();
