@@ -1230,7 +1230,7 @@ public:
 
     CoinQ::Script::Signer signer() const;
 
-    std::string toJson(bool includeRawHex = false) const;
+    std::string toJson(bool includeRawHex = false, bool includeSerialized = false) const;
 
     std::string toSerialized() const;
     void fromSerialized(const std::string& serialized);

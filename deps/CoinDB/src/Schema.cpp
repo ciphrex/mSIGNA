@@ -1114,7 +1114,7 @@ CoinQ::Script::Signer Tx::signer() const
     return CoinQ::Script::Signer(toCoinCore(), true);
 }
 
-std::string Tx::toJson(bool includeRawHex) const
+std::string Tx::toJson(bool includeRawHex, bool includeSerialized) const
 {
     std::stringstream ss;
     ss << "{"
@@ -1149,6 +1149,11 @@ std::string Tx::toJson(bool includeRawHex) const
     if (includeRawHex)
     {
         ss << ",\"rawhex\":\"" << uchar_vector(raw()).getHex() << "\"";
+    }
+
+    if (includeSerialized)
+    {
+        ss << ",\"serialized\":\"" << toSerialized() << "\"";
     }
 
     ss << "}";
