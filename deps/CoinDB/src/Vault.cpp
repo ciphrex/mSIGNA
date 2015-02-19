@@ -2995,7 +2995,11 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
 
     // TODO: Better fee calculation heuristics
     uint64_t desired_total = fee;
-    for (auto& txout: txouts) { desired_total += txout->value(); }
+    for (auto& txout: txouts)
+    {
+        if (txout->value() == 0) throw TxInvalidOutputsException();
+        desired_total += txout->value();
+    }
 
     std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
 
@@ -3067,7 +3071,11 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
     // TODO: Better fee calculation heuristics
     uint64_t input_total = 0;
     uint64_t desired_total = fee;
-    for (auto& txout: txouts) { desired_total += txout->value(); }
+    for (auto& txout: txouts)
+    {
+        desired_total += txout->value();
+        if (txout->value() == 0) throw TxInvalidOutputsException();
+    }
 
     typedef odb::query<TxOutView> query_t;
     query_t base_query(query_t::Tx::status > Tx::UNSIGNED && query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id());
