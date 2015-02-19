@@ -458,6 +458,41 @@ void SynchedVault::updateBloomFilter()
     m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
 }
 
+// This function recursively tries to send dependencies.
+// TODO: We might want to make recursive sending optional and allowing an exception to be thrown instead if any dependency is still unpropagated.
+void recursiveSendTx(Vault& vault, CoinQ::Network::NetworkSync& networkSync, std::shared_ptr<Tx>& tx)
+{
+    if (tx->status() == Tx::UNSIGNED)
+        throw std::runtime_error("Transaction is missing signatures.");
+
+    // Send any unsent dependencies first.
+    // TODO: Write a new protected method to 
+    for (auto& txin: tx->txins())
+    {
+        try
+        {
+            std::shared_ptr<Tx> dependencyTx = vault.getTx(txin->outhash());
+            if (dependencyTx->status() == Tx::UNSIGNED)
+                throw std::runtime_error("Transaction depends on another transaction that is missing signatures.");
+
+            // Only try sending dependencies that have not confirmed. 
+            if (dependencyTx->status() == Tx::UNSENT || dependencyTx->status() == Tx::PROPAGATED)
+            {
+                recursiveSendTx(vault, networkSync, dependencyTx);
+            }
+        }
+        catch (const TxNotFoundException& e)
+        {
+            // Ignore dependencies we do not have.
+        }
+    }
+
+    Coin::Transaction coin_tx = tx->toCoinCore();
+    networkSync.sendTx(coin_tx);
+    uchar_vector txhash(tx->hash());
+    networkSync.getTx(txhash); // To ensure propagation
+}
+
 std::shared_ptr<Tx> SynchedVault::sendTx(const bytes_t& hash)
 {
     LOGGER(trace) << "SynchedVault::sendTx(" << uchar_vector(hash).getHex() << ")" << std::endl;
@@ -468,14 +503,7 @@ std::shared_ptr<Tx> SynchedVault::sendTx(const bytes_t& hash)
     if (!m_vault) throw std::runtime_error("No vault is open.");
 
     std::shared_ptr<Tx> tx = m_vault->getTx(hash);
-    if (tx->status() == Tx::UNSIGNED)
-        throw std::runtime_error("Transaction is missing signatures.");
-
-    Coin::Transaction coin_tx = tx->toCoinCore();
-    m_networkSync.sendTx(coin_tx);
-    uchar_vector txhash(tx->hash());
-    m_networkSync.getTx(txhash); // To ensure propagation
-
+    recursiveSendTx(*m_vault, m_networkSync, tx);
     return tx;
 }
 
@@ -489,14 +517,7 @@ std::shared_ptr<Tx> SynchedVault::sendTx(unsigned long tx_id)
     if (!m_vault) throw std::runtime_error("No vault is open.");
 
     std::shared_ptr<Tx> tx = m_vault->getTx(tx_id);
-    if (tx->status() == Tx::UNSIGNED)
-        throw std::runtime_error("Transaction is missing signatures.");
-
-    Coin::Transaction coin_tx = tx->toCoinCore();
-    m_networkSync.sendTx(coin_tx);
-    uchar_vector txhash(tx->hash());
-    m_networkSync.getTx(txhash); // To ensure propagation
-
+    recursiveSendTx(*m_vault, m_networkSync, tx);
     return tx;
 }
 
