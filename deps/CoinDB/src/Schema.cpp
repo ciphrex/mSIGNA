@@ -1148,12 +1148,12 @@ std::string Tx::toJson(bool includeRawHex, bool includeSerialized) const
 
     if (includeRawHex)
     {
-        ss << ",\"rawhex\":\"" << uchar_vector(raw()).getHex() << "\"";
+        ss << ",\"rawtx\":\"" << uchar_vector(raw()).getHex() << "\"";
     }
 
     if (includeSerialized)
     {
-        ss << ",\"serialized\":\"" << toSerialized() << "\"";
+        ss << ",\"serializedtx\":\"" << toSerialized() << "\"";
     }
 
     ss << "}";
