@@ -26,6 +26,9 @@ public:
     void setAccount(const QString& accountName);
     void update();
 
+    // Overriden methods
+    Qt::ItemFlags flags(const QModelIndex& index) const;
+
 private:
     void initColumns();
 

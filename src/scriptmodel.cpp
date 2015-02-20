@@ -98,3 +98,9 @@ void ScriptModel::update()
         appendRow(row);
     }    
 }
+
+Qt::ItemFlags ScriptModel::flags(const QModelIndex& index) const
+{
+    return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+}
+
