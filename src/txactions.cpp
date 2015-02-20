@@ -547,23 +547,23 @@ void TxActions::createActions()
     sendTxAction->setEnabled(false);
     connect(sendTxAction, SIGNAL(triggered()), this, SLOT(sendTx()));
 
-    exportTxToFileAction = new QAction(tr("Export Transaction To File..."), this);
+    exportTxToFileAction = new QAction(tr("To File..."), this);
     exportTxToFileAction->setEnabled(false);
     connect(exportTxToFileAction, SIGNAL(triggered()), this, SLOT(exportTxToFile()));
 
-    importTxFromFileAction = new QAction(tr("Import Transaction From File..."), this);
+    importTxFromFileAction = new QAction(tr("From File..."), this);
     importTxFromFileAction->setEnabled(false);
     connect(importTxFromFileAction, SIGNAL(triggered()), this, SLOT(importTxFromFile()));
 
-    importTxFromClipboardAction = new QAction(tr("Import Transaction From Clipboard"), this);
+    importTxFromClipboardAction = new QAction(tr("From Clipboard"), this);
     importTxFromClipboardAction->setEnabled(false);
     connect(importTxFromClipboardAction, SIGNAL(triggered()), this, SLOT(importTxFromClipboard()));
 
-    exportAllTxsToFileAction = new QAction(tr("Export All Transactions To File..."), this);
+    exportAllTxsToFileAction = new QAction(tr("All To File..."), this);
     exportAllTxsToFileAction->setEnabled(false);
     connect(exportAllTxsToFileAction, SIGNAL(triggered()), this, SLOT(exportAllTxsToFile()));
 
-    importTxsFromFileAction = new QAction(tr("Import Multiple Transactions From File..."), this);
+    importTxsFromFileAction = new QAction(tr("Multiple From File..."), this);
     importTxsFromFileAction->setEnabled(false);
     connect(importTxsFromFileAction, SIGNAL(triggered()), this, SLOT(importTxsFromFile()));
 
@@ -579,19 +579,19 @@ void TxActions::createActions()
     copyTxHashToClipboardAction->setEnabled(false);
     connect(copyTxHashToClipboardAction, SIGNAL(triggered()), this, SLOT(copyTxHashToClipboard()));
 
-    copyRawTxToClipboardAction = new QAction(tr("Copy Raw Transaction To Clipboard"), this);
+    copyRawTxToClipboardAction = new QAction(tr("To Clipboard (raw)"), this);
     copyRawTxToClipboardAction->setEnabled(false);
     connect(copyRawTxToClipboardAction, SIGNAL(triggered()), this, SLOT(copyRawTxToClipboard()));
 
-    insertRawTxFromClipboardAction = new QAction(tr("Insert Raw Transaction From Clipboard"), this);
+    insertRawTxFromClipboardAction = new QAction(tr("From Clipboard (raw)"), this);
     insertRawTxFromClipboardAction->setEnabled(false);
     connect(insertRawTxFromClipboardAction, SIGNAL(triggered()), this, SLOT(insertRawTxFromClipboard()));
 
-    saveRawTxToFileAction = new QAction(tr("Save Raw Transaction To File..."), this);
+    saveRawTxToFileAction = new QAction(tr("To File (raw)..."), this);
     saveRawTxToFileAction->setEnabled(false);
     connect(saveRawTxToFileAction, SIGNAL(triggered()), this, SLOT(saveRawTxToFile()));
 
-    insertRawTxFromFileAction = new QAction(tr("Insert Raw Transaction From File..."), this);
+    insertRawTxFromFileAction = new QAction(tr("From File (raw)..."), this);
     insertRawTxFromFileAction->setEnabled(false);
     connect(insertRawTxFromFileAction, SIGNAL(triggered()), this, SLOT(insertRawTxFromFile()));
 
@@ -613,7 +613,7 @@ void TxActions::createMenus()
     menu->addSeparator();
     //menu->addAction(signTxAction);
 
-    QMenu* importTxMenu = menu->addMenu(tr("Import"));
+    QMenu* importTxMenu = menu->addMenu(tr("Import Transaction"));
     importTxMenu->addAction(importTxFromClipboardAction);
     importTxMenu->addAction(importTxFromFileAction);
     importTxMenu->addAction(importTxsFromFileAction);
@@ -621,7 +621,7 @@ void TxActions::createMenus()
     importTxMenu->addAction(insertRawTxFromClipboardAction);
     importTxMenu->addAction(insertRawTxFromFileAction);
 
-    QMenu* exportTxMenu = menu->addMenu(tr("Export"));
+    QMenu* exportTxMenu = menu->addMenu(tr("Export Transaction"));
     exportTxMenu->addAction(exportTxToFileAction);
     exportTxMenu->addAction(exportAllTxsToFileAction);
     exportTxMenu->addSeparator();
