@@ -609,23 +609,42 @@ void TxActions::createMenus()
     menu = new QMenu(tr("&Transactions"));
     menu->addAction(signaturesAction);
     menu->addAction(sendTxAction);
+
     menu->addSeparator();
     //menu->addAction(signTxAction);
-    menu->addAction(exportTxToFileAction);
-    menu->addAction(importTxFromFileAction);
-    menu->addAction(importTxFromClipboardAction);
+
+    QMenu* importTxMenu = menu->addMenu(tr("Import"));
+    importTxMenu->addAction(importTxFromClipboardAction);
+    importTxMenu->addAction(importTxFromFileAction);
+    importTxMenu->addAction(importTxsFromFileAction);
+    importTxMenu->addSeparator();
+    importTxMenu->addAction(insertRawTxFromClipboardAction);
+    importTxMenu->addAction(insertRawTxFromFileAction);
+
+    QMenu* exportTxMenu = menu->addMenu(tr("Export"));
+    exportTxMenu->addAction(exportTxToFileAction);
+    exportTxMenu->addAction(exportAllTxsToFileAction);
+    exportTxMenu->addSeparator();
+    exportTxMenu->addAction(copyRawTxToClipboardAction);
+    exportTxMenu->addAction(saveRawTxToFileAction);
+
     menu->addSeparator();
-    menu->addAction(exportAllTxsToFileAction);
-    menu->addAction(importTxsFromFileAction);
-    menu->addSeparator();
+
+    //menu->addAction(exportTxToFileAction);
+    //menu->addAction(importTxFromFileAction);
+    //menu->addAction(importTxFromClipboardAction);
+    //menu->addSeparator();
+    //menu->addAction(exportAllTxsToFileAction);
+    //menu->addAction(importTxsFromFileAction);
+    //menu->addSeparator();
     //menu->addAction(viewRawTxAction);
     menu->addAction(copyAddressToClipboardAction);
     menu->addAction(copyTxHashToClipboardAction);
-    menu->addAction(copyRawTxToClipboardAction);
-    menu->addAction(insertRawTxFromClipboardAction);
-    menu->addSeparator();
-    menu->addAction(saveRawTxToFileAction);
-    menu->addAction(insertRawTxFromFileAction);
+    //menu->addAction(copyRawTxToClipboardAction);
+    //menu->addAction(insertRawTxFromClipboardAction);
+    //menu->addSeparator();
+    //menu->addAction(saveRawTxToFileAction);
+    //menu->addAction(insertRawTxFromFileAction);
     menu->addSeparator();
     menu->addAction(viewTxOnWebAction);
     menu->addSeparator();
