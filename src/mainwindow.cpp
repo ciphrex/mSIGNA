@@ -1978,32 +1978,32 @@ void MainWindow::createActions()
     importPrivateAction->setChecked(true);
     importPrivate = true;
 
-    importKeychainAction = new QAction(tr("Import Keychain..."), this);
+    importKeychainAction = new QAction(tr("From File..."), this);
     importKeychainAction->setStatusTip(tr("Import keychain from file"));
     importKeychainAction->setEnabled(false);
     connect(importKeychainAction, SIGNAL(triggered()), this, SLOT(importKeychain()));
 
-    exportPrivateKeychainAction = new QAction(tr("Export Private Keychain..."), this);
+    exportPrivateKeychainAction = new QAction(tr("To File (private)..."), this);
     exportPrivateKeychainAction->setStatusTip(tr("Export private keychain to file"));
     exportPrivateKeychainAction->setEnabled(false);
     connect(exportPrivateKeychainAction, &QAction::triggered, [=]() { this->exportKeychain(true); });
 
-    exportPublicKeychainAction = new QAction(tr("Export Public Keychain..."), this);
+    exportPublicKeychainAction = new QAction(tr("To File (public)..."), this);
     exportPublicKeychainAction->setStatusTip(tr("Export public keychain to file"));
     exportPublicKeychainAction->setEnabled(false);
     connect(exportPublicKeychainAction, &QAction::triggered, [=]() { this->exportKeychain(false); });
 
-    importBIP32Action = new QAction(tr("Import BIP32 Master Key..."), this);
+    importBIP32Action = new QAction(tr("From BIP32..."), this);
     importBIP32Action->setStatusTip(tr("Import keychain from BIP32 master key"));
     importBIP32Action->setEnabled(false);
     connect(importBIP32Action, SIGNAL(triggered()), this, SLOT(importBIP32()));
 
-    viewPrivateBIP32Action = new QAction(tr("View Private BIP32 Master Key..."), this);
+    viewPrivateBIP32Action = new QAction(tr("To BIP32 (private)..."), this);
     viewPrivateBIP32Action->setStatusTip(tr("View private BIP32 master key"));
     viewPrivateBIP32Action->setEnabled(false);
     connect(viewPrivateBIP32Action, &QAction::triggered, [=]() { this->viewBIP32(true); });
 
-    viewPublicBIP32Action = new QAction(tr("View Public BIP32 Master Key..."), this);
+    viewPublicBIP32Action = new QAction(tr("To BIP32 (public)..."), this);
     viewPublicBIP32Action->setStatusTip(tr("View public BIP32 master key"));
     viewPublicBIP32Action->setEnabled(false);
     connect(viewPublicBIP32Action, &QAction::triggered, [=]() { this->viewBIP32(false); });
@@ -2228,13 +2228,18 @@ void MainWindow::createMenus()
     keychainMenu->addAction(importPublicAction);
 */
     keychainMenu->addSeparator();
-    keychainMenu->addAction(importKeychainAction);
-    keychainMenu->addAction(exportPrivateKeychainAction);
-    keychainMenu->addAction(exportPublicKeychainAction);
-    keychainMenu->addSeparator();
-    keychainMenu->addAction(importBIP32Action);
-    keychainMenu->addAction(viewPrivateBIP32Action);
-    keychainMenu->addAction(viewPublicBIP32Action);
+
+    QMenu* importKeychainMenu = keychainMenu->addMenu(tr("Import Keychain"));
+    importKeychainMenu->addAction(importKeychainAction);
+    importKeychainMenu->addAction(importBIP32Action);
+
+    QMenu* exportKeychainMenu = keychainMenu->addMenu(tr("Export Keychain"));
+    exportKeychainMenu->addAction(exportPrivateKeychainAction);
+    exportKeychainMenu->addAction(exportPublicKeychainAction);
+    exportKeychainMenu->addSeparator();
+    exportKeychainMenu->addAction(viewPrivateBIP32Action);
+    exportKeychainMenu->addAction(viewPublicBIP32Action);
+
     keychainMenu->addSeparator();
     keychainMenu->addAction(quickNewAccountAction);
 /*
