@@ -710,27 +710,31 @@ void MainWindow::newKeychain()
     }    
 }
 
-void MainWindow::unlockKeychain()
+bool MainWindow::unlockKeychain(QString name)
 {
-    QModelIndex index = keychainSelectionModel->currentIndex();
-    int row = index.row();
-    if (row < 0)
-    {
-        showError(tr("No keychain is selected."));
-        return;
-    }
-
     try
     {
-        QStandardItem* nameItem = keychainModel->item(row, 0);
-        QString name = nameItem->data(Qt::DisplayRole).toString();
+        if (name.isNull())
+        {
+            QModelIndex index = keychainSelectionModel->currentIndex();
+            int row = index.row();
+            if (row < 0)
+            {
+                showError(tr("No keychain is selected."));
+                return false;
+            }
+
+            QStandardItem* nameItem = keychainModel->item(row, 0);
+            name = nameItem->data(Qt::DisplayRole).toString();
+        }
+
         secure_bytes_t hash;
         if (keychainModel->isEncrypted(name))
         {
             PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
             while (true)
             {
-                if (!dlg.exec()) return;
+                if (!dlg.exec()) return false;
 
                 try
                 {
@@ -744,26 +748,31 @@ void MainWindow::unlockKeychain()
             }
         }
 
-        keychainModel->unlockKeychain(name, hash);
+        return keychainModel->unlockKeychain(name, hash);
     }
     catch (const std::exception& e)
     {
         showError(e.what());
     }
+
+    return false;
 }
 
-void MainWindow::lockKeychain()
+void MainWindow::lockKeychain(QString name)
 {
-    QModelIndex index = keychainSelectionModel->currentIndex();
-    int row = index.row();
-    if (row < 0)
+    if (name.isNull())
     {
-        showError(tr("No keychain is selected."));
-        return;
-    }
+        QModelIndex index = keychainSelectionModel->currentIndex();
+        int row = index.row();
+        if (row < 0)
+        {
+            showError(tr("No keychain is selected."));
+            return;
+        }
 
-    QStandardItem* nameItem = keychainModel->item(row, 0);
-    QString name = nameItem->data(Qt::DisplayRole).toString();
+        QStandardItem* nameItem = keychainModel->item(row, 0);
+        name = nameItem->data(Qt::DisplayRole).toString();
+    }
 
     keychainModel->lockKeychain(name);
 }
@@ -793,7 +802,7 @@ void MainWindow::setKeychainPassphrase()
 
     if (status == KeychainModel::PUBLIC)
     {
-        showError(tr("Keychain is public."));
+        showError(tr("Keychain is nonprivate."));
         return;
     }
 
@@ -914,14 +923,10 @@ void MainWindow::exportKeychain(bool exportPrivate)
         return;
     }
 
-    if (exportPrivate && status == KeychainModel::LOCKED)
-    {
-        // TODO: prompt for unlock
-        showError(tr("Keychain is locked."));
-        return;
-    }
-
     QString name = keychainModel->getName(row);
+
+    bool bLocked = exportPrivate && (status == KeychainModel::LOCKED);
+    if (bLocked && !unlockKeychain(name)) return;
 
     QString fileName = name + (exportPrivate ? ".priv" : ".pub");
 
@@ -931,7 +936,11 @@ void MainWindow::exportKeychain(bool exportPrivate)
         getDocDir() + "/" + fileName,
         tr("Keychains (*.priv *.pub)"));
 
-    if (fileName.isEmpty()) return;
+    if (fileName.isEmpty())
+    {
+        if (bLocked) { lockKeychain(name); }
+        return;
+    }
 
     QFileInfo fileInfo(fileName);
     setDocDir(fileInfo.dir().absolutePath());
@@ -940,10 +949,12 @@ void MainWindow::exportKeychain(bool exportPrivate)
     try {
         updateStatusMessage(tr("Exporting ") + (exportPrivate ? tr("private") : tr("public")) + tr("  keychain...") + name);
         keychainModel->exportKeychain(name, fileName, exportPrivate);
+        if (bLocked) { lockKeychain(name); }
         updateStatusMessage(tr("Saved ") + fileName);
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::exportKeychain - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
         showError(e.what());
     }
 }
@@ -984,6 +995,15 @@ void MainWindow::viewBIP32(bool viewPrivate)
         return;
     }
 
+    int status = keychainModel->getStatus(row);
+    if (viewPrivate && status == KeychainModel::PUBLIC)
+    {
+        showError(tr("Keychain is nonprivate."));
+        return;
+    }
+
+    bool bLocked = viewPrivate && (status == KeychainModel::LOCKED);
+
     QStandardItem* nameItem = keychainModel->item(row, 0);
     QString name = nameItem->data(Qt::DisplayRole).toString();
 
@@ -991,6 +1011,8 @@ void MainWindow::viewBIP32(bool viewPrivate)
         if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
         CoinDB::VaultLock lock(synchedVault);
         if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        if (bLocked && !unlockKeychain(name)) return;
 
         secure_bytes_t extendedKey = synchedVault.getVault()->exportBIP32(name.toStdString(), viewPrivate);
 /*
@@ -1009,10 +1031,12 @@ void MainWindow::viewBIP32(bool viewPrivate)
 */
 
         ViewBIP32Dialog dlg(name, extendedKey, this);
+        if (bLocked) { lockKeychain(name); }
         dlg.exec();
     }
     catch (const exception& e) {
         LOGGER(error) << "MainWindow::viewBIP32 - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
         showError(e.what());
     }
 }
@@ -1066,9 +1090,9 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
         unlockKeychainAction->setEnabled(status == KeychainModel::LOCKED);
         lockKeychainAction->setEnabled(status == KeychainModel::UNLOCKED);
         setKeychainPassphraseAction->setEnabled(status == KeychainModel::UNLOCKED || (status == KeychainModel::LOCKED && !keychainModel->isEncrypted(row)));
-        exportPrivateKeychainAction->setEnabled(status == KeychainModel::UNLOCKED);
+        exportPrivateKeychainAction->setEnabled(status != KeychainModel::PUBLIC);
         exportPublicKeychainAction->setEnabled(true);
-        viewPrivateBIP32Action->setEnabled(status == KeychainModel::UNLOCKED);
+        viewPrivateBIP32Action->setEnabled(status != KeychainModel::PUBLIC);
         viewPublicBIP32Action->setEnabled(true);
         backupKeychainAction->setEnabled(true);
     }

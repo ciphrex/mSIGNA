@@ -138,8 +138,8 @@ private slots:
     //////////////////////
     // KEYCHAIN OPERATIONS
     void newKeychain();
-    void unlockKeychain();
-    void lockKeychain();
+    bool unlockKeychain(QString name = QString());
+    void lockKeychain(QString name = QString());
     void lockAllKeychains();
     void setKeychainPassphrase();
     void importKeychain(QString fileName = QString());

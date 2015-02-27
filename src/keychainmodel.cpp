@@ -98,7 +98,7 @@ QString KeychainModel::importKeychain(const QString& fileName, bool& importPriva
     return QString::fromStdString(keychain->name());
 }
 
-void KeychainModel::unlockKeychain(const QString& keychainName, const secure_bytes_t& unlockKey)
+bool KeychainModel::unlockKeychain(const QString& keychainName, const secure_bytes_t& unlockKey)
 {
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
@@ -108,6 +108,7 @@ void KeychainModel::unlockKeychain(const QString& keychainName, const secure_byt
     {
         vault->unlockKeychain(keychainName.toStdString(), unlockKey);
         update();
+        return true;
     }
     catch (const CoinDB::KeychainPrivateKeyUnlockFailedException& e)
     {
@@ -117,6 +118,8 @@ void KeychainModel::unlockKeychain(const QString& keychainName, const secure_byt
     {
         emit error(e.what());
     } 
+
+    return false;
 }
 
 void KeychainModel::lockKeychain(const QString& keychainName)
