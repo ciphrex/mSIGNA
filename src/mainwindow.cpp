@@ -2083,8 +2083,8 @@ void MainWindow::createActions()
     viewAccountHistoryAction->setEnabled(false);
     connect(viewAccountHistoryAction, SIGNAL(triggered()), this, SLOT(viewAccountHistory()));
 
-    viewScriptsAction = new QAction(tr("View Scripts..."), this);
-    viewScriptsAction->setStatusTip(tr("View scripts for active account"));
+    viewScriptsAction = new QAction(tr("View Addresses..."), this);
+    viewScriptsAction->setStatusTip(tr("View addresses for active account"));
     viewScriptsAction->setEnabled(false);
     connect(viewScriptsAction, SIGNAL(triggered()), this, SLOT(viewScripts()));
     

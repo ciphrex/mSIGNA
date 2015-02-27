@@ -33,5 +33,5 @@ ScriptDialog::ScriptDialog(CoinDB::Vault* vault, const QString& accountName, QWi
     QVBoxLayout* mainLayout = new QVBoxLayout();
     mainLayout->addWidget(scriptView);
     setLayout(mainLayout);
-    setWindowTitle(getDefaultSettings().getAppName() + " - " + accountName + tr(" scripts"));
+    setWindowTitle(getDefaultSettings().getAppName() + " - " + accountName + tr(" addresses"));
 }
