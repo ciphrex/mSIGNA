@@ -55,7 +55,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 12
-#define SCHEMA_VERSION      14
+#define SCHEMA_VERSION      15
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -109,10 +109,49 @@ private:
     std::string network_;
 };
 
+///////////
+// USERS //
+///////////
+#pragma db object pointer(std::shared_ptr)
+class User : public std::enable_shared_from_this<User>
+{
+public:
+    User(const std::string& username, bool txoutscript_whitelist_enabled = false) : username_(username), txoutscript_whitelist_enabled_(txoutscript_whitelist_enabled) { }
+
+    std::shared_ptr<User> get_shared_ptr() { return shared_from_this(); }
+
+    unsigned int id() const { return id_; }
+
+    const std::string& username() const { return username_; }
+    void username(const std::string& username) { username_ = username; }
+
+    const std::set<bytes_t>& txoutscript_whitelist() const { return txoutscript_whitelist_; }
+    void addTxOutScriptToWhitelist(const bytes_t& txoutscript) { txoutscript_whitelist_.insert(txoutscript); }
+    std::size_t removeTxOutScriptFromWhitelist(const bytes_t& txoutscript) { return txoutscript_whitelist_.erase(txoutscript); }
+    void clearTxOutScriptWhitelist() { txoutscript_whitelist_.clear(); }
+
+    void enableTxOutScriptWhitelist(bool enabled = true) { txoutscript_whitelist_enabled_ = enabled; }
+
+private:
+    User() { }
+
+    friend class odb::access;
+
+    #pragma db id auto
+    unsigned long id_;
+
+    #pragma db unique
+    std::string username_;
+
+    std::set<bytes_t> txoutscript_whitelist_;
+    bool txoutscript_whitelist_enabled_;
+};
+
+typedef std::vector<std::shared_ptr<User>> UserVector;
+
 //////////////
 // CONTACTS //
 //////////////
-
 #pragma db object pointer(std::shared_ptr)
 class Contact : public std::enable_shared_from_this<Contact>
 {
@@ -1221,6 +1260,9 @@ public:
     void blockheader(std::shared_ptr<BlockHeader> blockheader);
     std::shared_ptr<BlockHeader> blockheader() const { return blockheader_; }
 
+    void user(std::shared_ptr<User> user);
+    std::shared_ptr<User> user() const { return user_; }
+
     void shuffle_txins();
     void shuffle_txouts();
 
@@ -1280,9 +1322,12 @@ private:
     #pragma db null
     odb::nullable<uint32_t> blockindex_;
 
+    #pragma db null
+    std::shared_ptr<User> user_;
+
     friend class boost::serialization::access;
     template<class Archive>
-    void save(Archive& ar, const unsigned int /*version*/) const
+    void save(Archive& ar, const unsigned int v) const
     {
         ar & version_;
 
@@ -1300,9 +1345,24 @@ private:
 
         uint32_t statusflag = (uint32_t)status_;
         ar & statusflag;
+
+        if (v >= 2)
+        {
+            if (user_)
+            {
+                bool has_user = true;
+                ar & has_user;
+                ar & user_->username();
+            }
+            else
+            {
+                bool has_user = false;
+                ar & has_user;
+            }
+        }
     }
     template<class Archive>
-    void load(Archive& ar, const unsigned int /*version*/)
+    void load(Archive& ar, const unsigned int v)
     {
         ar & version_;
 
@@ -1354,6 +1414,18 @@ private:
         coin_tx.clearScriptSigs();
         unsigned_hash_ = coin_tx.hash();
         updateTotals();
+
+        if (v >= 2)
+        {
+            bool has_user;
+            ar & has_user;
+            if (has_user)
+            {
+                std::string username;
+                ar & username;
+                user_ = std::make_shared<User>(username);
+            }
+        }
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
@@ -1800,7 +1872,7 @@ BOOST_CLASS_VERSION(CoinDB::MerkleBlock, 1)
 
 BOOST_CLASS_VERSION(CoinDB::TxIn, 1)
 BOOST_CLASS_VERSION(CoinDB::TxOut, 1)
-BOOST_CLASS_VERSION(CoinDB::Tx, 1)
+BOOST_CLASS_VERSION(CoinDB::Tx, 2)
 
 BOOST_CLASS_VERSION(CoinDB::Keychain, 2)
 BOOST_CLASS_VERSION(CoinDB::AccountBin, 2)

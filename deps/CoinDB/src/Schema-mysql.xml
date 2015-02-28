@@ -1,4 +1,40 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="mysql" version="1">
+  <changeset version="15">
+    <add-table name="User" options="ENGINE=InnoDB" kind="object">
+      <column name="id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="username" type="VARCHAR(255)" null="false"/>
+      <column name="txoutscript_whitelist_enabled" type="TINYINT(1)" null="false"/>
+      <primary-key auto="true">
+        <column name="id"/>
+      </primary-key>
+      <index name="username_i" type="UNIQUE">
+        <column name="username"/>
+      </index>
+    </add-table>
+    <add-table name="User_txoutscript_whitelist" options="ENGINE=InnoDB" kind="container">
+      <column name="object_id" type="BIGINT UNSIGNED" null="false"/>
+      <column name="value" type="VARBINARY(255)" null="false"/>
+      <foreign-key name="User_txoutscript_whitelist_object_id_fk" on-delete="CASCADE">
+        <column name="object_id"/>
+        <references table="User">
+          <column name="id"/>
+        </references>
+      </foreign-key>
+      <index name="object_id_i">
+        <column name="object_id"/>
+      </index>
+    </add-table>
+    <alter-table name="Tx">
+      <add-column name="user" type="BIGINT UNSIGNED" null="true"/>
+      <add-foreign-key name="Tx_user_fk" deferrable="DEFERRED">
+        <column name="user"/>
+        <references table="User">
+          <column name="id"/>
+        </references>
+      </add-foreign-key>
+    </alter-table>
+  </changeset>
+
   <changeset version="14">
     <alter-table name="Account">
       <add-column name="compressed_keys" type="TINYINT(1)" null="false"/>
