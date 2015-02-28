@@ -4163,3 +4163,74 @@ void Vault::importMerkleBlocks_unwrapped(boost::archive::text_iarchive& ia)
     }
 }
 
+/////////////////////
+// USER OPERATIONS //
+/////////////////////
+std::shared_ptr<User> Vault::addUser(const std::string& username, bool txoutscript_whitelist_enabled)
+{
+    LOGGER(trace) << "Vault::addUser(" << username << ", " << (txoutscript_whitelist_enabled ? "true" : "false") << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<User> user = addUser_unwrapped(username, txoutscript_whitelist_enabled);
+    t.commit();
+
+    return user;
+}
+
+std::shared_ptr<User> Vault::addUser_unwrapped(const std::string& username, bool txoutscript_whitelist_enabled)
+{
+    odb::result<User> r(db_->query<User>(odb::query<User>::username == username));
+    if (!r.empty()) throw UserAlreadyExistsException(username);
+
+    std::shared_ptr<User> user = std::make_shared<User>(username, txoutscript_whitelist_enabled);
+    db_->persist(user);
+
+    return user;
+}
+
+std::shared_ptr<User> Vault::getUser(const std::string& username) const
+{
+    LOGGER(trace) << "Vault::getUser(" << username << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::transaction t(db_->begin());
+    return getUser_unwrapped(username);
+}
+
+std::shared_ptr<User> Vault::getUser_unwrapped(const std::string& username) const
+{
+    odb::result<User> r(db_->query<User>(odb::query<User>::username == username));
+    if (r.empty()) throw UserNotFoundException(username);
+
+    std::shared_ptr<User> user(r.begin().load());
+    return user;
+}
+
+const std::set<bytes_t>& Vault::getTxOutScriptWhitelist(const std::string& username) const
+{
+    LOGGER(trace) << "Vault::getTxOutScriptWhitelist(" << username << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::transaction t(db_->begin());
+
+    std::shared_ptr<User> user = getUser_unwrapped(username);
+    return user->txoutscript_whitelist();
+}
+
+bool Vault::isTxOutScriptWhitelistEnabled(const std::string& username) const
+{
+    LOGGER(trace) << "Vault::isTxOutScriptWhitelistEnabled(" << username << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::transaction t(db_->begin());
+
+    std::shared_ptr<User> user = getUser_unwrapped(username);
+    return user->isTxOutScriptWhitelistEnabled();
+}

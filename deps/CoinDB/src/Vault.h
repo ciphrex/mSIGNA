@@ -169,7 +169,9 @@ public:
     std::shared_ptr<Tx>                     insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs = false, bool isCoinbase = false);
     std::shared_ptr<Tx>                     confirmMerkleTx(const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount);
     std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
+    std::shared_ptr<Tx>                     createTx(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
     std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations, bool insert = false); // Pass empty output scripts to generate change outputs.
+    std::shared_ptr<Tx>                     createTx(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations, bool insert = false); // Pass empty output scripts to generate change outputs.
     void                                    deleteTx(const bytes_t& tx_hash); // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     void                                    deleteTx(unsigned long tx_id); // Throws TxNotFoundException.
     SigningRequest                          getSigningRequest(const bytes_t& hash, bool include_raw_tx = false) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException.
@@ -212,6 +214,14 @@ public:
     unsigned int                            deleteMerkleBlock(uint32_t height);
     void                                    exportMerkleBlocks(const std::string& filepath) const;
     void                                    importMerkleBlocks(const std::string& filepath);
+
+    /////////////////////
+    // USER OPERATIONS //
+    /////////////////////
+    std::shared_ptr<User>                   addUser(const std::string& username, bool txoutscript_whitelist_enabled = false);
+    std::shared_ptr<User>                   getUser(const std::string& username) const;
+    const std::set<bytes_t>&                getTxOutScriptWhitelist(const std::string& username) const;
+    bool                                    isTxOutScriptWhitelistEnabled(const std::string& username) const;
 
     ////////////////////////
     // SLOT SUBSCRIPTIONS //
@@ -329,7 +339,9 @@ protected:
     std::shared_ptr<Tx>                     insertMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs = false, bool isCoinbase = false);
     std::shared_ptr<Tx>                     confirmMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount);
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
+    std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations);
+    std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations);
     void                                    deleteTx_unwrapped(std::shared_ptr<Tx> tx);
     void                                    updateTx_unwrapped(std::shared_ptr<Tx> tx);
     SigningRequest                          getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
@@ -363,6 +375,12 @@ protected:
 
     void                                    exportMerkleBlocks_unwrapped(boost::archive::text_oarchive& oa) const;
     void                                    importMerkleBlocks_unwrapped(boost::archive::text_iarchive& ia);
+
+    /////////////////////
+    // USER OPERATIONS //
+    /////////////////////
+    std::shared_ptr<User>                   addUser_unwrapped(const std::string& username, bool txoutscript_whitelist_enabled = false);
+    std::shared_ptr<User>                   getUser_unwrapped(const std::string& username) const;
 
     /////////////
     // SIGNALS //

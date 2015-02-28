@@ -131,6 +131,7 @@ public:
     void clearTxOutScriptWhitelist() { txoutscript_whitelist_.clear(); }
 
     void enableTxOutScriptWhitelist(bool enabled = true) { txoutscript_whitelist_enabled_ = enabled; }
+    bool isTxOutScriptWhitelistEnabled() const { return txoutscript_whitelist_enabled_; }
 
 private:
     User() { }
