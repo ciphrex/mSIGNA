@@ -222,6 +222,9 @@ public:
     std::shared_ptr<User>                   getUser(const std::string& username) const;
     const std::set<bytes_t>&                getTxOutScriptWhitelist(const std::string& username) const;
     std::shared_ptr<User>                   setTxOutScriptWhitelist(const std::string& username, const std::set<bytes_t>& txoutscripts);
+    std::shared_ptr<User>                   addTxOutScriptToWhitelist(const std::string& username, const bytes_t& txoutscript);
+    std::shared_ptr<User>                   removeTxOutScriptFromWhitelist(const std::string& username, const bytes_t& txoutscript);
+    std::shared_ptr<User>                   clearTxOutScriptWhitelist(const std::string& username);
     std::shared_ptr<User>                   enableTxOutScriptWhitelist(const std::string& username, bool enabled = true);
     bool                                    isTxOutScriptWhitelistEnabled(const std::string& username) const;
 
