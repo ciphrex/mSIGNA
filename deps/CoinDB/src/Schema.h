@@ -1261,7 +1261,7 @@ public:
     void blockheader(std::shared_ptr<BlockHeader> blockheader);
     std::shared_ptr<BlockHeader> blockheader() const { return blockheader_; }
 
-    void user(std::shared_ptr<User> user);
+    void user(std::shared_ptr<User> user) { user_ = user; }
     std::shared_ptr<User> user() const { return user_; }
 
     void shuffle_txins();

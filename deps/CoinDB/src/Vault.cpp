@@ -3043,6 +3043,44 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
     return tx;
 }
 
+std::shared_ptr<Tx> Vault::createTx(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts, bool insert)
+{
+    LOGGER(trace) << "Vault::createTx(" << username << ", " << account_name << ", " << tx_version << ", " << tx_locktime << ", " << txouts.size() << " txout(s), " << fee << ", " << maxchangeouts << ", " << (insert ? "insert" : "no insert") << ")" << std::endl;
+
+    std::shared_ptr<Tx> tx;
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = createTx_unwrapped(username, account_name, tx_version, tx_locktime, txouts, fee, maxchangeouts);
+        if (insert)
+        {
+            tx = insertTx_unwrapped(tx);
+            if (tx) t.commit();
+        }
+    }
+
+    signalQueue.flush();
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts)
+{
+    std::shared_ptr<User> user = getUser_unwrapped(username);
+
+    if (user->isTxOutScriptWhitelistEnabled())
+    {
+        for (auto& txout: txouts)
+        {
+            if (!user->txoutscript_whitelist().count(txout->script())) throw TxOutputScriptNotInUserWhitelistException(username, txout->script());        
+        }
+    }
+
+    std::shared_ptr<Tx> tx = createTx_unwrapped(account_name, tx_version, tx_locktime, txouts, fee, maxchangeouts);
+    tx->user(user);
+    return tx;
+}
+
 std::shared_ptr<Tx> Vault::createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations, bool insert)
 {
     LOGGER(trace) << "Vault::createTx(" << account_name << ", " << tx_version << ", " << tx_locktime << ", " << coin_ids.size() << " txin(s), " << txouts.size() << " txout(s), " << fee << ", " << min_confirmations << ", " << (insert ? "insert" : "no insert") << ")" << std::endl;
@@ -3150,6 +3188,44 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
 
     std::shared_ptr<Tx> tx(new Tx());
     tx->set(tx_version, txins, txouts, tx_locktime, time(NULL), Tx::UNSIGNED);
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::createTx(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations, bool insert)
+{
+    LOGGER(trace) << "Vault::createTx(" << username << ", " << account_name << ", " << tx_version << ", " << tx_locktime << ", " << coin_ids.size() << " txin(s), " << txouts.size() << " txout(s), " << fee << ", " << min_confirmations << ", " << (insert ? "insert" : "no insert") << ")" << std::endl;
+
+    std::shared_ptr<Tx> tx;
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        tx = createTx_unwrapped(username, account_name, tx_version, tx_locktime, coin_ids, txouts, fee, min_confirmations);
+        if (insert)
+        {
+            tx = insertTx_unwrapped(tx);
+            if (tx) t.commit();
+        }
+    }
+
+    signalQueue.flush();
+    return tx;
+}
+
+std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations)
+{
+    std::shared_ptr<User> user = getUser_unwrapped(username);
+
+    if (user->isTxOutScriptWhitelistEnabled())
+    {
+        for (auto& txout: txouts)
+        {
+            if (!user->txoutscript_whitelist().count(txout->script())) throw TxOutputScriptNotInUserWhitelistException(username, txout->script());        
+        }
+    }
+
+    std::shared_ptr<Tx> tx = createTx_unwrapped(username, account_name, tx_version, tx_locktime, coin_ids, txouts, fee, min_confirmations);
+    tx->user(user);
     return tx;
 }
 
