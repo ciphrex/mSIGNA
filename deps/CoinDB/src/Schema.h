@@ -126,6 +126,8 @@ public:
     void username(const std::string& username) { username_ = username; }
 
     const std::set<bytes_t>& txoutscript_whitelist() const { return txoutscript_whitelist_; }
+    void txoutscript_whitelist(const std::set<bytes_t>& txoutscripts) { txoutscript_whitelist_ = txoutscripts; }
+
     void addTxOutScriptToWhitelist(const bytes_t& txoutscript) { txoutscript_whitelist_.insert(txoutscript); }
     std::size_t removeTxOutScriptFromWhitelist(const bytes_t& txoutscript) { return txoutscript_whitelist_.erase(txoutscript); }
     void clearTxOutScriptWhitelist() { txoutscript_whitelist_.clear(); }

@@ -4298,6 +4298,37 @@ const std::set<bytes_t>& Vault::getTxOutScriptWhitelist(const std::string& usern
     return user->txoutscript_whitelist();
 }
 
+std::shared_ptr<User> Vault::setTxOutScriptWhitelist(const std::string& username, const std::set<bytes_t>& txoutscripts)
+{
+    LOGGER(trace) << "Vault::setTxOutScriptWhitelist(" << username << ", ...)" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<User> user = getUser_unwrapped(username);
+    user->txoutscript_whitelist(txoutscripts);
+    db_->update(user);
+    t.commit();
+
+    return user;
+}
+
+std::shared_ptr<User> Vault::enableTxOutScriptWhitelist(const std::string& username, bool enable)
+{
+    LOGGER(trace) << "Vault::enableTxOutScriptWhitelist(" << username << ", " << (enable ? "true" : "false") << ")" << std::endl;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<User> user = getUser_unwrapped(username);
+    if (user->isTxOutScriptWhitelistEnabled() != enable)
+    {
+        user->enableTxOutScriptWhitelist(enable);
+        db_->update(user);
+        t.commit();
+    }
+
+    return user;
+}
+
 bool Vault::isTxOutScriptWhitelistEnabled(const std::string& username) const
 {
     LOGGER(trace) << "Vault::isTxOutScriptWhitelistEnabled(" << username << ")" << std::endl;
