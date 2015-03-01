@@ -1426,7 +1426,8 @@ private:
             {
                 std::string username;
                 ar & username;
-                user_ = std::make_shared<User>(username);
+                // TODO: handle user
+                //user_ = std::make_shared<User>(username);
             }
         }
     }
