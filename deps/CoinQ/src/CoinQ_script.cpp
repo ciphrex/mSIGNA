@@ -171,7 +171,7 @@ std::string getAddressForTxOutScript(const bytes_t& txoutscript, const unsigned 
         return toBase58Check(payee.second, addressVersions[1]);
 
     default:
-        return "";
+        return "N/A";
     }
 }
 
