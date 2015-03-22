@@ -7,6 +7,7 @@ OBJS = \
         obj/CoinNodeData.o \
         obj/CoinKey.o \
         obj/hdkeys.o \
+        obj/bip39.o \
         obj/BloomFilter.o \
         obj/MerkleTree.o \
         obj/secp256k1.o \
