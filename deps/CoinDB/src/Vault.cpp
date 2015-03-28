@@ -3022,7 +3022,7 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
         i++;
         if (total >= desired_total) break;
     }
-    if (total < desired_total) throw AccountInsufficientFundsException(account_name); 
+    if (total < desired_total) throw AccountInsufficientFundsException(account_name, desired_total, total); 
 
     utxoviews.resize(i);
     uint64_t change = total - desired_total;
@@ -3076,7 +3076,17 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& username, const
         }
     }
 
-    std::shared_ptr<Tx> tx = createTx_unwrapped(account_name, tx_version, tx_locktime, txouts, fee, maxchangeouts);
+    std::shared_ptr<Tx> tx;
+    try
+    {
+        tx = createTx_unwrapped(account_name, tx_version, tx_locktime, txouts, fee, maxchangeouts);
+    }
+    catch (AccountInsufficientFundsException& e)
+    {
+        e.username(username);
+        throw e;
+    }
+
     tx->user(user);
     return tx;
 }
@@ -3121,7 +3131,7 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
     if (min_confirmations > 0)
     {
         uint32_t best_height = getBestHeight_unwrapped();
-        if (min_confirmations > best_height) throw AccountInsufficientFundsException(account_name);
+        if (min_confirmations > best_height) throw AccountInsufficientFundsException(account_name, desired_total, 0);
         base_query = (base_query && query_t::BlockHeader::height <= best_height + 1 - min_confirmations);
     }
 
@@ -3156,7 +3166,7 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
             input_total += utxoview.value;
             if (input_total >= desired_total) break;
         }
-        if (input_total < desired_total) throw AccountInsufficientFundsException(account_name);
+        if (input_total < desired_total) throw AccountInsufficientFundsException(account_name, desired_total, input_total);
     }
  
     // Use supplied outputs first

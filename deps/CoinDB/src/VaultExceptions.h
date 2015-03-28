@@ -288,7 +288,16 @@ public:
 class AccountInsufficientFundsException : public AccountException
 {
 public:
-    explicit AccountInsufficientFundsException(const std::string& account_name) : AccountException("Insufficient funds.", ACCOUNT_INSUFFICIENT_FUNDS, account_name) { }
+    explicit AccountInsufficientFundsException(const std::string& account_name, uint64_t requested, uint64_t available, const std::string& username = std::string()) : AccountException("Insufficient funds.", ACCOUNT_INSUFFICIENT_FUNDS, account_name), requested_(requested), available_(available), username_(username) { }
+    uint64_t requested() const { return requested_; }
+    uint64_t available() const { return available_; }
+    const std::string& username() const { return username_; }
+    void username(const std::string& username) { username_ = username; }
+
+private:
+    uint64_t requested_;
+    uint64_t available_;
+    std::string username_;
 };
 
 class AccountCannotIssueChangeScriptException : public AccountException
