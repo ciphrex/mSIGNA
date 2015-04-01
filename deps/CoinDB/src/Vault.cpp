@@ -1640,6 +1640,7 @@ std::shared_ptr<SigningScript> Vault::issueSigningScript(const std::string& acco
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
     odb::core::transaction t(db_->begin());
+    if (!accountExists_unwrapped(account_name)) throw AccountNotFoundException(account_name);
     std::shared_ptr<AccountBin> bin = getAccountBin_unwrapped(account_name, bin_name);
     if (bin->isChange()) throw AccountCannotIssueChangeScriptException(account_name);
     std::shared_ptr<SigningScript> script = issueAccountBinSigningScript_unwrapped(bin, label, index);
