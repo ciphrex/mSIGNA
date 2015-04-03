@@ -622,7 +622,7 @@ private:
     bool                        compressed_keys_;
 };
 
-const uint32_t DEFAULT_UNUSED_POOL_SIZE = 25;
+const uint32_t DEFAULT_UNUSED_POOL_SIZE = 1000;
 
 #pragma db object pointer(std::shared_ptr)
 class Account : public std::enable_shared_from_this<Account>
