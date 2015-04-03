@@ -32,6 +32,7 @@
 #include <QMessageBox>
 
 #include <stdexcept>
+#include <cstdlib>
 
 const int COIN_CONTROL_VIEW_MIN_WIDTH = 700;
 const int COIN_CONTROL_VIEW_MIN_HEIGHT = 200;
@@ -48,6 +49,10 @@ TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol
     this->currencySymbol = currencySymbol;
     this->currencyMax = currencyMax;
     this->currencyDecimals = currencyDecimals;
+
+    countEdit = new QLineEdit();
+    countEdit->setFixedWidth(30);
+    countEdit->setText("1");
 
     QLabel* addressLabel = new QLabel(tr("Address:"));
     addressEdit = new QLineEdit();
@@ -66,6 +71,7 @@ TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol
     removeButton = new QPushButton(tr("Remove"));
 
     setSizeConstraint(QLayout::SetFixedSize);
+    addWidget(countEdit);
     addWidget(addressLabel);
     addWidget(addressEdit);
     addWidget(amountLabel);
@@ -73,6 +79,16 @@ TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol
     addWidget(recipientLabel);
     addWidget(recipientEdit);
     addWidget(removeButton);
+}
+
+inline void TxOutLayout::setCount(int count)
+{
+    countEdit->setText(QString::number(count));
+}
+
+int TxOutLayout::getCount() const
+{
+    return strtol(countEdit->text().toStdString().c_str(), NULL, 10);
 }
 
 inline void TxOutLayout::setAddress(const QString& address)
@@ -311,9 +327,14 @@ std::vector<std::shared_ptr<CoinDB::TxOut>> CreateTxDialog::getTxOuts()
             removeTxOut(txOutLayout);
             continue;
         }
-        std::shared_ptr<CoinDB::TxOut> txout(new CoinDB::TxOut(txOutLayout->getValue(), txOutLayout->getScript()));
-        txout->sending_label(txOutLayout->getRecipient().toStdString());
-        txouts.push_back(txout);
+
+        uint64_t value = txOutLayout->getValue() / (uint64_t)(txOutLayout->getCount());
+        for (int i = 0; i < txOutLayout->getCount(); i++)
+        {
+            std::shared_ptr<CoinDB::TxOut> txout(new CoinDB::TxOut(value, txOutLayout->getScript()));
+            txout->sending_label(txOutLayout->getRecipient().toStdString());
+            txouts.push_back(txout);
+        }
     }
 
     if (txouts.empty()) {

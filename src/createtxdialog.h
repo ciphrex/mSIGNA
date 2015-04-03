@@ -38,6 +38,9 @@ class TxOutLayout : public QHBoxLayout
 public:
     TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol, uint64_t maxCurrencyValue, unsigned int maxCurrencyDecimals, QWidget* parent = nullptr);
 
+    void setCount(int count);
+    int getCount() const;
+
     void setAddress(const QString& address);
     QString getAddress() const;
 
@@ -56,6 +59,7 @@ public:
 private:
     unsigned char base58_versions[2];
 
+    QLineEdit* countEdit;
     QLineEdit* addressEdit;
     QLineEdit* amountEdit;
     QLineEdit* recipientEdit;
