@@ -1016,6 +1016,19 @@ std::shared_ptr<Keychain> Vault::importBIP32(const std::string& keychain_name, c
     return keychain;
 }
 
+secure_bytes_t Vault::exportBIP39(const std::string& keychain_name) const
+{
+    LOGGER(trace) << "Vault::exportBIP39(" << keychain_name << ")" << std::endl;
+
+#if defined(LOCK_ALL_CALLS)
+    boost::lock_guard<boost::mutex> lock(mutex);
+#endif
+    odb::core::transaction t(db_->begin());
+    std::shared_ptr<Keychain> keychain = getKeychain_unwrapped(keychain_name);
+    unlockKeychain_unwrapped(keychain); 
+    return keychain->seed();
+}
+
 void Vault::encryptKeychain(const std::string& keychain_name, const secure_bytes_t& lock_key)
 {
     LOGGER(trace) << "Vault::encryptKeychain(" << keychain_name << ", ...)" << std::endl;

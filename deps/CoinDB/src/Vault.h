@@ -110,6 +110,7 @@ public:
     std::vector<KeychainView>               getRootKeychainViews(const std::string& account_name = "", bool get_hidden = false) const;
     secure_bytes_t                          exportBIP32(const std::string& keychain_name, bool export_private) const;
     std::shared_ptr<Keychain>               importBIP32(const std::string& keychain_name, const secure_bytes_t& extkey, const secure_bytes_t& lock_key = secure_bytes_t());
+    secure_bytes_t                          exportBIP39(const std::string& keychain_name) const;
 
     // The following methods change the persisted encryption state using the in-memory unlock key map.
     void                                    encryptKeychain(const std::string& keychain_name, const secure_bytes_t& lock_key);
