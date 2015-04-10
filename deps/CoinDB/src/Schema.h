@@ -237,6 +237,7 @@ public:
     const bytes_t& pubkey() const { return pubkey_; }
     secure_bytes_t privkey() const;
     secure_bytes_t seed() const;
+    bool hasSeed() const;
     const bytes_t& chain_code() const { return chain_code_; }
 
     void importPrivateKey(const Keychain& source);

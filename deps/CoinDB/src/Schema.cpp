@@ -117,7 +117,6 @@ std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private, const se
         child->chain_code_ = hdkeychain.chain_code();
 
         child->privkey_ = hdkeychain.privkey();
-        child->seed_ = seed_;
         if (lock_key.empty())
         {
             child->privkey_salt_ = 0;
@@ -131,11 +130,17 @@ std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private, const se
             child->privkey_salt_ = AES::random_salt();
             child->privkey_ciphertext_ = AES::encrypt(lock_key, child->privkey_, true, child->privkey_salt_);
 
-            child->seed_salt_ = AES::random_salt();
-            child->seed_ciphertext_ = AES::encrypt(lock_key, child->seed_, true, child->seed_salt_);
+            if (seed_.empty())
+            {
+                child->seed_salt_ = 0;
+            }
+            else
+            {
+                child->seed_salt_ = AES::random_salt();
+                child->seed_ciphertext_ = AES::encrypt(lock_key, seed_, true, child->seed_salt_);
+            }
         }
         child->privkey_.clear();
-        child->seed_.clear();
 
         child->child_num_ = hdkeychain.child_num();
         child->parent_fp_ = hdkeychain.parent_fp();
@@ -181,7 +186,7 @@ void Keychain::unlock(const secure_bytes_t& lock_key) const
         privkey_ = AES::decrypt(lock_key, privkey_ciphertext_, true, privkey_salt_); 
     }
 
-    if (seed_salt_ == 0)
+    if (seed_salt_ == 0 || seed_ciphertext_.empty())
     {
         seed_ = seed_ciphertext_;
     }
@@ -204,8 +209,11 @@ void Keychain::encrypt(const secure_bytes_t& lock_key)
     privkey_salt_ = AES::random_salt();
     privkey_ciphertext_ = AES::encrypt(lock_key, privkey_, true, privkey_salt_);
 
-    seed_salt_ = AES::random_salt();
-    seed_ciphertext_ = AES::encrypt(lock_key, seed_, true, seed_salt_);
+    if (!seed_.empty())
+    {
+        seed_salt_ = AES::random_salt();
+        seed_ciphertext_ = AES::encrypt(lock_key, seed_, true, seed_salt_);
+    }
 }
 
 void Keychain::decrypt()
@@ -249,8 +257,14 @@ secure_bytes_t Keychain::privkey() const
 secure_bytes_t Keychain::seed() const
 {
     if (!isPrivate()) throw std::runtime_error("Keychain is nonprivate.");
-    if (seed_.empty()) throw std::runtime_error("Keychain is locked.");
+    if (privkey_.empty()) throw std::runtime_error("Keychain is locked.");
+    if (seed_ciphertext_.empty()) throw std::runtime_error("Keychain has no seed.");
     return seed_;
+}
+
+bool Keychain::hasSeed() const
+{
+    return !seed_ciphertext_.empty();
 }
 
 void Keychain::importPrivateKey(const Keychain& source)
@@ -316,6 +330,10 @@ void Keychain::clearPrivateKey()
     privkey_.clear();
     privkey_ciphertext_.clear();
     privkey_salt_ = 0;
+
+    seed_.clear();
+    seed_ciphertext_.clear();
+    seed_salt_ = 0;
 }
 
 
