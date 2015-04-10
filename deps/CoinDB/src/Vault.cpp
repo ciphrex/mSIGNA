@@ -894,10 +894,16 @@ std::shared_ptr<Keychain> Vault::newKeychain(const std::string& keychain_name, c
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session session;
     odb::core::transaction t(db_->begin());
-    odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
-    if (!r.empty()) throw KeychainAlreadyExistsException(keychain_name);
+    {
+        odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::name == keychain_name));
+        if (!r.empty()) throw KeychainAlreadyExistsException(keychain_name);
+    }
 
     std::shared_ptr<Keychain> keychain(new Keychain(keychain_name, entropy, lock_key));
+    {
+        odb::result<Keychain> r(db_->query<Keychain>(odb::query<Keychain>::hash == keychain->hash()));
+        if (!r.empty()) throw KeychainAlreadyExistsException(keychain_name);
+    }
     persistKeychain_unwrapped(keychain);
     t.commit();
 
