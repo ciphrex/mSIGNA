@@ -37,6 +37,9 @@ typedef std::set<bytes_t> hashset_t;
 
 typedef std::string secure_string_t;
 
+typedef std::vector<int> ints_t;
+typedef std::vector<int> secure_ints_t;
+
 // TODO: use custom allocators for secure types
 
 #endif // __TYPEDEFS_H__

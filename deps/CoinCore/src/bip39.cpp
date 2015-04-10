@@ -27,6 +27,8 @@
 #include "hash.h"
 #include "wordlists/english.h"
 
+#include <map>
+
 using namespace Coin::BIP39;
 using namespace std;
 
@@ -85,5 +87,95 @@ secure_string_t Coin::BIP39::toWordlist(const secure_bytes_t& data, Language lan
 
 secure_bytes_t Coin::BIP39::fromWordlist(const secure_string_t& list, Language language)
 {
-    return secure_bytes_t();
+    const char** WORDLIST;
+    int WORDCOUNT;    
+    switch (language)
+    {
+    case ENGLISH:
+        WORDLIST = ENGLISH_WORDLIST;
+        WORDCOUNT = ENGLISH_WORDCOUNT;
+        break;
+
+    default:
+        throw runtime_error("Coin::BIP39::fromWordList() - unsupported language.");
+    }
+
+    typedef map<secure_string_t, int> wordmap_t;
+    wordmap_t words;
+    for (int i = 0; i < WORDCOUNT; i++) { words[WORDLIST[i]] = i; }
+
+    secure_string_t word;
+    secure_ints_t wordValues;
+    for (auto c: list)
+    {
+        if (c == ' ')
+        {
+            if (word.empty()) continue;
+
+            auto it = words.find(word);
+            if (it == words.end()) throw InvalidWordException(word);
+
+            wordValues.push_back(it->second);
+            word.clear();
+            continue;
+        }
+
+        if (c >= 'A' && c <= 'Z') { c += 'a' - 'A'; }
+        if (c < 'a' || c > 'z') throw InvalidCharacterException(c);
+
+        word += c;
+    }
+
+    if (!word.empty())
+    {
+        auto it = words.find(word);
+        if (it == words.end()) throw InvalidWordException(word);
+
+        wordValues.push_back(it->second);
+    }
+
+    if (wordValues.size() < 3 || wordValues.size() > 3*256 || wordValues.size() % 3) throw InvalidWordlistLength();
+    int nChecksumBits = wordValues.size() / 3;
+    int nDataBytes = nChecksumBits << 2; // * 4
+
+    int iBit = 0;
+    unsigned char byte = 0;
+    secure_bytes_t bytes;
+    for (auto wordValue: wordValues)
+    {
+        for (int k = 10; k >= 0; k--)
+        {
+            byte <<= 1;
+            byte += (char)(wordValue >> k) & 1;
+            iBit++;
+            if (iBit == 8)
+            {
+                bytes.push_back(byte);
+                byte = 0;
+                iBit = 0;
+            }
+        }
+    }
+
+    if (iBit) { bytes.push_back(byte << (8 - iBit)); }
+
+    secure_bytes_t rval(bytes.begin(), bytes.begin() + nDataBytes);
+    secure_bytes_t checksum1(bytes.begin() + nDataBytes, bytes.end());
+    secure_bytes_t checksum2 = sha256(rval);
+
+    // TODO: Clean up this implementation
+    iBit = 0;
+    for (int i = 0; i < checksum1.size(); i++)
+    {
+        char byte1 = checksum1[i];
+        char byte2 = checksum2[i];
+        for (int k = 7; k >= 0; k--)
+        {
+            if (((byte1 >> k) & 1) != ((byte2 >> k) & 1)) throw InvalidChecksum();
+            iBit++;
+            if (iBit == nChecksumBits) break;
+        } 
+    }
+
+    return rval;
 }
