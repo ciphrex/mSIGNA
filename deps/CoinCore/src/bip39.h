@@ -32,8 +32,13 @@
 
 namespace Coin
 {
+namespace BIP39
+{
 
-std::string toWordList(const secure_bytes_t& data);
-secure_bytes_t fromWordList(const std::string& list);
+enum Language { ENGLISH };
 
+std::string toWordlist(const secure_bytes_t& data, Language language = ENGLISH);
+secure_bytes_t fromWordlist(const std::string& list, Language language = ENGLISH);
+
+}
 }

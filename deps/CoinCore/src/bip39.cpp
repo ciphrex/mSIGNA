@@ -25,15 +25,17 @@
 
 #include "bip39.h"
 #include "hash.h"
+#include "wordlists/english.h"
 
-using namespace Coin;
+using namespace Coin::BIP39;
 using namespace std;
-string Coin::toWordList(const secure_bytes_t& data)
+
+string Coin::BIP39::toWordlist(const secure_bytes_t& data, Language language)
 {
     return string();
 }
 
-secure_bytes_t Coin::fromWordList(const string& list)
+secure_bytes_t Coin::BIP39::fromWordlist(const string& list, Language language)
 {
     return secure_bytes_t();
 }
