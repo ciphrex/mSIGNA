@@ -58,6 +58,7 @@
 #include "viewbip32dialog.h"
 #include "importbip32dialog.h"
 #include "viewbip39dialog.h"
+#include "importbip39dialog.h"
 #include "passphrasedialog.h"
 #include "setpassphrasedialog.h"
 #include "currencyunitdialog.h"
@@ -1045,6 +1046,29 @@ void MainWindow::viewBIP32(bool viewPrivate)
 
 void MainWindow::importBIP39()
 {
+    ImportBIP39Dialog dlg(this);
+    while (dlg.exec() == QDialog::Accepted)
+    {
+        try
+        {
+            secure_bytes_t seed = dlg.getSeed();
+            string name = dlg.getName().toStdString();
+
+            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+            CoinDB::VaultLock lock(synchedVault);
+            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+            synchedVault.getVault()->newKeychain(name, seed);
+            keychainModel->update();
+            keychainView->updateColumns();
+            tabWidget->setCurrentWidget(keychainView);
+            break;
+        }
+        catch (const exception& e)
+        {
+            LOGGER(error) << "MainWindow::importBIP39 - " << e.what() << std::endl;
+            showError(e.what());
+        }        
+    }
 }
 
 void MainWindow::viewBIP39()
