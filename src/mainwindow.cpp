@@ -402,6 +402,7 @@ void MainWindow::updateVaultStatus(const QString& name)
     lockAllKeychainsAction->setEnabled(keychainModel && keychainModel->rowCount());
     importKeychainAction->setEnabled(isOpen);
     importBIP32Action->setEnabled(isOpen);
+    importBIP39Action->setEnabled(isOpen);
 
     // account actions
     quickNewAccountAction->setEnabled(isOpen);
@@ -1041,6 +1042,14 @@ void MainWindow::viewBIP32(bool viewPrivate)
     }
 }
 
+void MainWindow::importBIP39()
+{
+}
+
+void MainWindow::viewBIP39()
+{
+}
+
 void MainWindow::backupKeychain()
 {
     QModelIndex index = keychainSelectionModel->currentIndex();
@@ -1082,6 +1091,7 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
         exportPublicKeychainAction->setEnabled(false);
         viewPrivateBIP32Action->setEnabled(false);
         viewPublicBIP32Action->setEnabled(false);
+        viewBIP39Action->setEnabled(false);
         backupKeychainAction->setEnabled(false);
     }
     else {
@@ -1094,6 +1104,7 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
         exportPublicKeychainAction->setEnabled(true);
         viewPrivateBIP32Action->setEnabled(status != KeychainModel::PUBLIC);
         viewPublicBIP32Action->setEnabled(true);
+        viewBIP39Action->setEnabled(status != KeychainModel::PUBLIC);
         backupKeychainAction->setEnabled(true);
     }
 }
@@ -2032,6 +2043,16 @@ void MainWindow::createActions()
     viewPublicBIP32Action->setEnabled(false);
     connect(viewPublicBIP32Action, &QAction::triggered, [=]() { this->viewBIP32(false); });
 
+    importBIP39Action = new QAction(tr("From Wordlist..."), this);
+    importBIP39Action->setStatusTip(tr("Import keychain from BIP39 wordlist"));
+    importBIP39Action->setEnabled(false);
+    connect(importBIP39Action, SIGNAL(triggered()), this, SLOT(importBIP39()));
+
+    viewBIP39Action = new QAction(tr("To Wordlist (private)..."), this);
+    viewBIP39Action->setStatusTip(tr("View private BIP39 wordlist"));
+    viewBIP39Action->setEnabled(false);
+    connect(viewBIP39Action, SIGNAL(triggered()), this, SLOT(viewBIP39()));
+
     backupKeychainAction = new QAction(tr("Backup Keychain..."), this);
     backupKeychainAction->setStatusTip(tr("Make paper backup"));
     backupKeychainAction->setEnabled(false);
@@ -2256,6 +2277,7 @@ void MainWindow::createMenus()
     QMenu* importKeychainMenu = keychainMenu->addMenu(tr("Import Keychain"));
     importKeychainMenu->addAction(importKeychainAction);
     importKeychainMenu->addAction(importBIP32Action);
+    importKeychainMenu->addAction(importBIP39Action);
 
     QMenu* exportKeychainMenu = keychainMenu->addMenu(tr("Export Keychain"));
     exportKeychainMenu->addAction(exportPrivateKeychainAction);
@@ -2263,6 +2285,8 @@ void MainWindow::createMenus()
     exportKeychainMenu->addSeparator();
     exportKeychainMenu->addAction(viewPrivateBIP32Action);
     exportKeychainMenu->addAction(viewPublicBIP32Action);
+    exportKeychainMenu->addSeparator();
+    exportKeychainMenu->addAction(viewBIP39Action);
 
     keychainMenu->addSeparator();
     keychainMenu->addAction(quickNewAccountAction);

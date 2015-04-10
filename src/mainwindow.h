@@ -146,6 +146,8 @@ private slots:
     void exportKeychain(bool exportPrivate);
     void importBIP32();
     void viewBIP32(bool viewPrivate);
+    void importBIP39();
+    void viewBIP39();
     void backupKeychain();
 //    void mergeKeychains();
 //    void removeKeychain();
@@ -302,6 +304,8 @@ private:
     QAction* importBIP32Action;
     QAction* viewPrivateBIP32Action;
     QAction* viewPublicBIP32Action;
+    QAction* importBIP39Action;
+    QAction* viewBIP39Action;
     QAction* backupKeychainAction;
 
     // account actions
