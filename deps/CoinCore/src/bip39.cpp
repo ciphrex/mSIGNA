@@ -30,12 +30,60 @@
 using namespace Coin::BIP39;
 using namespace std;
 
-string Coin::BIP39::toWordlist(const secure_bytes_t& data, Language language)
+secure_string_t Coin::BIP39::toWordlist(const secure_bytes_t& data, Language language)
 {
-    return string();
+    const char** WORDLIST;
+    switch (language)
+    {
+    case ENGLISH:
+        WORDLIST = ENGLISH_WORDLIST;
+        break;
+
+    default:
+        throw runtime_error("Coin::BIP39::toWordList() - unsupported language.");
+    }
+
+    int nDataBits = data.size() << 3; // * 8
+    if (nDataBits % 32) throw runtime_error("Coin::BIP39::toWordList() - data has invalid length.");
+
+    int nChecksumBits = nDataBits / 32;
+    if (nChecksumBits > 256) throw runtime_error("Coin::BIP39::toWordList() - data is too long.");
+
+    int nChecksumBytes = (nChecksumBits + 7) / 8;
+    secure_bytes_t checksum = sha256(data);
+    secure_bytes_t bytes(data);
+    for (int i = 0; i < nChecksumBytes; i++) { bytes.push_back(checksum[i]); }
+
+    int nBits = nDataBits + nChecksumBits; // will be a multiple of 11
+
+    secure_string_t rval;
+    bool addSpace = false;
+    int iBit = 0;
+    int iWord = 0;
+    for (auto byte: bytes)
+    {
+        for (int k = 7; k >= 0; k--)
+        {
+            iWord <<= 1;
+            iWord += (byte >> k) & 1;
+            iBit++;
+            if (iBit % 11 == 0)
+            {
+                if (addSpace)   { rval += " "; }
+                else            { addSpace = true; }
+
+                rval += WORDLIST[iWord];
+                iWord = 0;
+            }
+
+            if (iBit == nBits) break;
+        }
+    }
+
+    return rval;
 }
 
-secure_bytes_t Coin::BIP39::fromWordlist(const string& list, Language language)
+secure_bytes_t Coin::BIP39::fromWordlist(const secure_string_t& list, Language language)
 {
     return secure_bytes_t();
 }

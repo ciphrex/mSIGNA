@@ -1,6 +1,11 @@
 #pragma once
 
-const char* WORDLIST[] =
+namespace Coin
+{
+namespace BIP39
+{
+
+const char* ENGLISH_WORDLIST[] =
 {
   "abandon",
   "ability",
@@ -2052,4 +2057,7 @@ const char* WORDLIST[] =
   "zoo"
 };
 
-const int WORDCOUNT = sizeof(WORDLIST) / sizeof(WORDLIST[0]);
+const int ENGLISH_WORDCOUNT = sizeof(ENGLISH_WORDLIST) / sizeof(ENGLISH_WORDLIST[0]);
+
+}
+}
