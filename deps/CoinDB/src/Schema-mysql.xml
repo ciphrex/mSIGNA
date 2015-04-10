@@ -1,4 +1,11 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="mysql" version="1">
+  <changeset version="16">
+    <alter-table name="Keychain">
+      <add-column name="seed_ciphertext" type="VARBINARY(255)" null="false"/>
+      <add-column name="seed_salt" type="BIGINT UNSIGNED" null="false"/>
+    </alter-table>
+  </changeset>
+
   <changeset version="15">
     <add-table name="User" options="ENGINE=InnoDB" kind="object">
       <column name="id" type="BIGINT UNSIGNED" null="false"/>

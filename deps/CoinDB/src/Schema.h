@@ -55,7 +55,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 12
-#define SCHEMA_VERSION      15
+#define SCHEMA_VERSION      16
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -236,6 +236,7 @@ public:
     uint32_t child_num() const { return child_num_; }
     const bytes_t& pubkey() const { return pubkey_; }
     secure_bytes_t privkey() const;
+    secure_bytes_t seed() const;
     const bytes_t& chain_code() const { return chain_code_; }
 
     void importPrivateKey(const Keychain& source);
@@ -271,6 +272,11 @@ private:
     mutable secure_bytes_t privkey_;
     bytes_t privkey_ciphertext_;
     uint64_t privkey_salt_;
+
+    #pragma db transient
+    mutable secure_bytes_t seed_;
+    bytes_t seed_ciphertext_;
+    uint64_t seed_salt_;
 
     #pragma db null
     std::shared_ptr<Keychain> parent_;
@@ -311,6 +317,13 @@ private:
         {
             ar & privkey_salt_;
         }
+
+        // Seed added in version 3
+        if (version >= 3)
+        {
+            ar & seed_ciphertext_;
+            ar & seed_salt_;
+        }
     }
     template<class Archive>
     void load(Archive& ar, const unsigned int version)
@@ -339,6 +352,13 @@ private:
         else
         {
             ar & privkey_salt_;
+        }
+
+        // Seed added in version 3
+        if (version >= 3)
+        {
+            ar & seed_ciphertext_;
+            ar & seed_salt_;
         }
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -1878,7 +1898,7 @@ BOOST_CLASS_VERSION(CoinDB::TxIn, 1)
 BOOST_CLASS_VERSION(CoinDB::TxOut, 1)
 BOOST_CLASS_VERSION(CoinDB::Tx, 2)
 
-BOOST_CLASS_VERSION(CoinDB::Keychain, 2)
+BOOST_CLASS_VERSION(CoinDB::Keychain, 3)
 BOOST_CLASS_VERSION(CoinDB::AccountBin, 2)
 BOOST_CLASS_VERSION(CoinDB::Account, 2)
 
