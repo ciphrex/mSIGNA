@@ -226,6 +226,16 @@ bool KeychainModel::isEncrypted(const QString& keychainName) const
     return keychain->isEncrypted();
 }
 
+bool KeychainModel::hasSeed(const QString& keychainName) const
+{
+    if (!vault) {
+        throw std::runtime_error("No vault is loaded.");
+    }
+
+    std::shared_ptr<Keychain> keychain = vault->getKeychain(keychainName.toStdString());
+    return keychain->hasSeed();
+}
+
 QString KeychainModel::getName(int row) const
 {
     if (row < 0 || row >= rowCount()) throw std::runtime_error("Invalid row.");

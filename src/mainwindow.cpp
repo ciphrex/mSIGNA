@@ -1096,6 +1096,7 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
     }
     else {
         int status = keychainModel->getStatus(row);
+        bool hasSeed = keychainModel->hasSeed(row); 
 
         unlockKeychainAction->setEnabled(status == KeychainModel::LOCKED);
         lockKeychainAction->setEnabled(status == KeychainModel::UNLOCKED);
@@ -1104,7 +1105,7 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
         exportPublicKeychainAction->setEnabled(true);
         viewPrivateBIP32Action->setEnabled(status != KeychainModel::PUBLIC);
         viewPublicBIP32Action->setEnabled(true);
-        viewBIP39Action->setEnabled(status != KeychainModel::PUBLIC);
+        viewBIP39Action->setEnabled(status != KeychainModel::PUBLIC && hasSeed);
         backupKeychainAction->setEnabled(true);
     }
 }
