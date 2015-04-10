@@ -97,6 +97,7 @@ HEADERS = \
     src/viewbip32dialog.h \
     src/importbip32dialog.h \
     src/viewbip39dialog.h \
+    src/importbip39dialog.h \
     src/passphrasedialog.h \
     src/setpassphrasedialog.h
                 
@@ -151,6 +152,7 @@ SOURCES = \
     src/viewbip32dialog.cpp \
     src/importbip32dialog.cpp \
     src/viewbip39dialog.cpp \
+    src/importbip39dialog.cpp \
     src/passphrasedialog.cpp \
     src/setpassphrasedialog.cpp
 
