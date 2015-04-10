@@ -57,6 +57,7 @@
 #include "keychainbackupdialog.h"
 #include "viewbip32dialog.h"
 #include "importbip32dialog.h"
+#include "viewbip39dialog.h"
 #include "passphrasedialog.h"
 #include "setpassphrasedialog.h"
 #include "currencyunitdialog.h"
@@ -1048,6 +1049,44 @@ void MainWindow::importBIP39()
 
 void MainWindow::viewBIP39()
 {
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0) {
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    int hasSeed = keychainModel->hasSeed(row);
+    if (!hasSeed)
+    {
+        showError(tr("Keychain does not contain seed."));
+        return;
+    }
+
+    int status = keychainModel->getStatus(row);
+    bool bLocked = status == KeychainModel::LOCKED;
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+
+    try {
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        if (bLocked && !unlockKeychain(name)) return;
+
+        secure_bytes_t seed = synchedVault.getVault()->exportBIP39(name.toStdString());
+
+        ViewBIP39Dialog dlg(name, seed, this);
+        if (bLocked) { lockKeychain(name); }
+        dlg.exec();
+    }
+    catch (const exception& e) {
+        LOGGER(error) << "MainWindow::viewBIP39 - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
+        showError(e.what());
+    }
 }
 
 void MainWindow::backupKeychain()
