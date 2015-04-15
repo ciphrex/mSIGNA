@@ -32,7 +32,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-const std::string COINDB_VERSION = "v0.6.1";
+const std::string COINDB_VERSION = "v0.7.0";
 
 using namespace std;
 using namespace odb::core;
@@ -1170,7 +1170,7 @@ cli::result_t cmd_randombytes(const cli::params_t& params)
 int main(int argc, char* argv[])
 {
     stringstream helpMessage;
-    helpMessage << "CoinDB by Eric Lombrozo " << COINDB_VERSION << " - " << DBMS;
+    helpMessage << "CoinDB by Eric Lombrozo " << COINDB_VERSION << " - Schema " << SCHEMA_VERSION << " - " << DBMS;
 
     using namespace cli;
     Shell shell(helpMessage.str());
