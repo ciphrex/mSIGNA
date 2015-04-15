@@ -3254,7 +3254,7 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& username, const
         }
     }
 
-    std::shared_ptr<Tx> tx = createTx_unwrapped(username, account_name, tx_version, tx_locktime, coin_ids, txouts, fee, min_confirmations);
+    std::shared_ptr<Tx> tx = createTx_unwrapped(account_name, tx_version, tx_locktime, coin_ids, txouts, fee, min_confirmations);
     tx->user(user);
     return tx;
 }
