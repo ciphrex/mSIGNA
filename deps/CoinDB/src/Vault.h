@@ -173,6 +173,7 @@ public:
     std::shared_ptr<Tx>                     createTx(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
     std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations, bool insert = false); // Pass empty output scripts to generate change outputs.
     std::shared_ptr<Tx>                     createTx(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations, bool insert = false); // Pass empty output scripts to generate change outputs.
+    txs_t                                   consolidateTxOuts(const std::string& username, const std::string& account_name, uint32_t max_tx_size /* in bytes */, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, const bytes_t& txoutscript, uint64_t min_fee, uint32_t min_confirmations, bool insert = false);
     void                                    deleteTx(const bytes_t& tx_hash); // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     void                                    deleteTx(unsigned long tx_id); // Throws TxNotFoundException.
     SigningRequest                          getSigningRequest(const bytes_t& hash, bool include_raw_tx = false) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException.
@@ -348,6 +349,7 @@ protected:
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations);
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations);
+    txs_t                                   consolidateTxOuts_unwrapped(const std::string& account_name, uint32_t max_tx_size /* in bytes */, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, const bytes_t& txoutscript, uint64_t min_fee, uint32_t min_confirmations);
     void                                    deleteTx_unwrapped(std::shared_ptr<Tx> tx);
     void                                    updateTx_unwrapped(std::shared_ptr<Tx> tx);
     SigningRequest                          getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;

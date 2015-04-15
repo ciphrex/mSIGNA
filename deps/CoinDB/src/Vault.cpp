@@ -3259,6 +3259,108 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& username, const
     return tx;
 }
 
+txs_t Vault::consolidateTxOuts(const std::string& username, const std::string& account_name, uint32_t max_tx_size, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, const bytes_t& txoutscript, uint64_t min_fee, uint32_t min_confirmations, bool insert)
+{
+    LOGGER(trace) << "Vault::consolidateTxOuts(" << username << ", " << account_name << ", " << max_tx_size << ", " << tx_version << ", " << tx_locktime << ", " << coin_ids.size() << " txin(s), " << uchar_vector(txoutscript).getHex() << ", " << min_fee << ", " << min_confirmations << ", " << (insert ? "insert" : "no insert") << ")" << std::endl;
+
+    std::shared_ptr<User> user = getUser_unwrapped(username);
+
+    txs_t txs;
+    {
+        boost::lock_guard<boost::mutex> lock(mutex);
+        odb::core::session s;
+        odb::core::transaction t(db_->begin());
+        txs = consolidateTxOuts_unwrapped(account_name, max_tx_size, tx_version, tx_locktime, coin_ids, txoutscript, min_fee, min_confirmations);
+        bool bInserted = false;
+        for (auto& tx: txs)
+        {
+            tx->user(user); 
+            if (insert)
+            {
+                tx = insertTx_unwrapped(tx);
+                if (tx) { bInserted = true; }
+            }
+        }
+        if (bInserted) t.commit();
+    }
+
+    signalQueue.flush();
+    return txs;
+}
+
+txs_t Vault::consolidateTxOuts_unwrapped(const std::string& account_name, uint32_t max_tx_size, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, const bytes_t& txoutscript, uint64_t min_fee, uint32_t min_confirmations)
+{
+    std::shared_ptr<Account> account = getAccount_unwrapped(account_name);
+
+    typedef odb::query<TxOutView> query_t;
+    query_t base_query(query_t::Tx::status > Tx::UNSIGNED && query_t::TxOut::status == TxOut::UNSPENT && query_t::receiving_account::id == account->id());
+
+    if (min_confirmations > 0)
+    {
+        uint32_t best_height = getBestHeight_unwrapped();
+        if (min_confirmations > best_height) throw AccountInsufficientFundsException(account_name, 0, 0);
+        base_query = (base_query && query_t::BlockHeader::height <= best_height + 1 - min_confirmations);
+    }
+
+    odb::result<TxOutView> utxoview_r;
+    if (coin_ids.empty())
+    {
+        utxoview_r = db_->query<TxOutView>(base_query);
+    }
+    else
+    {
+        utxoview_r = db_->query<TxOutView>(base_query && query_t::TxOut::id.in_range(coin_ids.begin(), coin_ids.end()));
+    }
+
+    std::vector<TxOutView> utxoviews;
+    for (auto& utxoview: utxoview_r) { utxoviews.push_back(utxoview); }
+    if (utxoviews.size() < coin_ids.size()) throw TxInvalidInputsException();
+
+    // TODO: Better rng seeding
+    std::srand(std::time(0));
+    std::random_shuffle(utxoviews.begin(), utxoviews.end(), [](int i) { return std::rand() % i; });
+
+    txins_t txins;
+    uint64_t input_total = 0;
+    
+    std::shared_ptr<Tx> tx = std::make_shared<Tx>();
+    txs_t txs;
+    std::shared_ptr<TxOut> txout = std::make_shared<TxOut>(0, txoutscript);
+    txouts_t txouts;
+    txouts.push_back(txout);
+    for (auto& utxoview: utxoviews)
+    {
+        std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+        txins.push_back(txin);
+        tx->set(tx_version, txins, txouts, tx_locktime, time(NULL), Tx::UNSIGNED);
+        if (tx->raw().size() > max_tx_size)
+        {
+            txins.pop_back();
+            if (txins.empty()) throw std::runtime_error("Vault::consolidateTxOuts_unwrapped() - txins empty.");
+            if (input_total <= min_fee) throw std::runtime_error("Vault::consolidateTxOuts_unwrapped() - input total is not greater than fee.");
+            txouts[0]->value(input_total - min_fee);
+            tx->set(tx_version, txins, txouts, tx_locktime, time(NULL), Tx::UNSIGNED);
+            if (tx->raw().size() > max_tx_size) throw std::runtime_error("Vault::consolidateTxOuts_unwrapped() - maximum transaction size is too small.");
+
+            txs.push_back(tx);
+            input_total = 0;
+            txins.clear();
+            txins.push_back(txin);
+        }
+            
+        input_total += utxoview.value;
+    }
+    
+    if (!txins.empty() && input_total >= min_fee)
+    {
+        txouts[0]->value(input_total - min_fee);
+        tx->set(tx_version, txins, txouts, tx_locktime, time(NULL), Tx::UNSIGNED);
+        if (tx->raw().size() < max_tx_size) { txs.push_back(tx); }
+    }
+    
+    return txs;
+}
+
 void Vault::updateTx_unwrapped(std::shared_ptr<Tx> tx)
 {
     for (auto& txin: tx->txins()) { db_->update(txin); }
