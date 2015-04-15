@@ -645,6 +645,34 @@ cli::result_t cmd_unsigned(const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_unsignedhashes(const cli::params_t& params)
+{
+    std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
+    if (account_name == "@all") account_name = "";
+
+    std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
+    if (bin_name == "@all") bin_name = "";
+
+    bool hide_change = params.size() > 3 ? params[3] == "true" : true;
+    
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name, TxOut::ROLE_BOTH, TxOut::BOTH, Tx::UNSIGNED, hide_change);
+    stringstream ss;
+    std::set<std::string> hashes;
+    for (auto& txOutView: txOutViews)
+    {
+        if (txOutView.tx_status != Tx::UNSIGNED) continue;
+        bytes_t txhash = txOutView.tx_unsigned_hash;
+        hashes.insert(uchar_vector(txhash).getHex());
+    }
+    for (auto& hash: hashes)
+    {
+        ss << hash << endl;
+    }
+ 
+    return ss.str();
+}
+
 cli::result_t cmd_refillaccountpool(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
@@ -914,6 +942,27 @@ cli::result_t cmd_deletetx(const cli::params_t& params)
     ss << "Tx deleted.";
     return ss.str();
 }
+
+cli::result_t cmd_consolidate(const cli::params_t& params)
+{
+    using namespace CoinQ::Script;
+
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    string account_name(params[1]);
+    uint32_t max_tx_size = strtoul(params[2].c_str(), NULL, 0);
+    bytes_t txoutscript = getTxOutScriptForAddress(params[3], BASE58_VERSIONS);
+    uint64_t min_fee = params.size() > 4 ? strtoull(params[4].c_str(), NULL, 0) : 0;
+    uint32_t min_confirmations = params.size() > 5 ? strtoul(params[5].c_str(), NULL, 0) : 1;
+    uint32_t tx_version = params.size() > 6 ? strtoul(params[6].c_str(), NULL, 0) : 1;
+    uint32_t tx_locktime = params.size() > 7 ? strtoul(params[7].c_str(), NULL, 0) : 0;
+
+    txs_t txs = vault.consolidateTxOuts(account_name, max_tx_size, tx_version, tx_locktime, ids_t(), txoutscript, min_fee, min_confirmations, false);
+
+    stringstream ss;
+    for (auto& tx: txs) { ss << uchar_vector(tx->raw()).getHex() << endl; }
+    return ss.str();
+} 
 
 cli::result_t cmd_signingrequest(const cli::params_t& params)
 {
@@ -1380,6 +1429,12 @@ int main(int argc, char* argv[])
         command::params(1, "db file"),
         command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
     shell.add(command(
+        &cmd_unsignedhashes,
+        "unsignedhashes",
+        "display unsigned transaction hashes",
+        command::params(1, "db file"),
+        command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
+    shell.add(command(
         &cmd_refillaccountpool,
         "refillaccountpool",
         "refill signing script pool for account",
@@ -1448,6 +1503,12 @@ int main(int argc, char* argv[])
         "deletetx",
         "delete a transaction",
         command::params(2, "db file", "tx hash or id")));
+    shell.add(command(
+        &cmd_consolidate,
+        "consolidate",
+        "consolidate transaction outputs",
+        command::params(4, "db file", "account name", "max tx size(bytes)", "address"),
+        command::params(4, "min fee = 0", "min confirmations = 1", "version = 1", "locktime = 0")));
     shell.add(command(
         &cmd_signingrequest,
         "signingrequest",
