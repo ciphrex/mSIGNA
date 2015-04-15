@@ -1130,8 +1130,13 @@ public:
     Coin::TxOut toCoinCore() const;
 
     unsigned long id() const { return id_; }
+
+    void value(uint64_t value) { value_ = value; }
     uint64_t value() const { return value_; }
+
+    void script(const bytes_t& script) { script_ = script; }
     const bytes_t& script() const { return script_; }
+
     bytes_t raw() const;
 
     void tx(std::shared_ptr<Tx> tx) { tx_ = tx; }
