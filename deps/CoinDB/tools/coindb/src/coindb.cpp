@@ -32,7 +32,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-const std::string COINDB_VERSION = "v0.7.1";
+const std::string COINDB_VERSION = "v0.7.2";
 
 using namespace std;
 using namespace odb::core;
@@ -618,6 +618,30 @@ cli::result_t cmd_history(const cli::params_t& params)
     ss << formattedTxOutViewHeader();
     for (auto& txOutView: txOutViews)
         ss << endl << formattedTxOutView(txOutView, best_height);
+    return ss.str();
+}
+
+cli::result_t cmd_historycsv(const cli::params_t& params)
+{
+    std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
+    if (account_name == "@all") account_name = "";
+
+    std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
+    if (bin_name == "@all") bin_name = "";
+
+    bool hide_change = params.size() > 3 ? params[3] == "true" : true;
+    
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    uint32_t best_height = vault.getBestHeight();
+    vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name, TxOut::ROLE_BOTH, TxOut::BOTH, Tx::ALL, hide_change);
+    stringstream ss;
+    bool bNewLine = false;
+    for (auto& txOutView: txOutViews)
+    {
+        if (bNewLine)   { ss << endl; }
+        else            { bNewLine = true; }
+        ss << formattedTxOutViewCSV(txOutView, best_height);
+    }
     return ss.str();
 }
 
@@ -1432,6 +1456,12 @@ int main(int argc, char* argv[])
         &cmd_history,
         "history",
         "display transaction history",
+        command::params(1, "db file"),
+        command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
+    shell.add(command(
+        &cmd_historycsv,
+        "historycsv",
+        "display transaction history in csv format",
         command::params(1, "db file"),
         command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
     shell.add(command(

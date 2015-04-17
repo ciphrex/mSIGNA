@@ -219,6 +219,30 @@ inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned in
     return ss.str();
 }
 
+inline std::string formattedTxOutViewCSV(const CoinDB::TxOutView& view, unsigned int best_height)
+{
+    using namespace std;
+    using namespace CoinDB;
+
+    bytes_t tx_hash = view.tx_status == Tx::UNSIGNED
+        ? view.tx_unsigned_hash : view.tx_hash;
+
+    unsigned int confirmations = view.height == 0
+        ? 0 : best_height - view.height + 1;
+
+    stringstream ss;
+    ss << view.role_account() << ","
+       << view.role_bin() << ","
+       << view.role_label() << ","
+       << TxOut::getRoleString(view.role_flags) << ","
+       << setprecision(8) << 1.0*view.value/COIN_EXP << ","
+       << getAddressFromScript(view.script) << ","
+       << confirmations << ","
+       << Tx::getStatusString(view.tx_status) << ","
+       << uchar_vector(tx_hash).getHex();
+    return ss.str();
+}
+
 inline std::string formattedUnspentTxOutViewHeader()
 {
     using namespace std;
