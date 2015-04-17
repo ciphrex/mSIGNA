@@ -5,13 +5,13 @@ Use:
 
 From project root directory, run:
     $ /usr/local/host/bin/qmake && make
-    $ /usr/local/usr/local/bin/macdeployqt build/debug/CoinVault.app
+    $ /usr/local/usr/local/bin/macdeployqt build/debug/mSIGNA.app
 
 To check bundle, run:
-    $ otool -L build/debug/CoinVault.app/Contents/MacOS/CoinVault
+    $ otool -L build/debug/mSIGNA.app/Contents/MacOS/mSIGNA
 
 Output should look something like this:
-build/debug/CoinVault.app/Contents/MacOS/CoinVault:
+build/debug/mSIGNA.app/Contents/MacOS/mSIGNA:
     @executable_path/../Frameworks/libodb-sqlite-2.3.dylib (compatibility version 0.0.0, current version 0.0.0)
     @executable_path/../Frameworks/libodb-2.3.dylib (compatibility version 0.0.0, current version 0.0.0)
     /usr/lib/libcrypto.0.9.8.dylib (compatibility version 0.9.8, current version 47.2.0)
