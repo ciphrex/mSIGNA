@@ -32,7 +32,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-const std::string COINDB_VERSION = "v0.7.0";
+const std::string COINDB_VERSION = "v0.7.1";
 
 using namespace std;
 using namespace odb::core;
@@ -481,6 +481,18 @@ cli::result_t cmd_exportaccount(const cli::params_t& params)
 
     std::string output_file = params.size() > 2 ? params[2] : (params[1] + ".acct");
     vault.exportAccount(params[1], output_file, true);
+
+    stringstream ss;
+    ss << "Account " << params[1] << " exported to " << output_file << ".";
+    return ss.str();
+}
+
+cli::result_t cmd_exportsharedaccount(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    std::string output_file = params.size() > 2 ? params[2] : (params[1] + ".sharedacct");
+    vault.exportAccount(params[1], output_file, false);
 
     stringstream ss;
     ss << "Account " << params[1] << " exported to " << output_file << ".";
@@ -1382,6 +1394,12 @@ int main(int argc, char* argv[])
         "export account to file",
         command::params(2, "db file", "account name"),
         command::params(1, "output file = *.acct")));
+    shell.add(command(
+        &cmd_exportsharedaccount,
+        "exportsharedaccount",
+        "export shared account to file",
+        command::params(2, "db file", "account name"),
+        command::params(1, "output file = *.sharedacct")));
     shell.add(command(
         &cmd_importaccount,
         "importaccount",
