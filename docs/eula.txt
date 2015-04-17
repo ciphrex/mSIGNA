@@ -1,9 +1,9 @@
-Bitcoin Vault(TM) End-user License Agreement
+mSIGNA(TM) End-user License Agreement
 
 End-user License Agreement (EULA)
 PLEASE READ CAREFULLY BEFORE USING THIS PRODUCT
 
-This End-User License Agreement "EULA" is a legal agreement between (a) you (either an individual or a single entity, ("Licensee") and (b) Ciphrex Corporation ("Licensor") that governs your use of any Software Product, installed on or made available by Ciphrex Corporation for use with BitcoinVault(TM) ("Product").  Other software  provided by third parties and used with Bitcoin Vault(TM) may be subject to a separate EULA. The term "Software Product" means computer software and may include associated media, printed materials and online or electronic documentation.  An amendment or addendum to this EULA may accompany Bitcoin Vault(TM).
+This End-User License Agreement "EULA" is a legal agreement between (a) you (either an individual or a single entity, ("Licensee") and (b) Ciphrex Corporation ("Licensor") that governs your use of any Software Product, installed on or made available by Ciphrex Corporation for use with mSIGNA(TM) ("Product").  Other software  provided by third parties and used with mSIGNA(TM) may be subject to a separate EULA. The term "Software Product" means computer software and may include associated media, printed materials and online or electronic documentation.  An amendment or addendum to this EULA may accompany mSIGNA(TM).
 
 BY CLICKING "I accept the agreement" YOU AGREE TO BE BOUND BY THE TERMS OF THIS EULA. IF YOU DO NOT ACCEPT THESE LICENSE TERMS, YOU MUST CLICK "Cancel" AND DELETE THE SOFTWARE PRODUCT FROM YOUR COMPUTER.
 
