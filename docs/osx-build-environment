@@ -59,8 +59,11 @@ Boost from homebrew on Mountain Lion is built using libstdc++ rather than libc++
     $ make install
     $ cd ..
 
-9) Build qrencode QR Code C library (libqrencode) for os x
-    $ cd CoinVault/deps/qrencode-3.4.3
+9) Clone mSIGNA repository, in case you haven't done so, already:
+    $ git clone https://github.com/ciphrex/mSIGNA.git
+
+10) Build qrencode QR Code C library (libqrencode) for os x
+    $ cd mSIGNA/deps/qrencode-3.4.3
     $ ./configure
     $ make
     $ sudo make install
@@ -121,8 +124,11 @@ Mac OS X 10.9.x Mavericks
     $ make install
     $ cd ..
 
-8) Build qrencode QR Code C library (libqrencode) for os x
-    $ cd CoinVault/deps/qrencode-3.4.3
+12) Clone mSIGNA repository, in case you haven't done so already:
+    $ git clone https://github.com/ciphrex/mSIGNA.git
+
+13) Build qrencode QR Code C library (libqrencode) for os x
+    $ cd mSIGNA/deps/qrencode-3.4.3
     $ ./configure
     $ make
     $ sudo make install

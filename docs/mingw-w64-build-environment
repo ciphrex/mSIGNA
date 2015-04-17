@@ -140,8 +140,11 @@
     $ sudo ln -s ../../include/sqlite3ext.h sqlite3ext.h
     $ cd
 
-12) Build qrencode QR Code C library (libqrencode) for windows
-    $ cd CoinVault/deps/qrencode-3.4.3
+12) Clone mSIGNA repository, in case you haven't done so already:
+    $ git clone https://github.com/ciphrex/mSIGNA.git
+
+13) Build qrencode QR Code C library (libqrencode) for windows
+    $ cd mSIGNA/deps/qrencode-3.4.3
     $ ./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32
     $ make
     $ sudo make install
