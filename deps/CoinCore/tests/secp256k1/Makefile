@@ -11,7 +11,10 @@ OBJS = \
 LIBS = \
     -lcrypto
 
-all: build/secp256k1_test${EXE_EXT} build/secp256k1_rfc6979_test${EXE_EXT} build/ascii2hex${EXE_EXT}
+all: build/secp256k1_keygen${EXE_EXT} build/secp256k1_test${EXE_EXT} build/secp256k1_rfc6979_test${EXE_EXT} build/ascii2hex${EXE_EXT}
+
+build/secp256k1_keygen${EXE_EXT}: src/secp256k1_keygen.cpp $(OBJS)
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $^ -o $@ $(LIBS)
 
 build/secp256k1_test${EXE_EXT}: src/secp256k1_test.cpp $(OBJS)
 	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $^ -o $@ $(LIBS)
