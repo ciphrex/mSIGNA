@@ -49,6 +49,7 @@ uint32_t getDataLength(const uchar_vector& script, uint& pos)
     }
 
     unsigned char op = script[pos++];
+    if (op == OP_0 || op == OP_1NEGATE || (op >= OP_1 && op <= OP_16)) return 0;
     if (op <= 0x4b) {
         return (uint32_t)op;
     }
