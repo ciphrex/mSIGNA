@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <CoinQ/CoinQ_coinparams.h>
+
 #include <string>
 #include <sstream>
 #include <fstream>
@@ -21,6 +23,7 @@
 
 const std::string DEFAULT_DATA_DIR = "CoinDB";
 const std::string DEFAULT_CONFIG_FILE = "coindb.conf";
+const std::string DEFAULT_NETWORK_NAME = "bitcoin";
 
 class CoinDBConfig
 {
@@ -31,10 +34,12 @@ public:
     std::string getHelpOptions() const;
     virtual bool parseParams(int argc, char* argv[]);
 
-    const std::string& getDataDir() const { return m_dataDir; }
-    const std::string& getConfigFile() const { return m_configFile; }
-    const std::string& getDatabaseUser() const { return m_databaseUser; }
-    const std::string& getDatabasePassword() const { return m_databasePassword; }
+    const std::string&          getDataDir() const { return m_dataDir; }
+    const std::string&          getConfigFile() const { return m_configFile; }
+    const std::string&          getDatabaseUser() const { return m_databaseUser; }
+    const std::string&          getDatabasePassword() const { return m_databasePassword; }
+    const std::string&          getNetworkName() const { return m_networkName; }
+    const CoinQ::CoinParams&    getCoinParams() const { return m_networkSelector.getCoinParams(); }
 
 protected:
     boost::program_options::options_description m_options;
@@ -44,6 +49,9 @@ protected:
     std::string m_configFile;
     std::string m_databaseUser;
     std::string m_databasePassword;
+    std::string m_networkName;
+
+    CoinQ::NetworkSelector m_networkSelector;
 };
 
 inline CoinDBConfig::CoinDBConfig() : m_options("Options")
@@ -56,6 +64,7 @@ inline CoinDBConfig::CoinDBConfig() : m_options("Options")
         ("config", po::value<std::string>(&m_configFile), "name of the configuration file")
         ("dbuser", po::value<std::string>(&m_databaseUser), "database user")
         ("dbpasswd", po::value<std::string>(&m_databasePassword), "database password")
+        ("network", po::value<std::string>(&m_networkName), "network name (default: bitcoin)")
     ;
 }
 
@@ -93,6 +102,10 @@ inline bool CoinDBConfig::parseParams(int argc, char* argv[])
         ifs.close();
         po::notify(m_vm); 
     }
+
+    if (!m_vm.count("network")) { m_networkName = DEFAULT_NETWORK_NAME; }
+    std::transform(m_networkName.begin(), m_networkName.end(), m_networkName.begin(), ::tolower);
+    m_networkSelector.select(m_networkName);
 
     return true;
 }
