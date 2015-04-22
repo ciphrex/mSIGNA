@@ -11,6 +11,7 @@
 
 #include <CoinCore/Base58Check.h>
 
+#include <CoinQ/CoinQ_coinparams.h>
 #include <CoinQ/CoinQ_script.h>
 
 #include <Vault.h>
@@ -66,10 +67,11 @@ inline std::string formattedScriptHeader()
     return ss.str();
 }
 
-inline std::string formattedScript(const CoinDB::SigningScriptView& view)
+inline std::string formattedScript(const CoinDB::SigningScriptView& view, const CoinQ::CoinParams& coinParams)
 {
     using namespace std;
     using namespace CoinDB;
+    using namespace CoinQ::Script;
 
     stringstream ss;
     ss << " ";
@@ -78,7 +80,7 @@ inline std::string formattedScript(const CoinDB::SigningScriptView& view)
        << left  << setw(8)  << view.label << " | "
        << right << setw(5)  << view.index << " | "
        << left  << setw(50) << uchar_vector(view.txoutscript).getHex() << " | "
-       << left  << setw(36) << getAddressFromScript(view.txoutscript) << " | "
+       << left  << setw(36) << getAddressForTxOutScript(view.txoutscript, coinParams.address_versions()) << " | "
        << left  << setw(8)  << SigningScript::getStatusString(view.status);
     ss << " ";
     return ss.str();
@@ -150,10 +152,11 @@ inline std::string formattedTxOutHeader()
     return ss.str();
 }
 
-inline std::string formattedTxOut(const std::shared_ptr<CoinDB::TxOut>& txout)
+inline std::string formattedTxOut(const std::shared_ptr<CoinDB::TxOut>& txout, const CoinQ::CoinParams& coinParams)
 {
     using namespace std;
     using namespace CoinDB;
+    using namespace CoinQ::Script;
 
     string status = txout->receiving_account() ? TxOut::getStatusString(txout->status()) : "N/A";
 
@@ -162,7 +165,7 @@ inline std::string formattedTxOut(const std::shared_ptr<CoinDB::TxOut>& txout)
     ss << right << setw(6)  << txout->txindex() << " | "
        << right << setw(15) << fixed << setprecision(8) << 1.0*txout->value()/COIN_EXP << " | "
        << left  << setw(50) << uchar_vector(txout->script()).getHex() << " | "
-       << left  << setw(36) << getAddressFromScript(txout->script()) << " | "
+       << left  << setw(36) << getAddressForTxOutScript(txout->script(), coinParams.address_versions()) << " | "
        << left  << setw(7)  << status;
     ss << " ";
     return ss.str();
@@ -192,10 +195,11 @@ inline std::string formattedTxOutViewHeader()
     return ss.str();
 }
 
-inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned int best_height)
+inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned int best_height, const CoinQ::CoinParams& coinParams)
 {
     using namespace std;
     using namespace CoinDB;
+    using namespace CoinQ::Script;
 
     bytes_t tx_hash = view.tx_status == Tx::UNSIGNED
         ? view.tx_unsigned_hash : view.tx_hash;
@@ -210,7 +214,7 @@ inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned in
        << left  << setw(40) << view.role_label() << " | "
        << left  << setw(7)  << TxOut::getRoleString(view.role_flags) << " | "
        << right << setw(15) << fixed << setprecision(8) << 1.0*view.value/COIN_EXP << " | "
-       << left  << setw(36) << getAddressFromScript(view.script) << " | "
+       << left  << setw(36) << getAddressForTxOutScript(view.script, coinParams.address_versions()) << " | "
        << right << setw(6)  << confirmations << " | "
        << left  << setw(10) << Tx::getStatusString(view.tx_status) << " | "
        << right << setw(6)  << view.tx_id << " | "
@@ -219,10 +223,11 @@ inline std::string formattedTxOutView(const CoinDB::TxOutView& view, unsigned in
     return ss.str();
 }
 
-inline std::string formattedTxOutViewCSV(const CoinDB::TxOutView& view, unsigned int best_height)
+inline std::string formattedTxOutViewCSV(const CoinDB::TxOutView& view, unsigned int best_height, const CoinQ::CoinParams& coinParams)
 {
     using namespace std;
     using namespace CoinDB;
+    using namespace CoinQ::Script;
 
     bytes_t tx_hash = view.tx_status == Tx::UNSIGNED
         ? view.tx_unsigned_hash : view.tx_hash;
@@ -236,7 +241,7 @@ inline std::string formattedTxOutViewCSV(const CoinDB::TxOutView& view, unsigned
        << view.role_label() << ","
        << TxOut::getRoleString(view.role_flags) << ","
        << setprecision(8) << 1.0*view.value/COIN_EXP << ","
-       << getAddressFromScript(view.script) << ","
+       << getAddressForTxOutScript(view.script, coinParams.address_versions()) << ","
        << confirmations << ","
        << Tx::getStatusString(view.tx_status) << ","
        << uchar_vector(tx_hash).getHex();
@@ -261,10 +266,11 @@ inline std::string formattedUnspentTxOutViewHeader()
     return ss.str();
 }
 
-inline std::string formattedUnspentTxOutView(const CoinDB::TxOutView& view, unsigned int best_height)
+inline std::string formattedUnspentTxOutView(const CoinDB::TxOutView& view, unsigned int best_height, const CoinQ::CoinParams& coinParams)
 {
     using namespace std;
     using namespace CoinDB;
+    using namespace CoinQ::Script;
 
     unsigned int confirmations = view.height == 0
         ? 0 : best_height - view.height + 1;
@@ -273,7 +279,7 @@ inline std::string formattedUnspentTxOutView(const CoinDB::TxOutView& view, unsi
     ss << " ";
     ss << right << setw(8)  << view.id << " | "
        << right << setw(15) << fixed << setprecision(8) << 1.0*view.value/COIN_EXP << " | "
-       << left  << setw(36) << getAddressFromScript(view.script) << " | "
+       << left  << setw(36) << getAddressForTxOutScript(view.script, coinParams.address_versions()) << " | "
        << right << setw(6)  << confirmations;
     ss << " ";
     return ss.str();
