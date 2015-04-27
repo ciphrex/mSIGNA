@@ -165,7 +165,7 @@ secure_bytes_t Coin::BIP39::fromWordlist(const secure_string_t& list, Language l
 
     // TODO: Clean up this implementation
     iBit = 0;
-    for (int i = 0; i < checksum1.size(); i++)
+    for (int i = 0; i < (int)checksum1.size(); i++)
     {
         char byte1 = checksum1[i];
         char byte2 = checksum2[i];
