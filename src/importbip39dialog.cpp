@@ -23,6 +23,17 @@
 ImportBIP39Dialog::ImportBIP39Dialog(QWidget* parent)
     : QDialog(parent)
 {
+    init(); 
+}
+
+ImportBIP39Dialog::ImportBIP39Dialog(const QString& name, QWidget* parent)
+    : QDialog(parent)
+{
+    init(name);
+}
+
+void ImportBIP39Dialog::init(const QString& name)
+{
     setWindowTitle(tr("Import Wordlist"));
 
     // Buttons
@@ -34,6 +45,13 @@ ImportBIP39Dialog::ImportBIP39Dialog(QWidget* parent)
 
     QLabel* nameLabel = new QLabel(tr("Name:"));
     m_nameEdit = new QLineEdit();
+
+    if (!name.isEmpty())
+    {
+        m_nameEdit->setText(name);
+        m_nameEdit->setReadOnly(true);
+    }
+
     QHBoxLayout* nameLayout = new QHBoxLayout();
     nameLayout->addWidget(nameLabel);
     nameLayout->addWidget(m_nameEdit);

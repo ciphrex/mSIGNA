@@ -22,11 +22,14 @@ class ImportBIP39Dialog : public QDialog
 
 public:
     ImportBIP39Dialog(QWidget* parent = NULL);
+    ImportBIP39Dialog(const QString& name, QWidget* parent = NULL);
 
     QString getName() const;
     secure_bytes_t getSeed() const;
 
 private:
+    void init(const QString& name = QString());
+
     QLineEdit* m_nameEdit;
     QLineEdit* m_wordlistEdit;
 };

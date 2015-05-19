@@ -695,10 +695,32 @@ void MainWindow::newKeychain()
 
             {
                 // TODO: Randomize using user input for entropy
+                secure_bytes_t seed = getRandomBytes(32);
+
+                // Prompt user to write down and verify word list
+                ViewBIP39Dialog viewDlg(name, seed, this);
+                viewDlg.exec();
+
+                while (true)
+                {
+                    try
+                    {
+                        ImportBIP39Dialog checkDlg(name, this);
+                        if (!checkDlg.exec()) return; // User canceled out
+
+                        secure_bytes_t seed2 = checkDlg.getSeed();
+                        if (seed == seed2) break;
+                        else throw std::runtime_error("Wordlists do not match.");
+                    }
+                    catch (const exception& e)
+                    {
+                        showError(e.what());
+                    } 
+                }
+
                 CoinDB::VaultLock lock(synchedVault);
                 if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
-                secure_bytes_t entropy = getRandomBytes(32);
-                synchedVault.getVault()->newKeychain(name.toStdString(), entropy);
+                synchedVault.getVault()->newKeychain(name.toStdString(), seed);
             }
 
             keychainModel->update();
