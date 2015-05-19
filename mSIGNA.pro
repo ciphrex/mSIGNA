@@ -1,7 +1,7 @@
 #######################################
-# coinvault.pro
+# mSIGNA.pro
 #
-# Copyright (c) 2013 Eric Lombrozo
+# Copyright (c) 2013-2015 Eric Lombrozo
 #
 # All Rights Reserved.
 
