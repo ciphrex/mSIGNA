@@ -57,6 +57,7 @@
 #include "keychainbackupdialog.h"
 #include "viewbip32dialog.h"
 #include "importbip32dialog.h"
+#include "keychainbackupwizard.h"
 #include "viewbip39dialog.h"
 #include "importbip39dialog.h"
 #include "passphrasedialog.h"
@@ -698,9 +699,9 @@ void MainWindow::newKeychain()
                 secure_bytes_t seed = getRandomBytes(32);
 
                 // Prompt user to write down and verify word list
-                ViewBIP39Dialog viewDlg(name, seed, this);
-                viewDlg.exec();
-
+                KeychainBackupWizard backupWizard(name, seed, this);
+                if (!backupWizard.exec()) return;
+/*
                 while (true)
                 {
                     try
@@ -717,7 +718,7 @@ void MainWindow::newKeychain()
                         showError(e.what());
                     } 
                 }
-
+*/
                 CoinDB::VaultLock lock(synchedVault);
                 if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
                 synchedVault.getVault()->newKeychain(name.toStdString(), seed);

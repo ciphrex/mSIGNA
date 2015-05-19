@@ -20,5 +20,9 @@ class ViewBIP39Dialog : public QDialog
 
 public:
     ViewBIP39Dialog(const QString& name, const secure_bytes_t& seed, QWidget* parent = NULL);
+    ViewBIP39Dialog(const QString& prompt, const QString& name, const secure_bytes_t& seed, QWidget* parent = NULL);
+
+protected:
+    void init(const QString& prompt, const QString& name, const secure_bytes_t& seed);
 };
 

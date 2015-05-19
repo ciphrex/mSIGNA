@@ -93,6 +93,7 @@ HEADERS = \
     src/signatureactions.h \
     src/requestpaymentdialog.h \
     src/networksettingsdialog.h \
+    src/keychainbackupwizard.h \
     src/keychainbackupdialog.h \
     src/viewbip32dialog.h \
     src/importbip32dialog.h \
@@ -148,6 +149,7 @@ SOURCES = \
     src/signatureactions.cpp \
     src/requestpaymentdialog.cpp \
     src/networksettingsdialog.cpp \
+    src/keychainbackupwizard.cpp \
     src/keychainbackupdialog.cpp \
     src/viewbip32dialog.cpp \
     src/importbip32dialog.cpp \
