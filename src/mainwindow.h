@@ -141,7 +141,7 @@ private slots:
     bool unlockKeychain(QString name = QString());
     void lockKeychain(QString name = QString());
     void lockAllKeychains();
-    void setKeychainPassphrase();
+    int  setKeychainPassphrase(const QString& keychainName = QString());
     int  makeKeychainBackup(const QString& keychainName = QString());
     void importKeychain(QString fileName = QString());
     void exportKeychain(bool exportPrivate);
