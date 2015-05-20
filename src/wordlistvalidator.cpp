@@ -33,9 +33,6 @@ QValidator::State WordlistValidator::validate(QString& input, int& pos) const
     int newPos = pos;
     
     std::string wordlist = input.toStdString();
-    int len = wordlist.size();
-
-    bool removeSpaces = true;
     bool final = true;
     QString lastWord;
     int i = 0;
