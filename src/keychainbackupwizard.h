@@ -15,6 +15,7 @@
 #include <QWizard>
 
 class QPlainTextEdit;
+class QLineEdit;
 
 class KeychainBackupWizard : public QWizard
 {
@@ -32,7 +33,7 @@ class WordlistViewPage : public QWizardPage
 public:
     WordlistViewPage(const QString& name, const secure_bytes_t& seed, QWidget* parent = NULL);
 
-private:
+protected:
     QPlainTextEdit* wordlistEdit;
 };
 
@@ -45,9 +46,11 @@ public:
 
     bool isComplete() const;
 
-private:
+protected:
+    //void keyPressEvent(QKeyEvent* event);
+
     QString wordlist;
-    QPlainTextEdit* wordlistEdit;
+    QLineEdit* wordlistEdit;
 };
 
 class WordlistCompletePage : public QWizardPage

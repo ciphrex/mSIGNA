@@ -9,6 +9,7 @@
 // All Rights Reserved.
 
 #include "keychainbackupwizard.h"
+#include "wordlistvalidator.h"
 
 #include <CoinCore/bip39.h>
 
@@ -16,9 +17,8 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPlainTextEdit>
+#include <QLineEdit>
 #include <QLabel>
-
-#include <QMessageBox>
 
 #include <stdexcept>
 
@@ -60,20 +60,28 @@ WordlistVerifyPage::WordlistVerifyPage(const QString& name, const secure_bytes_t
     QLabel* promptLabel = new QLabel(tr("Please enter the words in the correct order below:"));
     promptLabel->setWordWrap(true);
 
-    wordlistEdit = new QPlainTextEdit();
+    wordlistEdit = new QLineEdit();
+    wordlistEdit->setValidator(new WordlistValidator(this));
 
     QVBoxLayout* layout = new QVBoxLayout();
     layout->addWidget(promptLabel);
     layout->addWidget(wordlistEdit);
     setLayout(layout);
 
-    QObject::connect(wordlistEdit, &QPlainTextEdit::textChanged, [=]() { emit completeChanged(); });
+    QObject::connect(wordlistEdit, &QLineEdit::textChanged, [=]() { emit completeChanged(); });
 }
+
+/*
+void WordlistVerifyPage::keyPressEvent(QKeyEvent* event)
+{
+    QWizardPage::keyPressEvent(event);
+}
+*/
 
 bool WordlistVerifyPage::isComplete() const
 {
     // TODO: convert to lowercase and disallow invalid characters and additional whitespace
-    return (wordlist == wordlistEdit->toPlainText());
+    return (wordlist == wordlistEdit->text());
 }
 
 WordlistCompletePage::WordlistCompletePage(QWidget* parent)
