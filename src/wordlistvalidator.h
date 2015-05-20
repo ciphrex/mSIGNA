@@ -18,8 +18,12 @@ class WordlistValidator : public QValidator
     Q_OBJECT
 
 public:
-    explicit WordlistValidator(QObject* parent = nullptr);
+    explicit WordlistValidator(int minlen, int maxlen, QObject* parent = nullptr);
     QValidator::State validate(QString& input, int& pos) const;
-    void fixup(QString& input) const;
+
+private:
+    mutable QString lastInput;
+    int minlen_;
+    int maxlen_;
 };
 

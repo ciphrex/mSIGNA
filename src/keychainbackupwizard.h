@@ -58,5 +58,5 @@ class WordlistCompletePage : public QWizardPage
     Q_OBJECT
 
 public:
-    WordlistCompletePage(QWidget* parent = NULL);
+    WordlistCompletePage(const QString& name, QWidget* parent = NULL);
 };
