@@ -71,6 +71,9 @@ public:
     explicit InvalidChecksum() : std::runtime_error("Invalid checksum.") { }
 };
 
+int minWordLen();
+int maxWordLen();
+
 std::string toWordlist(const secure_bytes_t& data, Language language = ENGLISH);
 secure_bytes_t fromWordlist(const std::string& list, Language language = ENGLISH);
 

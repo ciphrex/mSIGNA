@@ -2058,6 +2058,8 @@ const char* ENGLISH_WORDLIST[] =
 };
 
 const int ENGLISH_WORDCOUNT = sizeof(ENGLISH_WORDLIST) / sizeof(ENGLISH_WORDLIST[0]);
+const int MIN_WORDLEN = 3;
+const int MAX_WORDLEN = 8;
 
 }
 }

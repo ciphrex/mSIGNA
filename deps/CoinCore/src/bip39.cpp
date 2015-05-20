@@ -32,6 +32,16 @@
 using namespace Coin::BIP39;
 using namespace std;
 
+int Coin::BIP39::minWordLen()
+{
+    return MIN_WORDLEN;
+}
+
+int Coin::BIP39::maxWordLen()
+{
+    return MAX_WORDLEN;
+}
+
 secure_string_t Coin::BIP39::toWordlist(const secure_bytes_t& data, Language language)
 {
     const char** WORDLIST;
