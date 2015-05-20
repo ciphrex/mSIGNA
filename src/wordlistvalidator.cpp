@@ -51,7 +51,7 @@ QValidator::State WordlistValidator::validate(QString& input, int& pos) const
                 newInput += lastWord + ' ';
                 lastWord.clear();
             }
-            else if (i < wordlist.size() && newPos > newInput.size())
+            else if (i < (int)wordlist.size() && newPos > newInput.size())
             {
                 // Remove words that are too short.
                 newPos = newInput.size() - 1;
