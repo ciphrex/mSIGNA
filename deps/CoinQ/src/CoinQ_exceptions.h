@@ -47,6 +47,7 @@ class NetworkSelectorNoNetworkSelectedException : public NetworkSelectorExceptio
 {
 public:
     explicit NetworkSelectorNoNetworkSelectedException() : NetworkSelectorException("No network selected.", NETWORKSELECTOR_NO_NETWORK_SELECTED) {}
+    ~NetworkSelectorNoNetworkSelectedException() throw() { }
 };
 
 class NetworkSelectorNetworkNotRecognizedException : public NetworkSelectorException

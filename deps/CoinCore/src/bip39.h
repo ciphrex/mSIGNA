@@ -43,7 +43,8 @@ public:
     explicit InvalidWordException(const std::string& word) : std::runtime_error("Invalid word."), word_(word) { }
 
     const std::string& word() const { return word_; }
-
+    ~InvalidWordException() throw() { }
+    
 private:
     std::string word_;
 };
