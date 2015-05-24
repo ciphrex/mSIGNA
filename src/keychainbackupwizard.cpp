@@ -25,17 +25,35 @@
 KeychainBackupWizard::KeychainBackupWizard(const QString& name, const secure_bytes_t& seed, QWidget* parent)
     : QWizard(parent)
 {
-    addPage(new WordlistViewPage(name, seed));
-    addPage(new WordlistVerifyPage(name, seed));
-    addPage(new WordlistCompletePage(name));
+    addPage(new WordlistViewPage(1, name, seed));
+    addPage(new WordlistVerifyPage(2, name, seed));
+    addPage(new WordlistCompletePage(3));
+    setWindowTitle(tr("Keychain Backup"));
+}
+
+KeychainBackupWizard::KeychainBackupWizard(const QList<QString>& names, const QList<secure_bytes_t>& seeds, QWidget* parent)
+    : QWizard(parent)
+{
+    if (names.size() != seeds.size()) throw std::runtime_error("Number of names does not match number of seeds.");
+    if (names.isEmpty()) throw std::runtime_error("At least one keychain is required.");
+
+    int i = 0;
+    for (auto& name: names)
+    {
+        const secure_bytes_t& seed = seeds.at(i);
+        addPage(new WordlistViewPage(2*i + 1, name, seed));
+        addPage(new WordlistVerifyPage(2*i + 2, name, seed));
+        i++;
+    }
+    addPage(new WordlistCompletePage(2*i + 1));
     setWindowTitle(tr("Keychain Backup"));
 }
 
 
-WordlistViewPage::WordlistViewPage(const QString& name, const secure_bytes_t& seed, QWidget* parent)
+WordlistViewPage::WordlistViewPage(int i, const QString& name, const secure_bytes_t& seed, QWidget* parent)
     : QWizardPage(parent)
 {
-    setTitle(tr("Step 1: Copy"));
+    setTitle(tr("Step ") + QString::number(i) + tr(": Copy"));
     setSubTitle(tr("Keychain: ") + name);
 
     QLabel* promptLabel = new QLabel(tr("IMPORTANT: Please write down the following list of words. In the event you lose your data you can recover your keychain by entering this list."));
@@ -51,12 +69,12 @@ WordlistViewPage::WordlistViewPage(const QString& name, const secure_bytes_t& se
     setLayout(layout);
 }
 
-WordlistVerifyPage::WordlistVerifyPage(const QString& name, const secure_bytes_t& seed, QWidget* parent)
+WordlistVerifyPage::WordlistVerifyPage(int i, const QString& name, const secure_bytes_t& seed, QWidget* parent)
     : QWizardPage(parent)
 {
     using namespace Coin;
 
-    setTitle(tr("Step 2: Verify"));
+    setTitle(tr("Step ") + QString::number(i) + tr(": Verify"));
     setSubTitle(tr("Keychain: ") + name);
 
     QLabel* promptLabel = new QLabel(tr("Please enter the words in the correct order below:"));
@@ -87,13 +105,12 @@ bool WordlistVerifyPage::isComplete() const
     return (wordlist == wordlistEdit->text());
 }
 
-WordlistCompletePage::WordlistCompletePage(const QString& name, QWidget* parent)
+WordlistCompletePage::WordlistCompletePage(int i, QWidget* parent)
     : QWizardPage(parent)
 {
-    setTitle(tr("Step 3: Put in safe, secure place"));
-    setSubTitle(tr("Keychain: ") + name);
+    setTitle(tr("Step ") + QString::number(i) + tr(": Put in safe, secure place"));
 
-    QLabel* promptLabel = new QLabel(tr("IMPORTANT: Keep the wordlist in a safe place."));
+    QLabel* promptLabel = new QLabel(tr("IMPORTANT: Keep all wordlists in a safe place."));
     promptLabel->setWordWrap(true);
 
     QVBoxLayout* layout = new QVBoxLayout();

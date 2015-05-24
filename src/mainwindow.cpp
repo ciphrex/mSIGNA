@@ -1382,7 +1382,8 @@ void MainWindow::quickNewAccount()
     if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
 
     QuickNewAccountDialog dlg(this);
-    while (dlg.exec()) {
+    while (dlg.exec())
+    {
         try {
             QString accountName = dlg.getName();
             if (accountName.isEmpty())
@@ -1397,23 +1398,39 @@ void MainWindow::quickNewAccount()
             const int MAX_KEYCHAIN_INDEX = 1000;
             int i = 0;
             QList<QString> keychainNames;
-            while (keychainNames.size() < dlg.getMaxSigs() && ++i <= MAX_KEYCHAIN_INDEX) {
+            QList<secure_bytes_t> keychainSeeds;
+            while (keychainNames.size() < dlg.getMaxSigs() && ++i <= MAX_KEYCHAIN_INDEX)
+            {
                 QString keychainName = accountName + " " + QString::number(i);
                 if (!keychainModel->exists(keychainName))
+                {
+                    // TODO: Randomize using user input for seed entropy
                     keychainNames << keychainName;
+                    keychainSeeds << getRandomBytes(32);
+                }
             }
+
             if (i > MAX_KEYCHAIN_INDEX)
                 throw std::runtime_error(tr("Ran out of keychain indices.").toStdString());
 
-            for (auto& keychainName: keychainNames) {
-                // TODO: Randomize using user input for entropy
+            // Require user to copy down the wordlists
+            KeychainBackupWizard backupDlg(keychainNames, keychainSeeds, this);
+            if (!backupDlg.exec()) return;
+
+            {
                 CoinDB::VaultLock lock(synchedVault);
                 if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
-                secure_bytes_t entropy = getRandomBytes(32);
-                synchedVault.getVault()->newKeychain(keychainName.toStdString(), entropy);
+
+                int i = 0;
+                for (auto& keychainName: keychainNames)
+                {
+                    const secure_bytes_t& keychainSeed = keychainSeeds.at(i++);
+                    synchedVault.getVault()->newKeychain(keychainName.toStdString(), keychainSeed);
+                }
+
+                accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames, dlg.getCreationTime());
             }
 
-            accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames, dlg.getCreationTime());
             accountModel->update();
             accountView->updateColumns();
             keychainModel->update();

@@ -13,6 +13,7 @@
 #include <CoinQ/CoinQ_typedefs.h>
 
 #include <QWizard>
+#include <QList>
 
 class QPlainTextEdit;
 class QLineEdit;
@@ -23,6 +24,7 @@ class KeychainBackupWizard : public QWizard
 
 public:
     KeychainBackupWizard(const QString& name, const secure_bytes_t& seed, QWidget* parent = NULL);
+    KeychainBackupWizard(const QList<QString>& names, const QList<secure_bytes_t>& seeds, QWidget* parent = NULL);
 };
 
 
@@ -31,7 +33,7 @@ class WordlistViewPage : public QWizardPage
     Q_OBJECT
 
 public:
-    WordlistViewPage(const QString& name, const secure_bytes_t& seed, QWidget* parent = NULL);
+    WordlistViewPage(int i, const QString& name, const secure_bytes_t& seed, QWidget* parent = NULL);
 
 protected:
     QPlainTextEdit* wordlistEdit;
@@ -42,7 +44,7 @@ class WordlistVerifyPage : public QWizardPage
     Q_OBJECT
 
 public:
-    WordlistVerifyPage(const QString& name, const secure_bytes_t& seed, QWidget* parent = NULL);
+    WordlistVerifyPage(int i, const QString& name, const secure_bytes_t& seed, QWidget* parent = NULL);
 
     bool isComplete() const;
 
@@ -58,5 +60,5 @@ class WordlistCompletePage : public QWizardPage
     Q_OBJECT
 
 public:
-    WordlistCompletePage(const QString& name, QWidget* parent = NULL);
+    WordlistCompletePage(int i, QWidget* parent = NULL);
 };
