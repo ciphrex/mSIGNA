@@ -104,7 +104,7 @@ public:
     std::vector<std::shared_ptr<CoinDB::TxOut>> getTxOuts();
     std::vector<TaggedOutput> getOutputs();
 
-    enum status_t { SAVE_ONLY, SIGN_AND_SAVE, SIGN_AND_SEND };
+    enum status_t { SAVE, SIGN };
     status_t getStatus() const { return status; }
 
 public slots:
@@ -125,8 +125,7 @@ private:
 
     std::set<TxOutLayout*> txOutLayouts;
 
-    QPushButton* signAndSendButton;
-    QPushButton* signAndSaveButton;
+    QPushButton* signButton;
     QPushButton* saveButton;
     QPushButton* cancelButton;
 

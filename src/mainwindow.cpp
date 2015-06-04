@@ -63,6 +63,7 @@
 #include "passphrasedialog.h"
 #include "setpassphrasedialog.h"
 #include "currencyunitdialog.h"
+#include "signaturedialog.h"
 //#include "resyncdialog.h"
 
 // Logging
@@ -1791,8 +1792,6 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
     bool saved = false;
     while (!saved && dlg.exec()) {
         try {
-            CreateTxDialog::status_t status = dlg.getStatus();
-            bool sign = status == CreateTxDialog::SIGN_AND_SEND || status == CreateTxDialog::SIGN_AND_SAVE;
             std::shared_ptr<CoinDB::Tx> tx = accountModel->getVault()->createTx(
                 dlg.getAccountName().toStdString(),
                 1,
@@ -1802,16 +1801,46 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 dlg.getFeeValue(),
                 0,
                 true);
-            if (!tx) throw std::runtime_error("Error creating transaction.");
+            if (!tx) throw std::runtime_error(tr("Error creating transaction.").toStdString());
 
             saved = true;
-            newTx();            
-            if (sign)
+            newTx();
+
+            tabWidget->setCurrentWidget(txView);
+
+            if (dlg.getStatus() == CreateTxDialog::SIGN)
             {
+                // First try to sign with unlocked keychains
                 std::vector<std::string> keychains;
                 tx = accountModel->getVault()->signTx(tx->id(), keychains, true);
+                txModel->update();
+
+                if (tx->status() == CoinDB::Tx::UNSIGNED)
+                {
+                    // If still unsigned, pop open dialog
+                    SignatureDialog dlg(synchedVault, tx->unsigned_hash(), this);
+                    connect(&dlg, &SignatureDialog::error, [this](const QString& msg) { showError(msg); });
+                    connect(&dlg, &SignatureDialog::txUpdated, [this]() { txModel->update(); });
+                    connect(&dlg, &SignatureDialog::keychainsUpdated, [this]() { keychainModel->update(); });
+                    dlg.exec();
+                }
+                else if (isConnected())
+                {
+                    // TODO: Create new dialog for sending confirmation.
+                    QMessageBox sendPrompt;
+                    sendPrompt.setText(tr("Transaction is fully signed. Would you like to send?"));
+                    sendPrompt.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                    sendPrompt.setDefaultButton(QMessageBox::Yes);
+                    if (sendPrompt.exec() == QMessageBox::Yes)
+                    {
+                        if (!synchedVault.isConnected()) throw std::runtime_error(tr("Connection was lost.").toStdString());
+
+                        Coin::Transaction coin_tx = tx->toCoinCore();
+                        synchedVault.sendTx(coin_tx);
+                    }
+                }
             }
-            tabWidget->setCurrentWidget(txView);
+/*
             if (status == CreateTxDialog::SIGN_AND_SEND) {
                 // TODO: Clean up signing and sending code
                 if (tx->status() == CoinDB::Tx::UNSIGNED) {
@@ -1823,6 +1852,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 Coin::Transaction coin_tx = tx->toCoinCore();
                 synchedVault.sendTx(coin_tx);
             }
+*/
             return;
         }
         catch (const exception& e) {

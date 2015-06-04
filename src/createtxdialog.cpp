@@ -202,7 +202,7 @@ void CoinControlWidget::updateTotal(const QItemSelection& /*selected*/, const QI
 }
 
 CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName, const PaymentRequest& paymentRequest, QWidget* parent)
-    : QDialog(parent), status(SAVE_ONLY)
+    : QDialog(parent), status(SAVE)
 {
     // Coin parameters
     currencyDivisor = getCurrencyDivisor(); //getCoinParams().currency_divisor();
@@ -212,26 +212,17 @@ CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName,
     defaultFee = getDefaultFee(); // getCoinParams().default_fee();
 
     // Buttons
-    signAndSendButton = new QPushButton(tr("Sign and Send"));
-    signAndSaveButton = new QPushButton(tr("Sign and Save"));
+    signButton = new QPushButton(tr("Sign"));
     saveButton = new QPushButton(tr("Save Unsigned"));
     cancelButton = new QPushButton(tr("Cancel"));
     cancelButton->setDefault(true);
-/*
-    QDialogButtonBox* buttonBox = new QDialogButtonBox(
-                                        QDialogButtonBox::Ok |
-                                        QDialogButtonBox::Cancel);
-
-*/
 
     QDialogButtonBox* buttonBox = new QDialogButtonBox;
-    buttonBox->addButton(signAndSendButton, QDialogButtonBox::ActionRole);
-    buttonBox->addButton(signAndSaveButton, QDialogButtonBox::ActionRole);
+    buttonBox->addButton(signButton, QDialogButtonBox::ActionRole);
     buttonBox->addButton(saveButton, QDialogButtonBox::AcceptRole);
     buttonBox->addButton(cancelButton, QDialogButtonBox::RejectRole);
 
-    connect(signAndSendButton, &QPushButton::clicked, [this]() { status = SIGN_AND_SEND; accept(); });
-    connect(signAndSaveButton, &QPushButton::clicked, [this]() { status = SIGN_AND_SAVE; accept(); });
+    connect(signButton, &QPushButton::clicked, [this]() { status = SIGN; accept(); });
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
 
