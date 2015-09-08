@@ -340,7 +340,9 @@ bytes_t CoinCrypto::secp256k1_sign(const secp256k1_key& key, const bytes_t& data
 // Verification function
 bool CoinCrypto::secp256k1_verify(const secp256k1_key& key, const bytes_t& data, const bytes_t& signature)
 {
-    return (ECDSA_verify(0, (const unsigned char*)&data[0], data.size(), (const unsigned char*)&signature[0], signature.size(), key.getKey()) != 0);
+    int rval = ECDSA_verify(0, (const unsigned char*)&data[0], data.size(), (const unsigned char*)&signature[0], signature.size(), key.getKey());
+    if (rval == -1) throw std::runtime_error("secp256k1_verify(): ECDSA_verify error.");
+    return (rval == 1);
 }
 
 bytes_t CoinCrypto::secp256k1_rfc6979_k(const secp256k1_key& key, const bytes_t& data)
