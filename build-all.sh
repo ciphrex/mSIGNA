@@ -16,6 +16,13 @@ do
         mingw64=true
     ;;
 
+    mingw32)
+        if [[ ! -z "$OS" ]]; then echo "OS cannot be set twice"; exit 1; fi
+        OS=mingw32
+        OPTIONS="OS=mingw32 $OPTIONS"
+        mingw32=true
+    ;;
+
     osx)
         if [[ ! -z "$OS" ]]; then echo "OS cannot be set twice"; exit 1; fi
         OS=osx
@@ -62,7 +69,13 @@ fi
 if [ $mingw64 ]
 then
     if [[ -z "$QMAKE_PATH" ]]; then QMAKE_PATH="/usr/x86_64-w64-mingw32/host/bin/"; fi
-    SPEC="-spec win32-g++"
+    SPEC="-spec win32-g++ OS=mingw64"
+fi
+
+if [ $mingw32 ]
+then
+    if [[ -z "$QMAKE_PATH" ]]; then QMAKE_PATH="/usr/i686-w64-mingw32/host/bin/"; fi
+    SPEC="-spec win32-g++ OS=mingw32"
 fi
 
 # Use release as default build type

@@ -1,0 +1,3 @@
+#!/bin/bash
+set -x
+qmake -spec win32-g++ OS=mingw64 && make

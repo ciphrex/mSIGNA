@@ -171,13 +171,32 @@ INSTALLS += target
 win32 {
     BOOST_LIB_SUFFIX = -mt-s
     BOOST_THREAD_LIB_SUFFIX = _win32
+    DEFINES += LIBODB_SQLITE_STATIC_LIB LIBODB_STATIC_LIB
+    CONFIG += static
 
-    LIBS += \
+    contains(OS, mingw64){
+     LIBS += \
+        -L/usr/x86_64-w64-mingw32/lib \
         -L/usr/x86_64-w64-mingw32/plugins/platforms \
-        -static -static-libgcc -static-libstdc++ \
-        -lpthread \
+        -L/usr/x86_64-w64-mingw32/plugins/imageformats \
+        -L/usr/x86_64-w64-mingw32/plugins/bearer \
+
+    }
+
+    contains(OS, mingw32){    
+     LIBS += \
+        -L/usr/i686-w64-mingw32/lib \
+        -L/usr/i686-w64-mingw32/plugins/platforms \
+        -L/usr/i686-w64-mingw32/plugins/imageformats \
+        -L/usr/i686-w64-mingw32/plugins/bearer \
+    }
+   
+   LIBS += \
+        -static-libgcc -static-libstdc++ -static \
+        -lgdi32 \
         -lws2_32 \
-        -lmswsock
+        -lmswsock \
+        -lpthread
 }
 
 macx {

@@ -22,7 +22,7 @@ ifeq ($(OS), linux)
 else ifeq ($(OS), mingw64)
     CXX =  x86_64-w64-mingw32-g++
     CC =  x86_64-w64-mingw32-gcc
-    CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -fvisibility=hidden -fvisibility-inlines-hidden -DBOOST_SYSTEM_NOEXCEPT=""
+    CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -fvisibility=hidden -fvisibility-inlines-hidden -DBOOST_SYSTEM_NOEXCEPT="" -DLIBODB_SQLITE_STATIC_LIB -DLIBODB_STATIC_LIB
     ARCHIVER = x86_64-w64-mingw32-ar
     EXE_EXT = .exe
 
@@ -30,10 +30,36 @@ else ifeq ($(OS), mingw64)
     GLOBAL_SYSROOT = /usr/x86_64-w64-mingw32
 
     PLATFORM_LIBS += \
-        -static-libgcc -static-libstdc++ \
+        -L/usr/x86_64-w64-mingw32/lib \
+        -L/usr/x86_64-w64-mingw32/plugins/platforms \
+        -L/usr/x86_64-w64-mingw32/plugins/imageformats \
+        -L/usr/x86_64-w64-mingw32/plugins/bearer \
+        -static-libgcc -static-libstdc++ -static \
         -lgdi32 \
         -lws2_32 \
-        -lmswsock
+        -lmswsock \
+        -lpthread
+
+else ifeq ($(OS), mingw32)
+    CXX =  i686-w64-mingw32-g++
+    CC =  i686-w64-mingw32-gcc
+    CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -fvisibility=hidden -fvisibility-inlines-hidden -DBOOST_SYSTEM_NOEXCEPT="" -DLIBODB_SQLITE_STATIC_LIB -DLIBODB_STATIC_LIB
+    ARCHIVER = i686-w64-mingw32-ar
+    EXE_EXT = .exe
+
+    LOCAL_SYSROOT = /usr/i686-w64-mingw32/local
+    GLOBAL_SYSROOT = /usr/i686-w64-mingw32
+
+    PLATFORM_LIBS += \
+        -L/usr/i686-w64-mingw32/lib \
+        -L/usr/i686-w64-mingw32/plugins/platforms \
+        -L/usr/i686-w64-mingw32/plugins/imageformats \
+        -L/usr/i686-w64-mingw32/plugins/bearer \
+        -static-libgcc -static-libstdc++ -static \
+        -lgdi32 \
+        -lws2_32 \
+        -lmswsock \
+        -lpthread
 
 else ifeq ($(OS), osx)
     CXX = clang++
@@ -45,7 +71,7 @@ else ifeq ($(OS), osx)
     GLOBAL_SYSROOT = /usr
 
 else ifneq ($(MAKECMDGOALS), clean)
-    $(error OS must be set to linux, mingw64, or osx)
+    $(error OS must be set to linux, mingw64, mingw32, or osx)
 endif
 
 ifndef SYSROOT
