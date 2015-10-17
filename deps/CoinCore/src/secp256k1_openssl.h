@@ -98,11 +98,15 @@ private:
     BN_CTX*   ctx;    
 };
 
+enum SignatureFlag
+{
+    SIGNATURE_ENFORCE_LOW_S = 0x1,
+};
 
 bytes_t secp256k1_sigToLowS(const bytes_t& signature);
 
 bytes_t secp256k1_sign(const secp256k1_key& key, const bytes_t& data);
-bool secp256k1_verify(const secp256k1_key& key, const bytes_t& data, const bytes_t& signature);
+bool secp256k1_verify(const secp256k1_key& key, const bytes_t& data, const bytes_t& signature, int flags = 0);
 
 bytes_t secp256k1_rfc6979_k(const secp256k1_key& key, const bytes_t& data);
 bytes_t secp256k1_sign_rfc6979(const secp256k1_key& key, const bytes_t& data);

@@ -8,6 +8,8 @@
 using namespace CoinCrypto;
 using namespace std;
 
+const int SIGNATURE_FLAGS = SIGNATURE_ENFORCE_LOW_S;
+
 int main(int argc, char* argv[])
 {
     if (argc < 2)
@@ -38,8 +40,8 @@ int main(int argc, char* argv[])
         cout << "Signature: " << sig.getHex() << endl;
 
         cout << endl << "Verifying signature (should be valid)..." << flush;
-        if (secp256k1_verify(key, data, sig))  { cout << "valid." << endl; }
-        else                                    { cout << "invalid." << endl; }
+        if (secp256k1_verify(key, data, sig, SIGNATURE_FLAGS))  { cout << "valid." << endl; }
+        else                                    { cout << "invalid. TEST FAILED" << endl; }
 
         cout << endl << "Creating public key object..." << flush;
         secp256k1_key key2;
@@ -51,7 +53,7 @@ int main(int argc, char* argv[])
             cout << "Trying to get private key (should fail)..." << flush;
             privkey = key2.getPrivKey();
             cout << "done." << endl;
-            cout << "Private key: " << privkey.getHex() << endl;
+            cout << "Private key: " << privkey.getHex() << " TEST FAILED" << endl;
         }
         catch (const exception& e)
         {
@@ -62,8 +64,8 @@ int main(int argc, char* argv[])
         cout << "Public key: " << pubkey.getHex() << endl;
 
         cout << endl << "Verifying signature (should be valid)..." << flush;
-        if (secp256k1_verify(key2, data, sig))  { cout << "valid." << endl; }
-        else                                    { cout << "invalid." << endl; }
+        if (secp256k1_verify(key2, data, sig, SIGNATURE_FLAGS))  { cout << "valid." << endl; }
+        else                                    { cout << "invalid. TEST FAILED" << endl; }
 
         cout << endl << "Creating new key..." << flush;
         key.newKey();
@@ -76,7 +78,7 @@ int main(int argc, char* argv[])
         cout << "Public key: " << pubkey.getHex() << endl;
         
         cout << endl << "Verifying old signature with new key (should be invalid)..." << flush;
-        if (secp256k1_verify(key, data, sig))   { cout << "valid." << endl; }
+        if (secp256k1_verify(key, data, sig, SIGNATURE_FLAGS))   { cout << "valid. TEST FAILED" << endl; }
         else                                    { cout << "invalid." << endl; }
     }
     catch (const exception& e)
