@@ -37,6 +37,10 @@
 
 using namespace CoinCrypto;
 
+const uchar_vector SECP256K1_FIELD_MOD("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F");
+const uchar_vector SECP256K1_GROUP_ORDER("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
+const uchar_vector SECP256K1_GROUP_HALFORDER("7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0");
+
 bool static EC_KEY_regenerate_key(EC_KEY* eckey, BIGNUM* priv_key)
 {
     if (!eckey) return false;
@@ -326,6 +330,40 @@ finish:
     throw std::runtime_error(std::string("secp256k1_point::init() - ") + err);
 }
 
+bytes_t CoinCrypto::secp256k1_sigToLowS(const bytes_t& signature)
+{
+    const unsigned char* pvch = (const unsigned char*)&signature[0];
+    ECDSA_SIG* sig = d2i_ECDSA_SIG(NULL, &pvch, signature.size());
+    if (!sig) throw std::runtime_error("secp256k1_sigToLowS(): d2i_ECDSA_SIG failed.");
+
+    BIGNUM* order = BN_bin2bn(&SECP256K1_GROUP_ORDER[0], SECP256K1_GROUP_ORDER.size(), NULL);
+    if (!order)
+    {
+        ECDSA_SIG_free(sig);
+        throw std::runtime_error("secp256k1_sigToLowS(): BN_bin2bn failed.");
+    }
+
+    BIGNUM* halforder = BN_bin2bn(&SECP256K1_GROUP_HALFORDER[0], SECP256K1_GROUP_HALFORDER.size(), NULL);
+    if (!halforder)
+    {
+        ECDSA_SIG_free(sig);
+        BN_clear_free(order);
+        throw std::runtime_error("secp256k1_sigToLowS(): BN_bin2bn failed.");
+    }
+    
+    if (BN_cmp(sig->s, halforder) > 0) { BN_sub(sig->s, order, sig->s); }
+
+    BN_clear_free(order);
+    BN_clear_free(halforder);
+
+    unsigned char buffer[1024];
+    unsigned char* pos = &buffer[0];
+    int nSize = i2d_ECDSA_SIG(sig, &pos);
+    ECDSA_SIG_free(sig);
+
+    return bytes_t(buffer, buffer + nSize);
+}
+
 // Signing function
 bytes_t CoinCrypto::secp256k1_sign(const secp256k1_key& key, const bytes_t& data)
 {
@@ -334,7 +372,7 @@ bytes_t CoinCrypto::secp256k1_sign(const secp256k1_key& key, const bytes_t& data
     if (!ECDSA_sign(0, (const unsigned char*)&data[0], data.size(), signature, &nSize, key.getKey())) {
         throw std::runtime_error("secp256k1_sign(): ECDSA_sign failed.");
     }
-    return bytes_t(signature, signature + nSize);
+    return secp256k1_sigToLowS(bytes_t(signature, signature + nSize));
 }
 
 // Verification function
@@ -360,8 +398,6 @@ bytes_t CoinCrypto::secp256k1_rfc6979_k(const secp256k1_key& key, const bytes_t&
     return v; 
 }
 
-const uchar_vector SECP256K1_FIELD_MOD("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F");
-const uchar_vector SECP256K1_GROUP_ORDER("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141");
 
 bytes_t CoinCrypto::secp256k1_sign_rfc6979(const secp256k1_key& key, const bytes_t& data)
 {
@@ -425,6 +461,6 @@ bytes_t CoinCrypto::secp256k1_sign_rfc6979(const secp256k1_key& key, const bytes
 
     if (!res) throw std::runtime_error("secp256k1_sign_rfc6979(): ECDSA_sign_ex failed.");
 
-    return bytes_t(signature, signature + nSize);
+    return secp256k1_sigToLowS(bytes_t(signature, signature + nSize));
 }
     
