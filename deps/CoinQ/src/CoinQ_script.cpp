@@ -9,7 +9,7 @@
 #include "CoinQ_script.h"
 
 #include <CoinCore/Base58Check.h>
-#include <CoinCore/secp256k1.h>
+#include <CoinCore/secp256k1_openssl.h>
 
 using namespace CoinCrypto;
 

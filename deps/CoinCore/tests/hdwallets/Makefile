@@ -10,12 +10,12 @@ INCPATH += \
 
 OBJS = \
     $(OBJDIR)/hdkeys.o \
-    $(OBJDIR)/secp256k1.o
+    $(OBJDIR)/secp256k1_openssl.o
 
 HEADERS = \
     $(SRCDIR)/hdkeys.h \
     $(SRCDIR)/hash.h \
-    $(SRCDIR)/secp256k1.h \
+    $(SRCDIR)/secp256k1_openssl.h \
     $(SRCDIR)/BigInt.h
 
 build/hdwallets: hdwallets.cpp $(OBJS) $(SRCDIR)/Base58Check.h

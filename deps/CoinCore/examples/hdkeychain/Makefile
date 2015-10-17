@@ -9,7 +9,7 @@ LIBPATH = -L/opt/local/lib
 HEADERS = \
     $(SRCDIR)/hdkeys.h \
     $(SRCDIR)/hash.h \
-    $(SRCDIR)/secp256k1.h \
+    $(SRCDIR)/secp256k1_openssl.h \
     $(SRCDIR)/BigInt.h \
     $(SRCDIR)/uchar_vector.h
 

@@ -1,4 +1,4 @@
-#include <CoinCore/secp256k1.h>
+#include <CoinCore/secp256k1_openssl.h>
 #include <CoinCore/hash.h>
 #include <stdutils/uchar_vector.h>
 

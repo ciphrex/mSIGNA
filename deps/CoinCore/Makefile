@@ -10,7 +10,7 @@ OBJS = \
         obj/bip39.o \
         obj/BloomFilter.o \
         obj/MerkleTree.o \
-        obj/secp256k1.o \
+        obj/secp256k1_openssl.o \
         obj/aes.o \
         obj/StandardTransactions.o
 

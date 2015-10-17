@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// secp256k1.cpp
+// secp256k1_openssl.cpp
 //
 // Copyright (c) 2013-2014 Eric Lombrozo
 //
@@ -25,7 +25,7 @@
 // Some portions taken from bitcoin/bitcoin,
 //      Copyright (c) 2009-2013 Satoshi Nakamoto, the Bitcoin developers
 
-#include "secp256k1.h"
+#include "secp256k1_openssl.h"
 #include "hash.h"
 
 #include <string>

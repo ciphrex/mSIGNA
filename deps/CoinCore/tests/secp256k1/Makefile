@@ -6,7 +6,7 @@ INCLUDE_PATH += \
     -I../../src
 
 OBJS = \
-    ../../obj/secp256k1.o
+    ../../obj/secp256k1_openssl.o
 
 LIBS = \
     -lcrypto
@@ -25,6 +25,6 @@ build/secp256k1_rfc6979_test${EXE_EXT}: src/secp256k1_rfc6979_test.cpp $(OBJS)
 build/ascii2hex${EXE_EXT}: src/ascii2hex.cpp $(OBJS)
 	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $^ -o $@ $(LIBS)
 
-../../obj/secp256k1.o: ../../src/secp256k1.cpp ../../src/secp256k1.h
+../../obj/secp256k1_openssl.o: ../../src/secp256k1_openssl.cpp ../../src/secp256k1_openssl.h
 	$(CXX) $(CXX_FLAGS) -DTRACE_RFC6979 $(INCLUDE_PATH) -c $< -o $@
 

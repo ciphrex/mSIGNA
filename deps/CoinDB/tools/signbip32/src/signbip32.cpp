@@ -9,7 +9,7 @@
 
 #include <CoinCore/hdkeys.h>
 #include <CoinCore/Base58Check.h>
-#include <CoinCore/secp256k1.h>
+#include <CoinCore/secp256k1_openssl.h>
 #include <CoinQ/CoinQ_script.h>
 #include <stdutils/uchar_vector.h>
 

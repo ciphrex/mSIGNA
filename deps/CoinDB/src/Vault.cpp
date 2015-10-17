@@ -29,7 +29,7 @@
 #include <CoinCore/hash.h>
 #include <CoinCore/aes.h>
 #include <CoinCore/MerkleTree.h>
-#include <CoinCore/secp256k1.h>
+#include <CoinCore/secp256k1_openssl.h>
 #include <CoinCore/BigInt.h>
 
 #include <logger/logger.h>

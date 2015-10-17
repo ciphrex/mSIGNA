@@ -26,7 +26,7 @@
 #include "hdkeys.h"
 
 #include "hash.h"
-#include "secp256k1.h"
+#include "secp256k1_openssl.h"
 #include "BigInt.h"
 
 #include <stdutils/uchar_vector.h>
