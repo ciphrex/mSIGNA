@@ -28,3 +28,5 @@ build/ascii2hex${EXE_EXT}: src/ascii2hex.cpp $(OBJS)
 ../../obj/secp256k1_openssl.o: ../../src/secp256k1_openssl.cpp ../../src/secp256k1_openssl.h
 	$(CXX) $(CXX_FLAGS) -DTRACE_RFC6979 $(INCLUDE_PATH) -c $< -o $@
 
+clean:
+	-rm -f build/*
