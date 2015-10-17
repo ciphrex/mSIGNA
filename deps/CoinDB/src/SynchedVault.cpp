@@ -79,6 +79,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     {
         LOGGER(trace) << "SynchedVault - connection opened." << std::endl;
         m_bConnected = true;
+        m_notifyPeerConnected();
     });
 
     m_networkSync.subscribeClose([this]()
@@ -86,6 +87,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         LOGGER(trace) << "SynchedVault - connection closed." << std::endl;
         m_bConnected = false;
         m_bSynching = false;
+        m_notifyPeerDisconnected();
     });
 
     m_networkSync.subscribeStarted([this]()
@@ -570,6 +572,8 @@ void SynchedVault::clearAllSlots()
     m_notifySyncHeaderChanged.clear();
     m_notifyConnectionError.clear();
 
+    m_notifyPeerConnected.clear();
+    m_notifyPeerDisconnected.clear();
     m_notifyTxInserted.clear();
     m_notifyTxUpdated.clear();
     m_notifyTxDeleted.clear();

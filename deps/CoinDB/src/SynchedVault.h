@@ -93,6 +93,8 @@ public:
     Signals::Connection subscribeBlockTreeError(ErrorSignal::Slot slot) { return m_notifyBlockTreeError.connect(slot); }
 
     // P2P network state events
+    Signals::Connection subscribePeerConnected(VoidSignal::Slot slot) { return m_notifyPeerConnected.connect(slot); }
+    Signals::Connection subscribePeerDisconnected(VoidSignal::Slot slot) { return m_notifyPeerDisconnected.connect(slot); }
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
     Signals::Connection subscribeTxUpdated(TxSignal::Slot slot) { return m_notifyTxUpdated.connect(slot); }
     Signals::Connection subscribeTxDeleted(TxSignal::Slot slot) { return m_notifyTxDeleted.connect(slot); }
@@ -153,6 +155,8 @@ private:
     ErrorSignal                 m_notifyBlockTreeError;
 
     // P2P network state events
+    VoidSignal                  m_notifyPeerConnected;
+    VoidSignal                  m_notifyPeerDisconnected;
     TxSignal                    m_notifyTxInserted;
     TxSignal                    m_notifyTxUpdated;
     TxSignal                    m_notifyTxDeleted;
