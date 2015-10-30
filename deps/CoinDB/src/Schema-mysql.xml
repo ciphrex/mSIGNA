@@ -1,4 +1,10 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="mysql" version="1">
+  <changeset version="17">
+    <alter-table name="Tx">
+      <add-column name="propagation_protocol" type="VARCHAR(255)" null="false"/>
+    </alter-table>
+  </changeset>
+
   <changeset version="16">
     <alter-table name="Keychain">
       <add-column name="seed_ciphertext" type="VARBINARY(255)" null="false"/>

@@ -55,7 +55,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 12
-#define SCHEMA_VERSION      16
+#define SCHEMA_VERSION      17
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -1292,6 +1292,9 @@ public:
     void user(std::shared_ptr<User> user) { user_ = user; }
     std::shared_ptr<User> user() const { return user_; }
 
+    void propagation_protocol(const std::string& propagation_protocol) { propagation_protocol_ = propagation_protocol; }
+    std::string propagation_protocol() const { return propagation_protocol_; }
+
     void shuffle_txins();
     void shuffle_txouts();
 
@@ -1354,6 +1357,8 @@ private:
     #pragma db null
     std::shared_ptr<User> user_;
 
+    std::string propagation_protocol_;
+
     friend class boost::serialization::access;
     template<class Archive>
     void save(Archive& ar, const unsigned int v) const
@@ -1388,6 +1393,11 @@ private:
                 bool has_user = false;
                 ar & has_user;
             }
+        }
+
+        if (v >= 3)
+        {
+            ar & propagation_protocol_;
         }
     }
     template<class Archive>
@@ -1455,6 +1465,11 @@ private:
                 // TODO: handle user
                 //user_ = std::make_shared<User>(username);
             }
+        }
+
+        if (v >= 3)
+        {
+            ar & propagation_protocol_;
         }
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -1902,7 +1917,7 @@ BOOST_CLASS_VERSION(CoinDB::MerkleBlock, 1)
 
 BOOST_CLASS_VERSION(CoinDB::TxIn, 1)
 BOOST_CLASS_VERSION(CoinDB::TxOut, 1)
-BOOST_CLASS_VERSION(CoinDB::Tx, 2)
+BOOST_CLASS_VERSION(CoinDB::Tx, 3)
 
 BOOST_CLASS_VERSION(CoinDB::Keychain, 3)
 BOOST_CLASS_VERSION(CoinDB::AccountBin, 2)
