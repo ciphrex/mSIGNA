@@ -33,7 +33,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-const std::string COINDB_VERSION = "v0.7.3";
+const std::string COINDB_VERSION = "v0.7.5";
 const std::string DEFAULT_NETWORK = "bitcoin";
 
 using namespace std;
