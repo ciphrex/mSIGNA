@@ -47,8 +47,10 @@ public:
     CoinDB::Vault* getVault() const;
     bool isOpen() const { return m_synchedVault.isVaultOpen(); }
 
+    static const unsigned int DEFAULT_LOOKAHEAD = 25;
+
     // Account operations
-    void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch = QDateTime::currentDateTime().toMSecsSinceEpoch());
+    void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch = QDateTime::currentDateTime().toMSecsSinceEpoch(), unsigned int unusedPoolSize = DEFAULT_LOOKAHEAD);
     bool accountExists(const QString& name) const;
     void exportAccount(const QString& name, const QString& filePath, bool shared) const;
     QString importAccount(const QString& filePath);
