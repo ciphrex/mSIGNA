@@ -4311,7 +4311,7 @@ unsigned int Vault::deleteMerkleBlock_unwrapped(uint32_t height)
 
 unsigned int Vault::updateConfirmations_unwrapped(std::shared_ptr<Tx> tx)
 {
-    LOGGER(debug) << "Vault::updateConfirmations(...)" << std::endl;
+    LOGGER(debug) << "Vault::updateConfirmations(" << (tx ? uchar_vector(tx->hash()).getHex() : std::string("...")) << ")" << std::endl;
 
     try
     {
