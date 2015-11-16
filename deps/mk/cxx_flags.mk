@@ -1,9 +1,5 @@
 INITIAL_CXX_FLAGS += -Wall
 
-ifndef GLOBALVISIBILITY
-    INITIAL_CXX_FLAGS += -fvisibility=hidden -fvisibility-inlines-hidden
-endif
-
 ifdef DEBUG
     INITIAL_CXX_FLAGS += -g
 else

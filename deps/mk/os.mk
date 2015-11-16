@@ -10,7 +10,7 @@ endif
 ifeq ($(OS), linux)
     CXX = g++
     CC = gcc
-    CXX_FLAGS += -Wno-unknown-pragmas -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
+    CXX_FLAGS += -Wno-unknown-pragmas -std=c++0x -fvisibility=hidden -fvisibility-inlines-hidden -DBOOST_SYSTEM_NOEXCEPT=""
     ARCHIVER = ar
 
     LOCAL_SYSROOT = /usr/local
@@ -22,7 +22,7 @@ ifeq ($(OS), linux)
 else ifeq ($(OS), mingw64)
     CXX =  x86_64-w64-mingw32-g++
     CC =  x86_64-w64-mingw32-gcc
-    CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -DBOOST_SYSTEM_NOEXCEPT=""
+    CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -fvisibility=hidden -fvisibility-inlines-hidden -DBOOST_SYSTEM_NOEXCEPT=""
     ARCHIVER = x86_64-w64-mingw32-ar
     EXE_EXT = .exe
 
