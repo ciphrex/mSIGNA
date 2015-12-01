@@ -38,6 +38,7 @@ else ifeq ($(OS), mingw64)
 else ifeq ($(OS), osx)
     CXX = clang++
     CC = clang
+    C_FLAGS += -mmacosx-version-min=10.7
     CXX_FLAGS += -Wno-unknown-pragmas -Wno-unneeded-internal-declaration -std=c++11 -stdlib=libc++ -DBOOST_THREAD_DONT_USE_CHRONO -DMAC_OS_X_VERSION_MIN_REQUIRED=MAC_OS_X_VERSION_10_6 -mmacosx-version-min=10.7
     ARCHIVER = ar
 
