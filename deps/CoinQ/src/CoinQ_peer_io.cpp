@@ -103,7 +103,7 @@ void Peer::do_read()
             LOGGER(debug) << "Peer read handler - command: " << command << endl;
 
             // Get payload size
-            unsigned int payloadSize = vch_to_uint<uint32_t>(uchar_vector(read_message.begin() + 16, read_message.begin() + 20), _BIG_ENDIAN);
+            unsigned int payloadSize = vch_to_uint<uint32_t>(uchar_vector(read_message.begin() + 16, read_message.begin() + 20), LITTLE_ENDIAN_);
             LOGGER(debug) << "Peer read handler - payload size: " << payloadSize << endl;
             LOGGER(debug) << "Peer read handler - read_message size: " << read_message.size() << endl;
 

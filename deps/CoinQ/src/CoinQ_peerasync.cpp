@@ -65,7 +65,7 @@ void Peer::do_read()
             uchar_vector(read_message.begin() + 4, read_message.begin() + 16).copyToArray(command);
 
             // Get payload size
-            unsigned int payloadSize = vch_to_uint<uint32_t>(uchar_vector(read_message.begin() + 16, read_message.begin() + 20), _BIG_ENDIAN);
+            unsigned int payloadSize = vch_to_uint<uint32_t>(uchar_vector(read_message.begin() + 16, read_message.begin() + 20), LITTLE_ENDIAN_);
 
             if (read_message.size() < MIN_MESSAGE_HEADER_SIZE  + payloadSize) {
                 break;

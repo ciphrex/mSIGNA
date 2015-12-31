@@ -113,7 +113,7 @@ public:
     Peer(io_service_t& _io_service, const endpoint_t& _endpoint, uint32_t _magic_bytes, uint32_t _protocol_version)
         : io_service(_io_service), strand(io_service), socket(_io_service), endpoint(_endpoint), timer(_io_service), magic_bytes(_magic_bytes), protocol_version(_protocol_version), bRunning(false), bHandshakeComplete(false)
     {
-        magicBytes = uint_to_vch(magic_bytes, _BIG_ENDIAN);
+        magicBytes = uint_to_vch(magic_bytes, LITTLE_ENDIAN_);
     }
 
     void subscribeMessage(peer_message_slot_t slot) { notifyMessage.connect(slot); }

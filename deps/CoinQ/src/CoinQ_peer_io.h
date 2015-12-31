@@ -73,7 +73,7 @@ public:
         relay_(relay),
         bRunning(false)
     {
-        magic_bytes_vector_ = uint_to_vch(magic_bytes_, _BIG_ENDIAN);
+        magic_bytes_vector_ = uint_to_vch(magic_bytes_, LITTLE_ENDIAN_);
     }
 
     ~Peer() { stop(); }
@@ -89,7 +89,7 @@ public:
         start_height_ = start_height;
         relay_ = relay;
 
-        magic_bytes_vector_ = uint_to_vch(magic_bytes_, _BIG_ENDIAN);
+        magic_bytes_vector_ = uint_to_vch(magic_bytes_, LITTLE_ENDIAN_);
     }
 
     void subscribeMessage(peer_message_slot_t slot) { notifyMessage.connect(slot); }
