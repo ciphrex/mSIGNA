@@ -28,8 +28,8 @@
 #include <vector>
 
 enum {
-    _LITTLE_ENDIAN = 1,
-    _BIG_ENDIAN
+    BIG_ENDIAN_ = 1,
+    LITTLE_ENDIAN_
 };
 
 template<typename T>
@@ -43,7 +43,7 @@ std::vector<unsigned char> uint_to_vch(T n, uint endianness)
     }
     rval.push_back(n);
 
-    if (endianness == _LITTLE_ENDIAN)
+    if (endianness == BIG_ENDIAN_)
         rval.reverse();
 
     return rval;
@@ -55,7 +55,7 @@ T vch_to_uint(const std::vector<unsigned char>& vch, uint endianness)
     T n = 0;
     uchar_vector bytes(vch.begin(), vch.begin() + sizeof(T));
 
-    if (endianness == _BIG_ENDIAN)
+    if (endianness == LITTLE_ENDIAN_)
         bytes.reverse();
 
     for (uint i = 0; i < sizeof(T)-1; i++) {

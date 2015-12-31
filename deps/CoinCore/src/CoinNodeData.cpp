@@ -134,7 +134,7 @@ const uchar_vector& CoinNodeStructure::getHashLittleEndian(hashfunc_t hashfunc) 
 uint32_t CoinNodeStructure::getChecksum() const
 {
     getHash();
-    return vch_to_uint<uint32_t>(uchar_vector(hash_.begin(), hash_.begin() + 4), _BIG_ENDIAN);
+    return vch_to_uint<uint32_t>(uchar_vector(hash_.begin(), hash_.begin() + 4), LITTLE_ENDIAN_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -158,16 +158,16 @@ uchar_vector VarInt::getSerialized() const
     }
     if (this->value <= 0xffff) {
         rval.push_back(0xfd);
-        rval += uint_to_vch<uint16_t>(this->value, _BIG_ENDIAN);
+        rval += uint_to_vch<uint16_t>(this->value, LITTLE_ENDIAN_);
         return rval;
     }
     if (this->value <= 0xffffffff) {
         rval.push_back(0xfe);
-        rval += uint_to_vch<uint32_t>(this->value, _BIG_ENDIAN);
+        rval += uint_to_vch<uint32_t>(this->value, LITTLE_ENDIAN_);
         return rval;
     }
     rval.push_back(0xff);
-    rval += uint_to_vch<uint64_t>(this->value, _BIG_ENDIAN);
+    rval += uint_to_vch<uint64_t>(this->value, LITTLE_ENDIAN_);
     return rval;
 }
 
@@ -179,11 +179,11 @@ void VarInt::setSerialized(const uchar_vector& bytes)
     if (bytes[0] < 0xfd)
         this->value = bytes[0];
     else if ((bytes[0] == 0xfd) && (bytes.size() >= 3))
-        this->value = vch_to_uint<uint16_t>(uchar_vector(bytes.begin() + 1, bytes.begin() + 3), _BIG_ENDIAN);
+        this->value = vch_to_uint<uint16_t>(uchar_vector(bytes.begin() + 1, bytes.begin() + 3), LITTLE_ENDIAN_);
     else if ((bytes[0] == 0xfe) && (bytes.size() >= 5))
-        this->value = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + 1, bytes.begin() + 5), _BIG_ENDIAN);
+        this->value = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + 1, bytes.begin() + 5), LITTLE_ENDIAN_);
     else if (bytes.size() >= 9)
-        this->value = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + 1, bytes.begin() + 9), _BIG_ENDIAN);
+        this->value = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + 1, bytes.begin() + 9), LITTLE_ENDIAN_);
     else
         throw runtime_error("Invalid data - VarInt length is wrong.");
 }
@@ -250,11 +250,11 @@ uchar_vector NetworkAddress::getSerialized() const
 {
     uchar_vector rval;
     if (this->hasTime)
-        rval += uint_to_vch(this->time, _BIG_ENDIAN);
-    rval += uint_to_vch(this->services, _BIG_ENDIAN);
+        rval += uint_to_vch(this->time, LITTLE_ENDIAN_);
+    rval += uint_to_vch(this->services, LITTLE_ENDIAN_);
     uchar_vector ipv6vch(this->ipv6.getBytes(), 16);
     rval += ipv6vch;
-    rval += uint_to_vch(this->port, _LITTLE_ENDIAN);
+    rval += uint_to_vch(this->port, BIG_ENDIAN_);
     return rval;
 }
 
@@ -274,16 +274,16 @@ void NetworkAddress::setSerialized(const uchar_vector& bytes)
     uint pos = 0;
     this->hasTime = (bytes.size() >= 30);
     if (this->hasTime) {
-        this->time = vch_to_uint<uint32_t>(bytes, _BIG_ENDIAN);
+        this->time = vch_to_uint<uint32_t>(bytes, LITTLE_ENDIAN_);
         pos += sizeof(uint32_t);
     }
-    this->services = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + sizeof(uint64_t)), _BIG_ENDIAN);
+    this->services = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + sizeof(uint64_t)), LITTLE_ENDIAN_);
     pos += sizeof(uint64_t);
     unsigned char ipv6_bytes[16];
     uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 16).copyToArray(ipv6_bytes);
     this->ipv6 = ipv6_bytes;
     pos += 16;
-    this->port = vch_to_uint<uint16_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + sizeof(uint16_t)), _LITTLE_ENDIAN);
+    this->port = vch_to_uint<uint16_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + sizeof(uint16_t)), BIG_ENDIAN_);
 }
 
 string NetworkAddress::getName() const
@@ -347,11 +347,11 @@ MessageHeader::MessageHeader(const MessageHeader& header)
 
 uchar_vector MessageHeader::getSerialized() const
 {
-    uchar_vector rval = uint_to_vch(this->magic, _BIG_ENDIAN);
+    uchar_vector rval = uint_to_vch(this->magic, LITTLE_ENDIAN_);
     rval += uchar_vector((unsigned char*)this->command, 12);
-    rval += uint_to_vch(this->length, _BIG_ENDIAN);
+    rval += uint_to_vch(this->length, LITTLE_ENDIAN_);
     if (this->hasChecksum)
-        rval += uint_to_vch(this->checksum, _BIG_ENDIAN);
+        rval += uint_to_vch(this->checksum, LITTLE_ENDIAN_);
     return rval;
 }
 
@@ -360,12 +360,12 @@ void MessageHeader::setSerialized(const uchar_vector& bytes)
     if (bytes.size() < MIN_MESSAGE_HEADER_SIZE)
         throw runtime_error("Invalid data - MessageHeader too small.");
 
-    this->magic = vch_to_uint<uint32_t>(bytes, _BIG_ENDIAN);
+    this->magic = vch_to_uint<uint32_t>(bytes, LITTLE_ENDIAN_);
     uchar_vector(bytes.begin() + 4, bytes.begin() + 16).copyToArray((unsigned char*)this->command);
-    this->length = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + 16, bytes.begin() + 20), _BIG_ENDIAN);
+    this->length = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + 16, bytes.begin() + 20), LITTLE_ENDIAN_);
     this->hasChecksum = (bytes.size() >= 24);
     if (this->hasChecksum)
-        this->checksum = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + 20, bytes.begin() + 24), _BIG_ENDIAN);
+        this->checksum = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + 20, bytes.begin() + 24), LITTLE_ENDIAN_);
 }
 
 string MessageHeader::toString() const
@@ -678,14 +678,14 @@ uint64_t VersionMessage::getSize() const
 
 uchar_vector VersionMessage::getSerialized() const
 {
-    uchar_vector rval = uint_to_vch(version_, _BIG_ENDIAN);
-    rval += uint_to_vch(services_, _BIG_ENDIAN);
-    rval += uint_to_vch(timestamp_, _BIG_ENDIAN);
+    uchar_vector rval = uint_to_vch(version_, LITTLE_ENDIAN_);
+    rval += uint_to_vch(services_, LITTLE_ENDIAN_);
+    rval += uint_to_vch(timestamp_, LITTLE_ENDIAN_);
     rval += recipientAddress_.getSerialized();
     rval += senderAddress_.getSerialized();
-    rval += uint_to_vch(nonce_, _BIG_ENDIAN);
+    rval += uint_to_vch(nonce_, LITTLE_ENDIAN_);
     rval += subVersion_.getSerialized();
-    rval += uint_to_vch(startHeight_, _BIG_ENDIAN);
+    rval += uint_to_vch(startHeight_, LITTLE_ENDIAN_);
     if (version_ >= 70001) { rval.push_back(relay_ ? 1 : 0); }
     return rval;
 }
@@ -695,26 +695,26 @@ void VersionMessage::setSerialized(const uchar_vector& bytes)
     if (bytes.size() < MIN_VERSION_MESSAGE_SIZE)
         throw runtime_error("Invalid data - VersionMessage too small.");
 
-    version_ = vch_to_uint<uint32_t>(bytes, _BIG_ENDIAN);
+    version_ = vch_to_uint<uint32_t>(bytes, LITTLE_ENDIAN_);
     if (version_ >= 70001 && bytes.size() < MIN_VERSION_MESSAGE_SIZE + 1)
         throw runtime_error("Invalid data - VersionMessage is too small for version >= 70001.");
 
     uint pos = 4;
-    services_ = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 8), _BIG_ENDIAN);
+    services_ = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 8), LITTLE_ENDIAN_);
     pos += 8;
-    timestamp_ = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 8), _BIG_ENDIAN);
+    timestamp_ = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 8), LITTLE_ENDIAN_);
     pos += 8;
     recipientAddress_ = NetworkAddress(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 26));
     pos += 26;
     senderAddress_ = NetworkAddress(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 26));
     pos += 26;
-    nonce_ = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 8), _BIG_ENDIAN);
+    nonce_ = vch_to_uint<uint64_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 8), LITTLE_ENDIAN_);
     pos += 8;
     subVersion_ = VarString(uchar_vector(bytes.begin() + pos, bytes.end()));
     pos += subVersion_.getSize();
     if (bytes.size() < pos + 4)
         throw runtime_error("Invalid data - VersionMessage missing startHeight.");
-    startHeight_ = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN);
+    startHeight_ = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), LITTLE_ENDIAN_);
     if (version_ >= 70001)
     {
         pos += 4;
@@ -815,7 +815,7 @@ string AddrMessage::toIndentedString(uint spaces) const
 //
 uchar_vector InventoryItem::getSerialized() const
 {
-    uchar_vector rval = uint_to_vch(itemType, _BIG_ENDIAN);
+    uchar_vector rval = uint_to_vch(itemType, LITTLE_ENDIAN_);
     uchar_vector hashBytes((unsigned char*)hash, 32);
     hashBytes.reverse(); // to little endian
     rval += hashBytes;
@@ -827,7 +827,7 @@ void InventoryItem::setSerialized(const uchar_vector& bytes)
     if (bytes.size() < MIN_INVENTORY_ITEM_SIZE)
         throw runtime_error("Invalid data - InventoryItem too small.");
 
-    this->itemType = vch_to_uint<uint32_t>(bytes, _BIG_ENDIAN);
+    this->itemType = vch_to_uint<uint32_t>(bytes, LITTLE_ENDIAN_);
     uchar_vector hashBytes(bytes.begin() + 4, bytes.begin() + 36);
     hashBytes.reverse(); // to big endian
     hashBytes.copyToArray((unsigned char*)this->hash);
@@ -962,7 +962,7 @@ GetBlocksMessage::GetBlocksMessage(const string& hex)
 
 uchar_vector GetBlocksMessage::getSerialized() const
 {
-    uchar_vector rval = uint_to_vch(this->version, _BIG_ENDIAN);
+    uchar_vector rval = uint_to_vch(this->version, LITTLE_ENDIAN_);
     rval += VarInt(this->blockLocatorHashes.size()).getSerialized();
     for (uint i = 0; i < this->blockLocatorHashes.size(); i++)
         rval += uchar_vector(this->blockLocatorHashes[i].begin(), this->blockLocatorHashes[i].begin() + 32).getReverse();
@@ -975,7 +975,7 @@ void GetBlocksMessage::setSerialized(const uchar_vector& bytes)
     if (bytes.size() < MIN_GET_BLOCKS_SIZE)
         throw runtime_error("Invalid data - GetBlocksMessage too small.");
 
-    this->version = vch_to_uint<uint32_t>(bytes, _BIG_ENDIAN); uint pos = 4;
+    this->version = vch_to_uint<uint32_t>(bytes, LITTLE_ENDIAN_); uint pos = 4;
     VarInt count(uchar_vector(bytes.begin() + 4, bytes.end())); pos += count.getSize();
     if (bytes.size() < pos + 32*(count.value + 1))
         throw runtime_error("Invalid data - GetBlocksMessage has wrong length.");
@@ -1023,7 +1023,7 @@ string GetBlocksMessage::toIndentedString(uint spaces) const
 //
 uchar_vector GetHeadersMessage::getSerialized() const
 {
-    uchar_vector rval = uint_to_vch(this->version, _BIG_ENDIAN);
+    uchar_vector rval = uint_to_vch(this->version, LITTLE_ENDIAN_);
     rval += VarInt(this->blockLocatorHashes.size()).getSerialized();
     for (uint i = 0; i < this->blockLocatorHashes.size(); i++)
         rval += uchar_vector(this->blockLocatorHashes[i].begin(), this->blockLocatorHashes[i].begin() + 32).getReverse();
@@ -1036,7 +1036,7 @@ void GetHeadersMessage::setSerialized(const uchar_vector& bytes)
     if (bytes.size() < MIN_GET_BLOCKS_SIZE)
         throw runtime_error("Invalid data - GetHeadersMessage too small.");
 
-    this->version = vch_to_uint<uint32_t>(bytes, _BIG_ENDIAN); uint pos = 4;
+    this->version = vch_to_uint<uint32_t>(bytes, LITTLE_ENDIAN_); uint pos = 4;
     VarInt count(uchar_vector(bytes.begin(), bytes.end())); pos += count.getSize();
     if (bytes.size() < pos + 32*(count.value + 1))
         throw runtime_error("Invalid data - GetHeadersMessage has wrong length.");
@@ -1091,7 +1091,7 @@ uchar_vector OutPoint::getSerialized() const
 {
     uchar_vector rval(this->hash, 32);
     rval.reverse(); // to big endian
-    rval += uint_to_vch(this->index, _BIG_ENDIAN);
+    rval += uint_to_vch(this->index, LITTLE_ENDIAN_);
     return rval;
 }
 
@@ -1104,7 +1104,7 @@ void OutPoint::setSerialized(const uchar_vector& bytes)
     hashBytes.reverse(); // to little endian
 
     memcpy(this->hash, &hashBytes[0], 32);
-    this->index = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + 32, bytes.begin() + 36), _BIG_ENDIAN);
+    this->index = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + 32, bytes.begin() + 36), LITTLE_ENDIAN_);
 }
 
 string OutPoint::toDelimited(const string& delimiter) const
@@ -1148,7 +1148,7 @@ uchar_vector TxIn::getSerialized(bool includeScriptSigLength) const
     if (includeScriptSigLength)
         rval += VarInt(this->scriptSig.size()).getSerialized();
     rval += this->scriptSig;
-    rval += uint_to_vch(this->sequence, _BIG_ENDIAN);
+    rval += uint_to_vch(this->sequence, LITTLE_ENDIAN_);
     return rval;
 }
 
@@ -1167,7 +1167,7 @@ void TxIn::setSerialized(const uchar_vector& bytes)
 
     this->scriptSig.assign(bytes.begin() + pos, bytes.begin() + pos + scriptLength.value);
     pos += scriptLength.value;
-    this->sequence = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN);
+    this->sequence = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), LITTLE_ENDIAN_);
 }
 
 string TxIn::getAddress() const
@@ -1236,7 +1236,7 @@ TxOut::TxOut(uint64_t value, const string& scriptPubKeyHex)
 
 uchar_vector TxOut::getSerialized() const
 {
-    uchar_vector rval = uint_to_vch(this->value, _BIG_ENDIAN);
+    uchar_vector rval = uint_to_vch(this->value, LITTLE_ENDIAN_);
     rval += VarInt(this->scriptPubKey.size()).getSerialized();
     rval += this->scriptPubKey;
     return rval;
@@ -1247,7 +1247,7 @@ void TxOut::setSerialized(const uchar_vector& bytes)
     if (bytes.size() < MIN_TX_OUT_SIZE)
         throw runtime_error("Invalid data - TxOut too small.");
 
-    this->value = vch_to_uint<uint64_t>(bytes, _BIG_ENDIAN);
+    this->value = vch_to_uint<uint64_t>(bytes, LITTLE_ENDIAN_);
     VarInt scriptLength(uchar_vector(bytes.begin() + 8, bytes.end()));
     uint pos = scriptLength.getSize() + 8;
     if (bytes.size() < pos + scriptLength.value)
@@ -1338,7 +1338,7 @@ uint64_t Transaction::getSize() const
 uchar_vector Transaction::getSerialized(bool includeScriptSigLength) const
 {
     // version
-    uchar_vector rval = uint_to_vch(this->version, _BIG_ENDIAN);
+    uchar_vector rval = uint_to_vch(this->version, LITTLE_ENDIAN_);
 
     uint64_t i;
     // inputs
@@ -1352,7 +1352,7 @@ uchar_vector Transaction::getSerialized(bool includeScriptSigLength) const
         rval += this->outputs[i].getSerialized();
 
     // lock time
-    rval += uint_to_vch(this->lockTime, _BIG_ENDIAN);
+    rval += uint_to_vch(this->lockTime, LITTLE_ENDIAN_);
 
     return rval;
 }
@@ -1363,7 +1363,7 @@ void Transaction::setSerialized(const uchar_vector& bytes)
         throw runtime_error(string("Invalid data - Transaction too small: ") + bytes.getHex());
 
     // version
-    this->version = vch_to_uint<uint32_t>(uchar_vector(bytes.begin(), bytes.begin() + 4), _BIG_ENDIAN);
+    this->version = vch_to_uint<uint32_t>(uchar_vector(bytes.begin(), bytes.begin() + 4), LITTLE_ENDIAN_);
 
     uint64_t i;
     // inputs
@@ -1390,7 +1390,7 @@ void Transaction::setSerialized(const uchar_vector& bytes)
         throw runtime_error("Invalid data - Transaction missing lockTime.");
 
     // lock time
-    this->lockTime = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN);
+    this->lockTime = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), LITTLE_ENDIAN_);
 }
 
 string Transaction::toString() const
@@ -1473,7 +1473,7 @@ uint64_t Transaction::getTotalSent() const
 
 uchar_vector Transaction::getHashWithAppendedCode(uint32_t code) const
 {
-    return sha256_2(this->getSerialized() + uint_to_vch(code, _BIG_ENDIAN));
+    return sha256_2(this->getSerialized() + uint_to_vch(code, LITTLE_ENDIAN_));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1495,12 +1495,12 @@ CoinBlockHeader::CoinBlockHeader(const string& hex)
 
 uchar_vector CoinBlockHeader::getSerialized() const
 {
-    uchar_vector rval = uint_to_vch(version_, _BIG_ENDIAN);
+    uchar_vector rval = uint_to_vch(version_, LITTLE_ENDIAN_);
     rval += prevBlockHash_.getReverse(); // all big endian
     rval += merkleRoot_.getReverse();
-    rval += uint_to_vch(timestamp_, _BIG_ENDIAN);
-    rval += uint_to_vch(bits_, _BIG_ENDIAN);
-    rval += uint_to_vch(nonce_, _BIG_ENDIAN);
+    rval += uint_to_vch(timestamp_, LITTLE_ENDIAN_);
+    rval += uint_to_vch(bits_, LITTLE_ENDIAN_);
+    rval += uint_to_vch(nonce_, LITTLE_ENDIAN_);
     return rval;
 }
 
@@ -1509,7 +1509,7 @@ void CoinBlockHeader::setSerialized(const uchar_vector& bytes)
     if (bytes.size() < MIN_COIN_BLOCK_HEADER_SIZE)
         throw runtime_error("Invalid data - CoinBlockHeader too small.");
 
-    version_ = vch_to_uint<uint32_t>(bytes, _BIG_ENDIAN); uint pos = 4;
+    version_ = vch_to_uint<uint32_t>(bytes, LITTLE_ENDIAN_); uint pos = 4;
 
     uchar_vector subbytes(bytes.begin() + pos, bytes.begin() + pos + 32); pos += 32;
     subbytes.reverse();
@@ -1519,9 +1519,9 @@ void CoinBlockHeader::setSerialized(const uchar_vector& bytes)
     subbytes.reverse();
     merkleRoot_ = subbytes;
 
-    timestamp_ = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN); pos += 4;
-    bits_ = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN); pos += 4;
-    nonce_ = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN); pos += 4;
+    timestamp_ = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), LITTLE_ENDIAN_); pos += 4;
+    bits_ = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), LITTLE_ENDIAN_); pos += 4;
+    nonce_ = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), LITTLE_ENDIAN_); pos += 4;
 
     resetHash();
 }
@@ -1805,7 +1805,7 @@ uint64_t MerkleBlock::getSize() const
 uchar_vector MerkleBlock::getSerialized() const
 {
     uchar_vector rval = blockHeader.getSerialized();
-    rval += uint_to_vch(nTxs, _BIG_ENDIAN);
+    rval += uint_to_vch(nTxs, LITTLE_ENDIAN_);
     rval += VarInt(hashes.size()).getSerialized();
     for (uint i = 0; i < hashes.size(); i++) {
         // TODO: make sure hashes are all 32 bytes
@@ -1824,7 +1824,7 @@ void MerkleBlock::setSerialized(const uchar_vector& bytes)
     this->blockHeader.setSerialized(bytes);
     uint pos = MIN_COIN_BLOCK_HEADER_SIZE;
 
-    nTxs = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN); pos += 4;
+    nTxs = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), LITTLE_ENDIAN_); pos += 4;
 
     VarInt nHashes(uchar_vector(bytes.begin() + pos, bytes.end())); pos += nHashes.getSize();
     if (bytes.size() < pos + (nHashes.value * 32) + 1)
@@ -1960,8 +1960,8 @@ uchar_vector FilterLoadMessage::getSerialized() const
 {
     uchar_vector rval = VarInt(filter.size()).getSerialized();
     rval += filter;
-    rval += uint_to_vch(nHashFuncs, _BIG_ENDIAN);
-    rval += uint_to_vch(nTweak, _BIG_ENDIAN);
+    rval += uint_to_vch(nHashFuncs, LITTLE_ENDIAN_);
+    rval += uint_to_vch(nTweak, LITTLE_ENDIAN_);
     rval.push_back(nFlags);
     return rval;
 }
@@ -1980,8 +1980,8 @@ void FilterLoadMessage::setSerialized(const uchar_vector& bytes)
 
     uint pos = filterSizeLength + filterSize.value;
     filter.assign(bytes.begin() + filterSizeLength, bytes.begin() + pos);
-    nHashFuncs = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN); pos += 4;
-    nTweak = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), _BIG_ENDIAN); pos += 4;
+    nHashFuncs = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), LITTLE_ENDIAN_); pos += 4;
+    nTweak = vch_to_uint<uint32_t>(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + 4), LITTLE_ENDIAN_); pos += 4;
     nFlags = (uint8_t)bytes[pos]; 
 }
 
@@ -2035,7 +2035,7 @@ PingMessage::PingMessage()
 
 uchar_vector PingMessage::getSerialized() const
 {
-    return uint_to_vch(nonce, _BIG_ENDIAN);
+    return uint_to_vch(nonce, LITTLE_ENDIAN_);
 }
 
 void PingMessage::setSerialized(const uchar_vector& bytes)
@@ -2044,7 +2044,7 @@ void PingMessage::setSerialized(const uchar_vector& bytes)
         throw std::runtime_error("Invalid data - PingMessage too small.");
     }
 
-    nonce = vch_to_uint<uint64_t>(uchar_vector(bytes.begin(), bytes.begin() + 8), _BIG_ENDIAN);
+    nonce = vch_to_uint<uint64_t>(uchar_vector(bytes.begin(), bytes.begin() + 8), LITTLE_ENDIAN_);
 }
 
 std::string PingMessage::toString() const
@@ -2063,7 +2063,7 @@ std::string PingMessage::toIndentedString(uint spaces) const
 //
 uchar_vector PongMessage::getSerialized() const
 {
-    return uint_to_vch(nonce, _BIG_ENDIAN);
+    return uint_to_vch(nonce, LITTLE_ENDIAN_);
 }
 
 void PongMessage::setSerialized(const uchar_vector& bytes)
@@ -2072,7 +2072,7 @@ void PongMessage::setSerialized(const uchar_vector& bytes)
         throw std::runtime_error("Invalid data - PongMessage too small.");
     }
 
-    nonce = vch_to_uint<uint64_t>(uchar_vector(bytes.begin(), bytes.begin() + 8), _BIG_ENDIAN);
+    nonce = vch_to_uint<uint64_t>(uchar_vector(bytes.begin(), bytes.begin() + 8), LITTLE_ENDIAN_);
 }
 
 std::string PongMessage::toString() const

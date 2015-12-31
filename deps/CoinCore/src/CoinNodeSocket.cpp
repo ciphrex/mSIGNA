@@ -74,7 +74,7 @@ void CoinNodeSocket::messageLoop()
 #endif
         CoinNodeSocket* pNodeSocket = this;
         uchar_vector message;
-        uchar_vector magicBytes = uint_to_vch(magic, _BIG_ENDIAN);
+        uchar_vector magicBytes = uint_to_vch(magic, LITTLE_ENDIAN_);
 #ifdef __DEBUG_OUT__
         fprintf(stdout, "Magic Bytes: %s\n", magicBytes.getHex().c_str());
 #endif
@@ -104,7 +104,7 @@ void CoinNodeSocket::messageLoop()
                 uchar_vector(message.begin() + 4, message.begin() + 16).copyToArray(command);
 
                 // get payload length
-                payloadLength = vch_to_uint<uint32_t>(uchar_vector(message.begin() + 16, message.begin() + 20), _BIG_ENDIAN);
+                payloadLength = vch_to_uint<uint32_t>(uchar_vector(message.begin() + 16, message.begin() + 20), LITTLE_ENDIAN_);
 
                 // version and verack messages have no checksum - as of Feb 20, 2012, version messages do have a checksum
                 /*checksumLength = ((strcmp((char*)command, "version") == 0) ||

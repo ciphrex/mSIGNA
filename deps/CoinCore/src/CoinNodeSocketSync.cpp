@@ -95,7 +95,7 @@ void CoinNodeSocket::messageLoop()
                 uchar_vector(message.begin() + 4, message.begin() + 16).copyToArray(command);
 
                 // Get payload size
-                payloadSize = vch_to_uint<uint32_t>(uchar_vector(message.begin() + 16, message.begin() + 20), _BIG_ENDIAN);
+                payloadSize = vch_to_uint<uint32_t>(uchar_vector(message.begin() + 16, message.begin() + 20), LITTLE_ENDIAN_);
 
                 // Get checksum size
                 isVerack = (strcmp((char*)command, "verack") == 0);
@@ -148,7 +148,7 @@ void CoinNodeSocket::open(CoinMessageHandler callback, uint32_t magic, uint vers
 
     this->coinMessageHandler = callback;
     this->magic = magic;
-    this->magicBytes = uint_to_vch(magic, _BIG_ENDIAN);
+    this->magicBytes = uint_to_vch(magic, LITTLE_ENDIAN_);
     this->version = version;
     this->host = hostname;
     this->port = port;
