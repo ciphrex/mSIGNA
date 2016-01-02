@@ -1657,6 +1657,75 @@ uchar_vector Transaction::getHashWithAppendedCode(uint32_t code) const
     return sha256_2(this->getSerialized() + uint_to_vch(code, LITTLE_ENDIAN_));
 }
 
+uchar_vector Transaction::getSigHash(uint32_t hashType, uint index, const uchar_vector& script, uint64_t value) const
+{
+    if (index >= inputs.size())
+        throw runtime_error("Index out of range.");
+
+    // TODO: Add other hashtype support
+    if (hashType != SIGHASH_ALL)
+        throw runtime_error("Unsupported hash type.");
+
+    if (value == 0)
+    {
+        // Old sighash
+        Transaction copy(*this);
+        uint i = 0;
+        for (uint i = 0; i < copy.inputs.size(); i++)
+        {
+            if (index == i) { copy.inputs[i].scriptSig = script; }
+            else            { copy.inputs[i].scriptSig.clear();  }
+        }
+        return copy.getHashWithAppendedCode(hashType);
+    }
+
+    if (hashPrevouts.empty())
+    {
+        uchar_vector ss;
+        for (auto& input: inputs) { ss += input.previousOut.getSerialized(); }
+//        std::cout << "prevouts: " << ss.getHex() << std::endl;
+        hashPrevouts = sha256_2(ss);
+    }
+
+    if (hashSequence.empty())
+    {
+        uchar_vector ss;
+        for (auto& input: inputs) { ss += uint_to_vch(input.sequence, LITTLE_ENDIAN_); }
+//        std::cout << "sequence: " << ss.getHex() << std::endl;
+        hashSequence = sha256_2(ss);
+    }
+
+    if (hashOutputs.empty())
+    {
+        uchar_vector ss;
+        for (auto& output: outputs) { ss += output.getSerialized(); }
+//        std::cout << "outputs: " << ss.getHex() << std::endl;
+        hashOutputs = sha256_2(ss);
+    }
+
+    uchar_vector ss;
+    ss += uint_to_vch(version, LITTLE_ENDIAN_);
+    ss += hashPrevouts;
+    ss += hashSequence;
+    ss += inputs[index].previousOut.getSerialized();
+    ss += VarInt(script.size()).getSerialized();
+    ss += script;
+    ss += uint_to_vch(value, LITTLE_ENDIAN_);
+    ss += uint_to_vch(inputs[index].sequence, LITTLE_ENDIAN_);
+    ss += hashOutputs;
+    ss += uint_to_vch(lockTime, LITTLE_ENDIAN_);
+    ss += uint_to_vch(hashType, LITTLE_ENDIAN_);
+//    std::cout << "data to hash: " << ss.getHex() << std::endl;
+    return sha256_2(ss);
+}
+
+void Transaction::resetSigHash()
+{
+    hashPrevouts.clear();
+    hashSequence.clear();
+    hashOutputs.clear();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // class CoinBlockHeader implementation

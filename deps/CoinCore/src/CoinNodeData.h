@@ -90,6 +90,14 @@ extern uchar_vector g_zero32bytes;
 namespace Coin
 {
 
+enum HashType
+{
+    SIGHASH_ALL             = 0x01,
+    SIGHASH_NONE            = 0x02,
+    SIGHASH_SINGLE          = 0x03,
+    SIGHASH_ANYONECANPAY    = 0x80
+};
+
 typedef std::function<uchar_vector(const uchar_vector&)> hashfunc_t;
 
 class CoinNodeStructure
@@ -746,6 +754,13 @@ public:
     uint64_t getTotalSent() const;
 
     uchar_vector getHashWithAppendedCode(uint32_t code) const; // in little endian
+    uchar_vector getSigHash(uint32_t hashType, uint index, const uchar_vector& script, uint64_t value = 0) const;
+    void resetSigHash();
+
+private:
+    mutable uchar_vector hashPrevouts;
+    mutable uchar_vector hashSequence;
+    mutable uchar_vector hashOutputs;
 };
 
 class CoinBlock;
