@@ -11,8 +11,7 @@ OBJS = \
         obj/BloomFilter.o \
         obj/MerkleTree.o \
         obj/secp256k1_openssl.o \
-        obj/aes.o \
-        obj/StandardTransactions.o
+        obj/aes.o
 
 OBJ_HEADERS = \
         src/Base58Check.h \
