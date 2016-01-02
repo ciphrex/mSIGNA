@@ -1311,6 +1311,131 @@ string TxOut::toJson() const
 
 ///////////////////////////////////////////////////////////////////////////////
 //
+// class ScriptWitness implementation
+//
+uint64_t ScriptWitness::getSize() const
+{
+    uint64_t rval = VarInt(stack.size()).getSize();
+    for (auto& item: stack)
+    {
+        rval += VarInt(item.size()).getSize();
+        rval += item.size();
+    }
+    return rval;
+}
+
+uchar_vector ScriptWitness::getSerialized() const
+{
+    uchar_vector rval = VarInt(stack.size()).getSerialized();
+    for (auto& item: stack)
+    {
+        rval += VarInt(item.size()).getSerialized();
+        rval += item;
+    }
+    return rval;
+    
+}
+
+void ScriptWitness::setSerialized(const uchar_vector& bytes)
+{
+    clear();
+
+    VarInt count(bytes);
+    uint pos = count.getSize();
+    for (uint i = 0; i < count.value; i++)
+    {
+        VarInt size(uchar_vector(bytes.begin() + pos, bytes.end())); pos += size.getSize();
+        if (bytes.size() < pos + size.value)
+            throw runtime_error("Invalid data - ScriptWitness parse error");
+
+        uchar_vector item;
+        item.assign(bytes.begin() + pos, bytes.begin() + pos + size.value); pos += size.value;
+        stack.push_back(item);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// class TxWitness implementation
+//
+bool TxWitness::isNull() const
+{
+    for (auto& txinwit: txinwits)
+    {
+        if (!txinwit.isNull()) return false;
+    }
+
+    return true;
+}
+
+uint64_t TxWitness::getSize(bool withCount) const
+{
+    uint64_t rval = 0;
+    if (!isNull())
+    {
+        if (withCount)
+        {
+            rval += VarInt(txinwits.size()).getSize();
+        }
+
+        for (auto& txinwit: txinwits)
+        {
+            rval += txinwit.getSize();
+        }
+    }
+    return rval;
+}
+
+uchar_vector TxWitness::getSerialized(bool withCount) const
+{
+    uchar_vector rval;
+    if (!isNull())
+    {
+        if (withCount)
+        {
+            rval += VarInt(txinwits.size()).getSerialized();
+        }
+
+        for (auto& txinwit: txinwits)
+        {
+            rval += txinwit.getSerialized();
+        }
+    }
+    return rval;
+    
+}
+
+void TxWitness::setSerialized(const uchar_vector& bytes)
+{
+    if (bytes.size() == 0)
+    {
+        clear();
+    }
+    else
+    {
+        VarInt count(bytes);
+        setSerialized(count.value, uchar_vector(bytes.begin() + count.getSize(), bytes.end()));
+    }
+}
+
+void TxWitness::setSerialized(uint count, const uchar_vector& bytes)
+{
+    clear();
+
+    uint pos = 0;
+    for (uint i = 0; i < count; i++)
+    {
+        VarInt size(uchar_vector(bytes.begin() + pos, bytes.end())); pos += size.getSize();
+        if (bytes.size() < pos + size.value)
+            throw runtime_error("Invalid data - TxWitness parse error");
+
+        TxInWitness txinwit(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + size.value)); pos += size.value;
+        txinwits.push_back(txinwit);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
 // class Transaction implementation
 //
 Transaction::Transaction(const string& hex)
