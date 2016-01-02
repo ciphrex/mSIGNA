@@ -1424,11 +1424,7 @@ void TxWitness::setSerialized(uint count, const uchar_vector& bytes)
     uint pos = 0;
     for (uint i = 0; i < count; i++)
     {
-        VarInt size(uchar_vector(bytes.begin() + pos, bytes.end())); pos += size.getSize();
-        if (bytes.size() < pos + size.value)
-            throw runtime_error("Invalid data - TxWitness parse error");
-
-        TxInWitness txinwit(uchar_vector(bytes.begin() + pos, bytes.begin() + pos + size.value)); pos += size.value;
+        TxInWitness txinwit(uchar_vector(bytes.begin() + pos, bytes.end())); pos += txinwit.getSize();
         txinwits.push_back(txinwit);
     }
 }
@@ -1545,11 +1541,23 @@ void Transaction::setSerialized(const uchar_vector& bytes)
     // version
     this->version = vch_to_uint<uint32_t>(uchar_vector(bytes.begin(), bytes.begin() + 4), LITTLE_ENDIAN_);
 
-    uint64_t i;
+    uint pos = 4;
+
+    int flags = 0;
+    if (bytes[pos] == 0)
+    {
+        // witness serialization
+        pos++;
+        flags = bytes[pos++];
+        if (flags != 1)
+            throw runtime_error("Invalid data - unrecognized flags");
+    }
+
     // inputs
     this->inputs.clear();
-    VarInt count(uchar_vector(bytes.begin() + 4, bytes.end()));
-    uint pos = count.getSize() + 4;
+    VarInt count(uchar_vector(bytes.begin() + pos, bytes.end()));
+    pos += count.getSize();
+    uint64_t i;
     for (i = 0; i < count.value; i++) {
         TxIn txIn(uchar_vector(bytes.begin() + pos, bytes.end()));
         this->addInput(txIn);
@@ -1559,11 +1567,16 @@ void Transaction::setSerialized(const uchar_vector& bytes)
     // outputs
     this->outputs.clear();
     count.setSerialized(uchar_vector(bytes.begin() + pos, bytes.end()));
-    pos = pos + count.getSize();
+    pos += count.getSize();
     for (i = 0; i < count.value; i++) {
         TxOut txOut(uchar_vector(bytes.begin() + pos, bytes.end()));
         this->addOutput(txOut);
         pos += txOut.getSize();
+    }
+
+    if (flags != 0)
+    {
+        witness.setSerialized(inputs.size(), uchar_vector(bytes.begin() + pos, bytes.end())); pos += witness.getSize(false);
     }
 
     if (bytes.size() < pos + 4)
@@ -1669,7 +1682,6 @@ uchar_vector Transaction::getSigHash(uint32_t hashType, uint index, const uchar_
     {
         // Old sighash
         Transaction copy(*this);
-        uint i = 0;
         for (uint i = 0; i < copy.inputs.size(); i++)
         {
             if (index == i) { copy.inputs[i].scriptSig = script; }
