@@ -72,6 +72,11 @@ inline uchar_vector ripemd160(const uchar_vector& data)
     return rval;
 }
 
+inline uchar_vector hash160(const uchar_vector& data)
+{
+    return ripemd160(sha256(data));
+}
+
 inline uchar_vector mdsha(const uchar_vector& data)
 {
     return ripemd160(sha256(data));
