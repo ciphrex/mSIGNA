@@ -150,6 +150,11 @@ enum
 uchar_vector opPushData(uint32_t nBytes);
 
 /*
+ * pushStackItem - constructs a stack push for an object of arbitrary length.
+*/
+uchar_vector pushStackItem(const uchar_vector& data);
+
+/*
  * getDataLength
  *      precondition: pos indicates the position in script of a push operator which is followed by data.
  *      postcondition: pos is advanced to the start of the data.
