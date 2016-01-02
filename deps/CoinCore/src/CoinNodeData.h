@@ -708,6 +708,8 @@ public:
     std::vector<TxOut> outputs;
     uint32_t lockTime;
 
+    TxWitness witness;
+
     Transaction() { this->version = 1; lockTime = 0; }
     Transaction(const uchar_vector& bytes) { this->setSerialized(bytes); }
     Transaction(const std::string& hex);
@@ -717,9 +719,14 @@ public:
     const uchar_vector& hash() const { return getHashLittleEndian(); }
 
     const char* getCommand() const { return "tx"; }
+
     uint64_t getSize() const;
+    uint64_t getSizeWithWitness() const;
+
     uchar_vector getSerialized() const { return this->getSerialized(true); }
     uchar_vector getSerialized(bool includeScriptSigLength) const;
+    uchar_vector getSerializedWithWitness() const;
+
     void setSerialized(const uchar_vector& bytes);
 
     std::string toString() const;

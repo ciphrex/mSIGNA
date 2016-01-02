@@ -1460,6 +1460,28 @@ uint64_t Transaction::getSize() const
     return count;
 }
 
+uint64_t Transaction::getSizeWithWitness() const
+{
+    uint64_t count = 8; // version + locktime
+    count += VarInt(this->inputs.size()).getSize();
+    count += VarInt(this->outputs.size()).getSize();
+
+    uint64_t i;
+    for (i = 0; i < this->inputs.size(); i++)
+        count += this->inputs[i].getSize();
+
+    for (i = 0; i < this->outputs.size(); i++)
+        count += this->outputs[i].getSize();
+
+    if (!witness.isNull())
+    {
+        count += 2; // mask + flags
+        count += witness.getSize(false); // without txinwit count
+    }
+
+    return count;
+}
+
 uchar_vector Transaction::getSerialized(bool includeScriptSigLength) const
 {
     // version
@@ -1475,6 +1497,39 @@ uchar_vector Transaction::getSerialized(bool includeScriptSigLength) const
     rval += VarInt(this->outputs.size()).getSerialized();
     for (i = 0; i < this->outputs.size(); i++)
         rval += this->outputs[i].getSerialized();
+
+    // lock time
+    rval += uint_to_vch(this->lockTime, LITTLE_ENDIAN_);
+
+    return rval;
+}
+
+uchar_vector Transaction::getSerializedWithWitness() const
+{
+    if (witness.isNull()) return getSerialized();
+
+    // version
+    uchar_vector rval = uint_to_vch(this->version, LITTLE_ENDIAN_);
+
+    // mask
+    rval.push_back(0x00);
+
+    // flags
+    rval.push_back(0x01);
+
+    uint64_t i;
+    // inputs
+    rval += VarInt(this->inputs.size()).getSerialized();
+    for (i = 0; i < this->inputs.size(); i++)
+        rval += this->inputs[i].getSerialized();
+
+    // outputs
+    rval += VarInt(this->outputs.size()).getSerialized();
+    for (i = 0; i < this->outputs.size(); i++)
+        rval += this->outputs[i].getSerialized();
+
+    // witness
+    rval += witness.getSerialized(false); // without txinwit count
 
     // lock time
     rval += uint_to_vch(this->lockTime, LITTLE_ENDIAN_);
