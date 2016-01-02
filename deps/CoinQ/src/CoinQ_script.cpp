@@ -42,6 +42,14 @@ uchar_vector opPushData(uint32_t nBytes)
     return rval;
 }
 
+uchar_vector pushStackItem(const uchar_vector& data)
+{
+    uchar_vector rval;
+    rval += opPushData(data.size());
+    rval += data;
+    return rval;
+}
+
 uint32_t getDataLength(const uchar_vector& script, uint& pos)
 {
     if (pos >= script.size()) {
