@@ -76,6 +76,18 @@ public:
         return *this;
     }
 
+    uchar_vector& operator<<(const std::vector<unsigned char>& rhs)
+    {
+        this->insert(this->end(), rhs.begin(), rhs.end());
+        return *this;
+    }
+
+    uchar_vector& operator<<(unsigned char byte)
+    {
+        this->push_back(byte);
+        return *this;
+    }
+        
     const uchar_vector operator+(const std::vector<unsigned char>& rightOperand) const { return uchar_vector(*this) += rightOperand; }
 
     uchar_vector& operator=(const std::string& hex) { this->setHex(hex); return *this; }
