@@ -236,6 +236,40 @@ std::string getAddressForTxOutScript(const bytes_t& txoutscript, const unsigned 
 }
 
 /*
+ * class ScriptTemplate
+*/
+
+/*
+ * class WitnessProgram
+*/
+std::string WitnessProgram::p2sh(const unsigned char addressVersions[]) const
+{
+    return toBase58Check(hash160(witnessscript_), addressVersions[1]);
+}
+
+void WitnessProgram::update()
+{
+    witnessscript_.clear();
+    txinscript_.clear();
+    txoutscript_.clear();
+
+    switch (version())
+    {
+    case 0:
+        witnessscript_ << OP_0 << pushStackItem(redeemscript_);
+        break;
+    case 1:
+        witnessscript_ << OP_1 << pushStackItem(sha256(redeemscript_));
+        break;
+    default:
+        break;
+    }
+
+    txinscript_ << pushStackItem(witnessscript_);
+    txoutscript_ << OP_HASH160 << pushStackItem(hash160(witnessscript_)) << OP_EQUAL;
+}
+
+/*
  * class Script
 */
 Script::Script(type_t type, unsigned int minsigs, const std::vector<bytes_t>& pubkeys, const std::vector<bytes_t>& sigs)
