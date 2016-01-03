@@ -296,13 +296,13 @@ uchar_vector ScriptTemplate::script(const std::vector<bytes_t>& pubkeys) const
     return rval;
 }
 
-ScriptTemplate& ScriptTemplate::reduce(const bytes_t& pubkey)
+ScriptTemplate& ScriptTemplate::apply(const bytes_t& pubkey)
 {
     reduced_ = script(pubkey);
     return *this;
 }
 
-ScriptTemplate& ScriptTemplate::reduce(const std::vector<bytes_t>& pubkeys)
+ScriptTemplate& ScriptTemplate::apply(const std::vector<bytes_t>& pubkeys)
 {
     reduced_ = script(pubkeys);
     return *this;
