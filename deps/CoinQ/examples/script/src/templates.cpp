@@ -151,8 +151,8 @@ int main(int argc, char* argv[])
                             <<  OP_ENDIF;
 
             ScriptTemplate redeemTemplate(redeemPattern);
-            redeemTemplate.reduce(master_pubkey);
-            redeemTemplate.reduce(timelock_pubkey);
+            redeemTemplate.apply(master_pubkey);
+            redeemTemplate.apply(timelock_pubkey);
             uchar_vector redeemscript = redeemTemplate.script();
 
             uchar_vector txoutscript;
