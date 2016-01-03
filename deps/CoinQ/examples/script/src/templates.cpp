@@ -150,9 +150,10 @@ int main(int argc, char* argv[])
                             <<      OP_PUBKEY << 0 << OP_CHECKSIG
                             <<  OP_ENDIF;
 
-            ScriptTemplate redeemTemplate1(redeemPattern);
-            ScriptTemplate redeemTemplate2(redeemTemplate1.script(master_pubkey));
-            uchar_vector redeemscript = redeemTemplate2.script(timelock_pubkey);
+            ScriptTemplate redeemTemplate(redeemPattern);
+            redeemTemplate.reduce(master_pubkey);
+            redeemTemplate.reduce(timelock_pubkey);
+            uchar_vector redeemscript = redeemTemplate.script();
 
             uchar_vector txoutscript;
             txoutscript << OP_HASH160 << pushStackItem(hash160(redeemscript)) << OP_EQUAL;
@@ -164,24 +165,6 @@ int main(int argc, char* argv[])
             cout << "txoutscript:   " << txoutscript.getHex() << endl;
             cout << "txinscript:    " << txinscript.getHex() << endl;
             cout << "address:       " << toBase58Check(hash160(redeemscript), ADDRESS_VERSIONS[1]) << endl;
-/*
-        redeemscript.push_back(OP_DUP);
-        redeemscript += opPushData(locked_pubkey.size());
-        redeemscript += locked_pubkey;
-        redeemscript.push_back(OP_CHECKSIG);
-        redeemscript.push_back(OP_IF);
-            // We're using the locked pubkey
-            redeemscript += opPushData(serialized_locktime.size());
-            redeemscript += serialized_locktime;
-            redeemscript.push_back(OP_CHECKLOCKTIMEVERIFY);
-            redeemscript.push_back(OP_DROP);
-        redeemscript.push_back(OP_ELSE);
-            // We're using the unlocked pubkey
-            redeemscript += opPushData(unlocked_pubkey.size());
-            redeemscript += unlocked_pubkey;
-            redeemscript.push_back(OP_CHECKSIG);
-        redeemscript.push_back(OP_ENDIF);
-*/
         }
         else if (type == "witness")
         {
