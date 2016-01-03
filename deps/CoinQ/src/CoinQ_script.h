@@ -241,11 +241,17 @@ public:
 
     const uchar_vector& pattern() const { return pattern_; }
 
+    const uchar_vector& script() const;
     uchar_vector script(const bytes_t& pubkey) const; // use index 0 only
     uchar_vector script(const std::vector<bytes_t>& pubkeys) const;
+
+    ScriptTemplate& reduce(const bytes_t& pubkey);
+    ScriptTemplate& reduce(const std::vector<bytes_t>& pubkeys);
+    ScriptTemplate& reset();
     
 private:
     uchar_vector pattern_;
+    uchar_vector reduced_;
 };
 
 class WitnessProgram

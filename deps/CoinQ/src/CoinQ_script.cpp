@@ -238,6 +238,11 @@ std::string getAddressForTxOutScript(const bytes_t& txoutscript, const unsigned 
 /*
  * class ScriptTemplate
 */
+const uchar_vector& ScriptTemplate::script() const
+{
+    return reduced_.empty() ? pattern_ : reduced_;
+}
+
 uchar_vector ScriptTemplate::script(const bytes_t& pubkey) const
 {
     std::vector<bytes_t> pubkeys;
@@ -247,20 +252,22 @@ uchar_vector ScriptTemplate::script(const bytes_t& pubkey) const
 
 uchar_vector ScriptTemplate::script(const std::vector<bytes_t>& pubkeys) const
 {
+    const uchar_vector& pattern = script();
+
     uchar_vector rval;
 
     uint pos = 0;
     while (true)
     {   
-        uchar_vector fullop = getNextOp(pattern_, pos);
+        uchar_vector fullop = getNextOp(pattern, pos);
         if (fullop.empty()) break;
 
         if (fullop[0] == OP_PUBKEY || fullop[0] == OP_PUBKEYHASH)
         {
-            if (pos >= pattern_.size())
+            if (pos >= pattern.size())
                 throw std::runtime_error("Invalid pattern.");
 
-            std::size_t i = pattern_[pos++];
+            std::size_t i = pattern[pos++];
             if (i >= pubkeys.size())
             {
                 // Reduce indices so we can populate later
@@ -289,6 +296,24 @@ uchar_vector ScriptTemplate::script(const std::vector<bytes_t>& pubkeys) const
     return rval;
 }
 
+ScriptTemplate& ScriptTemplate::reduce(const bytes_t& pubkey)
+{
+    reduced_ = script(pubkey);
+    return *this;
+}
+
+ScriptTemplate& ScriptTemplate::reduce(const std::vector<bytes_t>& pubkeys)
+{
+    reduced_ = script(pubkeys);
+    return *this;
+}
+
+ScriptTemplate& ScriptTemplate::reset()
+{
+    reduced_.clear();
+    return *this;
+}
+    
 
 /*
  * class WitnessProgram
