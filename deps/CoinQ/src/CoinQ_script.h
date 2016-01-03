@@ -245,8 +245,8 @@ public:
     uchar_vector script(const bytes_t& pubkey) const; // use index 0 only
     uchar_vector script(const std::vector<bytes_t>& pubkeys) const;
 
-    ScriptTemplate& reduce(const bytes_t& pubkey);
-    ScriptTemplate& reduce(const std::vector<bytes_t>& pubkeys);
+    ScriptTemplate& apply(const bytes_t& pubkey);
+    ScriptTemplate& apply(const std::vector<bytes_t>& pubkeys);
     ScriptTemplate& reset();
     
 private:
