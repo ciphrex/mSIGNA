@@ -14,6 +14,7 @@
 #include <CoinCore/CoinNodeData.h>
 #include <CoinCore/typedefs.h>
 
+#include <algorithm>
 #include <utility>
 
 namespace CoinQ {
@@ -141,7 +142,12 @@ enum
     OP_NOP7,
     OP_NOP8,
     OP_NOP9,
-    OP_NOP10
+    OP_NOP10,
+
+    // Pseudo
+    OP_PUBKEYHASH = 0xfd,
+    OP_PUBKEY,
+    OP_INVALIDOPCODE,
 };
 
 /*
@@ -161,6 +167,14 @@ uchar_vector pushStackItem(const uchar_vector& data);
  *      returns: number of bytes in the data.
 */
 uint32_t getDataLength(const uchar_vector& script, uint& pos);
+
+/*
+ * getNextOp
+ *      precondition: pos indicates the position in script
+ *      postcondition: pos is advanced to the start of the next operation or end of script
+ *      returns: the complete op starting at pos including any data if pushed
+*/
+uchar_vector getNextOp(const bytes_t& script, uint& pos);
 
 // TODO: Get rid of PUBKEY in names below
 enum ScriptType {
@@ -202,6 +216,39 @@ uchar_vector getTxOutScriptForAddress(const std::string& address, const unsigned
 */
 std::string getAddressForTxOutScript(const bytes_t& txoutscript, const unsigned char addressVersions[]);
 
+
+class SymmetricKeyGroup
+{
+public:
+    SymmetricKeyGroup(const std::vector<bytes_t>& pubkeys) : pubkeys_(pubkeys)
+    {
+        std::sort(pubkeys_.begin(), pubkeys_.end());
+    }
+
+    std::size_t count() const { return pubkeys_.size(); }
+
+    const bytes_t& operator[](std::size_t i) const { return pubkeys_[i]; }
+    const std::vector<bytes_t> pubkeys() const { return pubkeys_; }
+
+private:
+    std::vector<bytes_t> pubkeys_;    
+};
+
+class ScriptTemplate
+{
+public:
+    ScriptTemplate(const bytes_t& tokenized)
+    {
+    }
+
+    uchar_vector script(const std::vector<bytes_t>& pubkeys)
+    {
+        return uchar_vector();
+    }
+    
+private:
+    std::vector<bytes_t> segments_;
+};
 
 class Script
 {

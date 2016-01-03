@@ -90,6 +90,56 @@ uint32_t getDataLength(const uchar_vector& script, uint& pos)
     }
 }
 
+uchar_vector getNextOp(const bytes_t& script, uint& pos)
+{
+    if (script.size() < pos)
+        throw std::runtime_error("Script pos past end.");
+
+    if (script.size() == pos)
+        return uchar_vector();
+
+    uint start = pos;
+    unsigned char op = script[pos++];
+    if (op <= 0x4b)
+    {
+        pos += op;
+    }
+    else if (op == 0x4c)
+    {
+        if (script.size() < pos + 1)
+            throw std::runtime_error("Unexpected end of script.");
+
+        pos += script[pos++];
+    }
+    else if (op == 0x4d)
+    {
+        if (script.size() < pos + 2)
+            throw std::runtime_error("Unexpected end of script.");
+
+        uint32_t len =  (uint32_t)script[pos++] |
+                        (uint32_t)script[pos++] << 8;
+
+        pos += len;
+    }
+    else if (op == 0x4e)
+    {
+        if (script.size() < pos + 4)
+            throw std::runtime_error("Unexpected end of script.");
+
+        uint32_t len =  (uint32_t)script[pos++]         |
+                        (uint32_t)script[pos++] << 8    |
+                        (uint32_t)script[pos++] << 16   |
+                        (uint32_t)script[pos++] << 24;
+
+        pos += len;
+    }
+
+    if (script.size() < pos)
+        throw std::runtime_error("Script pos past end.");
+
+    return uchar_vector(script.begin() + start, script.begin() + start + pos);
+}
+
 payee_t getScriptPubKeyPayee(const uchar_vector& scriptPubKey)
 {
     if (scriptPubKey.size()   == 25 &&
