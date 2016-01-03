@@ -109,7 +109,8 @@ uchar_vector getNextOp(const bytes_t& script, uint& pos)
         if (script.size() < pos + 1)
             throw std::runtime_error("Unexpected end of script.");
 
-        pos += script[pos++];
+        uint32_t len = script[pos++];
+        pos += len;
     }
     else if (op == 0x4d)
     {
@@ -137,7 +138,7 @@ uchar_vector getNextOp(const bytes_t& script, uint& pos)
     if (script.size() < pos)
         throw std::runtime_error("Script pos past end.");
 
-    return uchar_vector(script.begin() + start, script.begin() + start + pos);
+    return uchar_vector(script.begin() + start, script.begin() + pos);
 }
 
 payee_t getScriptPubKeyPayee(const uchar_vector& scriptPubKey)

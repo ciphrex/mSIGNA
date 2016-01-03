@@ -237,17 +237,57 @@ private:
 class ScriptTemplate
 {
 public:
-    ScriptTemplate(const bytes_t& tokenized)
+    ScriptTemplate(const bytes_t& tokenscript) : tokenscript_(tokenscript) { }
+
+    uchar_vector script(const bytes_t& pubkey) const
     {
+        std::vector<bytes_t> pubkeys;
+        pubkeys.push_back(pubkey);
+        return script(pubkeys);
     }
 
-    uchar_vector script(const std::vector<bytes_t>& pubkeys)
+    uchar_vector script(const std::vector<bytes_t>& pubkeys) const
     {
-        return uchar_vector();
+        uchar_vector rval;
+
+        uint pos = 0;
+        while (true)
+        {   
+            uchar_vector fullop = getNextOp(tokenscript_, pos);
+            if (fullop.empty()) break;
+
+            if (fullop[0] == OP_PUBKEY || fullop[0] == OP_PUBKEYHASH)
+            {
+                if (pos >= tokenscript_.size())
+                    throw std::runtime_error("Unexpected end of script.");
+
+                std::size_t i = tokenscript_[pos++];
+                if (i >= pubkeys.size())
+                    throw std::runtime_error("Pubkey index out of range.");
+
+                switch (fullop[0])
+                {
+                case OP_PUBKEY:
+                    rval << pushStackItem(pubkeys[i]);
+                    break;
+                case OP_PUBKEYHASH:
+                    rval << pushStackItem(hash160(pubkeys[i]));
+                    break;
+                default:
+                    break;
+                }
+            }
+            else
+            {
+                rval << fullop;
+            }
+        }
+
+        return rval;
     }
     
 private:
-    std::vector<bytes_t> segments_;
+    bytes_t tokenscript_;
 };
 
 class Script
