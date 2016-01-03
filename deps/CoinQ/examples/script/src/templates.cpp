@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
                 redeemPattern << OP_PUBKEY << i;
                 emptySigs << OP_0;
             }
-            redeemPattern << (OP_1_OFFSET + pubkeys.size());
+            redeemPattern << (OP_1_OFFSET + pubkeys.size()) << OP_CHECKMULTISIG;
 
             SymmetricKeyGroup keyGroup(pubkeys);
             ScriptTemplate redeemTemplate(redeemPattern);
