@@ -290,6 +290,30 @@ private:
     bytes_t tokenscript_;
 };
 
+class WitnessProgram
+{
+public:
+    WitnessProgram(const WitnessProgram& wp) : redeemscript_(wp.redeemscript_) { update(); }
+    WitnessProgram(const uchar_vector& redeemscript) : redeemscript_(redeemscript) { update(); }
+
+    int version() const { return (redeemscript_.size() <= 32) ? 0 : 1; }
+
+    const uchar_vector& redeemscript() const { return redeemscript_; }
+    const uchar_vector& witnessscript() const { return witnessscript_; }
+    const uchar_vector& txinscript() const { return txinscript_; }
+    const uchar_vector& txoutscript() const { return txoutscript_; }
+
+    std::string p2sh(const unsigned char addressVersions[]) const;
+
+private:
+    uchar_vector redeemscript_;
+    uchar_vector witnessscript_;
+    uchar_vector txinscript_;
+    uchar_vector txoutscript_;
+
+    void update();
+};
+
 class Script
 {
 public:
