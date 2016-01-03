@@ -237,57 +237,15 @@ private:
 class ScriptTemplate
 {
 public:
-    ScriptTemplate(const bytes_t& tokenscript) : tokenscript_(tokenscript) { }
+    ScriptTemplate(const uchar_vector& pattern) : pattern_(pattern) { }
 
-    uchar_vector script(const bytes_t& pubkey) const
-    {
-        std::vector<bytes_t> pubkeys;
-        pubkeys.push_back(pubkey);
-        return script(pubkeys);
-    }
+    const uchar_vector& pattern() const { return pattern_; }
 
-    uchar_vector script(const std::vector<bytes_t>& pubkeys) const
-    {
-        uchar_vector rval;
-
-        uint pos = 0;
-        while (true)
-        {   
-            uchar_vector fullop = getNextOp(tokenscript_, pos);
-            if (fullop.empty()) break;
-
-            if (fullop[0] == OP_PUBKEY || fullop[0] == OP_PUBKEYHASH)
-            {
-                if (pos >= tokenscript_.size())
-                    throw std::runtime_error("Unexpected end of script.");
-
-                std::size_t i = tokenscript_[pos++];
-                if (i >= pubkeys.size())
-                    throw std::runtime_error("Pubkey index out of range.");
-
-                switch (fullop[0])
-                {
-                case OP_PUBKEY:
-                    rval << pushStackItem(pubkeys[i]);
-                    break;
-                case OP_PUBKEYHASH:
-                    rval << pushStackItem(hash160(pubkeys[i]));
-                    break;
-                default:
-                    break;
-                }
-            }
-            else
-            {
-                rval << fullop;
-            }
-        }
-
-        return rval;
-    }
+    uchar_vector script(const bytes_t& pubkey) const; // use index 0 only
+    uchar_vector script(const std::vector<bytes_t>& pubkeys) const;
     
 private:
-    bytes_t tokenscript_;
+    uchar_vector pattern_;
 };
 
 class WitnessProgram
@@ -298,16 +256,16 @@ public:
 
     int version() const { return (redeemscript_.size() <= 32) ? 0 : 1; }
 
-    const uchar_vector& redeemscript() const { return redeemscript_; }
     const uchar_vector& witnessscript() const { return witnessscript_; }
+    const uchar_vector& redeemscript() const { return redeemscript_; }
     const uchar_vector& txinscript() const { return txinscript_; }
     const uchar_vector& txoutscript() const { return txoutscript_; }
 
-    std::string p2sh(const unsigned char addressVersions[]) const;
+    std::string address(const unsigned char addressVersions[]) const;
 
 private:
-    uchar_vector redeemscript_;
     uchar_vector witnessscript_;
+    uchar_vector redeemscript_;
     uchar_vector txinscript_;
     uchar_vector txoutscript_;
 
