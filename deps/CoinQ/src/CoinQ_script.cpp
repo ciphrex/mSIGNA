@@ -238,11 +238,62 @@ std::string getAddressForTxOutScript(const bytes_t& txoutscript, const unsigned 
 /*
  * class ScriptTemplate
 */
+uchar_vector ScriptTemplate::script(const bytes_t& pubkey) const
+{
+    std::vector<bytes_t> pubkeys;
+    pubkeys.push_back(pubkey);
+    return script(pubkeys);
+}
+
+uchar_vector ScriptTemplate::script(const std::vector<bytes_t>& pubkeys) const
+{
+    uchar_vector rval;
+
+    uint pos = 0;
+    while (true)
+    {   
+        uchar_vector fullop = getNextOp(pattern_, pos);
+        if (fullop.empty()) break;
+
+        if (fullop[0] == OP_PUBKEY || fullop[0] == OP_PUBKEYHASH)
+        {
+            if (pos >= pattern_.size())
+                throw std::runtime_error("Invalid pattern.");
+
+            std::size_t i = pattern_[pos++];
+            if (i >= pubkeys.size())
+            {
+                // Reduce indices so we can populate later
+                rval << fullop[0] << (i - pubkeys.size());
+                continue;
+            }
+
+            switch (fullop[0])
+            {
+            case OP_PUBKEY:
+                rval << pushStackItem(pubkeys[i]);
+                break;
+            case OP_PUBKEYHASH:
+                rval << pushStackItem(hash160(pubkeys[i]));
+                break;
+            default:
+                break;
+            }
+        }
+        else
+        {
+            rval << fullop;
+        }
+    }
+
+    return rval;
+}
+
 
 /*
  * class WitnessProgram
 */
-std::string WitnessProgram::p2sh(const unsigned char addressVersions[]) const
+std::string WitnessProgram::address(const unsigned char addressVersions[]) const
 {
     return toBase58Check(hash160(witnessscript_), addressVersions[1]);
 }
