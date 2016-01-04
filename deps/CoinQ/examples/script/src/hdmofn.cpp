@@ -56,6 +56,15 @@ int main(int argc, char* argv[])
             emptySigs << OP_0;
         }
         redeemPattern << (OP_1_OFFSET + n) << OP_CHECKMULTISIG;
+        ScriptTemplate redeemTemplate(redeemPattern);
+
+        uchar_vector inPattern;
+        inPattern << OP_0 << emptySigs << OP_TOKEN << 0;
+        ScriptTemplate inTemplate(inPattern);
+
+        uchar_vector outPattern;
+        outPattern << OP_HASH160 << OP_TOKENHASH << 0 << OP_EQUAL;
+        ScriptTemplate outTemplate(outPattern);
 
         vector<uchar_vector> extkeys;
         for (int k = 0; k < n; k++) { extkeys.push_back(HDSeed(secure_random_bytes(32)).getExtendedKey()); }
@@ -69,20 +78,15 @@ int main(int argc, char* argv[])
         }
 
         SymmetricHDKeyGroup keyGroup(extkeys);
-        ScriptTemplate redeemTemplate(redeemPattern);
 
         cout    << endl;
         cout    << "Scripts"
                 << "-------" << endl;
         for (int i = 1; i <= 10; i++)
         {
-            uchar_vector redeemscript = redeemTemplate.script(keyGroup.pubkeys());
-
-            uchar_vector txoutscript;
-            txoutscript << OP_HASH160 << pushStackItem(hash160(redeemscript)) << OP_EQUAL;
-
-            uchar_vector txinscript;
-            txinscript << OP_0 << emptySigs << pushStackItem(redeemscript);
+            uchar_vector redeemscript   = redeemTemplate.script(keyGroup.pubkeys());
+            uchar_vector txoutscript    = outTemplate.script(redeemscript);
+            uchar_vector txinscript     = inTemplate.script(redeemscript);
 
             cout << "index:         " << keyGroup.index() << endl;
             cout << "redeemscript:  " << redeemscript.getHex() << endl;
