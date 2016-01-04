@@ -28,13 +28,13 @@ const unsigned char ADDRESS_VERSIONS[] = {0, 5};
 string help(char* appName)
 {
     stringstream ss;
-    ss  << "# Usage: " << appName << " <m> <n>";
+    ss  << "# Usage: " << appName << " <m> (<n> or <xpub1> [xpub2] ...)";
     return ss.str();
 }
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3)
+    if (argc < 3 || argc > 16)
     {
         cerr << help(argv[0]) << endl;
         return -1;
@@ -43,10 +43,33 @@ int main(int argc, char* argv[])
     try
     {
         int m = strtol(argv[1], NULL, 0);
-        int n = strtol(argv[2], NULL, 0);
+        if (m < 1 || m > 15) throw runtime_error("Invalid m.");
 
-        if (m < 1 || m > 15 || m > n) throw runtime_error("Invalid m.");
-        if (n < 1 || n > 15) throw runtime_error("Invalid n.");
+        int n;
+
+        vector<uchar_vector> extkeys;
+
+        string xpubstr(argv[2]);
+        if (xpubstr.size() <= 2)
+        {
+            n = strtol(argv[2], NULL, 0);
+            if (n < m || n > 15) throw runtime_error("Invalid n.");
+            for (int k = 0; k < n; k++) { extkeys.push_back(HDSeed(secure_random_bytes(32)).getExtendedKey()); }
+        }
+        else
+        {
+            for (int k = 2; k < argc; k++)
+            {
+                uchar_vector xpub;
+                if (!fromBase58Check(argv[k], xpub))
+                    throw runtime_error("Invalid xpub.");
+
+                extkeys.push_back(xpub);
+            }
+
+            n = extkeys.size();
+            if (n < m || n > 15) throw runtime_error("Invalid n.");
+        }
 
         uchar_vector redeemPattern, emptySigs;
         redeemPattern << (OP_1_OFFSET + m);
@@ -65,9 +88,6 @@ int main(int argc, char* argv[])
         uchar_vector outPattern;
         outPattern << OP_HASH160 << OP_TOKENHASH << 0 << OP_EQUAL;
         ScriptTemplate outTemplate(outPattern);
-
-        vector<uchar_vector> extkeys;
-        for (int k = 0; k < n; k++) { extkeys.push_back(HDSeed(secure_random_bytes(32)).getExtendedKey()); }
 
         cout    << endl;
         cout    << "Extended Keys"
