@@ -13,8 +13,12 @@ HEADERS = \
     $(SRCDIR)/BigInt.h \
     $(SRCDIR)/uchar_vector.h
 
+LIBS = \
+    -lCoinCore \
+    -lcrypto
+
 build/hdkeychain: hdkeychain.cpp $(ROOTDIR)/obj/hdkeys.o $(SRCDIR)/Base58Check.h
-	$(CXX) $(CXXFLAGS) -o $@ $< $(ROOTDIR)/obj/hdkeys.o $(INCPATH) $(LIBPATH) -lcrypto
+	$(CXX) $(CXXFLAGS) -o $@ $< $(ROOTDIR)/obj/hdkeys.o $(INCPATH) $(LIBPATH) $(LIBS)
 
 $(SRCDIR)/obj/hdkeys.o: $(SRCDIR)/hdkeys.cpp $(HEADERS) 
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
