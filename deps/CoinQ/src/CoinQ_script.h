@@ -151,6 +151,12 @@ enum
     OP_INVALIDOPCODE,
 };
 
+enum
+{
+    OP_TOKENHASH = OP_PUBKEYHASH,
+    OP_TOKEN,
+};
+
 /*
  * opPushData - constructs an operator (of variable length) indicating nBytes of data follow.
 */
@@ -275,11 +281,11 @@ public:
     const uchar_vector& pattern() const { return pattern_; }
 
     const uchar_vector& script() const;
-    uchar_vector script(const uchar_vector& pubkey) const; // use index 0 only
-    uchar_vector script(const std::vector<uchar_vector>& pubkeys) const;
+    uchar_vector script(const uchar_vector& token) const; // use index 0 only
+    uchar_vector script(const std::vector<uchar_vector>& tokens) const;
 
-    ScriptTemplate& apply(const uchar_vector& pubkey);
-    ScriptTemplate& apply(const std::vector<uchar_vector>& pubkeys);
+    ScriptTemplate& apply(const uchar_vector& token);
+    ScriptTemplate& apply(const std::vector<uchar_vector>& tokens);
     ScriptTemplate& reset();
     
 private:
