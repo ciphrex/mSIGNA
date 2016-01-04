@@ -10,10 +10,13 @@ LIBS = \
     -lboost_regex$(BOOST_SUFFIX) \
     -lcrypto
 
-all: build/templates${EXE_EXT}
+all: build/templates${EXE_EXT} build/hdmofn${EXE_EXT}
 
 clean:
-	-rm -rf build/templates${EXE_EXT}
+	-rm -rf build/templates${EXE_EXT} build/hdmofn${EXE_EXT}
 
 build/templates${EXE_EXT}: src/templates.cpp
+	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $^ -o $@ $(LIBS)
+
+build/hdmofn${EXE_EXT}: src/hdmofn.cpp
 	$(CXX) $(CXX_FLAGS) $(INCLUDE_PATH) $^ -o $@ $(LIBS)
