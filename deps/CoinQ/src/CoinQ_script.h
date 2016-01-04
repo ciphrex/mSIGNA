@@ -221,18 +221,18 @@ std::string getAddressForTxOutScript(const bytes_t& txoutscript, const unsigned 
 class SymmetricKeyGroup
 {
 public:
-    SymmetricKeyGroup(const std::vector<bytes_t>& pubkeys) : pubkeys_(pubkeys)
+    SymmetricKeyGroup(const std::vector<uchar_vector>& pubkeys) : pubkeys_(pubkeys)
     {
         sort();
     }
 
     std::size_t count() const { return pubkeys_.size(); }
 
-    const bytes_t& operator[](std::size_t i) const { return pubkeys_[i]; }
-    const std::vector<bytes_t>& pubkeys() const { return pubkeys_; }
+    const uchar_vector& operator[](std::size_t i) const { return pubkeys_[i]; }
+    const std::vector<uchar_vector>& pubkeys() const { return pubkeys_; }
 
 protected:
-    std::vector<bytes_t> pubkeys_;
+    std::vector<uchar_vector> pubkeys_;
 
     SymmetricKeyGroup() { }
     void sort() { std::sort(pubkeys_.begin(), pubkeys_.end()); }
@@ -241,7 +241,7 @@ protected:
 class SymmetricHDKeyGroup : public SymmetricKeyGroup
 {
 public:
-    SymmetricHDKeyGroup(const std::vector<bytes_t>& extkeys);
+    SymmetricHDKeyGroup(const std::vector<uchar_vector>& extkeys);
 
     uint32_t index() const { return index_; }
 
