@@ -269,14 +269,14 @@ const uchar_vector& ScriptTemplate::script() const
     return reduced_.empty() ? pattern_ : reduced_;
 }
 
-uchar_vector ScriptTemplate::script(const uchar_vector& pubkey) const
+uchar_vector ScriptTemplate::script(const uchar_vector& token) const
 {
-    std::vector<uchar_vector> pubkeys;
-    pubkeys.push_back(pubkey);
-    return script(pubkeys);
+    std::vector<uchar_vector> tokens;
+    tokens.push_back(token);
+    return script(tokens);
 }
 
-uchar_vector ScriptTemplate::script(const std::vector<uchar_vector>& pubkeys) const
+uchar_vector ScriptTemplate::script(const std::vector<uchar_vector>& tokens) const
 {
     const uchar_vector& pattern = script();
 
@@ -288,26 +288,26 @@ uchar_vector ScriptTemplate::script(const std::vector<uchar_vector>& pubkeys) co
         uchar_vector fullop = getNextOp(pattern, pos);
         if (fullop.empty()) break;
 
-        if (fullop[0] == OP_PUBKEY || fullop[0] == OP_PUBKEYHASH)
+        if (fullop[0] == OP_TOKEN || fullop[0] == OP_TOKENHASH)
         {
             if (pos >= pattern.size())
                 throw std::runtime_error("Invalid pattern.");
 
             std::size_t i = pattern[pos++];
-            if (i >= pubkeys.size())
+            if (i >= tokens.size())
             {
                 // Reduce indices so we can populate later
-                rval << fullop[0] << (i - pubkeys.size());
+                rval << fullop[0] << (i - tokens.size());
                 continue;
             }
 
             switch (fullop[0])
             {
-            case OP_PUBKEY:
-                rval << pushStackItem(pubkeys[i]);
+            case OP_TOKEN:
+                rval << pushStackItem(tokens[i]);
                 break;
-            case OP_PUBKEYHASH:
-                rval << pushStackItem(hash160(pubkeys[i]));
+            case OP_TOKENHASH:
+                rval << pushStackItem(hash160(tokens[i]));
                 break;
             default:
                 break;
@@ -322,15 +322,15 @@ uchar_vector ScriptTemplate::script(const std::vector<uchar_vector>& pubkeys) co
     return rval;
 }
 
-ScriptTemplate& ScriptTemplate::apply(const uchar_vector& pubkey)
+ScriptTemplate& ScriptTemplate::apply(const uchar_vector& token)
 {
-    reduced_ = script(pubkey);
+    reduced_ = script(token);
     return *this;
 }
 
-ScriptTemplate& ScriptTemplate::apply(const std::vector<uchar_vector>& pubkeys)
+ScriptTemplate& ScriptTemplate::apply(const std::vector<uchar_vector>& tokens)
 {
-    reduced_ = script(pubkeys);
+    reduced_ = script(tokens);
     return *this;
 }
 
