@@ -279,6 +279,7 @@ public:
     ScriptTemplate(const uchar_vector& pattern) : pattern_(pattern) { }
 
     const uchar_vector& pattern() const { return pattern_; }
+    void pattern(const uchar_vector& pattern) { pattern_ = pattern; reduced_.clear(); }
 
     const uchar_vector& script() const;
     uchar_vector script(const uchar_vector& token) const; // use index 0 only
