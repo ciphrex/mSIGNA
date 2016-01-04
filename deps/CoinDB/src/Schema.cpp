@@ -371,15 +371,23 @@ secure_bytes_t Key::try_privkey() const
  * class Account
  */
 
+Account::Account()
+{
+    scripttemplatesloaded_ = false;
+}
+
 Account::Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size, uint32_t time_created, bool compressed_keys)
     : name_(name), minsigs_(minsigs), keychains_(keychains), unused_pool_size_(unused_pool_size), time_created_(time_created), compressed_keys_(compressed_keys)
 {
+    scripttemplatesloaded_ = false;
+
     // TODO: Use exception classes
     if (name_.empty() || name[0] == '@') throw std::runtime_error("Invalid account name.");
     if (keychains_.size() > 15) throw std::runtime_error("Account can use at most 15 keychains.");
     if (minsigs > keychains_.size()) throw std::runtime_error("Account minimum signatures cannot exceed number of keychains.");
     if (minsigs < 1) throw std::runtime_error("Account must require at least one signature.");
 
+    initScriptPatterns();
     updateHash();
 }
 
@@ -397,6 +405,41 @@ void Account::updateHash()
 
     hash_ = ripemd160(sha256(data));
 }
+
+void Account::initScriptPatterns()
+{
+    using namespace CoinQ::Script;
+
+    uchar_vector redeempattern, emptysigs;
+    redeempattern << (OP_1_OFFSET + minsigs_);
+    for (unsigned int k = 0; k < keychains_.size(); k++)
+    {
+        redeempattern << OP_PUBKEY << k;
+        emptysigs << OP_0;
+    }
+    redeempattern << (OP_1_OFFSET + keychains_.size()) << OP_CHECKMULTISIG;
+    redeempattern_ = redeempattern;
+
+    uchar_vector txinpattern;
+    txinpattern << OP_0 << emptysigs << OP_TOKEN << 0;
+    txinpattern_ = txinpattern;
+
+    uchar_vector txoutpattern;
+    txoutpattern << OP_HASH160 << OP_TOKENHASH << 0 << OP_EQUAL;
+    txoutpattern_ = txoutpattern;
+}
+
+void Account::loadScriptTemplates()
+{
+    if (scripttemplatesloaded_) return;
+
+    redeemtemplate_.pattern(redeempattern_);
+    txintemplate_.pattern(txinpattern_);
+    txouttemplate_.pattern(txoutpattern_);
+
+    scripttemplatesloaded_ = true;
+}
+
 
 AccountInfo Account::accountInfo() const
 {
@@ -584,11 +627,13 @@ SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t i
     // sort keys into canonical order
     std::sort(keys_.begin(), keys_.end(), [](std::shared_ptr<Key> key1, std::shared_ptr<Key> key2) { return key1->pubkey() < key2->pubkey(); });
 
-    std::vector<bytes_t> pubkeys;
+    std::vector<uchar_vector> pubkeys;
     for (auto& key: keys_) { pubkeys.push_back(key->pubkey()); }
-    CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, account_bin->minsigs(), pubkeys);
-    txinscript_ = script.txinscript(CoinQ::Script::Script::EDIT);
-    txoutscript_ = script.txoutscript();
+
+    account_->loadScriptTemplates();
+    uchar_vector redeemscript = account_->redeemtemplate().script(pubkeys);
+    txinscript_ = account_->txintemplate().script(redeemscript);
+    txoutscript_ = account_->txouttemplate().script(redeemscript);
 
     account_bin_->setScriptLabel(index, label);
 }
