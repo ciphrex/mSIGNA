@@ -276,6 +276,7 @@ protected:
 class ScriptTemplate
 {
 public:
+    ScriptTemplate() { }
     ScriptTemplate(const uchar_vector& pattern) : pattern_(pattern) { }
 
     const uchar_vector& pattern() const { return pattern_; }
