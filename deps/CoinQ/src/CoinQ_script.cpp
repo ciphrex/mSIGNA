@@ -2,7 +2,7 @@
 //
 // CoinQ_script.cpp
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2016 Eric Lombrozo
 //
 // All Rights Reserved.
 
@@ -234,6 +234,32 @@ std::string getAddressForTxOutScript(const bytes_t& txoutscript, const unsigned 
         return "N/A";
     }
 }
+
+
+/*
+ * class SymmetricHDKeyGroup
+*/
+SymmetricHDKeyGroup::SymmetricHDKeyGroup(const std::vector<bytes_t>& extkeys)
+{
+    for (auto& extkey: extkeys)
+    {
+        keychains_.push_back(Coin::HDKeychain(extkey));
+    }
+
+    index_ = 1; // Reserve 0 for nesting
+    update();
+}
+
+void SymmetricHDKeyGroup::update()
+{
+    pubkeys_.clear();
+    for (auto& keychain: keychains_)
+    {
+        pubkeys_.push_back(keychain.getChild(index_).pubkey());
+    }
+    sort();
+}
+
 
 /*
  * class ScriptTemplate

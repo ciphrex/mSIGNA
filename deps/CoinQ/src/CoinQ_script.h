@@ -2,7 +2,7 @@
 //
 // CoinQ_script.h 
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2016 Eric Lombrozo
 //
 // All Rights Reserved.
 
@@ -12,6 +12,7 @@
 #include "CoinQ_txs.h"
 
 #include <CoinCore/CoinNodeData.h>
+#include <CoinCore/hdkeys.h>
 #include <CoinCore/typedefs.h>
 
 #include <algorithm>
@@ -222,17 +223,49 @@ class SymmetricKeyGroup
 public:
     SymmetricKeyGroup(const std::vector<bytes_t>& pubkeys) : pubkeys_(pubkeys)
     {
-        std::sort(pubkeys_.begin(), pubkeys_.end());
+        sort();
     }
 
     std::size_t count() const { return pubkeys_.size(); }
 
     const bytes_t& operator[](std::size_t i) const { return pubkeys_[i]; }
-    const std::vector<bytes_t> pubkeys() const { return pubkeys_; }
+    const std::vector<bytes_t>& pubkeys() const { return pubkeys_; }
 
-private:
-    std::vector<bytes_t> pubkeys_;    
+protected:
+    std::vector<bytes_t> pubkeys_;
+
+    SymmetricKeyGroup() { }
+    void sort() { std::sort(pubkeys_.begin(), pubkeys_.end()); }
 };
+
+class SymmetricHDKeyGroup : public SymmetricKeyGroup
+{
+public:
+    SymmetricHDKeyGroup(const std::vector<bytes_t>& extkeys);
+
+    uint32_t index() const { return index_; }
+
+    SymmetricHDKeyGroup& next()
+    {
+        index_++;
+        update();
+        return *this;
+    }
+
+    SymmetricHDKeyGroup& next(uint32_t index)
+    {
+        index_ = index;
+        update();
+        return *this;
+    }
+    
+protected:
+    std::vector<Coin::HDKeychain> keychains_;
+    uint32_t index_;
+
+    void update();
+};
+
 
 class ScriptTemplate
 {
