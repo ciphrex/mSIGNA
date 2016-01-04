@@ -48,6 +48,7 @@ public:
     const bytes_t& getSeed() const { return seed_; }
     const bytes_t& getMasterKey() const { return master_key_; }
     const bytes_t& getMasterChainCode() const { return master_chain_code_; }
+    bytes_t getExtendedKey(bool bPrivate = false) const;
 
 private:
     bytes_t seed_;
