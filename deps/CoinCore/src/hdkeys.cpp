@@ -48,6 +48,14 @@ const BigInt CURVE_ORDER(CURVE_ORDER_BYTES);
 const uint32_t BITCOIN_HD_PRIVATE_VERSION = 0x0488ade4;
 const uint32_t BITCOIN_HD_PUBLIC_VERSION  = 0x0488b21e;
 
+bytes_t HDSeed::getExtendedKey(bool bPrivate) const
+{
+    HDKeychain keychain(master_key_, master_chain_code_);
+    if (!bPrivate) { keychain = keychain.getPublic(); }
+
+    return keychain.extkey();
+}
+
 HDKeychain::HDKeychain(const bytes_t& key, const bytes_t& chain_code, uint32_t child_num, uint32_t parent_fp, uint32_t depth)
     : depth_(depth), parent_fp_(parent_fp), child_num_(child_num), chain_code_(chain_code), key_(key)
 {
