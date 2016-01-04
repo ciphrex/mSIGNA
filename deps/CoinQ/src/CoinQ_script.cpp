@@ -239,7 +239,7 @@ std::string getAddressForTxOutScript(const bytes_t& txoutscript, const unsigned 
 /*
  * class SymmetricHDKeyGroup
 */
-SymmetricHDKeyGroup::SymmetricHDKeyGroup(const std::vector<bytes_t>& extkeys)
+SymmetricHDKeyGroup::SymmetricHDKeyGroup(const std::vector<uchar_vector>& extkeys)
 {
     for (auto& extkey: extkeys)
     {
