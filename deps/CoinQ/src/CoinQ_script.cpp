@@ -269,14 +269,14 @@ const uchar_vector& ScriptTemplate::script() const
     return reduced_.empty() ? pattern_ : reduced_;
 }
 
-uchar_vector ScriptTemplate::script(const bytes_t& pubkey) const
+uchar_vector ScriptTemplate::script(const uchar_vector& pubkey) const
 {
-    std::vector<bytes_t> pubkeys;
+    std::vector<uchar_vector> pubkeys;
     pubkeys.push_back(pubkey);
     return script(pubkeys);
 }
 
-uchar_vector ScriptTemplate::script(const std::vector<bytes_t>& pubkeys) const
+uchar_vector ScriptTemplate::script(const std::vector<uchar_vector>& pubkeys) const
 {
     const uchar_vector& pattern = script();
 
@@ -322,13 +322,13 @@ uchar_vector ScriptTemplate::script(const std::vector<bytes_t>& pubkeys) const
     return rval;
 }
 
-ScriptTemplate& ScriptTemplate::apply(const bytes_t& pubkey)
+ScriptTemplate& ScriptTemplate::apply(const uchar_vector& pubkey)
 {
     reduced_ = script(pubkey);
     return *this;
 }
 
-ScriptTemplate& ScriptTemplate::apply(const std::vector<bytes_t>& pubkeys)
+ScriptTemplate& ScriptTemplate::apply(const std::vector<uchar_vector>& pubkeys)
 {
     reduced_ = script(pubkeys);
     return *this;

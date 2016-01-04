@@ -275,11 +275,11 @@ public:
     const uchar_vector& pattern() const { return pattern_; }
 
     const uchar_vector& script() const;
-    uchar_vector script(const bytes_t& pubkey) const; // use index 0 only
-    uchar_vector script(const std::vector<bytes_t>& pubkeys) const;
+    uchar_vector script(const uchar_vector& pubkey) const; // use index 0 only
+    uchar_vector script(const std::vector<uchar_vector>& pubkeys) const;
 
-    ScriptTemplate& apply(const bytes_t& pubkey);
-    ScriptTemplate& apply(const std::vector<bytes_t>& pubkeys);
+    ScriptTemplate& apply(const uchar_vector& pubkey);
+    ScriptTemplate& apply(const std::vector<uchar_vector>& pubkeys);
     ScriptTemplate& reset();
     
 private:
