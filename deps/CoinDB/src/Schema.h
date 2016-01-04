@@ -55,7 +55,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 12
-#define SCHEMA_VERSION      17
+#define SCHEMA_VERSION      18
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -649,7 +649,7 @@ const uint32_t DEFAULT_UNUSED_POOL_SIZE = 25;
 class Account : public std::enable_shared_from_this<Account>
 {
 public:
-    Account() { }
+    Account();
     Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = DEFAULT_UNUSED_POOL_SIZE, uint32_t time_created = time(NULL), bool compressed_keys = true);
 
     void updateHash();
@@ -678,6 +678,11 @@ public:
     void compressed_keys(bool compressed_keys) { compressed_keys_ = compressed_keys; }
     bool compressed_keys() const { return compressed_keys_; }
 
+    void loadScriptTemplates();
+    const CoinQ::Script::ScriptTemplate& redeemtemplate() const { return redeemtemplate_; }
+    const CoinQ::Script::ScriptTemplate& txintemplate() const { return txintemplate_; }
+    const CoinQ::Script::ScriptTemplate& txouttemplate() const { return txouttemplate_; }
+
 private:
     friend class odb::access;
 
@@ -703,6 +708,21 @@ private:
 
     bool compressed_keys_;
 
+    bytes_t redeempattern_;
+    bytes_t txinpattern_;
+    bytes_t txoutpattern_;
+
+    void initScriptPatterns();
+
+    #pragma db transient
+    bool scripttemplatesloaded_;
+    #pragma db transient
+    CoinQ::Script::ScriptTemplate redeemtemplate_;
+    #pragma db transient
+    CoinQ::Script::ScriptTemplate txintemplate_;
+    #pragma db transient
+    CoinQ::Script::ScriptTemplate txouttemplate_;
+
     friend class boost::serialization::access;
     template<class Archive>
     void save(Archive& ar, const unsigned int version) const
@@ -725,6 +745,13 @@ private:
         n = bins_.size();
         ar & n;
         for (auto& bin: bins_)              { ar & *bin; }
+
+        if (version >= 3)
+        {
+            ar & redeempattern_;
+            ar & txinpattern_;
+            ar & txoutpattern_;
+        }
     }
     template<class Archive>
     void load(Archive& ar, const unsigned int version)
@@ -763,6 +790,17 @@ private:
             ar & *bin;
             bin->account(shared_from_this());
             bins_.push_back(bin);
+        }
+
+        if (version >= 3)
+        {
+            ar & redeempattern_;
+            ar & txinpattern_;
+            ar & txoutpattern_;
+        }
+        else
+        {
+            initScriptPatterns();
         }
 
         updateHash();
@@ -1921,6 +1959,6 @@ BOOST_CLASS_VERSION(CoinDB::Tx, 3)
 
 BOOST_CLASS_VERSION(CoinDB::Keychain, 3)
 BOOST_CLASS_VERSION(CoinDB::AccountBin, 2)
-BOOST_CLASS_VERSION(CoinDB::Account, 2)
+BOOST_CLASS_VERSION(CoinDB::Account, 3)
 
 #endif // COINDB_SCHEMA_H

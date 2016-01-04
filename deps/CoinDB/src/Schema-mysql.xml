@@ -1,4 +1,12 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="mysql" version="1">
+  <changeset version="18">
+    <alter-table name="Account">
+      <add-column name="redeempattern" type="VARBINARY(255)" null="false"/>
+      <add-column name="txinpattern" type="VARBINARY(255)" null="false"/>
+      <add-column name="txoutpattern" type="VARBINARY(255)" null="false"/>
+    </alter-table>
+  </changeset>
+
   <changeset version="17">
     <alter-table name="Tx">
       <add-column name="propagation_protocol" type="VARCHAR(255)" null="false"/>
