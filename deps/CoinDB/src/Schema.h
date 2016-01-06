@@ -55,7 +55,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 12
-#define SCHEMA_VERSION      18
+#define SCHEMA_VERSION      19
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -682,6 +682,7 @@ public:
     const CoinQ::Script::ScriptTemplate& redeemtemplate() const { return redeemtemplate_; }
     const CoinQ::Script::ScriptTemplate& txintemplate() const { return txintemplate_; }
     const CoinQ::Script::ScriptTemplate& txouttemplate() const { return txouttemplate_; }
+    const CoinQ::Script::ScriptTemplate& inputetemplate() const { return inputtemplate_; }
 
 private:
     friend class odb::access;
@@ -711,6 +712,7 @@ private:
     bytes_t redeempattern_;
     bytes_t txinpattern_;
     bytes_t txoutpattern_;
+    bytes_t inputpattern_;
 
     void initScriptPatterns();
 
@@ -722,6 +724,8 @@ private:
     CoinQ::Script::ScriptTemplate txintemplate_;
     #pragma db transient
     CoinQ::Script::ScriptTemplate txouttemplate_;
+    #pragma db transient
+    CoinQ::Script::ScriptTemplate inputtemplate_;
 
     friend class boost::serialization::access;
     template<class Archive>
@@ -1062,14 +1066,24 @@ private:
 class TxIn
 {
 public:
+    enum type_t
+    {
+        UNDEFINED,
+        P2SH,
+        WITNESS_V0,
+        WITNESS_V1,
+    };
+
     TxIn() { }
-    TxIn(const bytes_t& outhash, uint32_t outindex, const bytes_t& script, uint32_t sequence)
-        : outhash_(outhash), outindex_(outindex), script_(script), sequence_(sequence) { }
+    TxIn(const bytes_t& outhash, uint32_t outindex, const bytes_t& script, uint32_t sequence, const std::vector<bytes_t>& scriptinputs = const std::vector<bytes_t>)
+        : outhash_(outhash), outindex_(outindex), script_(script), sequence_(sequence), scriptinputs_(scriptinputs) { }
 
     TxIn(const Coin::TxIn& coin_txin);
     TxIn(const bytes_t& raw);
 
-	void fromCoinCore(const Coin::TxIn& coin_txin);
+    type_t type() const;
+
+    void fromCoinCore(const Coin::TxIn& coin_txin);
     Coin::TxIn toCoinCore() const;
 
     unsigned long id() const { return id_; }
@@ -1092,6 +1106,12 @@ public:
     void outpoint(std::shared_ptr<TxOut> outpoint);
     const std::shared_ptr<TxOut> outpoint() const { return outpoint_.lock(); }
 
+    void pushScriptInput(const bytes_t& scriptinput) { scriptinputs_.push_back(scriptinput);    
+    void clearScriptInputs() { scriptinputs_.clear(); }
+    const std::vector<bytes_t>& scriptinputs() const { return scriptinputs_; }
+
+    static std::vector<bytes_t> emptyScriptInputs(std::size_t n);
+
     std::string toJson() const;
 
 private:
@@ -1113,15 +1133,48 @@ private:
     #pragma db null
     std::weak_ptr<TxOut> outpoint_;
 
+    #pragma db value_not_null \
+        id_column("object_id") value_column("value")
+    std::vector<bytes_t> scriptinputs_;
+
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int /*version*/)
+    void save(Archive& ar, const unsigned int version) const
     {
         ar & outhash_;
         ar & outindex_;
         ar & script_;
         ar & sequence_;
+
+        if (version >= 2)
+        {
+            uint32_t n = scriptinputs_.size();
+            ar & n;
+            for (auto& scriptinput: scriptinputs_)    { ar & scriptinput; }
+        }
     }
+    template<class Archive>
+    void load(Archive& ar, const unsigned int version)
+    { 
+        ar & outhash_;
+        ar & outindex_;
+        ar & script_;
+        ar & sequence_;
+
+        if (version >= 2)
+        {
+            uint32_t n;
+            ar & n;
+            scriptinputs_.clear();
+            for (uint32_t i = 0; i < n; i++)
+            {
+                bytes_t scriptinput;
+                ar & scriptinput;
+                scriptinputs_.push_back(scriptinput);
+            }
+        }
+    }
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
 typedef std::vector<std::shared_ptr<TxIn>> txins_t;
@@ -1953,7 +2006,7 @@ struct IncompleteBlockCountView
 BOOST_CLASS_VERSION(CoinDB::BlockHeader, 1)
 BOOST_CLASS_VERSION(CoinDB::MerkleBlock, 1)
 
-BOOST_CLASS_VERSION(CoinDB::TxIn, 1)
+BOOST_CLASS_VERSION(CoinDB::TxIn, 2)
 BOOST_CLASS_VERSION(CoinDB::TxOut, 1)
 BOOST_CLASS_VERSION(CoinDB::Tx, 3)
 
