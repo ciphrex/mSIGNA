@@ -410,22 +410,25 @@ void Account::initScriptPatterns()
 {
     using namespace CoinQ::Script;
 
-    uchar_vector redeempattern, emptysigs;
+    uchar_vector redeempattern, inputpattern;
     redeempattern << (OP_1_OFFSET + minsigs_);
+    inputpattern << OP_0;
     for (unsigned int k = 0; k < keychains_.size(); k++)
     {
         redeempattern << OP_PUBKEY << k;
-        emptysigs << OP_0;
+        inputpattern << OP_SIG << k;
     }
     redeempattern << (OP_1_OFFSET + keychains_.size()) << OP_CHECKMULTISIG;
     redeempattern_ = redeempattern;
+    inputpattern_ = inputpattern;
 
+    // m-of-n p2sh
     uchar_vector txinpattern;
-    txinpattern << OP_0 << emptysigs << OP_TOKEN << 0;
+    txinpattern << OP_TOKEN << 0; // OP_TOKEN <- redeemscript
     txinpattern_ = txinpattern;
 
     uchar_vector txoutpattern;
-    txoutpattern << OP_HASH160 << OP_TOKENHASH << 0 << OP_EQUAL;
+    txoutpattern << OP_HASH160 << OP_TOKENHASH << 0 << OP_EQUAL; // OP_TOKENHASH <- hash160(redeemscript)
     txoutpattern_ = txoutpattern;
 }
 
@@ -436,6 +439,7 @@ void Account::loadScriptTemplates()
     redeemtemplate_.pattern(redeempattern_);
     txintemplate_.pattern(txinpattern_);
     txouttemplate_.pattern(txoutpattern_);
+    inputtemplate_.pattern(inputtemplate_);
 
     scripttemplatesloaded_ = true;
 }
@@ -768,6 +772,25 @@ TxIn::TxIn(const bytes_t& raw)
 	fromCoinCore(coin_txin);
 }
 
+type_t TxIn::type() const
+{
+    if (script.size() == 0)
+        return UNDEFINED;
+
+    if (script.size() <= 32)
+    {
+        if (script[0] == script.size() - 1)
+            return WITNESS_V0;
+
+        return P2SH;
+    }
+
+    if (script.size() == 33 && script[0] == script.size() - 1)
+        return WITNESS_V1;
+
+    return P2SH;
+}
+
 void TxIn::fromCoinCore(const Coin::TxIn& coin_txin)
 {
     outhash_ = coin_txin.getOutpointHash();
@@ -826,6 +849,13 @@ std::string TxIn::toJson() const
        << "\"sequence\":" << sequence_
        << "}";
     return ss.str();
+}
+
+static std::vector<bytes_t> emptyScriptInputs(std::size_t n)
+{
+    std::vector<bytes_t> scriptinputs;
+    for (std::size_t k = 0; k < n; k++) { scriptinputs.push_back(bytes_t()); }
+    return scriptinputs;
 }
 
 
