@@ -301,7 +301,7 @@ public:
     WitnessProgram(const WitnessProgram& wp) : redeemscript_(wp.redeemscript_) { update(); }
     WitnessProgram(const uchar_vector& redeemscript) : redeemscript_(redeemscript) { update(); }
 
-    int version() const { return (redeemscript_.size() <= 32) ? 0 : 1; }
+    int version() const { return (redeemscript_.size() < 32) ? 0 : 1; }
 
     const uchar_vector& witnessscript() const { return witnessscript_; }
     const uchar_vector& redeemscript() const { return redeemscript_; }
