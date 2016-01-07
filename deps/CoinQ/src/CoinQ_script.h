@@ -412,9 +412,9 @@ public:
 
     bytes_t txinscript(sigtype_t sigtype) const;
     bytes_t txoutscript() const;
+    Coin::ScriptWitness scriptwitness(sigtype_t sigtype) const;
 
     const bytes_t& redeemscript() const { return redeemscript_; }
-    const bytes_t& hash() const { return hash_; }
 
     unsigned int sigsneeded() const; // returns how many signatures are still needed
     std::vector<bytes_t> missingsigs() const; // returns pubkeys for which we are still missing signatures
@@ -430,7 +430,6 @@ private:
     std::vector<bytes_t> sigs_; // empty vectors for missing signatures
 
     bytes_t redeemscript_; // empty if type is not script hash
-    bytes_t hash_;
 };
 
 class Signer

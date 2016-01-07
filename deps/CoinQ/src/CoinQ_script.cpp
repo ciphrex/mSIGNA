@@ -893,7 +893,7 @@ bytes_t SignableTxIn::txinscript(sigtype_t sigtype) const
     {
     case PAY_TO_M_OF_N_SCRIPT_HASH:
         rval << OP_0;
-        for (auto& sig: sigs_) { rval << pushStackItem(sig); }
+        for (auto& sig: sigs_) { if (!sig.empty() || sigtype == EDIT) rval << pushStackItem(sig); }
         rval << pushStackItem(redeemscript_);
         break;
 
@@ -927,6 +927,28 @@ bytes_t SignableTxIn::txoutscript() const
     }
 
     return rval; 
+}
+
+Coin::ScriptWitness SignableTxIn::scriptwitness(sigtype_t sigtype) const
+{
+    Coin::ScriptWitness scriptwitness;
+
+    switch (type_)
+    {
+    case PAY_TO_M_OF_N_SCRIPT_HASH:
+        break;
+
+    case WITNESS_PAY_TO_M_OF_N:
+        scriptwitness.clear();
+        scriptwitness.push(bytes_t());
+        for (auto& sig: sigs_) { if (!sig.empty() || sigtype == EDIT) scriptwitness.push(sig); }
+        break;
+
+    default:
+        break;
+    }
+
+    return scriptwitness; 
 }
 
 unsigned int SignableTxIn::sigsneeded() const
