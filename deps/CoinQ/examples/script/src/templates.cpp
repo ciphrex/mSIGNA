@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
             if (minsigs < 1 || minsigs > 15)
                 throw runtime_error("Invalid minsigs.");
 
-            vector<bytes_t> pubkeys;
+            vector<uchar_vector> pubkeys;
             for (int i = 3; i < argc; i++)
             {
                 uchar_vector pubkey(argv[i]);
