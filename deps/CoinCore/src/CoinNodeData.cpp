@@ -1679,7 +1679,7 @@ uchar_vector Transaction::getSigHash(uint32_t hashType, uint index, const uchar_
     if (hashType != SIGHASH_ALL)
         throw runtime_error("Unsupported hash type.");
 
-    if (value == 0)
+    if (witness.txinwits.size() <= index || witness.txinwits[index].scriptWitness.isNull())
     {
         // Old sighash
         Transaction copy(*this);
