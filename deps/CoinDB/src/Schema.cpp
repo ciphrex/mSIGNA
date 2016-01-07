@@ -410,12 +410,14 @@ void Account::initScriptPatterns()
 {
     using namespace CoinQ::Script;
 
-    uchar_vector redeempattern, inputpattern;
+    uchar_vector redeempattern, txinpattern, inputpattern;
     redeempattern << (OP_1_OFFSET + minsigs_);
+    txinpattern << OP_0;
     inputpattern << OP_0;
     for (unsigned int k = 0; k < keychains_.size(); k++)
     {
         redeempattern << OP_PUBKEY << k;
+        txinpattern << OP_0;
         inputpattern << OP_SIG << k;
     }
     redeempattern << (OP_1_OFFSET + keychains_.size()) << OP_CHECKMULTISIG;
@@ -423,8 +425,7 @@ void Account::initScriptPatterns()
     inputpattern_ = inputpattern;
 
     // m-of-n p2sh
-    uchar_vector txinpattern;
-    txinpattern << OP_TOKEN << 0; // OP_TOKEN <- redeemscript
+    txinpattern << OP_TOKEN << 0; // OP_TOKEN <- inputs + redeemscript
     txinpattern_ = txinpattern;
 
     uchar_vector txoutpattern;
@@ -439,7 +440,7 @@ void Account::loadScriptTemplates()
     redeemtemplate_.pattern(redeempattern_);
     txintemplate_.pattern(txinpattern_);
     txouttemplate_.pattern(txoutpattern_);
-    inputtemplate_.pattern(inputtemplate_);
+    inputtemplate_.pattern(inputpattern_);
 
     scripttemplatesloaded_ = true;
 }
@@ -763,32 +764,13 @@ std::string MerkleBlock::toJson() const
 
 TxIn::TxIn(const Coin::TxIn& coin_txin)
 {
-	fromCoinCore(coin_txin);
+    fromCoinCore(coin_txin);
 }
 
 TxIn::TxIn(const bytes_t& raw)
 {
     Coin::TxIn coin_txin(raw);
-	fromCoinCore(coin_txin);
-}
-
-type_t TxIn::type() const
-{
-    if (script.size() == 0)
-        return UNDEFINED;
-
-    if (script.size() <= 32)
-    {
-        if (script[0] == script.size() - 1)
-            return WITNESS_V0;
-
-        return P2SH;
-    }
-
-    if (script.size() == 33 && script[0] == script.size() - 1)
-        return WITNESS_V1;
-
-    return P2SH;
+    fromCoinCore(coin_txin);
 }
 
 void TxIn::fromCoinCore(const Coin::TxIn& coin_txin)
@@ -1115,7 +1097,18 @@ Coin::Transaction Tx::toCoinCore() const
 {
     Coin::Transaction coin_tx;
     coin_tx.version = version_;
-    for (auto& txin:  txins_) { coin_tx.inputs.push_back(txin->toCoinCore()); }
+    Coin::TxWitness witness;
+    for (auto& txin: txins_)
+    {
+        coin_tx.inputs.push_back(txin->toCoinCore());
+        Coin::TxInWitness txinwit;
+        for (auto& stackitem: txin->scriptwitnessstack()) { txinwit.push(stackitem); }
+        witness.txinwits.push_back(txinwit);
+    }
+    if (!witness.isNull())
+    {
+        coin_tx.witness = witness;
+    }
     for (auto& txout: txouts_) { coin_tx.outputs.push_back(txout->toCoinCore()); }
     coin_tx.lockTime = locktime_;
     return coin_tx;
@@ -1187,8 +1180,18 @@ void Tx::fromCoinCore(const Coin::Transaction& coin_tx)
     {
         std::shared_ptr<TxIn> txin(new TxIn(coin_txin));
         txin->tx(shared_from_this());
-        txin->txindex(i++);
+        txin->txindex(i);
+        if (i < (int)coin_tx.witness.txinwits.size())
+        {
+            std::vector<bytes_t> stack;
+            for (auto& stackitem: coin_tx.witness.txinwits[i].scriptWitness.stack)
+            {
+                stack.push_back(stackitem);
+            } 
+            txin->scriptwitnessstack(stack);
+        }
         txins_.push_back(txin);
+        i++;
     }
 
     i = 0;
