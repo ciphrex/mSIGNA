@@ -90,7 +90,7 @@ uint32_t getDataLength(const uchar_vector& script, uint& pos)
     }
 }
 
-uchar_vector getNextOp(const bytes_t& script, uint& pos)
+uchar_vector getNextOp(const bytes_t& script, uint& pos, bool pushdataonly)
 {
     if (script.size() < pos)
         throw std::runtime_error("Script pos past end.");
@@ -100,9 +100,16 @@ uchar_vector getNextOp(const bytes_t& script, uint& pos)
 
     uint start = pos;
     unsigned char op = script[pos++];
-    if (op <= 0x4b)
+    if (op >= OP_1 && op <= OP_16)
+    {
+        uchar_vector rval;
+        rval.push_back(op - OP_1_OFFSET);
+        return rval;
+    }
+    else if (op <= 0x4b)
     {
         pos += op;
+        if (pushdataonly) { start += 1; }
     }
     else if (op == 0x4c)
     {
@@ -111,6 +118,7 @@ uchar_vector getNextOp(const bytes_t& script, uint& pos)
 
         uint32_t len = script[pos++];
         pos += len;
+        if (pushdataonly) { start += 2; }
     }
     else if (op == 0x4d)
     {
@@ -121,6 +129,7 @@ uchar_vector getNextOp(const bytes_t& script, uint& pos)
                         (uint32_t)script[pos++] << 8;
 
         pos += len;
+        if (pushdataonly) { start += 3; }
     }
     else if (op == 0x4e)
     {
@@ -133,6 +142,11 @@ uchar_vector getNextOp(const bytes_t& script, uint& pos)
                         (uint32_t)script[pos++] << 24;
 
         pos += len;
+        if (pushdataonly) { start += 5; }
+    }
+    else if (pushdataonly)
+    {
+        return uchar_vector();
     }
 
     if (script.size() < pos)
@@ -733,6 +747,184 @@ unsigned int Script::mergesigs(const Script& other)
     return sigsadded;
 }
 
+
+void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount, bool clearinvalidsigs)
+{
+    redeemscript_.clear();
+    sigs_.clear();
+
+    if (nIn >= tx.inputs.size())
+        throw std::runtime_error("SignableTxIn::setTxIn() - nIn out of range.");
+
+    const bytes_t& txinscript = tx.inputs[nIn].scriptSig;
+    const std::vector<uchar_vector>& stack = tx.inputs[nIn].scriptWitness.stack;
+    std::vector<bytes_t> objects;
+    unsigned int pos = 0;
+    while (pos < txinscript.size())
+    {
+        std::size_t size = getDataLength(txinscript, pos);
+        if (pos + size > txinscript.size())
+            throw std::runtime_error("SignableTxIn::setTxIn() - Push operation exceeds data size.");
+
+        objects.push_back(bytes_t(txinscript.begin() + pos, txinscript.begin() + pos + size));
+        pos += size;
+    }
+
+    std::vector<bytes_t> sigs;
+    type_ = UNKNOWN;
+    if (objects.size() == 1)
+    {
+        WitnessProgram::version_t wpVersion = WitnessProgram::getWitnessVersion(txinscript);
+        switch (wpVersion)
+        {
+        case WitnessProgram::WITNESS_V1:
+            if (stack.empty()) return;
+            redeemscript_ = stack.back();
+            for (std::size_t i = 1; i + 1 < stack.size(); i++) { sigs.push_back(stack[i]); }
+
+        case WitnessProgram::WITNESS_V0:
+        default:
+            return;
+        }
+    }
+    else if (objects.size() == 2)
+    {
+        type_ = PAY_TO_PUBKEY_HASH;
+        pubkeys_.push_back(objects[1]);
+        minsigs_ = 1;
+        sigs.push_back(objects[0]);
+    }
+    else if (objects.size() >= 3)
+    {
+        redeemscript_ = objects.back();
+        for (std::size_t i = 1; i + 1 < objects.size(); i++) { sigs.push_back(objects[i]); }
+    }
+
+    if (!redeemscript_.empty() || redeemscript_.size() < 3) return;
+
+    if (redeemscript_.size() >= 3)
+    {
+        // Parse redeemscript
+        // Get minsigs. Size opcode is offset by 0x50.
+        unsigned char byte = redeemscript_[0];
+        if (byte < OP_1 || byte > OP_16) return;
+        minsigs_ = byte - OP_1_OFFSET;
+
+        unsigned char numkeys = 0;
+        unsigned int pos = 1;
+        while (true)
+        {
+            byte = redeemscript_[pos++];
+            if (pos >= redeemscript_.size()) return;
+
+            if (byte >= OP_1 && byte <= OP_16)
+            {
+                // Interpret byte as signature counter.
+                if (byte - OP_1_OFFSET != numkeys) return;
+
+                if (numkeys < minsigs_) return;
+
+                // Redeemscript must terminate with OP_CHECKMULTISIG
+                if (redeemscript_[pos++] != 0xae || pos > redeemscript_.size()) return;
+
+                break;
+            }
+            // Interpret byte as pubkey size
+            if (byte > 0x4b || pos + byte > redeemscript_.size()) return;
+
+            numkeys++;
+            if (numkeys > 16) throw std::runtime_error("Public key maximum of 16 exceeded.");
+
+            pubkeys_.push_back(bytes_t(redeemscript_.begin() + pos, redeemscript_.begin() + pos + byte));
+            pos += byte;
+        }
+
+        type_ = (stack.empty() ? PAY_TO_M_OF_N_SCRIPT_HASH : WITNESS_PAY_TO_M_OF_N);
+    }
+
+    if (sigs.size() > pubkeys_.size()) throw std::runtime_error("Too many signatures.");
+
+    // Validate signatures.
+    unsigned int iSig = 0;
+    unsigned int nValidSigs = 0;
+    for (auto& pubkey: pubkeys_)
+    {
+        // If we already have enough valid signatures or there are no more signatures or signature is a placeholder
+        if (nValidSigs == minsigs_ || iSig >= sigs.size() || sigs[iSig].empty())
+        {
+            // Add or keep placeholder.
+            sigs_.push_back(bytes_t());
+            iSig++;
+        }
+        else
+        {
+            // TODO: add support for other hash types.
+            if (sigs[iSig].back() != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
+
+            // Remove hash type byte.
+            bytes_t signature(sigs[iSig].begin(), sigs[iSig].end() - 1);
+
+            // Verify signature.
+            bytes_t sighash = tx.getSigHash(SIGHASH_ALL, nIn, redeemscript_, outpointamount);
+            secp256k1_key key;
+            key.setPubKey(pubkey);
+            if (secp256k1_verify(key, sighash, signature))
+            {
+                // Signature is valid. Keep it.
+                sigs_.push_back(sigs[iSig]);
+                iSig++;
+                nValidSigs++;
+            }
+            else
+            {
+                // Signature is invalid. Add placeholder for this pubkey and test it for next pubkey
+                sigs_.push_back(bytes_t());
+            }
+        }
+        if (!clearinvalidsigs && iSig < sigs.size()) throw std::runtime_error("Invalid signature.");
+    }
+}
+
+bytes_t SignableTxIn::txinscript(sigtype_t sigtype) const
+{
+    return bytes_t();
+}
+
+bytes_t SignableTxIn::txoutscript() const
+{
+    return bytes_t();
+}
+
+unsigned int SignableTxIn::sigsneeded() const
+{
+    return 0;
+}
+
+std::vector<bytes_t> SignableTxIn::missingsigs() const
+{
+    return std::vector<bytes_t>();
+}
+
+std::vector<bytes_t> SignableTxIn::presentsigs() const
+{
+    return std::vector<bytes_t>();
+}
+
+bool SignableTxIn::addSig(const bytes_t& pubkey, const bytes_t& sig)
+{
+    return false;
+}
+
+void SignableTxIn::clearSigs()
+{
+}
+
+unsigned int SignableTxIn::mergesigs(const SignableTxIn& other)
+{
+    return 0;
+}
+
+
 void Signer::setTx(const Coin::Transaction& tx, bool clearinvalidsigs)
 {
     tx_ = tx;
@@ -760,10 +952,35 @@ void Signer::setTx(const Coin::Transaction& tx, bool clearinvalidsigs)
     }
 }
 
-std::vector<bytes_t> Signer::sign(const std::vector<secure_bytes_t>& privkeys)
+unsigned int Signer::sigsneeded(std::size_t nIn) const
+{
+    return 0;
+}
+
+std::vector<bytes_t> Signer::missingsigs(std::size_t nIn) const
 {
     return std::vector<bytes_t>();
 }
+
+std::vector<bytes_t> Signer::presentsigs(std::size_t nIn) const
+{
+    return std::vector<bytes_t>();
+}
+
+bool Signer::addSig(std::size_t nIn, const bytes_t& pubkey, const bytes_t& sig)
+{
+    return false;
+}
+
+void Signer::clearSigs(std::size_t nIn)
+{
+}
+
+unsigned int mergesigs(std::size_t nIn, const Coin::TxIn& other)
+{
+    return 0;
+}
+
 
 }
 }

@@ -180,9 +180,10 @@ uint32_t getDataLength(const uchar_vector& script, uint& pos);
  * getNextOp
  *      precondition: pos indicates the position in script
  *      postcondition: pos is advanced to the start of the next operation or end of script
- *      returns: the complete op starting at pos including any data if pushed
+ *      returns: the complete op starting at pos including any data if pushed - if pushdataonly is true,
+ *               only the data pushed to the stack is returned
 */
-uchar_vector getNextOp(const bytes_t& script, uint& pos);
+uchar_vector getNextOp(const bytes_t& script, uint& pos, bool pushdataonly = false);
 
 // TODO: Get rid of PUBKEY in names below
 enum ScriptType {
@@ -380,6 +381,58 @@ private:
 
 typedef std::vector<Script> scripts_t;
 
+class SignableTxIn
+{
+public:
+    enum type_t
+    {
+        UNKNOWN,
+        PAY_TO_PUBKEY,
+        PAY_TO_PUBKEY_HASH,
+        PAY_TO_M_OF_N_SCRIPT_HASH,
+        WITNESS_PAY_TO_PUBKEY,
+        WITNESS_PAY_TO_M_OF_N,
+    };
+
+    explicit SignableTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0, bool clearinvalidsigs = false) { setTxIn(tx, nIn, outpointamount, clearinvalidsigs); }
+
+    void setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0, bool clearinvalidsigs = false);
+
+    type_t type() const { return type_; }
+    unsigned int minsigs() const { return minsigs_; }
+    const std::vector<bytes_t>& pubkeys() const { return pubkeys_; }
+    const std::vector<bytes_t>& sigs() const { return sigs_; }
+
+    enum sigtype_t { EDIT, SIGN, BROADCAST }; 
+    /*
+     * EDIT         - includes 0-length placeholders for missing signatures
+     * SIGN         - format the script for signing
+     * BROADCAST    - format the script for broadcast (remove 0-length placeholders)
+    */
+
+    bytes_t txinscript(sigtype_t sigtype) const;
+    bytes_t txoutscript() const;
+
+    const bytes_t& redeemscript() const { return redeemscript_; }
+    const bytes_t& hash() const { return hash_; }
+
+    unsigned int sigsneeded() const; // returns how many signatures are still needed
+    std::vector<bytes_t> missingsigs() const; // returns pubkeys for which we are still missing signatures
+    std::vector<bytes_t> presentsigs() const; // returns pubkeys for which we have signatures
+    bool addSig(const bytes_t& pubkey, const bytes_t& sig); // returns true iff signature was absent and has been added
+    void clearSigs(); // resets all signatures to 0-length placeholders
+    unsigned int mergesigs(const SignableTxIn& other); // merges the signatures from another input that is otherwise identical. returns number of signatures added.
+
+private:
+    type_t type_;
+    unsigned int minsigs_;
+    std::vector<bytes_t> pubkeys_;
+    std::vector<bytes_t> sigs_; // empty vectors for missing signatures
+
+    bytes_t redeemscript_; // empty if type is not script hash
+    bytes_t hash_;
+};
+
 class Signer
 {
 public:
@@ -389,8 +442,12 @@ public:
     void setTx(const Coin::Transaction& tx, bool clearinvalidsigs = false);
     const Coin::Transaction& getTx() const { return tx_; }
 
-    // sign returns a vector of the pubkeys for which signatures were added.
-    std::vector<bytes_t> sign(const std::vector<secure_bytes_t>& privkeys);
+    unsigned int sigsneeded(std::size_t nIn) const; // returns how many signatures are still needed
+    std::vector<bytes_t> missingsigs(std::size_t nIn) const; // returns pubkeys for which we are still missing signatures
+    std::vector<bytes_t> presentsigs(std::size_t nIn) const; // returns pubkeys for which we have signatures
+    bool addSig(std::size_t nIn, const bytes_t& pubkey, const bytes_t& sig); // returns true iff signature was absent and has been added
+    void clearSigs(std::size_t nIn); // resets all signatures
+    unsigned int mergesigs(std::size_t nIn, const Coin::TxIn& other); // merges the signatures from another input that is otherwise identical. returns number of signatures added.
 
     bool isSigned() const { return isSigned_; }
 
