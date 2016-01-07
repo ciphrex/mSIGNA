@@ -155,6 +155,7 @@ enum
 {
     OP_TOKENHASH = OP_PUBKEYHASH,
     OP_TOKEN,
+    OP_SIG,
 };
 
 /*
