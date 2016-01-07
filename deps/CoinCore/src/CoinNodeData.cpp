@@ -1132,6 +1132,51 @@ string OutPoint::toIndentedString(uint spaces) const
 
 ///////////////////////////////////////////////////////////////////////////////
 //
+// class ScriptWitness implementation
+//
+uint64_t ScriptWitness::getSize() const
+{
+    uint64_t rval = VarInt(stack.size()).getSize();
+    for (auto& item: stack)
+    {
+        rval += VarInt(item.size()).getSize();
+        rval += item.size();
+    }
+    return rval;
+}
+
+uchar_vector ScriptWitness::getSerialized() const
+{
+    uchar_vector rval = VarInt(stack.size()).getSerialized();
+    for (auto& item: stack)
+    {
+        rval += VarInt(item.size()).getSerialized();
+        rval += item;
+    }
+    return rval;
+    
+}
+
+void ScriptWitness::setSerialized(const uchar_vector& bytes)
+{
+    clear();
+
+    VarInt count(bytes);
+    uint pos = count.getSize();
+    for (uint i = 0; i < count.value; i++)
+    {
+        VarInt size(uchar_vector(bytes.begin() + pos, bytes.end())); pos += size.getSize();
+        if (bytes.size() < pos + size.value)
+            throw runtime_error("Invalid data - ScriptWitness parse error");
+
+        uchar_vector item;
+        item.assign(bytes.begin() + pos, bytes.begin() + pos + size.value); pos += size.value;
+        stack.push_back(item);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
 // class TxIn implementation
 //
 TxIn::TxIn(const OutPoint& previousOut, const string& scriptSigHex, uint32_t sequence)
@@ -1311,127 +1356,6 @@ string TxOut::toJson() const
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// class ScriptWitness implementation
-//
-uint64_t ScriptWitness::getSize() const
-{
-    uint64_t rval = VarInt(stack.size()).getSize();
-    for (auto& item: stack)
-    {
-        rval += VarInt(item.size()).getSize();
-        rval += item.size();
-    }
-    return rval;
-}
-
-uchar_vector ScriptWitness::getSerialized() const
-{
-    uchar_vector rval = VarInt(stack.size()).getSerialized();
-    for (auto& item: stack)
-    {
-        rval += VarInt(item.size()).getSerialized();
-        rval += item;
-    }
-    return rval;
-    
-}
-
-void ScriptWitness::setSerialized(const uchar_vector& bytes)
-{
-    clear();
-
-    VarInt count(bytes);
-    uint pos = count.getSize();
-    for (uint i = 0; i < count.value; i++)
-    {
-        VarInt size(uchar_vector(bytes.begin() + pos, bytes.end())); pos += size.getSize();
-        if (bytes.size() < pos + size.value)
-            throw runtime_error("Invalid data - ScriptWitness parse error");
-
-        uchar_vector item;
-        item.assign(bytes.begin() + pos, bytes.begin() + pos + size.value); pos += size.value;
-        stack.push_back(item);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//
-// class TxWitness implementation
-//
-bool TxWitness::isNull() const
-{
-    for (auto& txinwit: txinwits)
-    {
-        if (!txinwit.isNull()) return false;
-    }
-
-    return true;
-}
-
-uint64_t TxWitness::getSize(bool withCount) const
-{
-    uint64_t rval = 0;
-    if (!isNull())
-    {
-        if (withCount)
-        {
-            rval += VarInt(txinwits.size()).getSize();
-        }
-
-        for (auto& txinwit: txinwits)
-        {
-            rval += txinwit.getSize();
-        }
-    }
-    return rval;
-}
-
-uchar_vector TxWitness::getSerialized(bool withCount) const
-{
-    uchar_vector rval;
-    if (!isNull())
-    {
-        if (withCount)
-        {
-            rval += VarInt(txinwits.size()).getSerialized();
-        }
-
-        for (auto& txinwit: txinwits)
-        {
-            rval += txinwit.getSerialized();
-        }
-    }
-    return rval;
-    
-}
-
-void TxWitness::setSerialized(const uchar_vector& bytes)
-{
-    if (bytes.size() == 0)
-    {
-        clear();
-    }
-    else
-    {
-        VarInt count(bytes);
-        setSerialized(count.value, uchar_vector(bytes.begin() + count.getSize(), bytes.end()));
-    }
-}
-
-void TxWitness::setSerialized(uint count, const uchar_vector& bytes)
-{
-    clear();
-
-    uint pos = 0;
-    for (uint i = 0; i < count; i++)
-    {
-        TxInWitness txinwit(uchar_vector(bytes.begin() + pos, bytes.end())); pos += txinwit.getSize();
-        txinwits.push_back(txinwit);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-//
 // class Transaction implementation
 //
 Transaction::Transaction(const string& hex)
@@ -1470,10 +1394,10 @@ uint64_t Transaction::getSizeWithWitness() const
     for (i = 0; i < this->outputs.size(); i++)
         count += this->outputs[i].getSize();
 
-    if (!witness.isNull())
+    if (hasWitness())
     {
         count += 2; // mask + flags
-        count += witness.getSize(false); // without txinwit count
+        for (auto& input: inputs) { count += input.scriptWitness.getSize(); }
     }
 
     return count;
@@ -1503,10 +1427,10 @@ uchar_vector Transaction::getSerialized(bool includeScriptSigLength) const
 
 uchar_vector Transaction::getSerializedWithWitness() const
 {
-    if (witness.isNull()) return getSerialized();
+    if (!hasWitness()) return getSerialized();
 
     // version
-    uchar_vector rval = uint_to_vch(this->version, LITTLE_ENDIAN_);
+    uchar_vector rval = uint_to_vch(version, LITTLE_ENDIAN_);
 
     // mask
     rval.push_back(0x00);
@@ -1514,22 +1438,19 @@ uchar_vector Transaction::getSerializedWithWitness() const
     // flags
     rval.push_back(0x01);
 
-    uint64_t i;
     // inputs
-    rval += VarInt(this->inputs.size()).getSerialized();
-    for (i = 0; i < this->inputs.size(); i++)
-        rval += this->inputs[i].getSerialized();
+    rval += VarInt(inputs.size()).getSerialized();
+    for (auto& input: inputs) { rval += input.getSerialized(); }
 
     // outputs
-    rval += VarInt(this->outputs.size()).getSerialized();
-    for (i = 0; i < this->outputs.size(); i++)
-        rval += this->outputs[i].getSerialized();
+    rval += VarInt(outputs.size()).getSerialized();
+    for (auto& output: outputs) { rval += output.getSerialized(); }
 
     // witness
-    rval += witness.getSerialized(false); // without txinwit count
+    for (auto& input: inputs) { rval += input.scriptWitness.getSerialized(); }
 
     // lock time
-    rval += uint_to_vch(this->lockTime, LITTLE_ENDIAN_);
+    rval += uint_to_vch(lockTime, LITTLE_ENDIAN_);
 
     return rval;
 }
@@ -1577,7 +1498,11 @@ void Transaction::setSerialized(const uchar_vector& bytes)
 
     if (flags != 0)
     {
-        witness.setSerialized(inputs.size(), uchar_vector(bytes.begin() + pos, bytes.end())); pos += witness.getSize(false);
+        for (auto& input: inputs)
+        {
+            input.scriptWitness.setSerialized(uchar_vector(bytes.begin() + pos, bytes.end()));
+            pos += input.scriptWitness.getSize();
+        }
     }
 
     if (bytes.size() < pos + 4)
@@ -1679,7 +1604,7 @@ uchar_vector Transaction::getSigHash(uint32_t hashType, uint index, const uchar_
     if (hashType != SIGHASH_ALL)
         throw runtime_error("Unsupported hash type.");
 
-    if (witness.txinwits.size() <= index || witness.txinwits[index].scriptWitness.isNull())
+    if (inputs[index].scriptWitness.isEmpty())
     {
         // Old sighash
         Transaction copy(*this);

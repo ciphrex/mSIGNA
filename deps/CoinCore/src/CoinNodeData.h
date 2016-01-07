@@ -579,12 +579,36 @@ public:
     std::string toIndentedString(uint spaces = 0) const;
 };
 
+class ScriptWitness : public CoinNodeStructure
+{
+public:
+    std::vector<uchar_vector> stack;
+
+    ScriptWitness() { }
+    ScriptWitness(const uchar_vector& bytes) { setSerialized(bytes); }
+
+    void clear() { stack.clear(); }
+    void push(const uchar_vector& data) { stack.push_back(data); }
+    bool isEmpty() const { return stack.empty(); }
+
+    const char* getCommand() const { return ""; }
+    uint64_t getSize() const;
+
+    uchar_vector getSerialized() const;
+    void setSerialized(const uchar_vector& bytes);
+
+    // TODO: toString methods
+    std::string toString() const { return std::string(); }
+    std::string toIndentedString(uint spaces = 0) const { return std::string(); }
+};
+
 class TxIn : public CoinNodeStructure
 {
 public:
     OutPoint previousOut;
     uchar_vector scriptSig;
     uint32_t sequence;
+    ScriptWitness scriptWitness;
 
     TxIn() { }
     TxIn(const TxIn& txIn)
@@ -606,6 +630,8 @@ public:
     std::string toString() const;
     std::string toIndentedString(uint spaces = 0) const;
     std::string toJson() const;
+
+    bool hasWitness() const { return !scriptWitness.isEmpty(); }
 };
 
 class TxOut : public CoinNodeStructure
@@ -633,81 +659,6 @@ public:
     std::string toJson() const;
 };
 
-class ScriptWitness : public CoinNodeStructure
-{
-public:
-    std::vector<uchar_vector> stack;
-
-    ScriptWitness() { }
-    ScriptWitness(const uchar_vector& bytes) { setSerialized(bytes); }
-
-    void clear() { stack.clear(); }
-    void push(const uchar_vector& data) { stack.push_back(data); }
-    bool isNull() const { return stack.empty(); }
-
-    const char* getCommand() const { return ""; }
-    uint64_t getSize() const;
-
-    uchar_vector getSerialized() const;
-    void setSerialized(const uchar_vector& bytes);
-
-    // TODO: toString methods
-    std::string toString() const { return std::string(); }
-    std::string toIndentedString(uint spaces = 0) const { return std::string(); }
-};
-
-class TxInWitness : public CoinNodeStructure
-{
-public:
-    ScriptWitness scriptWitness;
-
-    TxInWitness() { }
-    TxInWitness(const uchar_vector& bytes) { setSerialized(bytes); }
-
-    void clear() { scriptWitness.clear(); }
-    void push(const uchar_vector& data) { scriptWitness.push(data); }
-    bool isNull() const { return scriptWitness.isNull(); }
-
-    const char* getCommand() const { return ""; }
-    uint64_t getSize() const { return scriptWitness.getSize(); }
-
-    uchar_vector getSerialized() const { return scriptWitness.getSerialized(); }
-    void setSerialized(const uchar_vector& bytes) { scriptWitness.setSerialized(bytes); }
-
-    // TODO: toString methods
-    std::string toString() const { return std::string(); }
-    std::string toIndentedString(uint spaces = 0) const { return std::string(); }
-};
-
-class TxWitness : public CoinNodeStructure
-{
-public:
-    std::vector<TxInWitness> txinwits;
-
-    TxWitness() { }
-    TxWitness(const uchar_vector& bytes) { setSerialized(bytes); }
-    TxWitness(uint count, const uchar_vector& bytes) { setSerialized(count, bytes); }
-
-    void clear() { txinwits.clear(); }
-    bool isEmpty() const { return txinwits.empty(); }
-    bool isNull() const;
-
-    const char* getCommand() const { return ""; }
-
-    uint64_t getSize() const { return getSize(true); }
-    uint64_t getSize(bool withCount) const;
-
-    uchar_vector getSerialized() const { return getSerialized(true); }
-    uchar_vector getSerialized(bool withCount) const;
-
-    void setSerialized(const uchar_vector& bytes);
-    void setSerialized(uint count, const uchar_vector& bytes);
-
-    // TODO: toString methods
-    std::string toString() const { return std::string(); }
-    std::string toIndentedString(uint spaces = 0) const { return std::string(); }
-};
-
 class Transaction : public CoinNodeStructure
 {
 public:
@@ -715,8 +666,6 @@ public:
     std::vector<TxIn> inputs;
     std::vector<TxOut> outputs;
     uint32_t lockTime;
-
-    TxWitness witness;
 
     Transaction() { this->version = 1; lockTime = 0; }
     Transaction(const uchar_vector& bytes) { this->setSerialized(bytes); }
@@ -727,6 +676,8 @@ public:
     const uchar_vector& hash() const { return getHashLittleEndian(); }
 
     const char* getCommand() const { return "tx"; }
+
+    bool hasWitness() const { for (auto& input: inputs) { if (input.hasWitness()) return true; } return false; }
 
     uint64_t getSize() const;
     uint64_t getSizeWithWitness() const;
