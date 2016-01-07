@@ -1066,22 +1066,12 @@ private:
 class TxIn
 {
 public:
-    enum type_t
-    {
-        UNDEFINED,
-        P2SH,
-        WITNESS_V0,
-        WITNESS_V1,
-    };
-
     TxIn() { }
-    TxIn(const bytes_t& outhash, uint32_t outindex, const bytes_t& script, uint32_t sequence, const std::vector<bytes_t>& scriptinputs = const std::vector<bytes_t>)
-        : outhash_(outhash), outindex_(outindex), script_(script), sequence_(sequence), scriptinputs_(scriptinputs) { }
+    TxIn(const bytes_t& outhash, uint32_t outindex, const bytes_t& script, uint32_t sequence)
+        : outhash_(outhash), outindex_(outindex), script_(script), sequence_(sequence) { }
 
     TxIn(const Coin::TxIn& coin_txin);
     TxIn(const bytes_t& raw);
-
-    type_t type() const;
 
     void fromCoinCore(const Coin::TxIn& coin_txin);
     Coin::TxIn toCoinCore() const;
@@ -1106,11 +1096,8 @@ public:
     void outpoint(std::shared_ptr<TxOut> outpoint);
     const std::shared_ptr<TxOut> outpoint() const { return outpoint_.lock(); }
 
-    void pushScriptInput(const bytes_t& scriptinput) { scriptinputs_.push_back(scriptinput);    
-    void clearScriptInputs() { scriptinputs_.clear(); }
-    const std::vector<bytes_t>& scriptinputs() const { return scriptinputs_; }
-
-    static std::vector<bytes_t> emptyScriptInputs(std::size_t n);
+    void scriptwitnessstack(const std::vector<bytes_t>& scriptwitnessstack) { scriptwitnessstack_ = scriptwitnessstack; }
+    const std::vector<bytes_t>& scriptwitnessstack() const { return scriptwitnessstack_; }
 
     std::string toJson() const;
 
@@ -1135,7 +1122,7 @@ private:
 
     #pragma db value_not_null \
         id_column("object_id") value_column("value")
-    std::vector<bytes_t> scriptinputs_;
+    std::vector<bytes_t> scriptwitnessstack_;
 
     friend class boost::serialization::access;
     template<class Archive>
@@ -1148,9 +1135,9 @@ private:
 
         if (version >= 2)
         {
-            uint32_t n = scriptinputs_.size();
+            uint32_t n = scriptwitnessstack_.size();
             ar & n;
-            for (auto& scriptinput: scriptinputs_)    { ar & scriptinput; }
+            for (auto& scriptwitnessitem: scriptwitnessstack_)    { ar & scriptwitnessitem; }
         }
     }
     template<class Archive>
@@ -1165,12 +1152,12 @@ private:
         {
             uint32_t n;
             ar & n;
-            scriptinputs_.clear();
+            scriptwitnessstack_.clear();
             for (uint32_t i = 0; i < n; i++)
             {
-                bytes_t scriptinput;
-                ar & scriptinput;
-                scriptinputs_.push_back(scriptinput);
+                bytes_t scriptwitnessitem;
+                ar & scriptwitnessitem;
+                scriptwitnessstack_.push_back(scriptwitnessitem);
             }
         }
     }
