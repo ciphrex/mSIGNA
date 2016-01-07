@@ -310,6 +310,15 @@ public:
 
     std::string address(const unsigned char addressVersions[]) const;
 
+    enum version_t
+    {
+        NO_WITNESS,
+        WITNESS_V0,
+        WITNESS_V1,
+    };
+
+    static version_t getWitnessVersion(const uchar_vector& txinscript);
+
 private:
     uchar_vector witnessscript_;
     uchar_vector redeemscript_;
