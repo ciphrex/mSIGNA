@@ -371,6 +371,22 @@ void WitnessProgram::update()
     txoutscript_ << OP_HASH160 << pushStackItem(hash160(witnessscript_)) << OP_EQUAL;
 }
 
+WitnessProgram::version_t WitnessProgram::getWitnessVersion(const uchar_vector& txinscript)
+{
+    uint pos = 0;
+    uchar_vector fullop = getNextOp(txinscript, pos);
+    if (fullop.size() < 3)
+        return NO_WITNESS;
+
+    if (fullop[0] < 35 && fullop[1] == OP_0 && fullop[2] == fullop.size() - 3)
+        return WITNESS_V0;
+
+    if (fullop[0] == 35 && fullop[1] == OP_1 && fullop[2] == 32)
+        return WITNESS_V1;
+
+    return NO_WITNESS;
+}
+
 /*
  * class Script
 */
