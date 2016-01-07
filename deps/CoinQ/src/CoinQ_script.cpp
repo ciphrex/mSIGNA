@@ -887,41 +887,139 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
 
 bytes_t SignableTxIn::txinscript(sigtype_t sigtype) const
 {
-    return bytes_t();
+    uchar_vector rval;
+
+    switch (type_)
+    {
+    case PAY_TO_M_OF_N_SCRIPT_HASH:
+        rval << OP_0;
+        for (auto& sig: sigs_) { rval << pushStackItem(sig); }
+        rval << pushStackItem(redeemscript_);
+        break;
+
+    case WITNESS_PAY_TO_M_OF_N:
+        rval << OP_1 << pushStackItem(sha256(redeemscript_));
+        break;
+        
+    default:
+        break;
+    }
+
+    return rval; 
 }
 
 bytes_t SignableTxIn::txoutscript() const
 {
-    return bytes_t();
+    uchar_vector rval;
+
+    switch (type_)
+    {
+    case PAY_TO_M_OF_N_SCRIPT_HASH:
+        rval << OP_HASH160 << pushStackItem(hash160(redeemscript_)) << OP_EQUAL;
+        break;
+
+    case WITNESS_PAY_TO_M_OF_N:
+        rval << OP_HASH160 << pushStackItem(hash160(sha256(redeemscript_))) << OP_EQUAL;
+        break;
+        
+    default:
+        break;
+    }
+
+    return rval; 
 }
 
 unsigned int SignableTxIn::sigsneeded() const
 {
-    return 0;
+    if (type_ == UNKNOWN) return 0;
+
+    unsigned int sigsneeded = minsigs_;
+    for (auto& sig: sigs_) {
+        if (!sig.empty()) {
+            sigsneeded--;
+        }
+        if (sigsneeded == 0) break;
+    }
+
+    return sigsneeded;
 }
 
 std::vector<bytes_t> SignableTxIn::missingsigs() const
 {
-    return std::vector<bytes_t>();
+    std::vector<bytes_t> missingsigs;
+    if (type_ == UNKNOWN) return missingsigs;
+
+    unsigned int i = 0;
+    for (auto& sig: sigs_)
+    {
+        if (sig.empty()) { missingsigs.push_back(pubkeys_[i]); }
+        i++;
+    }
+
+    return missingsigs;
 }
 
 std::vector<bytes_t> SignableTxIn::presentsigs() const
 {
-    return std::vector<bytes_t>();
+    std::vector<bytes_t> presentsigs;
+    if (type_ == UNKNOWN) return presentsigs;
+
+    unsigned int i = 0;
+    for (auto& sig: sigs_)
+    {
+        if (!sig.empty()) { presentsigs.push_back(pubkeys_[i]); }
+        i++;
+    }
+
+    return presentsigs;
 }
 
 bool SignableTxIn::addSig(const bytes_t& pubkey, const bytes_t& sig)
 {
+    if (type_ == UNKNOWN) return false;
+
+    unsigned int i = 0;
+    unsigned int nsigs = 0;
+    for (auto& sig_: sigs_) {
+        if (!sig_.empty()) {
+            nsigs++;
+            if (nsigs > minsigs_) return false;
+        }
+        else if (pubkeys_[i] == pubkey) {
+            sig_ = sig;
+            return true;
+        }
+        i++;
+    }
+
     return false;
 }
 
 void SignableTxIn::clearSigs()
 {
+    sigs_.clear();
+    for (unsigned int i = 0; i < pubkeys_.size(); i++) { sigs_.push_back(bytes_t()); }
 }
 
 unsigned int SignableTxIn::mergesigs(const SignableTxIn& other)
 {
-    return 0;
+    if (type_ != other.type_) throw std::runtime_error("SignableTxIn::mergesigs(...) - cannot merge two different script types.");
+    if (type_ == UNKNOWN) return 0;
+
+    if (minsigs_ != other.minsigs_) throw std::runtime_error("SignableTxIn::mergesigs(...) - cannot merge two scripts with different minimum signatures.");
+    if (pubkeys_ != other.pubkeys_) throw std::runtime_error("Signable::mergesigs(...) - cannot merge two scripts with different public keys.");
+    if (sigs_.size() != other.sigs_.size()) throw std::runtime_error("Signable::mergesigs(...) - signature counts differ. invalid state.");
+
+    unsigned int sigsadded = 0;
+    for (std::size_t i = 0; i < sigs_.size(); i++)
+    {
+        if (sigs_[i].empty() && !other.sigs_[i].empty())
+        {
+            sigs_[i] = other.sigs_[i];
+            sigsadded++;
+        }
+    }
+    return sigsadded;
 }
 
 
