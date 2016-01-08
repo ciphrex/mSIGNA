@@ -378,8 +378,8 @@ private:
     bytes_t hash_;
 };
 
-
 typedef std::vector<Script> scripts_t;
+
 
 class SignableTxIn
 {
@@ -410,7 +410,14 @@ public:
         }
     }
 
-    explicit SignableTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0) { setTxIn(tx, nIn, outpointamount); }
+    explicit SignableTxIn(const SignableTxIn& other) :
+        type_(other.type_),
+        minsigs_(other.minsigs_),
+        pubkeys_(other.pubkeys_),
+        sigs_(other.sigs_),
+        redeemscript_(other.redeemscript_) { }
+
+    SignableTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0) { setTxIn(tx, nIn, outpointamount); }
 
     void setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0);
 
@@ -436,36 +443,37 @@ private:
     unsigned int minsigs_;
     std::vector<bytes_t> pubkeys_;
     std::vector<bytes_t> sigs_; // empty vectors for missing signatures
-
     bytes_t redeemscript_; // empty if type is not script hash
 };
+
+typedef std::vector<SignableTxIn> signabletxins_t;
+
 
 class Signer
 {
 public:
-    Signer() : isSigned_(false) { }
-    explicit Signer(const Coin::Transaction& tx, bool clearinvalidsigs = false) { setTx(tx, clearinvalidsigs); }
+    Signer() { }
+    explicit Signer(const Coin::Transaction& tx, const std::vector<uint64_t>& outpointvalues = std::vector<uint64_t>()) { setTx(tx, outpointvalues); }
 
-    void setTx(const Coin::Transaction& tx, bool clearinvalidsigs = false);
+    void setTx(const Coin::Transaction& tx, const std::vector<uint64_t>& outpointvalues = std::vector<uint64_t>());
+
     const Coin::Transaction& getTx() const { return tx_; }
 
     unsigned int sigsneeded(std::size_t nIn) const; // returns how many signatures are still needed
+    unsigned int sigsneeded() const;
+
     std::vector<bytes_t> missingsigs(std::size_t nIn) const; // returns pubkeys for which we are still missing signatures
     std::vector<bytes_t> presentsigs(std::size_t nIn) const; // returns pubkeys for which we have signatures
-    bool addSig(std::size_t nIn, const bytes_t& pubkey, const bytes_t& sig); // returns true iff signature was absent and has been added
-    void clearSigs(std::size_t nIn); // resets all signatures
+    bool addsig(std::size_t nIn, const bytes_t& pubkey, const bytes_t& sig); // returns true iff signature was absent and has been added
+    void clearsigs(std::size_t nIn); // resets all signatures
+    void clearsigs();
     unsigned int mergesigs(std::size_t nIn, const Coin::TxIn& other); // merges the signatures from another input that is otherwise identical. returns number of signatures added.
 
-    bool isSigned() const { return isSigned_; }
-
-    const scripts_t& getScripts() const { return scripts_; }
-
-    void clearSigs() { for (auto& script: scripts_) script.clearSigs(); }
+    const signabletxins_t& getSignableTxIns() const { return signabletxins_; }
 
 private:
     Coin::Transaction tx_;
-    bool isSigned_;
-    scripts_t scripts_;
+    signabletxins_t signabletxins_;
 };
 
 }

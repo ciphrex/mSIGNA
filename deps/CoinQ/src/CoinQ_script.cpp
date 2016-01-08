@@ -1056,55 +1056,68 @@ unsigned int SignableTxIn::mergesigs(const SignableTxIn& other)
 }
 
 
-void Signer::setTx(const Coin::Transaction& tx, bool clearinvalidsigs)
+void Signer::setTx(const Coin::Transaction& tx, const std::vector<uint64_t>& outpointvalues)
 {
     tx_ = tx;
-    tx_.clearScriptSigs();
+    signabletxins_.clear();
 
-    Coin::Transaction txCopy = tx_;
-
-    scripts_.clear();
-    unsigned int i = 0;
-    for (auto& txin: tx.inputs)
+    for (std::size_t i = 0; i < tx.inputs.size(); i++)
     {
-        bytes_t signinghash;
-        {
-            Script script(txin.scriptSig);
-            txCopy.inputs[i].scriptSig = script.txinscript(Script::SIGN);
-            signinghash = txCopy.getHashWithAppendedCode(SIGHASH_ALL);
-            txCopy.inputs[i].scriptSig.clear();
-        }
-        {
-            Script script(txin.scriptSig, signinghash, clearinvalidsigs);
-            tx_.inputs[i].scriptSig = script.txinscript((script.sigsneeded() == 0) ? Script::BROADCAST : Script::EDIT);
-            scripts_.push_back(script);
-        }
-        i++;
+        uint64_t outpointvalue = (outpointvalues.size() > i ? outpointvalues[i] : 0);
+        signabletxins_.push_back(SignableTxIn(tx, i, outpointvalue));
     }
 }
 
 unsigned int Signer::sigsneeded(std::size_t nIn) const
 {
-    return 0;
+    if (nIn >= signabletxins_.size())
+        throw std::runtime_error("Signer::sigsneeded() - index out of range.");
+
+    return signabletxins_[nIn].sigsneeded();
+}
+
+unsigned int Signer::sigsneeded() const
+{
+    unsigned int total = 0;
+    for (auto& signabletxin: signabletxins_) { total += signabletxin.sigsneeded(); }
+    return total;
 }
 
 std::vector<bytes_t> Signer::missingsigs(std::size_t nIn) const
 {
-    return std::vector<bytes_t>();
+    if (nIn >= signabletxins_.size())
+        throw std::runtime_error("Signer::missingsigs() - index out of range.");
+
+    return signabletxins_[nIn].missingsigs();
 }
 
 std::vector<bytes_t> Signer::presentsigs(std::size_t nIn) const
 {
-    return std::vector<bytes_t>();
+    if (nIn >= signabletxins_.size())
+        throw std::runtime_error("Signer::presentsigs() - index out of range.");
+
+    return signabletxins_[nIn].presentsigs();
 }
 
-bool Signer::addSig(std::size_t nIn, const bytes_t& pubkey, const bytes_t& sig)
+bool Signer::addsig(std::size_t nIn, const bytes_t& pubkey, const bytes_t& sig)
 {
-    return false;
+    if (nIn >= signabletxins_.size())
+        throw std::runtime_error("Signer::addsig() - index out of range.");
+
+    return signabletxins_[nIn].addsig(pubkey, sig);
 }
 
-void Signer::clearSigs(std::size_t nIn)
+void Signer::clearsigs(std::size_t nIn)
 {
+    if (nIn >= signabletxins_.size())
+        throw std::runtime_error("Signer::clearsigs() - index out of range.");
+
+    signabletxins_[nIn].clearsigs();
+}
+
+void Signer::clearsigs()
+{
+    for (auto& signabletxin: signabletxins_) signabletxin.clearsigs(); }
 }
 
 unsigned int mergesigs(std::size_t nIn, const Coin::TxIn& other)
@@ -1113,5 +1126,4 @@ unsigned int mergesigs(std::size_t nIn, const Coin::TxIn& other)
 }
 
 
-}
 }
