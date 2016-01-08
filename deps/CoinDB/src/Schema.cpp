@@ -1097,18 +1097,13 @@ Coin::Transaction Tx::toCoinCore() const
 {
     Coin::Transaction coin_tx;
     coin_tx.version = version_;
-    Coin::TxWitness witness;
     for (auto& txin: txins_)
     {
         coin_tx.inputs.push_back(txin->toCoinCore());
-        Coin::TxInWitness txinwit;
-        for (auto& stackitem: txin->scriptwitnessstack()) { txinwit.push(stackitem); }
-        witness.txinwits.push_back(txinwit);
+        Coin::TxIn& input = coin_tx.inputs.back();
+        for (auto& item: txin->scriptwitnessstack()) { input.scriptWitness.push(item); }
     }
-    if (!witness.isNull())
-    {
-        coin_tx.witness = witness;
-    }
+
     for (auto& txout: txouts_) { coin_tx.outputs.push_back(txout->toCoinCore()); }
     coin_tx.lockTime = locktime_;
     return coin_tx;
@@ -1181,15 +1176,11 @@ void Tx::fromCoinCore(const Coin::Transaction& coin_tx)
         std::shared_ptr<TxIn> txin(new TxIn(coin_txin));
         txin->tx(shared_from_this());
         txin->txindex(i);
-        if (i < (int)coin_tx.witness.txinwits.size())
-        {
-            std::vector<bytes_t> stack;
-            for (auto& stackitem: coin_tx.witness.txinwits[i].scriptWitness.stack)
-            {
-                stack.push_back(stackitem);
-            } 
-            txin->scriptwitnessstack(stack);
-        }
+
+        std::vector<bytes_t> stack;
+        for (auto& item: coin_txin.scriptWitness.stack) { stack.push_back(item); } 
+        txin->scriptwitnessstack(stack);
+
         txins_.push_back(txin);
         i++;
     }
