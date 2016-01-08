@@ -412,8 +412,8 @@ public:
     unsigned int sigsneeded() const; // returns how many signatures are still needed
     std::vector<bytes_t> missingsigs() const; // returns pubkeys for which we are still missing signatures
     std::vector<bytes_t> presentsigs() const; // returns pubkeys for which we have signatures
-    bool addSig(const bytes_t& pubkey, const bytes_t& sig); // returns true iff signature was absent and has been added
-    void clearSigs(); // resets all signatures to 0-length placeholders
+    bool addsig(const bytes_t& pubkey, const bytes_t& sig); // returns true iff signature was absent and has been added
+    void clearsigs(); // resets all signatures to 0-length placeholders
     unsigned int mergesigs(const SignableTxIn& other); // merges the signatures from another input that is otherwise identical. returns number of signatures added.
 
 private:

@@ -775,12 +775,10 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
     type_ = UNKNOWN;
     if (objects.size() == 1)
     {
-std::cout << "objects.size() == 1" << std::endl;
         WitnessProgram::version_t wpVersion = WitnessProgram::getWitnessVersion(txinscript);
         switch (wpVersion)
         {
         case WitnessProgram::WITNESS_V1:
-std::cout << "WITNESS_V1" << std::endl;
             if (stack.empty()) return;
             redeemscript_ = stack.back();
             for (std::size_t i = 1; i < stack.size() - 1; i++) { sigs.push_back(stack[i]); }
@@ -801,12 +799,11 @@ std::cout << "WITNESS_V1" << std::endl;
     else if (objects.size() >= 3)
     {
         redeemscript_ = objects.back();
-        for (std::size_t i = 1; i + 1 < objects.size(); i++) { sigs.push_back(objects[i]); }
+        for (std::size_t i = 1; i < objects.size() - 1; i++) { sigs.push_back(objects[i]); }
     }
 
     if (redeemscript_.size() >= 3)
     {
-std::cout << "redeemscript == " << uchar_vector(redeemscript_).getHex() << std::endl;
         // Parse redeemscript
         // Get minsigs. Size opcode is offset by 0x50.
         unsigned char byte = redeemscript_[0];
@@ -841,12 +838,12 @@ std::cout << "redeemscript == " << uchar_vector(redeemscript_).getHex() << std::
         type_ = (stack.empty() ? PAY_TO_M_OF_N_SCRIPT_HASH : PAY_TO_M_OF_N_WITNESS_V1);
     }
 
-    if (sigs.size() > minsigs_) throw std::runtime_error("Too many signatures.");
+    if (sigs.size() > pubkeys_.size())
+        throw std::runtime_error("Too many signatures.");
 
     // Validate signatures.
     unsigned int iSig = 0;
     unsigned int nValidSigs = 0;
-    unsigned int nEmptySigs = 0;
     for (auto& pubkey: pubkeys_)
     {
         // If we already have enough valid signatures or there are no more signatures or signature is a placeholder
@@ -855,7 +852,6 @@ std::cout << "redeemscript == " << uchar_vector(redeemscript_).getHex() << std::
             // Add or keep placeholder.
             sigs_.push_back(bytes_t());
             iSig++;
-            nEmptySigs++;
         }
         else
         {
@@ -1009,9 +1005,11 @@ std::vector<bytes_t> SignableTxIn::presentsigs() const
     return presentsigs;
 }
 
-bool SignableTxIn::addSig(const bytes_t& pubkey, const bytes_t& sig)
+bool SignableTxIn::addsig(const bytes_t& pubkey, const bytes_t& sig)
 {
     if (type_ == UNKNOWN) return false;
+
+    if (sigsneeded() == 0) return false;
 
     unsigned int i = 0;
     unsigned int nsigs = 0;
@@ -1030,7 +1028,7 @@ bool SignableTxIn::addSig(const bytes_t& pubkey, const bytes_t& sig)
     return false;
 }
 
-void SignableTxIn::clearSigs()
+void SignableTxIn::clearsigs()
 {
     sigs_.clear();
     for (unsigned int i = 0; i < pubkeys_.size(); i++) { sigs_.push_back(bytes_t()); }
@@ -1042,8 +1040,8 @@ unsigned int SignableTxIn::mergesigs(const SignableTxIn& other)
     if (type_ == UNKNOWN) return 0;
 
     if (minsigs_ != other.minsigs_) throw std::runtime_error("SignableTxIn::mergesigs(...) - cannot merge two scripts with different minimum signatures.");
-    if (pubkeys_ != other.pubkeys_) throw std::runtime_error("Signable::mergesigs(...) - cannot merge two scripts with different public keys.");
-    if (sigs_.size() != other.sigs_.size()) throw std::runtime_error("Signable::mergesigs(...) - signature counts differ. invalid state.");
+    if (pubkeys_ != other.pubkeys_) throw std::runtime_error("SignableTxIn::mergesigs(...) - cannot merge two scripts with different public keys.");
+    if (sigs_.size() != other.sigs_.size()) throw std::runtime_error("SignableTxIn::mergesigs(...) - signature counts differ. invalid state.");
 
     unsigned int sigsadded = 0;
     for (std::size_t i = 0; i < sigs_.size(); i++)
