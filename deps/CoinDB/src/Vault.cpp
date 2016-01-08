@@ -2561,12 +2561,6 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
     {
         using namespace CoinQ::Script;
 
-        if (verifysigs)
-        {
-            Signer signer(cointx);
-            if (!signer.isSigned()) throw TxNotSignedException(cointx.hash());
-        }
-
         std::shared_ptr<Tx> tx(new Tx());
         tx->set(cointx, blockheader ? blockheader->timestamp() : time(NULL), Tx::PROPAGATED);
 
@@ -2575,6 +2569,17 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
         if (!r.empty())
         {
             std::shared_ptr<Tx> stored_tx(r.begin().load());
+            if (verifysigs)
+            {
+                std::vector<uint64_t> outpointvalues;
+                for (auto& txin: stored_tx->txins())
+                {
+                    outpointvalues.push_back(txin->outpoint() ? txin->outpoint()->value() : 0);
+                    Signer signer(cointx, outpointvalues);
+                    if (signer.sigsneeded()) throw TxNotSignedException(cointx.hash());
+                }
+            }
+
             if (stored_tx->status() < Tx::CONFIRMED)
             {
                 LOGGER(debug) << "Vault::insertNewTx_unwrapped - ADDING/REPLACING SIGNATURES, UPDATING CONFIRMATIONS AND STATUS. hash: " << uchar_vector(tx->hash()).getHex() << std::endl;
@@ -3562,19 +3567,19 @@ SignatureInfo Vault::getSignatureInfo_unwrapped(std::shared_ptr<Tx> tx) const
     unsigned int sigsNeeded = 0;
     std::set<bytes_t> missingpubkeys;
     std::set<bytes_t> presentpubkeys;
-
-    for (auto& script: signer.getScripts())
+ 
+    for (auto& signabletxin: signer.getSignableTxIns())
     {
-        unsigned int n = script.sigsneeded();
+        unsigned int n = signabletxin.sigsneeded();
         if (n > sigsNeeded) sigsNeeded = n;
 
         {
-            std::vector<bytes_t> pubkeys = script.missingsigs();
+            std::vector<bytes_t> pubkeys = signabletxin.missingsigs();
             for (auto& pubkey: pubkeys) { missingpubkeys.insert(pubkey); }
         }
 
         {
-            std::vector<bytes_t> pubkeys = script.presentsigs();
+            std::vector<bytes_t> pubkeys = signabletxin.presentsigs();
             for (auto& pubkey: pubkeys) { presentpubkeys.insert(pubkey); }
         }
     }
