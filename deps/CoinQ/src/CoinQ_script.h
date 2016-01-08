@@ -275,9 +275,9 @@ protected:
 };
 
 
-typedef std::vector<bytes_t> stack_t;
+typedef std::vector<bytes_t> scriptstack_t;
 
-stack_t scriptToStack(const uchar_vector& script);
+scriptstack_t scriptToStack(const uchar_vector& script);
 
 class ScriptTemplate
 {
@@ -292,9 +292,9 @@ public:
     uchar_vector script(const uchar_vector& token) const; // use index 0 only
     uchar_vector script(const std::vector<uchar_vector>& tokens) const;
 
-    stack_t stack() const { return scriptToStack(script()); }
-    stack_t stack(const uchar_vector& token) const { return scriptToStack(script(token)); }
-    stack_t stack(const std::vector<uchar_vector>& tokens) const { return scriptToStack(script(tokens)); }
+    scriptstack_t stack() const { return scriptToStack(script()); }
+    scriptstack_t stack(const uchar_vector& token) const { return scriptToStack(script(token)); }
+    scriptstack_t stack(const std::vector<uchar_vector>& tokens) const { return scriptToStack(script(tokens)); }
 
     ScriptTemplate& apply(const uchar_vector& token);
     ScriptTemplate& apply(const std::vector<uchar_vector>& tokens);
