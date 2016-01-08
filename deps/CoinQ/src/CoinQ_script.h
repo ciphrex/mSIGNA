@@ -387,6 +387,7 @@ public:
     enum type_t
     {
         UNKNOWN,
+        MISSING_WITNESS,
         PAY_TO_PUBKEY,
         PAY_TO_PUBKEY_HASH,
         PAY_TO_M_OF_N_SCRIPT_HASH,
@@ -401,6 +402,7 @@ public:
         switch (type_)
         {
         case UNKNOWN:                   return "UNKNOWN";
+        case MISSING_WITNESS:           return "MISSING_WITNESS";
         case PAY_TO_PUBKEY:             return "PAY_TO_PUBKEY";
         case PAY_TO_PUBKEY_HASH:        return "PAY_TO_PUBKEY_HASH";
         case PAY_TO_M_OF_N_SCRIPT_HASH: return "PAY_TO_M_OF_N_SCRIPT_HASH";

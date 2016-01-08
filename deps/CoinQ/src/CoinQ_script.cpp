@@ -771,15 +771,20 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         pos += size;
     }
 
+    WitnessProgram::version_t wpVersion = WitnessProgram::NO_WITNESS;
     std::vector<bytes_t> sigs;
     type_ = UNKNOWN;
     if (objects.size() == 1)
     {
-        WitnessProgram::version_t wpVersion = WitnessProgram::getWitnessVersion(txinscript);
+        wpVersion = WitnessProgram::getWitnessVersion(txinscript);
         switch (wpVersion)
         {
         case WitnessProgram::WITNESS_V1:
-            if (stack.empty()) return;
+            if (stack.empty())
+            {
+                type_ = MISSING_WITNESS;
+                return;
+            }
             redeemscript_ = stack.back();
             for (std::size_t i = 1; i < stack.size() - 1; i++) { sigs.push_back(stack[i]); }
             break;
@@ -835,7 +840,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
             pos += byte;
         }
 
-        type_ = (stack.empty() ? PAY_TO_M_OF_N_SCRIPT_HASH : PAY_TO_M_OF_N_WITNESS_V1);
+        type_ = (wpVersion == WitnessProgram::WITNESS_V1 ? PAY_TO_M_OF_N_WITNESS_V1 : PAY_TO_M_OF_N_SCRIPT_HASH);
     }
 
     if (sigs.size() > pubkeys_.size())
