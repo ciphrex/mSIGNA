@@ -1344,7 +1344,7 @@ public:
     txins_t txins() const { return txins_; }
     txouts_t txouts() const { return txouts_; }
     uint32_t locktime() const { return locktime_; }
-    bytes_t raw() const;
+    bytes_t raw(bool withWitness = true) const;
 
     void timestamp(uint32_t timestamp) { timestamp_ = timestamp; }
     uint32_t timestamp() const { return timestamp_; }
