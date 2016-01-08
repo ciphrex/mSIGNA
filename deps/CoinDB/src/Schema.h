@@ -55,7 +55,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 12
-#define SCHEMA_VERSION      19
+#define SCHEMA_VERSION      20
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -679,10 +679,8 @@ public:
     bool compressed_keys() const { return compressed_keys_; }
 
     void loadScriptTemplates();
+    bool use_witness() const { return use_witness_; }
     const CoinQ::Script::ScriptTemplate& redeemtemplate() const { return redeemtemplate_; }
-    const CoinQ::Script::ScriptTemplate& txintemplate() const { return txintemplate_; }
-    const CoinQ::Script::ScriptTemplate& txouttemplate() const { return txouttemplate_; }
-    const CoinQ::Script::ScriptTemplate& inputetemplate() const { return inputtemplate_; }
 
 private:
     friend class odb::access;
@@ -709,10 +707,8 @@ private:
 
     bool compressed_keys_;
 
+    bool use_witness_;
     bytes_t redeempattern_;
-    bytes_t txinpattern_;
-    bytes_t txoutpattern_;
-    bytes_t inputpattern_;
 
     void initScriptPatterns();
 
@@ -720,12 +716,6 @@ private:
     bool scripttemplatesloaded_;
     #pragma db transient
     CoinQ::Script::ScriptTemplate redeemtemplate_;
-    #pragma db transient
-    CoinQ::Script::ScriptTemplate txintemplate_;
-    #pragma db transient
-    CoinQ::Script::ScriptTemplate txouttemplate_;
-    #pragma db transient
-    CoinQ::Script::ScriptTemplate inputtemplate_;
 
     friend class boost::serialization::access;
     template<class Archive>
@@ -752,9 +742,8 @@ private:
 
         if (version >= 3)
         {
+            ar & use_witness_;
             ar & redeempattern_;
-            ar & txinpattern_;
-            ar & txoutpattern_;
         }
     }
     template<class Archive>
@@ -798,9 +787,8 @@ private:
 
         if (version >= 3)
         {
+            ar & use_witness_;
             ar & redeempattern_;
-            ar & txinpattern_;
-            ar & txoutpattern_;
         }
         else
         {
@@ -875,6 +863,8 @@ private:
     std::string label_;
     status_t status_;
 
+    #pragma db type("BLOB")
+    bytes_t redeemscript_;
     #pragma db type("BLOB")
     bytes_t txinscript_; // unsigned (0 byte length placeholders are used for signatures)
     #pragma db type("BLOB")
@@ -1322,6 +1312,8 @@ public:
 
     static std::string              getStatusString(int status, bool lowercase = false);
     static std::vector<status_t>    getStatusFlags(int status);
+
+    std::string                     getStatusString() const { return getStatusString(status_); }
 
     Tx(uint32_t version = 1, uint32_t locktime = 0, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false)
         : version_(version), locktime_(locktime), timestamp_(timestamp), status_(status), conflicting_(conflicting),  have_all_outpoints_(false), txin_total_(0), txout_total_(0) { }
@@ -1835,6 +1827,9 @@ struct TxOutView
 
     #pragma db column(SigningScript::status_)
     SigningScript::status_t signingscript_status;
+
+    #pragma db column(SigningScript::redeemscript_)
+    bytes_t signingscript_redeemscript;
 
     #pragma db column(SigningScript::txinscript_)
     bytes_t signingscript_txinscript;
