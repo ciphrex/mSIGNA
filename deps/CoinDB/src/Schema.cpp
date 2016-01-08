@@ -1230,10 +1230,10 @@ std::set<bytes_t> Tx::presentSigPubkeys() const
     std::set<bytes_t> pubkeys;
 
     using namespace CoinQ::Script;
-    Signer signer(toCoinCore(), true);
-    for (auto& script: signer.getScripts())
+    Signer signer_(signer());
+    for (auto& signabletxin: signer_.getSignableTxIns())
     {
-        std::vector<bytes_t> txinpubkeys = script.presentsigs();
+        std::vector<bytes_t> txinpubkeys = signabletxin.presentsigs();
         for (auto& txinpubkey: txinpubkeys) { pubkeys.insert(txinpubkey); }
     } 
     return pubkeys;
@@ -1241,7 +1241,14 @@ std::set<bytes_t> Tx::presentSigPubkeys() const
 
 CoinQ::Script::Signer Tx::signer() const
 {
-    return CoinQ::Script::Signer(toCoinCore(), true);
+    using namespace CoinQ::Script;
+    std::vector<uint64_t> outpointvalues;
+    for (auto& txin: txins_)
+    {
+        outpointvalues.push_back(txin->outpoint() ? txin->outpoint()->value() : 0);
+    }
+
+    return Signer(toCoinCore(), outpointvalues);
 }
 
 std::string Tx::toJson(bool includeRawHex, bool includeSerialized) const
