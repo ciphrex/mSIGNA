@@ -275,9 +275,9 @@ void SymmetricHDKeyGroup::update()
 }
 
 
-stack_t scriptToStack(const uchar_vector& script)
+scriptstack_t scriptToStack(const uchar_vector& script)
 {
-    stack_t stack;
+    scriptstack_t stack;
     uint pos = 0;
     while (pos < script.size())
     {
@@ -817,7 +817,30 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         type_ = PAY_TO_PUBKEY_HASH;
         pubkeys_.push_back(objects[1]);
         minsigs_ = 1;
-        sigs.push_back(objects[0]);
+        const bytes_t& sig = objects[0];
+
+        // TODO: add support for other hash types.
+        if (sig.back() != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
+
+        // Remove hash type byte.
+        bytes_t signature(sig.begin(), sig.end() - 1);
+
+        // Verify signature.
+        uchar_vector txoutscript;
+        txoutscript << OP_DUP << OP_HASH160 << pushStackItem(hash160(pubkeys_.back())) << OP_EQUALVERIFY << OP_CHECKSIG;
+        bytes_t sighash = tx.getSigHash(SIGHASH_ALL, nIn, txoutscript, outpointamount);
+        secp256k1_key key;
+        key.setPubKey(pubkeys_.back());
+        if (secp256k1_verify(key, sighash, signature))
+        {
+            // Signature is valid. Keep it.
+            sigs_.push_back(sig);
+        }
+        else
+        {
+            // Signature is invalid. Add placeholder for this pubkey and test it for next pubkey
+            sigs_.push_back(bytes_t());
+        }
     }
     else if (objects.size() >= 3)
     {
