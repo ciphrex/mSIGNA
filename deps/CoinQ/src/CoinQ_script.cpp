@@ -275,6 +275,24 @@ void SymmetricHDKeyGroup::update()
 }
 
 
+stack_t scriptToStack(const uchar_vector& script)
+{
+    stack_t stack;
+    uint pos = 0;
+    while (pos < script.size())
+    {
+        if (script[pos] == OP_TOKEN || script[pos] == OP_TOKENHASH)
+        {
+            pos += 2;
+            continue;
+        }
+
+        stack.push_back(getNextOp(script, pos, true));
+    }
+    return stack;
+}
+
+
 /*
  * class ScriptTemplate
 */
