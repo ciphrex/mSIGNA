@@ -459,15 +459,29 @@ public:
 
     const Coin::Transaction& getTx() const { return tx_; }
 
-    unsigned int sigsneeded(std::size_t nIn) const; // returns how many signatures are still needed
+    // returns how many signatures are still needed
+    unsigned int sigsneeded(std::size_t nIn) const;
     unsigned int sigsneeded() const;
 
-    std::vector<bytes_t> missingsigs(std::size_t nIn) const; // returns pubkeys for which we are still missing signatures
-    std::vector<bytes_t> presentsigs(std::size_t nIn) const; // returns pubkeys for which we have signatures
-    bool addsig(std::size_t nIn, const bytes_t& pubkey, const bytes_t& sig); // returns true iff signature was absent and has been added
+    // returns pubkeys for which we are still missing signatures
+    std::vector<bytes_t> missingsigs(std::size_t nIn) const;
+    std::vector<bytes_t> missingsigs() const;
+
+    // returns pubkeys for which we have signatures
+    std::vector<bytes_t> presentsigs(std::size_t nIn) const;
+    std::vector<bytes_t> presentsigs() const;
+
+    // returns true iff signature was absent and has been added
+    bool addsig(std::size_t nIn, const bytes_t& pubkey, const bytes_t& sig);
+    bool addsig(const bytes_t& pubkey, const bytes_t& sig);
+
     void clearsigs(std::size_t nIn); // resets all signatures
     void clearsigs();
-    unsigned int mergesigs(std::size_t nIn, const Coin::TxIn& other); // merges the signatures from another input that is otherwise identical. returns number of signatures added.
+
+    // merges the signatures from another input that is otherwise identical.
+    // returns number of signatures added.
+    unsigned int mergesigs(std::size_t nIn, const Signer& other);
+    unsigned int mergesigs(const Signer& other);
 
     const signabletxins_t& getSignableTxIns() const { return signabletxins_; }
 
