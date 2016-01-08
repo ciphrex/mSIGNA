@@ -3657,6 +3657,8 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
     using namespace CoinQ::Script;
     using namespace CoinCrypto;
 
+    Coin::Transaction coin_tx = tx->toCoinCore();
+
     // No point in trying nonprivate keys
     odb::query<Key> privkey_query(odb::query<Key>::is_private != 0);
 
@@ -3669,28 +3671,20 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
     unsigned int sigsadded = 0;
     for (auto& txin: tx->txins())
     {
-        Script script(txin->script());
-        unsigned int sigsneeded = script.sigsneeded();
+        uint64_t outpointvalue = txin->outpoint() ? txin->outpoint()->value() : 0;
+        SignableTxIn signableTxIn(coin_tx, txin->txindex(), outpointvalue);
+
+        unsigned int sigsneeded = signableTxIn.sigsneeded();
         if (sigsneeded == 0) continue;
 
-        std::vector<bytes_t> pubkeys = script.missingsigs();
+        std::vector<bytes_t> pubkeys = signableTxIn.missingsigs();
         if (pubkeys.empty()) continue;
 
         odb::result<Key> key_r(db_->query<Key>(privkey_query && odb::query<Key>::pubkey.in_range(pubkeys.begin(), pubkeys.end())));
         if (key_r.empty()) continue;
 
-        // Prepare the inputs for hashing
-        Coin::Transaction coin_tx = tx->toCoinCore();
-
-        unsigned int i = 0;
-        for (auto& coin_input: coin_tx.inputs)
-        {
-            if (i++ == txin->txindex()) { coin_input.scriptSig = script.txinscript(Script::SIGN); }
-            else                        { coin_input.scriptSig.clear(); }
-        }
-
         // Compute hash to sign
-        bytes_t signingHash = coin_tx.getHashWithAppendedCode(SIGHASH_ALL);
+        bytes_t signingHash = coin_tx.getSigHash(SIGHASH_ALL, txin->txindex(), signableTxIn.redeemscript(), outpointvalue);
         LOGGER(debug) << "Vault::signTx_unwrapped - computed signing hash " << uchar_vector(signingHash).getHex() << " for input " << txin->txindex() << std::endl;
 
         for (auto& key: key_r)
@@ -3713,7 +3707,7 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
 
             bytes_t signature = secp256k1_sign(signingKey, signingHash);
             signature.push_back(SIGHASH_ALL);
-            script.addSig(key.pubkey(), signature);
+            signableTxIn.addsig(key.pubkey(), signature);
             LOGGER(debug) << "Vault::signTx_unwrapped - PUBLIC KEY: " << uchar_vector(key.pubkey()).getHex() << " SIGNATURE: " << uchar_vector(signature).getHex() << std::endl;
             keychains_signed.insert(key.root_keychain());
             sigsadded++;
@@ -3721,7 +3715,10 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
             if (sigsneeded == 0) break;
         }
 
-        txin->script(script.txinscript(sigsneeded ? Script::EDIT : Script::BROADCAST));
+        txin->script(signableTxIn.txinscript());
+        std::vector<bytes_t> stack;
+        for (auto& item: signableTxIn.scriptwitness().stack) { stack.push_back(item); }
+        txin->scriptwitnessstack(stack);
     }
 
     keychain_names.clear();
