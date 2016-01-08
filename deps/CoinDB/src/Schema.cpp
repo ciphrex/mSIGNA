@@ -410,38 +410,22 @@ void Account::initScriptPatterns()
 {
     using namespace CoinQ::Script;
 
-    uchar_vector redeempattern, txinpattern, inputpattern;
+    use_witness_ = true;
+
+    uchar_vector redeempattern;
     redeempattern << (OP_1_OFFSET + minsigs_);
-    txinpattern << OP_0;
-    inputpattern << OP_0;
     for (unsigned int k = 0; k < keychains_.size(); k++)
     {
         redeempattern << OP_PUBKEY << k;
-        txinpattern << OP_0;
-        inputpattern << OP_SIG << k;
     }
     redeempattern << (OP_1_OFFSET + keychains_.size()) << OP_CHECKMULTISIG;
     redeempattern_ = redeempattern;
-    inputpattern_ = inputpattern;
-
-    // m-of-n p2sh
-    txinpattern << OP_TOKEN << 0; // OP_TOKEN <- inputs + redeemscript
-    txinpattern_ = txinpattern;
-
-    uchar_vector txoutpattern;
-    txoutpattern << OP_HASH160 << OP_TOKENHASH << 0 << OP_EQUAL; // OP_TOKENHASH <- hash160(redeemscript)
-    txoutpattern_ = txoutpattern;
 }
 
 void Account::loadScriptTemplates()
 {
     if (scripttemplatesloaded_) return;
-
     redeemtemplate_.pattern(redeempattern_);
-    txintemplate_.pattern(txinpattern_);
-    txouttemplate_.pattern(txoutpattern_);
-    inputtemplate_.pattern(inputpattern_);
-
     scripttemplatesloaded_ = true;
 }
 
@@ -636,15 +620,28 @@ SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t i
     for (auto& key: keys_) { pubkeys.push_back(key->pubkey()); }
 
     account_->loadScriptTemplates();
-    uchar_vector redeemscript = account_->redeemtemplate().script(pubkeys);
+    redeemscript_ = account_->redeemtemplate().script(pubkeys);
 
-    CoinQ::Script::WitnessProgram wp(redeemscript);
-    txinscript_ = wp.txinscript();
-    txoutscript_ = wp.txoutscript();
-/*
-    txinscript_ = account_->txintemplate().script(redeemscript);
-    txoutscript_ = account_->txouttemplate().script(redeemscript);
-*/
+    using namespace CoinQ::Script;
+
+    if (account_->use_witness())
+    {
+        WitnessProgram wp(redeemscript_);
+        txinscript_ = wp.txinscript();
+        txoutscript_ = wp.txoutscript();
+    }
+    else
+    {
+        uchar_vector txinscript, txoutscript;
+
+        txinscript << OP_0;
+        for (std::size_t k = 0; k < pubkeys.size(); k++) { txinscript << OP_0; }
+        txinscript << pushStackItem(redeemscript_);
+        txinscript_ = txinscript;
+
+        txoutscript << OP_HASH160 << pushStackItem(hash160(redeemscript_)) << OP_EQUAL;
+        txoutscript_ = txoutscript;
+    }
 
     account_bin_->setScriptLabel(index, label);
 }
@@ -1209,12 +1206,15 @@ unsigned int Tx::missingSigCount() const
     // Assume for now all inputs belong to the same account.
     using namespace CoinQ::Script;
     unsigned int count = 0;
-    Coin::Transaction cointx = toCoinCore();
+    Coin::Transaction cointx(toCoinCore());
     for (auto& txin: txins_)
     {
         uint64_t outpointvalue = txin->outpoint() ? txin->outpoint()->value() : 0;
         SignableTxIn signabletxin(cointx, txin->txindex(), outpointvalue);
         unsigned int sigsneeded = signabletxin.sigsneeded();
+LOGGER(trace) << "outpointvalue: " << outpointvalue << std::endl;
+LOGGER(trace) << "txinscript:    " << uchar_vector(txin->script()).getHex() << std::endl;
+LOGGER(trace) << "sigsneeded: " << sigsneeded << std::endl;
         if (sigsneeded > count) count = sigsneeded;
     }
     return count;
