@@ -392,10 +392,10 @@ WitnessProgram::version_t WitnessProgram::getWitnessVersion(const uchar_vector& 
     if (fullop.size() < 3)
         return NO_WITNESS;
 
-    if (fullop[0] < 35 && fullop[1] == OP_0 && fullop[2] == fullop.size() - 3)
+    if (fullop[0] < 34 && fullop[1] == OP_0 && fullop[2] == fullop.size() - 3)
         return WITNESS_V0;
 
-    if (fullop[0] == 35 && fullop[1] == OP_1 && fullop[2] == 32)
+    if (fullop[0] == 34 && fullop[1] == OP_1 && fullop[2] == fullop.size() - 3)
         return WITNESS_V1;
 
     return NO_WITNESS;
@@ -751,6 +751,7 @@ unsigned int Script::mergesigs(const Script& other)
 void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount, bool clearinvalidsigs)
 {
     redeemscript_.clear();
+    pubkeys_.clear();
     sigs_.clear();
 
     if (nIn >= tx.inputs.size())
@@ -780,7 +781,8 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         case WitnessProgram::WITNESS_V1:
             if (stack.empty()) return;
             redeemscript_ = stack.back();
-            for (std::size_t i = 1; i + 1 < stack.size(); i++) { sigs.push_back(stack[i]); }
+            for (std::size_t i = 1; i < stack.size() - 1; i++) { sigs.push_back(stack[i]); }
+            break;
 
         case WitnessProgram::WITNESS_V0:
         default:
@@ -800,8 +802,6 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         for (std::size_t i = 1; i + 1 < objects.size(); i++) { sigs.push_back(objects[i]); }
     }
 
-    if (!redeemscript_.empty() || redeemscript_.size() < 3) return;
-
     if (redeemscript_.size() >= 3)
     {
         // Parse redeemscript
@@ -810,7 +810,6 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         if (byte < OP_1 || byte > OP_16) return;
         minsigs_ = byte - OP_1_OFFSET;
 
-        unsigned char numkeys = 0;
         unsigned int pos = 1;
         while (true)
         {
@@ -820,33 +819,31 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
             if (byte >= OP_1 && byte <= OP_16)
             {
                 // Interpret byte as signature counter.
-                if (byte - OP_1_OFFSET != numkeys) return;
-
-                if (numkeys < minsigs_) return;
+                if (pubkeys_.size() < minsigs_ || (byte - OP_1_OFFSET) != pubkeys_.size()) return;
 
                 // Redeemscript must terminate with OP_CHECKMULTISIG
-                if (redeemscript_[pos++] != 0xae || pos > redeemscript_.size()) return;
+                if (redeemscript_[pos++] != 0xae || pos != redeemscript_.size()) return;
 
                 break;
             }
             // Interpret byte as pubkey size
             if (byte > 0x4b || pos + byte > redeemscript_.size()) return;
 
-            numkeys++;
-            if (numkeys > 16) throw std::runtime_error("Public key maximum of 16 exceeded.");
+            if (pubkeys_.size() >= 16) throw std::runtime_error("Public key maximum of 16 exceeded.");
 
             pubkeys_.push_back(bytes_t(redeemscript_.begin() + pos, redeemscript_.begin() + pos + byte));
             pos += byte;
         }
 
-        type_ = (stack.empty() ? PAY_TO_M_OF_N_SCRIPT_HASH : WITNESS_PAY_TO_M_OF_N);
+        type_ = (stack.empty() ? PAY_TO_M_OF_N_SCRIPT_HASH : PAY_TO_M_OF_N_WITNESS_V1);
     }
 
-    if (sigs.size() > pubkeys_.size()) throw std::runtime_error("Too many signatures.");
+    if (sigs.size() > minsigs_) throw std::runtime_error("Too many signatures.");
 
     // Validate signatures.
     unsigned int iSig = 0;
     unsigned int nValidSigs = 0;
+    unsigned int nEmptySigs = 0;
     for (auto& pubkey: pubkeys_)
     {
         // If we already have enough valid signatures or there are no more signatures or signature is a placeholder
@@ -855,6 +852,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
             // Add or keep placeholder.
             sigs_.push_back(bytes_t());
             iSig++;
+            nEmptySigs++;
         }
         else
         {
@@ -881,7 +879,6 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
                 sigs_.push_back(bytes_t());
             }
         }
-        if (!clearinvalidsigs && iSig < sigs.size()) throw std::runtime_error("Invalid signature.");
     }
 }
 
@@ -897,10 +894,13 @@ bytes_t SignableTxIn::txinscript(sigtype_t sigtype) const
         rval << pushStackItem(redeemscript_);
         break;
 
-    case WITNESS_PAY_TO_M_OF_N:
-        rval << OP_1 << pushStackItem(sha256(redeemscript_));
-        break;
-        
+    case PAY_TO_M_OF_N_WITNESS_V1:
+        {
+            uchar_vector witnessscript;
+            witnessscript << OP_1 << pushStackItem(sha256(redeemscript_));
+            rval << pushStackItem(witnessscript);
+            break;
+        } 
     default:
         break;
     }
@@ -918,10 +918,13 @@ bytes_t SignableTxIn::txoutscript() const
         rval << OP_HASH160 << pushStackItem(hash160(redeemscript_)) << OP_EQUAL;
         break;
 
-    case WITNESS_PAY_TO_M_OF_N:
-        rval << OP_HASH160 << pushStackItem(hash160(sha256(redeemscript_))) << OP_EQUAL;
-        break;
-        
+    case PAY_TO_M_OF_N_WITNESS_V1:
+        {
+            uchar_vector witnessscript;
+            witnessscript << OP_1 << pushStackItem(sha256(redeemscript_));
+            rval << OP_HASH160 << pushStackItem(hash160(sha256(witnessscript))) << OP_EQUAL;
+            break;
+        }
     default:
         break;
     }
@@ -938,7 +941,7 @@ Coin::ScriptWitness SignableTxIn::scriptwitness(sigtype_t sigtype) const
     case PAY_TO_M_OF_N_SCRIPT_HASH:
         break;
 
-    case WITNESS_PAY_TO_M_OF_N:
+    case PAY_TO_M_OF_N_WITNESS_V1:
         scriptwitness.clear();
         scriptwitness.push(bytes_t());
         for (auto& sig: sigs_) { if (!sig.empty() || sigtype == EDIT) scriptwitness.push(sig); }

@@ -390,8 +390,8 @@ public:
         PAY_TO_PUBKEY,
         PAY_TO_PUBKEY_HASH,
         PAY_TO_M_OF_N_SCRIPT_HASH,
-        WITNESS_PAY_TO_PUBKEY,
-        WITNESS_PAY_TO_M_OF_N,
+        PAY_TO_PUBKEY_WITNESS_V1,
+        PAY_TO_M_OF_N_WITNESS_V1,
     };
 
     explicit SignableTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0, bool clearinvalidsigs = false) { setTxIn(tx, nIn, outpointamount, clearinvalidsigs); }
