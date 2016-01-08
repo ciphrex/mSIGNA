@@ -394,11 +394,26 @@ public:
         PAY_TO_M_OF_N_WITNESS_V1,
     };
 
+    type_t type() const { return type_; }
+
+    const char* typestring() const
+    {
+        switch (type_)
+        {
+        case UNKNOWN:                   return "UNKNOWN";
+        case PAY_TO_PUBKEY:             return "PAY_TO_PUBKEY";
+        case PAY_TO_PUBKEY_HASH:        return "PAY_TO_PUBKEY_HASH";
+        case PAY_TO_M_OF_N_SCRIPT_HASH: return "PAY_TO_M_OF_N_SCRIPT_HASH";
+        case PAY_TO_PUBKEY_WITNESS_V1:  return "PAY_TO_PUBKEY_WITNESS_V1";
+        case PAY_TO_M_OF_N_WITNESS_V1:  return "PAY_TO_M_OF_N_WITNESS_V1";
+        default:                        return "UNDEFINED";
+        }
+    }
+
     explicit SignableTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0) { setTxIn(tx, nIn, outpointamount); }
 
     void setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0);
 
-    type_t type() const { return type_; }
     unsigned int minsigs() const { return minsigs_; }
     const std::vector<bytes_t>& pubkeys() const { return pubkeys_; }
     const std::vector<bytes_t>& sigs() const { return sigs_; }
