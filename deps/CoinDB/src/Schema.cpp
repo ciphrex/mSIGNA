@@ -800,9 +800,9 @@ bytes_t TxIn::unsigned_script() const
 {
     using namespace CoinQ::Script;
 
-    Script script(script_);
-    script.clearSigs();
-    return script.txinscript(Script::EDIT);
+    SignableTxIn signabletxin(tx()->toCoinCore(), txindex_, outpoint() ? outpoint()->value() : 0);
+    signabletxin.clearsigs();
+    return signabletxin.txinscript();
 }
 
 bytes_t TxIn::raw() const
@@ -1209,10 +1209,12 @@ unsigned int Tx::missingSigCount() const
     // Assume for now all inputs belong to the same account.
     using namespace CoinQ::Script;
     unsigned int count = 0;
+    Coin::Transaction cointx = toCoinCore();
     for (auto& txin: txins_)
     {
-        Script script(txin->script());
-        unsigned int sigsneeded = script.sigsneeded();
+        uint64_t outpointvalue = txin->outpoint() ? txin->outpoint()->value() : 0;
+        SignableTxIn signabletxin(cointx, txin->txindex(), outpointvalue);
+        unsigned int sigsneeded = signabletxin.sigsneeded();
         if (sigsneeded > count) count = sigsneeded;
     }
     return count;
@@ -1222,10 +1224,12 @@ std::set<bytes_t> Tx::missingSigPubkeys() const
 {
     using namespace CoinQ::Script;
     std::set<bytes_t> pubkeys;
+    Coin::Transaction cointx = toCoinCore();
     for (auto& txin: txins_)
     {
-        Script script(txin->script());
-        std::vector<bytes_t> txinpubkeys = script.missingsigs();
+        uint64_t outpointvalue = txin->outpoint() ? txin->outpoint()->value() : 0;
+        SignableTxIn signabletxin(cointx, txin->txindex(), outpointvalue);
+        std::vector<bytes_t> txinpubkeys = signabletxin.missingsigs();
         for (auto& txinpubkey: txinpubkeys) { pubkeys.insert(txinpubkey); }
     } 
     return pubkeys;
