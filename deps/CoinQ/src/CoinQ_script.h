@@ -394,25 +394,18 @@ public:
         PAY_TO_M_OF_N_WITNESS_V1,
     };
 
-    explicit SignableTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0, bool clearinvalidsigs = false) { setTxIn(tx, nIn, outpointamount, clearinvalidsigs); }
+    explicit SignableTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0) { setTxIn(tx, nIn, outpointamount); }
 
-    void setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0, bool clearinvalidsigs = false);
+    void setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0);
 
     type_t type() const { return type_; }
     unsigned int minsigs() const { return minsigs_; }
     const std::vector<bytes_t>& pubkeys() const { return pubkeys_; }
     const std::vector<bytes_t>& sigs() const { return sigs_; }
 
-    enum sigtype_t { EDIT, SIGN, BROADCAST }; 
-    /*
-     * EDIT         - includes 0-length placeholders for missing signatures
-     * SIGN         - format the script for signing
-     * BROADCAST    - format the script for broadcast (remove 0-length placeholders)
-    */
-
-    bytes_t txinscript(sigtype_t sigtype) const;
+    bytes_t txinscript() const;
     bytes_t txoutscript() const;
-    Coin::ScriptWitness scriptwitness(sigtype_t sigtype) const;
+    Coin::ScriptWitness scriptwitness() const;
 
     const bytes_t& redeemscript() const { return redeemscript_; }
 

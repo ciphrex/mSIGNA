@@ -748,7 +748,7 @@ unsigned int Script::mergesigs(const Script& other)
 }
 
 
-void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount, bool clearinvalidsigs)
+void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount)
 {
     redeemscript_.clear();
     pubkeys_.clear();
@@ -775,10 +775,12 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
     type_ = UNKNOWN;
     if (objects.size() == 1)
     {
+std::cout << "objects.size() == 1" << std::endl;
         WitnessProgram::version_t wpVersion = WitnessProgram::getWitnessVersion(txinscript);
         switch (wpVersion)
         {
         case WitnessProgram::WITNESS_V1:
+std::cout << "WITNESS_V1" << std::endl;
             if (stack.empty()) return;
             redeemscript_ = stack.back();
             for (std::size_t i = 1; i < stack.size() - 1; i++) { sigs.push_back(stack[i]); }
@@ -804,6 +806,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
 
     if (redeemscript_.size() >= 3)
     {
+std::cout << "redeemscript == " << uchar_vector(redeemscript_).getHex() << std::endl;
         // Parse redeemscript
         // Get minsigs. Size opcode is offset by 0x50.
         unsigned char byte = redeemscript_[0];
@@ -882,16 +885,19 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
     }
 }
 
-bytes_t SignableTxIn::txinscript(sigtype_t sigtype) const
+bytes_t SignableTxIn::txinscript() const
 {
     uchar_vector rval;
 
     switch (type_)
     {
     case PAY_TO_M_OF_N_SCRIPT_HASH:
-        rval << OP_0;
-        for (auto& sig: sigs_) { if (!sig.empty() || sigtype == EDIT) rval << pushStackItem(sig); }
-        rval << pushStackItem(redeemscript_);
+        {
+            bool needsSigs = sigsneeded() > 0;
+            rval << OP_0;
+            for (auto& sig: sigs_) { if (!sig.empty() || needsSigs) rval << pushStackItem(sig); }
+            rval << pushStackItem(redeemscript_);
+        }
         break;
 
     case PAY_TO_M_OF_N_WITNESS_V1:
@@ -932,7 +938,7 @@ bytes_t SignableTxIn::txoutscript() const
     return rval; 
 }
 
-Coin::ScriptWitness SignableTxIn::scriptwitness(sigtype_t sigtype) const
+Coin::ScriptWitness SignableTxIn::scriptwitness() const
 {
     Coin::ScriptWitness scriptwitness;
 
@@ -942,9 +948,13 @@ Coin::ScriptWitness SignableTxIn::scriptwitness(sigtype_t sigtype) const
         break;
 
     case PAY_TO_M_OF_N_WITNESS_V1:
-        scriptwitness.clear();
-        scriptwitness.push(bytes_t());
-        for (auto& sig: sigs_) { if (!sig.empty() || sigtype == EDIT) scriptwitness.push(sig); }
+        {
+            bool needsSigs = sigsneeded() > 0;
+            scriptwitness.clear();
+            scriptwitness.push(bytes_t());
+            for (auto& sig: sigs_) { if (!sig.empty() || needsSigs) scriptwitness.push(sig); }
+            scriptwitness.push(redeemscript_);
+        }
         break;
 
     default:
