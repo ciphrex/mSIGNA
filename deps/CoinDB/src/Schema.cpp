@@ -637,8 +637,14 @@ SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t i
 
     account_->loadScriptTemplates();
     uchar_vector redeemscript = account_->redeemtemplate().script(pubkeys);
+
+    CoinQ::Script::WitnessProgram wp(redeemscript);
+    txinscript_ = wp.txinscript();
+    txoutscript_ = wp.txoutscript();
+/*
     txinscript_ = account_->txintemplate().script(redeemscript);
     txoutscript_ = account_->txouttemplate().script(redeemscript);
+*/
 
     account_bin_->setScriptLabel(index, label);
 }
@@ -1122,9 +1128,9 @@ void Tx::blockheader(std::shared_ptr<BlockHeader> blockheader)
     else if (status_ == CONFIRMED)  { status_ = PROPAGATED; }   
 }
 
-bytes_t Tx::raw() const
+bytes_t Tx::raw(bool withWitness) const
 {
-    return toCoinCore().getSerialized();
+    return withWitness ? toCoinCore().getSerializedWithWitness() : toCoinCore().getSerialized();
 }
 
 void Tx::updateTotals()
