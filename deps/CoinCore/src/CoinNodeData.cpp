@@ -1365,6 +1365,30 @@ Transaction::Transaction(const string& hex)
     this->setSerialized(bytes);
 }
 
+const uchar_vector& Transaction::getHash(bool bWithWitness) const
+{
+    hash_ = sha256_2(getSerialized(bWithWitness));
+    return hash_;
+}
+
+const uchar_vector& Transaction::getHashLittleEndian(bool bWithWitness) const
+{
+    hashLittleEndian_ = sha256_2(getSerialized(bWithWitness)).getReverse();
+    return hashLittleEndian_;
+}
+
+const uchar_vector& Transaction::getHash(hashfunc_t hashfunc, bool bWithWitness) const
+{
+    hash_ = hashfunc(getSerialized(bWithWitness));
+    return hash_;
+}
+
+const uchar_vector& Transaction::getHashLittleEndian(hashfunc_t hashfunc, bool bWithWitness) const
+{
+    hashLittleEndian_ = hash_.getReverse();
+    return hashLittleEndian_;
+}
+
 uint64_t Transaction::getSize(bool bWithWitness) const
 {
     bWithWitness = bWithWitness && hasWitness();
@@ -1392,7 +1416,6 @@ uint64_t Transaction::getSize(bool bWithWitness) const
 uchar_vector Transaction::getSerialized(bool bWithWitness) const
 {
     bWithWitness = bWithWitness && hasWitness();
-    if (!hasWitness()) return getSerialized();
 
     // version
     uchar_vector rval = uint_to_vch(version, LITTLE_ENDIAN_);

@@ -673,6 +673,18 @@ public:
     Transaction(const Transaction& tx)
         : version(tx.version), inputs(tx.inputs), outputs(tx.outputs), lockTime(tx.lockTime) { }
 
+    const uchar_vector& getHash() const { return getHash(false); }
+    const uchar_vector& getHash(bool bWithWitness) const;
+
+    const uchar_vector& getHashLittleEndian() const { return getHashLittleEndian(false); }
+    const uchar_vector& getHashLittleEndian(bool bWithWitness) const;
+
+    const uchar_vector& getHash(hashfunc_t hashfunc) const { return getHash(hashfunc, false); }
+    const uchar_vector& getHash(hashfunc_t hashfunc, bool bWithWitness) const;
+
+    const uchar_vector& getHashLittleEndian(hashfunc_t hashfunc) const { return getHashLittleEndian(hashfunc, false); }
+    const uchar_vector& getHashLittleEndian(hashfunc_t hashfunc, bool bWithWitness) const;
+
     const uchar_vector& hash() const { return getHashLittleEndian(); }
 
     const char* getCommand() const { return "tx"; }
