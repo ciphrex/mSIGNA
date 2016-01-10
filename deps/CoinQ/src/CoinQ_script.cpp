@@ -103,7 +103,8 @@ uchar_vector getNextOp(const bytes_t& script, uint& pos, bool pushdataonly)
     if (op >= OP_1 && op <= OP_16)
     {
         uchar_vector rval;
-        rval.push_back(op - OP_1_OFFSET);
+        if (pushdataonly)   { rval.push_back(op - OP_1_OFFSET); }
+        else                { rval.push_back(op); }
         return rval;
     }
     else if (op <= 0x4b)
