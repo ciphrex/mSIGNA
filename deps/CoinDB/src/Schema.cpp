@@ -1212,9 +1212,6 @@ unsigned int Tx::missingSigCount() const
         uint64_t outpointvalue = txin->outpoint() ? txin->outpoint()->value() : 0;
         SignableTxIn signabletxin(cointx, txin->txindex(), outpointvalue);
         unsigned int sigsneeded = signabletxin.sigsneeded();
-LOGGER(trace) << "outpointvalue: " << outpointvalue << std::endl;
-LOGGER(trace) << "txinscript:    " << uchar_vector(txin->script()).getHex() << std::endl;
-LOGGER(trace) << "sigsneeded: " << sigsneeded << std::endl;
         if (sigsneeded > count) count = sigsneeded;
     }
     return count;
