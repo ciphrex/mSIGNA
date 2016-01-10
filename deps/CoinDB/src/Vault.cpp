@@ -2209,9 +2209,6 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool repla
 {
     try
     {
-        // TODO: Validate signatures
-        tx->updateStatus();
-LOGGER(trace) << "tx status!@#$: " << tx->getStatusString() << std::endl;
         Coin::Transaction cointx(tx->toCoinCore());
         std::string hashstr = uchar_vector(tx->hash()).getHex();
         std::string unsignedhashstr = uchar_vector(tx->unsigned_hash()).getHex();
@@ -2234,6 +2231,11 @@ LOGGER(trace) << "tx status!@#$: " << tx->getStatusString() << std::endl;
             {
                 throw TxMismatchException(stored_tx->hash());
             }
+
+            // We need to set the outpoints for sighash operations in updateStatus.
+            for (auto& txin: tx->txins()) { txin->outpoint(stored_tx->txins()[txin->txindex()]->outpoint()); }
+            tx->updateStatus();
+LOGGER(trace) << "update tx status: " << tx->getStatusString() << std::endl;
 
             bool updated = false;
 
@@ -2433,6 +2435,8 @@ LOGGER(trace) << "tx status!@#$: " << tx->getStatusString() << std::endl;
                     }
                 }
             }
+            if (sent_from_vault) { tx->updateStatus(); }
+LOGGER(trace) << "new tx status: " << tx->getStatusString() << std::endl;
         }
 
         // Check outputs
