@@ -11,6 +11,8 @@
 #include <CoinCore/Base58Check.h>
 #include <CoinCore/secp256k1_openssl.h>
 
+#include <logger/logger.h>
+
 using namespace CoinCrypto;
 
 namespace CoinQ {
@@ -805,6 +807,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
                 return;
             }
             redeemscript_ = stack.back();
+LOGGER(trace) << "redeemscript: " << uchar_vector(redeemscript_).getHex() << std::endl;
             for (std::size_t i = 1; i < stack.size() - 1; i++) { sigs.push_back(stack[i]); }
             break;
 
@@ -856,6 +859,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         unsigned char byte = redeemscript_[0];
         if (byte < OP_1 || byte > OP_16) return;
         minsigs_ = byte - OP_1_OFFSET;
+LOGGER(trace) << "minsigs: " << minsigs_ << std::endl;
 
         unsigned int pos = 1;
         while (true)
@@ -879,6 +883,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
             if (pubkeys_.size() >= 16) throw std::runtime_error("Public key maximum of 16 exceeded.");
 
             pubkeys_.push_back(bytes_t(redeemscript_.begin() + pos, redeemscript_.begin() + pos + byte));
+LOGGER(trace) << "pubkey: " << uchar_vector(pubkeys_.back()). getHex() << std::endl;
             pos += byte;
         }
 
@@ -898,6 +903,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         {
             // Add or keep placeholder.
             sigs_.push_back(bytes_t());
+LOGGER(trace) << "placeholder" << std::endl;
             iSig++;
         }
         else
@@ -916,6 +922,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
             {
                 // Signature is valid. Keep it.
                 sigs_.push_back(sigs[iSig]);
+LOGGER(trace) << "valid:       " << uchar_vector(sigs_.back()).getHex() << std::endl;
                 iSig++;
                 nValidSigs++;
             }
@@ -923,6 +930,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
             {
                 // Signature is invalid. Add placeholder for this pubkey and test it for next pubkey
                 sigs_.push_back(bytes_t());
+LOGGER(trace) << "invalid:     " << uchar_vector(sigs[iSig]).getHex() << std::endl;
             }
         }
     }
