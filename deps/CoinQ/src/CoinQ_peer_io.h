@@ -22,6 +22,8 @@
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
 
+#include <CoinCore/CoinNodeData.h> // TODO: Move flags into separate include file
+const uint32_t DEFAULT_INV_FLAGS = MSG_WITNESS_FLAG;
 
 inline uint64_t getRandomNonce64()
 {
@@ -58,7 +60,7 @@ typedef std::function<void(Peer&, const Coin::Inventory&)>          peer_inv_slo
 class Peer
 {
 public:
-    Peer(io_service_t& io_service, const std::string& host = "", const std::string& port = "", uint32_t magic_bytes = 0, uint32_t protocol_version = 0, const std::string& user_agent = std::string(), uint32_t start_height = 0, bool relay = true) :
+    Peer(io_service_t& io_service, const std::string& host = "", const std::string& port = "", uint32_t magic_bytes = 0, uint32_t protocol_version = 0, const std::string& user_agent = std::string(), uint32_t start_height = 0, bool relay = true, uint32_t invFlags = 0) :
         //io_service_(io_service),
         strand_(io_service),
         resolver_(io_service),
@@ -71,6 +73,7 @@ public:
         user_agent_(user_agent),
         start_height_(start_height),
         relay_(relay),
+        invFlags_(invFlags),
         bRunning(false)
     {
         magic_bytes_vector_ = uint_to_vch(magic_bytes_, LITTLE_ENDIAN_);
@@ -91,6 +94,8 @@ public:
 
         magic_bytes_vector_ = uint_to_vch(magic_bytes_, LITTLE_ENDIAN_);
     }
+
+    void setInvFlags(uint32_t invFlags) { invFlags_ = invFlags; }
 
     void subscribeMessage(peer_message_slot_t slot) { notifyMessage.connect(slot); }
     void subscribeHeaders(peer_headers_slot_t slot) { notifyHeaders.connect(slot); }
@@ -132,7 +137,7 @@ public:
             return;
         }
 
-        Coin::InventoryItem tx(MSG_TX, hash);
+        Coin::InventoryItem tx(MSG_TX | invFlags_, hash);
         Coin::Inventory inv;
         inv.addItem(tx);
         Coin::GetDataMessage getData(inv);
@@ -156,7 +161,7 @@ public:
                 return;
             }
 
-            inv.addItem(InventoryItem(MSG_TX, hash));
+            inv.addItem(InventoryItem(MSG_TX | invFlags_, hash));
         }
         GetDataMessage getData(inv);
         send(getData);
@@ -173,7 +178,7 @@ public:
             return;
         }
 
-        Coin::InventoryItem block(MSG_BLOCK, hash);
+        Coin::InventoryItem block(MSG_BLOCK | invFlags_, hash);
         Coin::Inventory inv;
         inv.addItem(block);
         Coin::GetDataMessage getData(inv);
@@ -191,7 +196,7 @@ public:
             return;
         }
 
-        Coin::InventoryItem block(MSG_FILTERED_BLOCK, hash);
+        Coin::InventoryItem block(MSG_FILTERED_BLOCK | invFlags_, hash);
         Coin::Inventory inv;
         inv.addItem(block);
         Coin::GetDataMessage getData(inv);
@@ -298,7 +303,9 @@ private:
     std::string user_agent_;
     uint32_t start_height_;
     bool relay_;
-    
+
+    // Protocol flags
+    uint32_t invFlags_;
 
     // State members
     boost::shared_mutex mutex;
