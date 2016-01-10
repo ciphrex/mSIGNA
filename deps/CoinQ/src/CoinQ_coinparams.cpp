@@ -131,7 +131,7 @@ const CoinParams segnetParams(
         1,
         1451529527,
         0x1d00ffff,
-        4144098459,
+        414098458,
         uchar_vector(32, 0),
         uchar_vector("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")
     )
