@@ -510,9 +510,11 @@ Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint
     odb::result<SigningScriptView> r(db_->query<SigningScriptView>());
     for (auto& view: r)
     {
-        Script script(view.txinscript);
-        elements.push_back(script.txinscript(Script::SIGN));                // Add input script element
-        elements.push_back(getScriptPubKeyPayee(view.txoutscript).second);  // Add output script element
+        // TODO: Fix this
+        WitnessProgram wp(view.redeemscript);
+        elements.push_back(view.redeemscript);                                  // Add input script element
+        elements.push_back(wp.witnessscript());                                 // Add input script element
+        elements.push_back(getScriptPubKeyPayee(view.txoutscript).second);      // Add output script element
     }
     if (elements.empty()) return Coin::BloomFilter();
 
