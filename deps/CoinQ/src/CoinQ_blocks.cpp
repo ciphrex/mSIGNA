@@ -93,6 +93,7 @@ bool CoinQBlockTreeMem::unsetBestChain(ChainHeader& header)
 
 void CoinQBlockTreeMem::setGenesisBlock(const Coin::CoinBlockHeader& header)
 {
+    LOGGER(trace) << "setGenesisBlock - hash: " << header.getPOWHashLittleEndian().getHex() << std::endl;
     if (mHeaderHashMap.size() != 0) throw std::runtime_error("Tree is not empty.");
 
     bFlushed = false;
