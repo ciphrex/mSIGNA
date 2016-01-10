@@ -52,6 +52,8 @@ void SetMultiSigAddressVersion(unsigned char version);
 #define MSG_TX                        1
 #define MSG_BLOCK                     2
 #define MSG_FILTERED_BLOCK            3
+#define MSG_WITNESS_BLOCK             4
+#define MSG_WITNESS_TX                5
 
 #define MIN_VAR_INT_SIZE              1
 #define MIN_VAR_STR_SIZE              1
