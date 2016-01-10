@@ -1364,36 +1364,22 @@ Transaction::Transaction(const string& hex)
     this->setSerialized(bytes);
 }
 
-uint64_t Transaction::getSize() const
+uint64_t Transaction::getSize(bool bWithWitness) const
 {
+    bWithWitness = bWithWitness && hasWitness();
+
     uint64_t count = 8; // version + locktime
-    count += VarInt(this->inputs.size()).getSize();
-    count += VarInt(this->outputs.size()).getSize();
+    count += VarInt(inputs.size()).getSize();
+    count += VarInt(outputs.size()).getSize();
 
     uint64_t i;
-    for (i = 0; i < this->inputs.size(); i++)
-        count += this->inputs[i].getSize();
+    for (i = 0; i < inputs.size(); i++)
+        count += inputs[i].getSize();
 
-    for (i = 0; i < this->outputs.size(); i++)
-        count += this->outputs[i].getSize();
+    for (i = 0; i < outputs.size(); i++)
+        count += outputs[i].getSize();
 
-    return count;
-}
-
-uint64_t Transaction::getSizeWithWitness() const
-{
-    uint64_t count = 8; // version + locktime
-    count += VarInt(this->inputs.size()).getSize();
-    count += VarInt(this->outputs.size()).getSize();
-
-    uint64_t i;
-    for (i = 0; i < this->inputs.size(); i++)
-        count += this->inputs[i].getSize();
-
-    for (i = 0; i < this->outputs.size(); i++)
-        count += this->outputs[i].getSize();
-
-    if (hasWitness())
+    if (bWithWitness)
     {
         count += 2; // mask + flags
         for (auto& input: inputs) { count += input.scriptWitness.getSize(); }
@@ -1402,40 +1388,22 @@ uint64_t Transaction::getSizeWithWitness() const
     return count;
 }
 
-uchar_vector Transaction::getSerialized(bool includeScriptSigLength) const
+uchar_vector Transaction::getSerialized(bool bWithWitness) const
 {
-    // version
-    uchar_vector rval = uint_to_vch(this->version, LITTLE_ENDIAN_);
-
-    uint64_t i;
-    // inputs
-    rval += VarInt(this->inputs.size()).getSerialized();
-    for (i = 0; i < this->inputs.size(); i++)
-        rval += this->inputs[i].getSerialized(includeScriptSigLength);
-
-    // outputs
-    rval += VarInt(this->outputs.size()).getSerialized();
-    for (i = 0; i < this->outputs.size(); i++)
-        rval += this->outputs[i].getSerialized();
-
-    // lock time
-    rval += uint_to_vch(this->lockTime, LITTLE_ENDIAN_);
-
-    return rval;
-}
-
-uchar_vector Transaction::getSerializedWithWitness() const
-{
+    bWithWitness = bWithWitness && hasWitness();
     if (!hasWitness()) return getSerialized();
 
     // version
     uchar_vector rval = uint_to_vch(version, LITTLE_ENDIAN_);
 
-    // mask
-    rval.push_back(0x00);
+    if (bWithWitness)
+    {
+        // mask
+        rval.push_back(0x00);
 
-    // flags
-    rval.push_back(0x01);
+        // flags
+        rval.push_back(0x01);
+    }
 
     // inputs
     rval += VarInt(inputs.size()).getSerialized();
@@ -1445,8 +1413,11 @@ uchar_vector Transaction::getSerializedWithWitness() const
     rval += VarInt(outputs.size()).getSerialized();
     for (auto& output: outputs) { rval += output.getSerialized(); }
 
-    // witness
-    for (auto& input: inputs) { rval += input.scriptWitness.getSerialized(); }
+    if (bWithWitness)
+    {
+        // witness
+        for (auto& input: inputs) { rval += input.scriptWitness.getSerialized(); }
+    }
 
     // lock time
     rval += uint_to_vch(lockTime, LITTLE_ENDIAN_);
@@ -1612,7 +1583,7 @@ uchar_vector Transaction::getSigHash(uint32_t hashType, uint index, const uchar_
             if (index == i) { copy.inputs[i].scriptSig = script; }
             else            { copy.inputs[i].scriptSig.clear();  }
         }
-        return copy.getHashWithAppendedCode(hashType);
+        return sha256_2(getSerialized(false) + uint_to_vch(hashType, LITTLE_ENDIAN_));
     }
 
     if (hashPrevouts.empty())
