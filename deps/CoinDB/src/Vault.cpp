@@ -2381,6 +2381,7 @@ LOGGER(trace) << "update tx status: " << tx->getStatusString() << std::endl;
                 {
                     CoinQ::Script::SignableTxIn signabletxin(cointx, txin->txindex(), 0);
                     txoutscript = signabletxin.txoutscript();
+LOGGER(trace) << "txoutscript!!! " << uchar_vector(txoutscript).getHex() << std::endl;
                 }
                 catch (const std::exception& e)
                 {
@@ -2518,6 +2519,8 @@ LOGGER(trace) << "new tx status: " << tx->getStatusString() << std::endl;
 
         if (sent_from_vault || sent_to_vault)
         {
+            // TODO: better tx status update method
+            if (!sent_from_vault) { tx->status(Tx::PROPAGATED); tx->hash(tx->toCoinCore().hash()); }
             LOGGER(debug) << "Vault::insertTx_unwrapped - INSERTING NEW TRANSACTION. hash: " << uchar_vector(tx->hash()).getHex() << ", unsigned hash: " << uchar_vector(tx->unsigned_hash()).getHex() << std::endl;
             tx->updateTotals();
 
