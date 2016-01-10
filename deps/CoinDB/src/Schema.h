@@ -1654,6 +1654,9 @@ struct SigningScriptView
     #pragma db column(SigningScript::status_)
     SigningScript::status_t status;
 
+    #pragma db column(SigningScript::redeemscript_)
+    bytes_t redeemscript;
+
     #pragma db column(SigningScript::txinscript_)
     bytes_t txinscript;
 
