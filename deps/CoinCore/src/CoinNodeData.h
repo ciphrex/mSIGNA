@@ -679,12 +679,11 @@ public:
 
     bool hasWitness() const { for (auto& input: inputs) { if (input.hasWitness()) return true; } return false; }
 
-    uint64_t getSize() const;
-    uint64_t getSizeWithWitness() const;
+    uint64_t getSize() const { return this->getSize(true); }
+    uint64_t getSize(bool bWithWitness) const;
 
     uchar_vector getSerialized() const { return this->getSerialized(true); }
-    uchar_vector getSerialized(bool includeScriptSigLength) const;
-    uchar_vector getSerializedWithWitness() const;
+    uchar_vector getSerialized(bool bWithWitness) const;
 
     void setSerialized(const uchar_vector& bytes);
 
