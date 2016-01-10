@@ -1127,7 +1127,7 @@ void Tx::blockheader(std::shared_ptr<BlockHeader> blockheader)
 
 bytes_t Tx::raw(bool withWitness) const
 {
-    return withWitness ? toCoinCore().getSerializedWithWitness() : toCoinCore().getSerialized();
+    return toCoinCore().getSerialized(withWitness);
 }
 
 void Tx::updateTotals()
