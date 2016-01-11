@@ -55,8 +55,8 @@ void SetMultiSigAddressVersion(unsigned char version);
 #define MSG_WITNESS_BLOCK             4
 #define MSG_WITNESS_TX                5
 
-const uint32_t MSG_WITNESS_FLAG     = 1 << 31;
-const uint32_t MSG_TYPE_MASK        = 0xffffffff >> 1; // Only one flag type
+const uint32_t MSG_WITNESS_FLAG     = 1 << 30;
+const uint32_t MSG_TYPE_MASK        = 0xffffffff >> 2;
 
 #define MIN_VAR_INT_SIZE              1
 #define MIN_VAR_STR_SIZE              1
