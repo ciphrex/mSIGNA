@@ -124,6 +124,7 @@ private:
 const CoinParams& getBitcoinParams();
 const CoinParams& getTestnet3Params();
 const CoinParams& getSegnetParams();
+const CoinParams& getSegnet2Params();
 const CoinParams& getLitecoinParams();
 const CoinParams& getQuarkcoinParams();
 
