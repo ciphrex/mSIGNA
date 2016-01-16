@@ -309,10 +309,27 @@ private:
 class WitnessProgram
 {
 public:
+    WitnessProgram() { }
     WitnessProgram(const WitnessProgram& wp) : redeemscript_(wp.redeemscript_) { update(); }
     WitnessProgram(const uchar_vector& redeemscript) : redeemscript_(redeemscript) { update(); }
 
-    int version() const { return (redeemscript_.size() < 32) ? 0 : 1; }
+    enum type_t
+    {
+        UNDEFINED,
+        V0_P2WPKH,
+        V0_P2WSH,
+    };
+
+    int type() const
+    {
+        if (pubkey_.size())         return V0_P2WPKH;
+        if (redeemscript_.size())   return V0_P2WSH;
+        /* default */               return UNDEFINED;
+    }
+
+    int version() const { return 0; }
+
+    void setPubKey(const uchar_vector& pubkey);
 
     const uchar_vector& witnessscript() const { return witnessscript_; }
     const uchar_vector& redeemscript() const { return redeemscript_; }
@@ -325,13 +342,13 @@ public:
     {
         NO_WITNESS,
         WITNESS_V0,
-        WITNESS_V1,
     };
 
     static version_t getWitnessVersion(const uchar_vector& txinscript);
 
 private:
     uchar_vector witnessscript_;
+    uchar_vector pubkey_;
     uchar_vector redeemscript_;
     uchar_vector txinscript_;
     uchar_vector txoutscript_;
@@ -400,8 +417,8 @@ public:
         PAY_TO_PUBKEY,
         PAY_TO_PUBKEY_HASH,
         PAY_TO_M_OF_N_SCRIPT_HASH,
-        PAY_TO_PUBKEY_WITNESS_V1,
-        PAY_TO_M_OF_N_WITNESS_V1,
+        PAY_TO_PUBKEY_HASH_WITNESS_V0,
+        PAY_TO_M_OF_N_WITNESS_V0,
     };
 
     type_t type() const { return type_; }
@@ -410,14 +427,14 @@ public:
     {
         switch (type_)
         {
-        case UNKNOWN:                   return "UNKNOWN";
-        case MISSING_WITNESS:           return "MISSING_WITNESS";
-        case PAY_TO_PUBKEY:             return "PAY_TO_PUBKEY";
-        case PAY_TO_PUBKEY_HASH:        return "PAY_TO_PUBKEY_HASH";
-        case PAY_TO_M_OF_N_SCRIPT_HASH: return "PAY_TO_M_OF_N_SCRIPT_HASH";
-        case PAY_TO_PUBKEY_WITNESS_V1:  return "PAY_TO_PUBKEY_WITNESS_V1";
-        case PAY_TO_M_OF_N_WITNESS_V1:  return "PAY_TO_M_OF_N_WITNESS_V1";
-        default:                        return "UNDEFINED";
+        case UNKNOWN:                       return "UNKNOWN";
+        case MISSING_WITNESS:               return "MISSING_WITNESS";
+        case PAY_TO_PUBKEY:                 return "PAY_TO_PUBKEY";
+        case PAY_TO_PUBKEY_HASH:            return "PAY_TO_PUBKEY_HASH";
+        case PAY_TO_M_OF_N_SCRIPT_HASH:     return "PAY_TO_M_OF_N_SCRIPT_HASH";
+        case PAY_TO_PUBKEY_HASH_WITNESS_V0: return "PAY_TO_PUBKEY_HASH_WITNESS_V0";
+        case PAY_TO_M_OF_N_WITNESS_V0:      return "PAY_TO_M_OF_N_WITNESS_V0";
+        default:                            return "UNDEFINED";
         }
     }
 
