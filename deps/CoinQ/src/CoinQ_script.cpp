@@ -384,19 +384,26 @@ std::string WitnessProgram::address(const unsigned char addressVersions[]) const
     return toBase58Check(hash160(witnessscript_), addressVersions[1]);
 }
 
+void WitnessProgram::setPubKey(const uchar_vector& pubkey)
+{
+    redeemscript_.clear();
+    pubkey_ = pubkey;
+    update();
+}
+
 void WitnessProgram::update()
 {
     witnessscript_.clear();
     txinscript_.clear();
     txoutscript_.clear();
 
-    switch (version())
+    switch (type())
     {
-    case 0:
-        witnessscript_ << OP_0 << pushStackItem(redeemscript_);
+    case V0_P2WPKH:
+        witnessscript_ << OP_0 << pushStackItem(hash160(pubkey_));
         break;
-    case 1:
-        witnessscript_ << OP_1 << pushStackItem(sha256(redeemscript_));
+    case V0_P2WSH:
+        witnessscript_ << OP_0 << pushStackItem(sha256(redeemscript_));
         break;
     default:
         break;
@@ -413,11 +420,8 @@ WitnessProgram::version_t WitnessProgram::getWitnessVersion(const uchar_vector& 
     if (fullop.size() < 3)
         return NO_WITNESS;
 
-    if (fullop[0] < 34 && fullop[1] == OP_0 && fullop[2] == fullop.size() - 3)
+    if ((fullop[0] == 34 || fullop[0] == 22) && fullop[1] == OP_0)
         return WITNESS_V0;
-
-    if (fullop[0] == 34 && fullop[1] == OP_1 && fullop[2] == fullop.size() - 3)
-        return WITNESS_V1;
 
     return NO_WITNESS;
 }
@@ -800,7 +804,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         wpVersion = WitnessProgram::getWitnessVersion(txinscript);
         switch (wpVersion)
         {
-        case WitnessProgram::WITNESS_V1:
+        case WitnessProgram::WITNESS_V0:
             if (stack.empty())
             {
                 type_ = MISSING_WITNESS;
@@ -811,7 +815,6 @@ LOGGER(trace) << "redeemscript: " << uchar_vector(redeemscript_).getHex() << std
             for (std::size_t i = 1; i < stack.size() - 1; i++) { sigs.push_back(stack[i]); }
             break;
 
-        case WitnessProgram::WITNESS_V0:
         default:
             return;
         }
@@ -887,7 +890,7 @@ LOGGER(trace) << "pubkey: " << uchar_vector(pubkeys_.back()). getHex() << std::e
             pos += byte;
         }
 
-        type_ = (wpVersion == WitnessProgram::WITNESS_V1 ? PAY_TO_M_OF_N_WITNESS_V1 : PAY_TO_M_OF_N_SCRIPT_HASH);
+        type_ = (wpVersion == WitnessProgram::WITNESS_V0 ? PAY_TO_M_OF_N_WITNESS_V0 : PAY_TO_M_OF_N_SCRIPT_HASH);
     }
 
     if (sigs.size() > pubkeys_.size())
@@ -951,10 +954,10 @@ bytes_t SignableTxIn::txinscript() const
         }
         break;
 
-    case PAY_TO_M_OF_N_WITNESS_V1:
+    case PAY_TO_M_OF_N_WITNESS_V0:
         {
             uchar_vector witnessscript;
-            witnessscript << OP_1 << pushStackItem(sha256(redeemscript_));
+            witnessscript << OP_0 << pushStackItem(sha256(redeemscript_));
             rval << pushStackItem(witnessscript);
             break;
         } 
@@ -975,10 +978,10 @@ bytes_t SignableTxIn::txoutscript() const
         rval << OP_HASH160 << pushStackItem(hash160(redeemscript_)) << OP_EQUAL;
         break;
 
-    case PAY_TO_M_OF_N_WITNESS_V1:
+    case PAY_TO_M_OF_N_WITNESS_V0:
         {
             uchar_vector witnessscript;
-            witnessscript << OP_1 << pushStackItem(sha256(redeemscript_));
+            witnessscript << OP_0 << pushStackItem(sha256(redeemscript_));
             rval << OP_HASH160 << pushStackItem(hash160(sha256(witnessscript))) << OP_EQUAL;
             break;
         }
@@ -998,7 +1001,7 @@ Coin::ScriptWitness SignableTxIn::scriptwitness() const
     case PAY_TO_M_OF_N_SCRIPT_HASH:
         break;
 
-    case PAY_TO_M_OF_N_WITNESS_V1:
+    case PAY_TO_M_OF_N_WITNESS_V0:
         {
             bool needsSigs = sigsneeded() > 0;
             scriptwitness.clear();
