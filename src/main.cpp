@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
     try {
         // Allow selecting a different network than bitcoin at startup.
         // If passed argument is an existing file, don't treat it as a network name.
-        selectNetwork("segnet2");
+        selectNetwork("segnet3");
         if (argc > 1)
         {
             if (std::string(argv[1]) == "select")
