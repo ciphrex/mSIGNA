@@ -22,7 +22,7 @@ using namespace Coin;
 using namespace CoinQ::Script;
 using namespace std;
 
-const unsigned char ADDRESS_VERSIONS[] = {30, 50};
+const unsigned char ADDRESS_VERSIONS[] = {30, 50, 6, 40};
 
 string help(char* appName)
 {
@@ -32,7 +32,8 @@ string help(char* appName)
         << "#   p2pkh   <pubkey>" << endl
         << "#   mofn    <m> <pubkey1> [pubkey2] ..." << endl
         << "#   cltv    <master pubkey> <timelock pubkey> <locktime>" << endl
-        << "#   witness <redeemscript>";
+        << "#   p2wpkh  <pubkey>" << endl
+        << "#   p2wsh   <redeemscript>";
     return ss.str();
 }
 
@@ -166,17 +167,33 @@ int main(int argc, char* argv[])
             cout << "txinscript:    " << txinscript.getHex() << endl;
             cout << "address:       " << toBase58Check(hash160(redeemscript), ADDRESS_VERSIONS[1]) << endl;
         }
-        else if (type == "witness")
+        else if (type == "p2wpkh")
+        {
+            if (argc != 3) throw runtime_error(help(argv[0]));
+
+            uchar_vector pubkey(argv[2]);
+            WitnessProgram_P2WPKH wp(pubkey);
+            cout << "type:        " << wp.typestring() << endl;
+            cout << "script:      " << wp.script().getHex() << endl;
+            cout << "p2shscript:  " << wp.p2shscript().getHex() << endl;
+            cout << "p2shaddress: " << wp.p2shaddress(ADDRESS_VERSIONS) << endl;
+            cout << "address:     " << wp.address(ADDRESS_VERSIONS) << endl;
+            cout << "stack:" << endl;
+            for (auto& item: wp.stack()) { cout << "  " << item.getHex() << endl; }
+        }
+        else if (type == "p2wsh")
         {
             if (argc != 3) throw runtime_error(help(argv[0]));
 
             uchar_vector redeemscript(argv[2]);
-            WitnessProgram wp(redeemscript);
-            cout << "witnessscript: " << wp.witnessscript().getHex() << endl;
-            cout << "redeemscript:  " << wp.redeemscript().getHex() << endl;
-            cout << "txoutscript:   " << wp.txoutscript().getHex() << endl;
-            cout << "txinscript:    " << wp.txinscript(). getHex() << endl;
-            cout << "address:       " << wp.address(ADDRESS_VERSIONS) << endl;
+            WitnessProgram_P2WSH wp(redeemscript);
+            cout << "type:        " << wp.typestring() << endl;
+            cout << "script:      " << wp.script().getHex() << endl;
+            cout << "p2shscript:  " << wp.p2shscript().getHex() << endl;
+            cout << "p2shaddress: " << wp.p2shaddress(ADDRESS_VERSIONS) << endl;
+            cout << "address:     " << wp.address(ADDRESS_VERSIONS) << endl;
+            cout << "stack:" << endl;
+            for (auto& item: wp.stack()) { cout << "  " << item.getHex() << endl; }
         }
         else
         {
