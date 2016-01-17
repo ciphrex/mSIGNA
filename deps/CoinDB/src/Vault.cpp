@@ -2707,6 +2707,8 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
 
         if (sending_account || receive)
         {
+            // TODO: better tx status update method
+            if (!sending_account) { tx->status(Tx::PROPAGATED); tx->hash(tx->toCoinCore().hash()); }
             for (auto& script:  updated_scripts)
             {
                 db_->update(script);
