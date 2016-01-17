@@ -115,10 +115,10 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
             switch (item.itemType)
             {
             case MSG_TX:
-                getData.items.push_back(item);
+                getData.items.push_back(InventoryItem(MSG_TX | peer.inv_flags(), item.hash));
                 break;
             case MSG_BLOCK:
-                getData.items.push_back(InventoryItem(MSG_FILTERED_BLOCK, item.hash));
+                getData.items.push_back(InventoryItem(MSG_FILTERED_BLOCK | peer.inv_flags(), item.hash));
                 break;
             default:
                 break;
