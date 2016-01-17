@@ -11,7 +11,7 @@
 #include <CoinCore/Base58Check.h>
 #include <CoinCore/secp256k1_openssl.h>
 
-#include <logger/logger.h>
+//#include <logger/logger.h>
 
 using namespace CoinCrypto;
 
@@ -377,53 +377,82 @@ ScriptTemplate& ScriptTemplate::reset()
     
 
 /*
+ * Witness program types
+*/
+WitnessProgramType getWitnessProgramType(const uchar_vector& wp)
+{
+    if (wp.size() < 4 ||
+        (wp[0] != OP_0 && (wp[0] < OP_1 || wp[0] > OP_16)) ||
+        wp[1] < 2 || wp[1] > 32 ||
+        wp[1] != wp.size() - 2) return WITNESS_NONE;
+
+    switch (wp[0])
+    {
+    case 0:
+        if (wp.size() == 22)    return WITNESS_P2WPKH;
+        if (wp.size() == 34)    return WITNESS_P2WSH;
+        throw std::runtime_error("Invalid script.");
+
+    default:
+        return WITNESS_UNDEFINED;
+    }
+}
+
+/*
  * class WitnessProgram
 */
-std::string WitnessProgram::address(const unsigned char addressVersions[]) const
+uchar_vector WitnessProgram::p2shscript() const
 {
-    return toBase58Check(hash160(witnessscript_), addressVersions[1]);
+    uchar_vector p2sh;
+    p2sh << OP_HASH160 << pushStackItem(hash160(script_)) << OP_EQUAL;
+    return p2sh;
 }
 
-void WitnessProgram::setPubKey(const uchar_vector& pubkey)
+std::string WitnessProgram::p2shaddress(const unsigned char addressVersions[]) const
 {
-    redeemscript_.clear();
-    pubkey_ = pubkey;
-    update();
+    return toBase58Check(hash160(script_), addressVersions[1]);
 }
 
-void WitnessProgram::update()
+/*
+ * class WitnessProgram_P2WPKH
+*/
+void WitnessProgram_P2WPKH::update()
 {
-    witnessscript_.clear();
-    txinscript_.clear();
-    txoutscript_.clear();
+    pubkeyhash_ = hash160(pubkey_);
 
-    switch (type())
-    {
-    case V0_P2WPKH:
-        witnessscript_ << OP_0 << pushStackItem(hash160(pubkey_));
-        break;
-    case V0_P2WSH:
-        witnessscript_ << OP_0 << pushStackItem(sha256(redeemscript_));
-        break;
-    default:
-        break;
-    }
+    script_.clear();
+    script_ << OP_0 << pushStackItem(pubkeyhash_);
 
-    txinscript_ << pushStackItem(witnessscript_);
-    txoutscript_ << OP_HASH160 << pushStackItem(hash160(witnessscript_)) << OP_EQUAL;
+    stack_.clear();
+    stack_.push_back(pubkey_);
 }
 
-WitnessProgram::version_t WitnessProgram::getWitnessVersion(const uchar_vector& txinscript)
+std::string WitnessProgram_P2WPKH::address(const unsigned char addressVersions[]) const
 {
-    uint pos = 0;
-    uchar_vector fullop = getNextOp(txinscript, pos);
-    if (fullop.size() < 3)
-        return NO_WITNESS;
+    uchar_vector buffer;
+    buffer << addressVersions[2] << 0x00 << 0x00 << pubkeyhash_;
+    return toBase58Check(buffer);
+}
 
-    if ((fullop[0] == 34 || fullop[0] == 22) && fullop[1] == OP_0)
-        return WITNESS_V0;
+/*
+ * class WitnessProgram_P2WSH
+*/
+void WitnessProgram_P2WSH::update()
+{
+    redeemscripthash_ = sha256(redeemscript_);
 
-    return NO_WITNESS;
+    script_.clear();
+    script_ << OP_0 << pushStackItem(redeemscripthash_);
+
+    stack_.clear();
+    stack_.push_back(redeemscript_);
+}
+
+std::string WitnessProgram_P2WSH::address(const unsigned char addressVersions[]) const
+{
+    uchar_vector buffer;
+    buffer << addressVersions[3] << 0x00 << 0x00 << redeemscripthash_;
+    return toBase58Check(buffer);
 }
 
 /*
@@ -773,7 +802,7 @@ unsigned int Script::mergesigs(const Script& other)
 }
 
 
-void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount)
+void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount, const bytes_t& txoutscript)
 {
     redeemscript_.clear();
     pubkeys_.clear();
@@ -782,7 +811,11 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
     if (nIn >= tx.inputs.size())
         throw std::runtime_error("SignableTxIn::setTxIn() - nIn out of range.");
 
-    const bytes_t& txinscript = tx.inputs[nIn].scriptSig;
+    // TODO: Clean the script stuff up.
+    const bytes_t& txinscript = tx.inputs[nIn].scriptSig.empty()
+        ? pushStackItem(txoutscript)
+        : tx.inputs[nIn].scriptSig;
+
     const std::vector<uchar_vector>& stack = tx.inputs[nIn].scriptWitness.stack;
     std::vector<bytes_t> objects;
     unsigned int pos = 0;
@@ -796,22 +829,24 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         pos += size;
     }
 
-    WitnessProgram::version_t wpVersion = WitnessProgram::NO_WITNESS;
+    WitnessProgramType wpType = WITNESS_NONE;
     std::vector<bytes_t> sigs;
     type_ = UNKNOWN;
     if (objects.size() == 1)
     {
-        wpVersion = WitnessProgram::getWitnessVersion(txinscript);
-        switch (wpVersion)
+        uint pos = 0;
+        uchar_vector wp = getNextOp(txinscript, pos, true);
+        if (pos != txinscript.size()) return;
+
+        wpType = getWitnessProgramType(wp);
+        switch (wpType)
         {
-        case WitnessProgram::WITNESS_V0:
+        case WITNESS_P2WSH:
             if (stack.empty())
-            {
-                type_ = MISSING_WITNESS;
-                return;
-            }
+                throw std::runtime_error("P2WSH transaction missing witness.");
+
             redeemscript_ = stack.back();
-LOGGER(trace) << "redeemscript: " << uchar_vector(redeemscript_).getHex() << std::endl;
+//LOGGER(trace) << "redeemscript: " << uchar_vector(redeemscript_).getHex() << std::endl;
             for (std::size_t i = 1; i < stack.size() - 1; i++) { sigs.push_back(stack[i]); }
             break;
 
@@ -862,7 +897,7 @@ LOGGER(trace) << "redeemscript: " << uchar_vector(redeemscript_).getHex() << std
         unsigned char byte = redeemscript_[0];
         if (byte < OP_1 || byte > OP_16) return;
         minsigs_ = byte - OP_1_OFFSET;
-LOGGER(trace) << "minsigs: " << minsigs_ << std::endl;
+//LOGGER(trace) << "minsigs: " << minsigs_ << std::endl;
 
         unsigned int pos = 1;
         while (true)
@@ -886,11 +921,11 @@ LOGGER(trace) << "minsigs: " << minsigs_ << std::endl;
             if (pubkeys_.size() >= 16) throw std::runtime_error("Public key maximum of 16 exceeded.");
 
             pubkeys_.push_back(bytes_t(redeemscript_.begin() + pos, redeemscript_.begin() + pos + byte));
-LOGGER(trace) << "pubkey: " << uchar_vector(pubkeys_.back()). getHex() << std::endl;
+//LOGGER(trace) << "pubkey: " << uchar_vector(pubkeys_.back()). getHex() << std::endl;
             pos += byte;
         }
 
-        type_ = (wpVersion == WitnessProgram::WITNESS_V0 ? PAY_TO_M_OF_N_WITNESS_V0 : PAY_TO_M_OF_N_SCRIPT_HASH);
+        type_ = (wpType == WITNESS_P2WSH ? PAY_TO_M_OF_N_WITNESS_V0 : PAY_TO_M_OF_N_SCRIPT_HASH);
     }
 
     if (sigs.size() > pubkeys_.size())
@@ -906,7 +941,7 @@ LOGGER(trace) << "pubkey: " << uchar_vector(pubkeys_.back()). getHex() << std::e
         {
             // Add or keep placeholder.
             sigs_.push_back(bytes_t());
-LOGGER(trace) << "placeholder" << std::endl;
+//LOGGER(trace) << "placeholder" << std::endl;
             iSig++;
         }
         else
@@ -925,7 +960,7 @@ LOGGER(trace) << "placeholder" << std::endl;
             {
                 // Signature is valid. Keep it.
                 sigs_.push_back(sigs[iSig]);
-LOGGER(trace) << "valid:       " << uchar_vector(sigs_.back()).getHex() << std::endl;
+//LOGGER(trace) << "valid:       " << uchar_vector(sigs_.back()).getHex() << std::endl;
                 iSig++;
                 nValidSigs++;
             }
@@ -933,7 +968,7 @@ LOGGER(trace) << "valid:       " << uchar_vector(sigs_.back()).getHex() << std::
             {
                 // Signature is invalid. Add placeholder for this pubkey and test it for next pubkey
                 sigs_.push_back(bytes_t());
-LOGGER(trace) << "invalid:     " << uchar_vector(sigs[iSig]).getHex() << std::endl;
+//LOGGER(trace) << "invalid:     " << uchar_vector(sigs[iSig]).getHex() << std::endl;
             }
         }
     }

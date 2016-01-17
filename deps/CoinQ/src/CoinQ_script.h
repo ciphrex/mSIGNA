@@ -16,6 +16,7 @@
 #include <CoinCore/typedefs.h>
 
 #include <algorithm>
+#include <deque>
 #include <utility>
 
 namespace CoinQ {
@@ -306,55 +307,77 @@ private:
     uchar_vector reduced_;
 };
 
+// Witness program types
+enum WitnessProgramType
+{
+    WITNESS_UNDEFINED,
+    WITNESS_NONE,
+    WITNESS_P2WPKH,
+    WITNESS_P2WSH,
+};
+
+WitnessProgramType getWitnessProgramType(const uchar_vector& wp); 
+
+// Abstract base class for witness programs
 class WitnessProgram
 {
 public:
-    WitnessProgram() { }
-    WitnessProgram(const WitnessProgram& wp) : redeemscript_(wp.redeemscript_) { update(); }
-    WitnessProgram(const uchar_vector& redeemscript) : redeemscript_(redeemscript) { update(); }
+    const uchar_vector&                 script() const { return script_; }
+    uchar_vector                        p2shscript() const;
+    std::string                         p2shaddress(const unsigned char addressVersions[]) const;
+    const std::deque<uchar_vector>&     stack() const { return stack_; }
 
-    enum type_t
-    {
-        UNDEFINED,
-        V0_P2WPKH,
-        V0_P2WSH,
-    };
+    // Subclasses must implement address()
+    virtual std::string                 address(const unsigned char addressVersions[]) const = 0;
+    virtual WitnessProgramType          type() const { return WITNESS_UNDEFINED; }
+    virtual std::string                 typestring() const { return "WITNESS_UNDEFINED"; }
 
-    int type() const
-    {
-        if (pubkey_.size())         return V0_P2WPKH;
-        if (redeemscript_.size())   return V0_P2WSH;
-        /* default */               return UNDEFINED;
-    }
+protected:
+    uchar_vector script_;
+    std::deque<uchar_vector> stack_;
 
-    int version() const { return 0; }
+    // Subclasses must implement update() and call it from the constructor
+    virtual void update() = 0;
+};
 
-    void setPubKey(const uchar_vector& pubkey);
+// Version 0: Pay to witness pubkey hash
+class WitnessProgram_P2WPKH : public WitnessProgram
+{
+public:
+    WitnessProgram_P2WPKH(const uchar_vector& pubkey) : pubkey_(pubkey) { update(); }
 
-    const uchar_vector& witnessscript() const { return witnessscript_; }
-    const uchar_vector& redeemscript() const { return redeemscript_; }
-    const uchar_vector& txinscript() const { return txinscript_; }
-    const uchar_vector& txoutscript() const { return txoutscript_; }
+    const uchar_vector& pubkey() const { return pubkey_; }
+    const uchar_vector& pubkeyhash() const { return pubkeyhash_; }
+    std::string         address(const unsigned char addressVersions[]) const;
+    WitnessProgramType  type() const { return WITNESS_P2WPKH; }
+    std::string         typestring() const { return "WITNESS_P2WPKH"; }
 
-    std::string address(const unsigned char addressVersions[]) const;
-
-    enum version_t
-    {
-        NO_WITNESS,
-        WITNESS_V0,
-    };
-
-    static version_t getWitnessVersion(const uchar_vector& txinscript);
-
-private:
-    uchar_vector witnessscript_;
+protected:
     uchar_vector pubkey_;
+    uchar_vector pubkeyhash_;
+
+    void update(); 
+};
+
+// Version 0: Pay to witness script hash
+class WitnessProgram_P2WSH : public WitnessProgram
+{
+public:
+    WitnessProgram_P2WSH(const uchar_vector& redeemscript) : redeemscript_(redeemscript) { update(); }
+
+    const uchar_vector& redeemscript() const { return redeemscript_; }
+    const uchar_vector& redeemscripthash() const { return redeemscripthash_; }
+    std::string         address(const unsigned char addressVersions[]) const;
+    WitnessProgramType  type() const { return WITNESS_P2WSH; }
+    std::string         typestring() const { return "WITNESS_P2WSH"; }
+
+protected:
     uchar_vector redeemscript_;
-    uchar_vector txinscript_;
-    uchar_vector txoutscript_;
+    uchar_vector redeemscripthash_;
 
     void update();
 };
+
 
 class Script
 {
@@ -445,9 +468,9 @@ public:
         sigs_(other.sigs_),
         redeemscript_(other.redeemscript_) { }
 
-    SignableTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0) { setTxIn(tx, nIn, outpointamount); }
+    SignableTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0, const bytes_t& txoutscript = bytes_t()) { setTxIn(tx, nIn, outpointamount); }
 
-    void setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0);
+    void setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount = 0, const bytes_t& txoutscript = bytes_t());
 
     unsigned int minsigs() const { return minsigs_; }
     const std::vector<bytes_t>& pubkeys() const { return pubkeys_; }
