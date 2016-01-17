@@ -1341,7 +1341,7 @@ public:
     void timestamp(uint32_t timestamp) { timestamp_ = timestamp; }
     uint32_t timestamp() const { return timestamp_; }
 
-    bool updateStatus(status_t status = NO_STATUS); // Will keep the status it already had if it didn't change and no parameter is passed. Returns true iff status changed.
+    bool updateStatus(status_t status = NO_STATUS, bool checksigs = false); // Will keep the status it already had if it didn't change and no parameter is passed. Returns true iff status changed.
     void status(status_t status) { status_ = status; }
     status_t status() const { return status_; }
 

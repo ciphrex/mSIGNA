@@ -1055,10 +1055,10 @@ void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status, bool confl
     updateTotals();
 }
 
-bool Tx::updateStatus(status_t status /* = NO_STATUS */)
+bool Tx::updateStatus(status_t status /* = NO_STATUS */, bool checksigs)
 {
     // Tx is not signed.
-    if (missingSigCount())
+    if (checksigs && missingSigCount())
     {
         status_ = UNSIGNED;
         hash_ = bytes_t();
