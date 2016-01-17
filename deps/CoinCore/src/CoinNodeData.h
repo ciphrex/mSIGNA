@@ -121,7 +121,7 @@ public:
     virtual const uchar_vector& getHash(hashfunc_t hashfunc) const;
     virtual const uchar_vector& getHashLittleEndian(hashfunc_t hashfunc) const;
 
-    virtual uint32_t getChecksum() const; // 4 least significant bytes, big endian
+    virtual uint32_t getChecksum() const; // 4 least significant bytes, little endian
 
     virtual uchar_vector getSerialized() const = 0;
     virtual void setSerialized(const uchar_vector& bytes) = 0;
@@ -617,7 +617,7 @@ public:
 
     TxIn() { }
     TxIn(const TxIn& txIn)
-        : previousOut(txIn.previousOut), scriptSig(txIn.scriptSig), sequence(txIn.sequence) { }
+        : previousOut(txIn.previousOut), scriptSig(txIn.scriptSig), sequence(txIn.sequence), scriptWitness(txIn.scriptWitness) { }
     TxIn(const OutPoint& _previousOut, const uchar_vector& _scriptSig, uint32_t _sequence)
         : previousOut(_previousOut), scriptSig(_scriptSig), sequence(_sequence) { }
     TxIn(const OutPoint& previousOut, const std::string& scriptSigHex, uint32_t sequence);
@@ -691,6 +691,8 @@ public:
     const uchar_vector& getHashLittleEndian(hashfunc_t hashfunc, bool bWithWitness) const;
 
     const uchar_vector& hash() const { return getHashLittleEndian(); }
+
+    uint32_t getChecksum() const;
 
     const char* getCommand() const { return "tx"; }
 

@@ -1389,6 +1389,12 @@ const uchar_vector& Transaction::getHashLittleEndian(hashfunc_t hashfunc, bool b
     return hashLittleEndian_;
 }
 
+uint32_t Transaction::getChecksum() const
+{
+    getHash(true);
+    return vch_to_uint<uint32_t>(uchar_vector(hash_.begin(), hash_.begin() + 4), LITTLE_ENDIAN_);
+}
+
 uint64_t Transaction::getSize(bool bWithWitness) const
 {
     bWithWitness = bWithWitness && hasWitness();
