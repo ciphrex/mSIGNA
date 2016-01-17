@@ -626,9 +626,9 @@ SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t i
 
     if (account_->use_witness())
     {
-        WitnessProgram wp(redeemscript_);
-        txinscript_ = wp.txinscript();
-        txoutscript_ = wp.txoutscript();
+        WitnessProgram_P2WSH wp(redeemscript_);
+        txinscript_ = pushStackItem(wp.script());
+        txoutscript_ = wp.p2shscript();
     }
     else
     {
