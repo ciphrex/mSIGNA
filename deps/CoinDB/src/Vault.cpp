@@ -511,9 +511,9 @@ Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint
     for (auto& view: r)
     {
         // TODO: Fix this
-        WitnessProgram wp(view.redeemscript);
+        WitnessProgram_P2WSH wp(view.redeemscript);
         elements.push_back(view.redeemscript);                                  // Add input script element
-        elements.push_back(wp.witnessscript());                                 // Add input script element
+        elements.push_back(wp.script());                                        // Add input script element
         elements.push_back(getScriptPubKeyPayee(view.txoutscript).second);      // Add output script element
     }
     if (elements.empty()) return Coin::BloomFilter();
