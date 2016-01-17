@@ -60,7 +60,7 @@ typedef std::function<void(Peer&, const Coin::Inventory&)>          peer_inv_slo
 class Peer
 {
 public:
-    Peer(io_service_t& io_service, const std::string& host = "", const std::string& port = "", uint32_t magic_bytes = 0, uint32_t protocol_version = 0, const std::string& user_agent = std::string(), uint32_t start_height = 0, bool relay = true, uint32_t invFlags = 0) :
+    Peer(io_service_t& io_service, const std::string& host = "", const std::string& port = "", uint32_t magic_bytes = 0, uint32_t protocol_version = 0, const std::string& user_agent = std::string(), uint32_t start_height = 0, bool relay = true, uint32_t invFlags = DEFAULT_INV_FLAGS) :
         //io_service_(io_service),
         strand_(io_service),
         resolver_(io_service),
@@ -125,6 +125,8 @@ public:
     const endpoint_t& endpoint() const { return endpoint_; }
     std::string resolved_name() const { std::stringstream ss; ss << endpoint_.address().to_string() << ":" << endpoint_.port(); return ss.str(); }
     std::string name() const { std::stringstream ss; ss << host_ << ":" << port_; return ss.str(); }
+
+    uint32_t inv_flags() const { return invFlags_; }
 
     void getTx(const bytes_t& hash)
     {
