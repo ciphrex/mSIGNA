@@ -2211,6 +2211,7 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool repla
 {
     try
     {
+        tx->updateStatus();
         Coin::Transaction cointx(tx->toCoinCore());
         std::string hashstr = uchar_vector(tx->hash()).getHex();
         std::string unsignedhashstr = uchar_vector(tx->unsigned_hash()).getHex();
@@ -2235,9 +2236,15 @@ std::shared_ptr<Tx> Vault::insertTx_unwrapped(std::shared_ptr<Tx> tx, bool repla
             }
 
             // We need to set the outpoints for sighash operations in updateStatus.
-            for (auto& txin: tx->txins()) { txin->outpoint(stored_tx->txins()[txin->txindex()]->outpoint()); }
-            tx->updateStatus();
-LOGGER(trace) << "update tx status: " << tx->getStatusString() << std::endl;
+            bool checksigs = true;
+            for (auto& txin: tx->txins())
+            {
+                txin->outpoint(stored_tx->txins()[txin->txindex()]->outpoint());
+                if (!txin->outpoint()) { checksigs = false; }
+            }
+
+            tx->updateStatus(Tx::NO_STATUS, checksigs);
+            LOGGER(trace) << "tx status: " << tx->getStatusString() << std::endl;
 
             bool updated = false;
 
@@ -2290,7 +2297,7 @@ LOGGER(trace) << "update tx status: " << tx->getStatusString() << std::endl;
                         db_->update(txin);
                         i++;
                     }
-                    stored_tx->updateStatus(tx->status());
+                    stored_tx->updateStatus(tx->status(), true);
                     db_->update(stored_tx);
                     updated = true;
                 }
@@ -2323,7 +2330,7 @@ LOGGER(trace) << "update tx status: " << tx->getStatusString() << std::endl;
 
                     if (sigs_updated)
                     {
-                        stored_tx->updateStatus();
+                        stored_tx->updateStatus(Tx::NO_STATUS, true);
                         db_->update(stored_tx);
                         updated = true;
                     }
@@ -2438,8 +2445,11 @@ LOGGER(trace) << "txoutscript!!! " << uchar_vector(txoutscript).getHex() << std:
                     }
                 }
             }
-            if (sent_from_vault) { tx->updateStatus(); }
-LOGGER(trace) << "new tx status: " << tx->getStatusString() << std::endl;
+            if (sent_from_vault)
+            {
+                tx->updateStatus(Tx::NO_STATUS, true);
+                LOGGER(trace) << "sent from vault tx status: " << tx->getStatusString() << std::endl;
+            }
         }
 
         // Check outputs
@@ -3783,7 +3793,7 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
     if (!sigsadded) return 0;
 
     for (auto& keychain: keychains_signed) { keychain_names.push_back(keychain->name()); }
-    tx->updateStatus();
+    tx->updateStatus(Tx::NO_STATUS, true);
     return sigsadded;
 }
 
