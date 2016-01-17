@@ -1318,9 +1318,9 @@ public:
     Tx(uint32_t version = 1, uint32_t locktime = 0, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false)
         : version_(version), locktime_(locktime), timestamp_(timestamp), status_(status), conflicting_(conflicting),  have_all_outpoints_(false), txin_total_(0), txout_total_(0) { }
 
-    void set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false);
-    void set(Coin::Transaction coin_tx, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false);
-    void set(const bytes_t& raw, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false);
+    void set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false, bool checksigs = false);
+    void set(Coin::Transaction coin_tx, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false, bool checksigs = false);
+    void set(const bytes_t& raw, uint32_t timestamp = 0xffffffff, status_t status = PROPAGATED, bool conflicting = false, bool checksigs = false);
 
     Coin::Transaction toCoinCore() const;
 

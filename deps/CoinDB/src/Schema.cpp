@@ -985,7 +985,7 @@ std::vector<Tx::status_t> Tx::getStatusFlags(int status)
     return flags;
 }
 
-void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp, status_t status, bool conflicting)
+void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp, status_t status, bool conflicting, bool checksigs)
 {
     version_ = version;
 
@@ -1012,8 +1012,8 @@ void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uin
 
     Coin::Transaction coin_tx = toCoinCore();
 
-    if (missingSigCount())  { status_ = UNSIGNED; }
-    else                    { status_ = status; hash_ = coin_tx.hash(); }
+    if (checksigs && missingSigCount()) { status_ = UNSIGNED; }
+    else                                { status_ = status; hash_ = coin_tx.hash(); }
 
     conflicting_ = conflicting;
 
@@ -1022,15 +1022,15 @@ void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uin
     updateTotals();
 }
 
-void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status, bool conflicting)
+void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status, bool conflicting, bool checksigs)
 {
     //LOGGER(trace) << "Tx::set - fromCoinCore(coin_tx);" << std::endl;
     fromCoinCore(coin_tx);
 
     timestamp_ = timestamp;
 
-    if (missingSigCount())  { status_ = UNSIGNED; }
-    else                    { status_ = status; hash_ = coin_tx.hash(); }
+    if (checksigs && missingSigCount()) { status_ = UNSIGNED; }
+    else                                { status_ = status; hash_ = coin_tx.hash(); }
 
     conflicting_ = conflicting;
 
@@ -1039,14 +1039,14 @@ void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status, boo
     updateTotals();
 }
 
-void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status, bool conflicting)
+void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status, bool conflicting, bool checksigs)
 {
     Coin::Transaction coin_tx(raw);
     fromCoinCore(coin_tx);
     timestamp_ = timestamp;
 
-    if (missingSigCount())  { status_ = UNSIGNED; }
-    else                    { status_ = status; hash_ = coin_tx.hash(); }
+    if (checksigs && missingSigCount()) { status_ = UNSIGNED; }
+    else                                { status_ = status; hash_ = coin_tx.hash(); }
 
     conflicting_ = conflicting;
 
