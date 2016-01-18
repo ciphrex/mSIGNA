@@ -411,6 +411,7 @@ void Account::initScriptPatterns()
     using namespace CoinQ::Script;
 
     use_witness_ = true;
+    use_witness_p2sh_ = false;
 
     uchar_vector redeempattern;
     redeempattern << (OP_1_OFFSET + minsigs_);
@@ -627,8 +628,15 @@ SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t i
     if (account_->use_witness())
     {
         WitnessProgram_P2WSH wp(redeemscript_);
-        txinscript_ = pushStackItem(wp.script());
-        txoutscript_ = wp.p2shscript();
+        if (account_->use_witness_p2sh())
+        {
+            txinscript_ = pushStackItem(wp.script());
+            txoutscript_ = wp.p2shscript();
+        }
+        else
+        {
+            txoutscript_ = wp.script();
+        }
     }
     else
     {

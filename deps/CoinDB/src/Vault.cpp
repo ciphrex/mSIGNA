@@ -498,6 +498,7 @@ Coin::BloomFilter Vault::getBloomFilter(double falsePositiveRate, uint32_t nTwea
 #if defined(LOCK_ALL_CALLS)
     boost::lock_guard<boost::mutex> lock(mutex);
 #endif
+    odb::core::session s;
     odb::core::transaction t(db_->begin());
     return getBloomFilter_unwrapped(falsePositiveRate, nTweak, nFlags);
 }
@@ -507,15 +508,57 @@ Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint
     using namespace CoinQ::Script;
 
     std::vector<bytes_t> elements;
-    odb::result<SigningScriptView> r(db_->query<SigningScriptView>());
-    for (auto& view: r)
+
+    // Add scripts
     {
-        // TODO: Fix this
-        WitnessProgram_P2WSH wp(view.redeemscript);
-        elements.push_back(view.redeemscript);                                  // Add input script element
-        elements.push_back(wp.script());                                        // Add input script element
-        elements.push_back(getScriptPubKeyPayee(view.txoutscript).second);      // Add output script element
+        odb::result<SigningScript> r(db_->query<SigningScript>());
+        for (auto& script: r)
+        {
+/*
+            // Add input script element
+            if (r.account()->use_witness())
+            {
+                WitnessProgram_P2WSH wp(view.redeemscript);
+                elements.push_back(wp.script());
+            }
+            else
+            {
+                elements.push_back(view.redeemscript);
+            }
+*/
+
+            // Add script elements
+            if (script.account()->use_witness())
+            {
+                WitnessProgram_P2WSH wp(script.redeemscript());
+                elements.push_back(wp.script());
+                if (script.account()->use_witness_p2sh())
+                {
+                    elements.push_back(getScriptPubKeyPayee(script.txoutscript()).second);
+                }
+            }
+            else
+            {
+                elements.push_back(getScriptPubKeyPayee(script.txoutscript()).second);
+            }
+        }
     }
+
+    {
+        // Add outpoints
+        typedef odb::query<TxOut> query_t;
+        odb::result<TxOut> r(db_->query<TxOut>(query_t::sending_account != 0 && query_t::status == TxOut::UNSPENT));
+        for (auto& txout: r)
+        {
+            std::shared_ptr<Tx> tx = txout.tx();
+            if (tx)
+            {
+                Coin::OutPoint outpoint(tx->hash(), txout.txindex());
+                elements.push_back(outpoint.getSerialized());
+            }
+        }
+    }
+
     if (elements.empty()) return Coin::BloomFilter();
 
     Coin::BloomFilter filter(elements.size(), falsePositiveRate, nTweak, nFlags);
