@@ -28,6 +28,8 @@ public:
         const char* default_port,
         uint8_t pay_to_pubkey_hash_version,
         uint8_t pay_to_script_hash_version,
+        uint8_t pay_to_witness_pubkey_hash_version,
+        uint8_t pay_to_witness_script_hash_version,
         const char* network_name,
         const char* url_prefix,
         uint64_t currency_divisor,
@@ -42,6 +44,8 @@ public:
     default_port_(default_port),
     pay_to_pubkey_hash_version_(pay_to_pubkey_hash_version),
     pay_to_script_hash_version_(pay_to_script_hash_version),
+    pay_to_witness_pubkey_hash_version_(pay_to_witness_pubkey_hash_version),
+    pay_to_witness_script_hash_version_(pay_to_witness_script_hash_version),
     network_name_(network_name),
     url_prefix_(url_prefix),
     currency_divisor_(currency_divisor),
@@ -69,6 +73,8 @@ public:
     const char*                     default_port() const { return default_port_; }
     uint8_t                         pay_to_pubkey_hash_version() const { return pay_to_pubkey_hash_version_; }
     uint8_t                         pay_to_script_hash_version() const { return pay_to_script_hash_version_; }
+    uint8_t                         pay_to_witness_pubkey_hash_version() const { return pay_to_witness_pubkey_hash_version_; }
+    uint8_t                         pay_to_witness_script_hash_version() const { return pay_to_witness_script_hash_version_; }
     const unsigned char*            address_versions() const { return address_versions_; }
     const char*                     network_name() const { return network_name_; }
     const char*                     url_prefix() const { return url_prefix_; }
@@ -87,6 +93,8 @@ private:
     const char*             default_port_;
     uint8_t                 pay_to_pubkey_hash_version_;
     uint8_t                 pay_to_script_hash_version_;
+    uint8_t                 pay_to_witness_pubkey_hash_version_;
+    uint8_t                 pay_to_witness_script_hash_version_;
     unsigned char           address_versions_[2];
     const char*             network_name_;
     const char*             url_prefix_;
