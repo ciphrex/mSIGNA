@@ -186,6 +186,20 @@ payee_t getScriptPubKeyPayee(const uchar_vector& scriptPubKey)
         return std::make_pair(SCRIPT_PUBKEY_PAY_TO_PUBKEY, uchar_vector(scriptPubKey.begin() + pos, scriptPubKey.begin() + pos + dataLength));
     }
 
+    if (scriptPubKey.size()   == 22 &&
+        scriptPubKey[0]       == OP_0 &&
+        scriptPubKey[1]       == 20)
+    {
+        return std::make_pair(SCRIPT_PUBKEY_PAY_TO_WITNESS_PUBKEY_HASH, uchar_vector(scriptPubKey.begin() + 2, scriptPubKey.begin() + 22));
+    }
+
+    if (scriptPubKey.size()   == 34 &&
+        scriptPubKey[0]       == OP_0 &&
+        scriptPubKey[1]       == 32)
+    {
+        return std::make_pair(SCRIPT_PUBKEY_PAY_TO_WITNESS_SCRIPT_HASH, uchar_vector(scriptPubKey.begin() + 2, scriptPubKey.begin() + 34));
+    }
+
     if (scriptPubKey.size() == 0)
     {
         return std::make_pair(SCRIPT_PUBKEY_EMPTY_SCRIPT, uchar_vector());
@@ -246,6 +260,20 @@ std::string getAddressForTxOutScript(const bytes_t& txoutscript, const unsigned 
 
     case SCRIPT_PUBKEY_PAY_TO_SCRIPT_HASH:
         return toBase58Check(payee.second, addressVersions[1]);
+
+    case SCRIPT_PUBKEY_PAY_TO_WITNESS_PUBKEY_HASH:
+        {
+            uchar_vector data;
+            data << addressVersions[2] << OP_0 << 0x00 << payee.second;
+            return toBase58Check(data);
+        }
+
+    case SCRIPT_PUBKEY_PAY_TO_WITNESS_SCRIPT_HASH:
+        {
+            uchar_vector data;
+            data << addressVersions[3] << OP_0 << 0x00 << payee.second;
+            return toBase58Check(data);
+        }
 
     default:
         return "N/A";
