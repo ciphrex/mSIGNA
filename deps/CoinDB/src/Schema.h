@@ -55,7 +55,7 @@ typedef odb::nullable<unsigned long> null_id_t;
 ////////////////////
 
 #define SCHEMA_BASE_VERSION 12
-#define SCHEMA_VERSION      20
+#define SCHEMA_VERSION      22
 
 #ifdef ODB_COMPILER
 #pragma db model version(SCHEMA_BASE_VERSION, SCHEMA_VERSION, open)
@@ -680,6 +680,7 @@ public:
 
     void loadScriptTemplates();
     bool use_witness() const { return use_witness_; }
+    bool use_witness_p2sh() const { return use_witness_p2sh_; }
     const CoinQ::Script::ScriptTemplate& redeemtemplate() const { return redeemtemplate_; }
 
 private:
@@ -709,6 +710,8 @@ private:
 
     bool use_witness_;
     bytes_t redeempattern_;
+
+    bool use_witness_p2sh_;
 
     void initScriptPatterns();
 
@@ -744,6 +747,11 @@ private:
         {
             ar & use_witness_;
             ar & redeempattern_;
+        }
+
+        if (version >= 4)
+        {
+            ar & use_witness_p2sh_;
         }
     }
     template<class Archive>
@@ -795,6 +803,12 @@ private:
             initScriptPatterns();
         }
 
+        use_witness_p2sh_ = false;
+        if (version >= 4)
+        {
+            ar & use_witness_p2sh_;
+        }
+
         updateHash();
     }
     BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -829,8 +843,9 @@ public:
     void status(status_t status);
     status_t status() const { return status_; }
 
-	void markUsed();
+    void markUsed();
 
+    const bytes_t& redeemscript() const { return redeemscript_; }  
     const bytes_t& txinscript() const { return txinscript_; }
     const bytes_t& txoutscript() const { return txoutscript_; }
 
@@ -1997,6 +2012,6 @@ BOOST_CLASS_VERSION(CoinDB::Tx, 3)
 
 BOOST_CLASS_VERSION(CoinDB::Keychain, 3)
 BOOST_CLASS_VERSION(CoinDB::AccountBin, 2)
-BOOST_CLASS_VERSION(CoinDB::Account, 3)
+BOOST_CLASS_VERSION(CoinDB::Account, 4)
 
 #endif // COINDB_SCHEMA_H
