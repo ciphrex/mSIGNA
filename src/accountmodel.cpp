@@ -34,6 +34,8 @@ AccountModel::AccountModel(CoinDB::SynchedVault& synchedVault)
 {
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
+    base58_versions[2] = getCoinParams().pay_to_witness_pubkey_hash_version();
+    base58_versions[3] = getCoinParams().pay_to_witness_script_hash_version();
 
     currencySymbol = getCurrencySymbol();
     setColumns();

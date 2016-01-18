@@ -98,7 +98,7 @@ public slots:
 private:
     void setColumns();
 
-    unsigned char base58_versions[2];
+    unsigned char base58_versions[4];
     QString currencySymbol;
 
     //CoinDB::Vault* vault;
