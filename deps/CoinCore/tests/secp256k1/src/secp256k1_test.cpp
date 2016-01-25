@@ -1,4 +1,5 @@
 #include <CoinCore/secp256k1_openssl.h>
+#include <CoinCore/hash.h>
 #include <stdutils/uchar_vector.h>
 
 #include <iostream>
@@ -35,12 +36,12 @@ int main(int argc, char* argv[])
         cout << "Public key: " << pubkey.getHex() << endl;
 
         cout << endl << "Signing data..." << flush;
-        uchar_vector sig = secp256k1_sign(key, data);
+        uchar_vector sig = secp256k1_sign(key, sha256(data));
         cout << "done." << endl;
         cout << "Signature: " << sig.getHex() << endl;
 
         cout << endl << "Verifying signature (should be valid)..." << flush;
-        if (secp256k1_verify(key, data, sig, SIGNATURE_FLAGS))  { cout << "valid." << endl; }
+        if (secp256k1_verify(key, sha256(data), sig, SIGNATURE_FLAGS))  { cout << "valid." << endl; }
         else                                    { cout << "invalid. TEST FAILED" << endl; }
 
         cout << endl << "Creating public key object..." << flush;
@@ -64,7 +65,7 @@ int main(int argc, char* argv[])
         cout << "Public key: " << pubkey.getHex() << endl;
 
         cout << endl << "Verifying signature (should be valid)..." << flush;
-        if (secp256k1_verify(key2, data, sig, SIGNATURE_FLAGS))  { cout << "valid." << endl; }
+        if (secp256k1_verify(key2, sha256(data), sig, SIGNATURE_FLAGS))  { cout << "valid." << endl; }
         else                                    { cout << "invalid. TEST FAILED" << endl; }
 
         cout << endl << "Creating new key..." << flush;
@@ -78,7 +79,7 @@ int main(int argc, char* argv[])
         cout << "Public key: " << pubkey.getHex() << endl;
         
         cout << endl << "Verifying old signature with new key (should be invalid)..." << flush;
-        if (secp256k1_verify(key, data, sig, SIGNATURE_FLAGS))   { cout << "valid. TEST FAILED" << endl; }
+        if (secp256k1_verify(key, sha256(data), sig, SIGNATURE_FLAGS))   { cout << "valid. TEST FAILED" << endl; }
         else                                    { cout << "invalid." << endl; }
     }
     catch (const exception& e)

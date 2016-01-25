@@ -36,13 +36,13 @@ int main(int argc, char* argv[])
         cout << "Using data " << data.getHex() << endl;
         cout << "Data hash: " << sha256(data).getHex() << endl;
 
-        uchar_vector k = secp256k1_rfc6979_k(key, data);
+        uchar_vector k = secp256k1_rfc6979_k(key, sha256(data));
         cout << "k = " << k.getHex() << endl;
 
         cout << "Signing..." << endl;
-        uchar_vector sig = secp256k1_sign_rfc6979(key, data);
+        uchar_vector sig = secp256k1_sign_rfc6979(key, sha256(data));
         cout << "Signature: " << sig.getHex() << endl;
-        cout << "Valid: " << (secp256k1_verify(key, data, sig) ? "TRUE" : "FALSE") << endl << endl;
+        cout << "Valid: " << (secp256k1_verify(key, sha256(data), sig) ? "TRUE" : "FALSE") << endl << endl;
     }
     catch (const exception& e)
     {
