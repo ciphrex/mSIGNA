@@ -32,6 +32,7 @@ string help(char* appName)
         << "#   p2pkh   <pubkey>" << endl
         << "#   mofn    <m> <pubkey1> [pubkey2] ..." << endl
         << "#   cltv    <master pubkey> <timelock pubkey> <locktime>" << endl
+        << "#   csv     <master pubkey> <timelock pubkey> <sequence>" << endl
         << "#   p2wpkh  <pubkey>" << endl
         << "#   p2wsh   <redeemscript>";
     return ss.str();
@@ -147,6 +148,44 @@ int main(int argc, char* argv[])
                             <<  OP_IF
                             <<      pushStackItem(CScriptNum::serialize(locktime))
                             <<      OP_CHECKLOCKTIMEVERIFY << OP_DROP
+                            <<  OP_ELSE
+                            <<      OP_PUBKEY << 0 << OP_CHECKSIG
+                            <<  OP_ENDIF;
+
+            ScriptTemplate redeemTemplate(redeemPattern);
+            redeemTemplate.apply(master_pubkey);
+            redeemTemplate.apply(timelock_pubkey);
+            uchar_vector redeemscript = redeemTemplate.script();
+
+            uchar_vector txoutscript;
+            txoutscript << OP_HASH160 << pushStackItem(hash160(redeemscript)) << OP_EQUAL;
+
+            uchar_vector txinscript;
+            txinscript << OP_0 << pushStackItem(redeemscript);
+
+            cout << "redeemscript:  " << redeemscript.getHex() << endl;
+            cout << "txoutscript:   " << txoutscript.getHex() << endl;
+            cout << "txinscript:    " << txinscript.getHex() << endl;
+            cout << "address:       " << toBase58Check(hash160(redeemscript), ADDRESS_VERSIONS[1]) << endl;
+        }
+        else if (type == "csv")
+        {
+            if (argc != 5) throw runtime_error(help(argv[0]));
+
+            uchar_vector master_pubkey(argv[2]);
+                if (master_pubkey.size() != 33) throw runtime_error("Invalid master pubkey.");
+
+            uchar_vector timelock_pubkey(argv[3]);
+                if (timelock_pubkey.size() != 33) throw runtime_error("Invalid timelock pubkey.");
+
+            uint32_t sequence = strtoul(argv[4], NULL, 0);
+
+            uchar_vector redeemPattern;
+            redeemPattern   <<  OP_DUP
+                            <<  OP_PUBKEY << 1 << OP_CHECKSIG
+                            <<  OP_IF
+                            <<      pushStackItem(CScriptNum::serialize(sequence))
+                            <<      OP_CHECKSEQUENCEVERIFY << OP_DROP
                             <<  OP_ELSE
                             <<      OP_PUBKEY << 0 << OP_CHECKSIG
                             <<  OP_ENDIF;
