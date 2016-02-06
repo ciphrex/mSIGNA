@@ -52,6 +52,52 @@ uchar_vector pushStackItem(const uchar_vector& data)
     return rval;
 }
 
+uchar_vector pushStackNum(int64_t value)
+{
+    uchar_vector rval;
+    if (value == 0)
+    {
+        rval << OP_0;
+        return rval;
+    }
+
+    if (value >= 1 && value <= 16)
+    {
+        rval << (unsigned char)(OP_1_OFFSET + value);
+        return rval;
+    }
+
+    const bool neg = value < 0; 
+    uint64_t absvalue = neg ? -value : value;
+
+    while(absvalue)
+    {
+        rval << (unsigned char)(absvalue & 0xff);
+        absvalue >>= 8;
+    }
+
+    //    - If the most significant byte is >= 0x80 and the value is positive, push a
+    //    new zero-byte to make the significant byte < 0x80 again.
+
+    //    - If the most significant byte is >= 0x80 and the value is negative, push a
+    //    new 0x80 byte that will be popped off when converting to an integer.
+
+    //    - If the most significant byte is < 0x80 and the value is negative, add
+    //    0x80 to it, since it will be subtracted and interpreted as a negative when
+    //    converting to an integer.
+
+    if (rval.back() & 0x80)
+    {
+        rval << (neg ? 0x80 : 0);
+    }
+    else if (neg)
+    {
+        rval.back() |= 0x80;
+    }
+
+    return pushStackItem(rval);
+}
+
 uint32_t getDataLength(const uchar_vector& script, uint& pos)
 {
     if (pos >= script.size()) {
