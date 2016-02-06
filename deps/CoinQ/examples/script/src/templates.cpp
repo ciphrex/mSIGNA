@@ -9,7 +9,6 @@
 // All Rights Reserved.
 
 #include <CoinQ/CoinQ_script.h>
-#include <CoinQ/scriptnum.h>
 #include <CoinCore/Base58Check.h>
 #include <CoinCore/hash.h>
 
@@ -22,7 +21,8 @@ using namespace Coin;
 using namespace CoinQ::Script;
 using namespace std;
 
-const unsigned char ADDRESS_VERSIONS[] = {30, 50, 6, 40};
+//const unsigned char ADDRESS_VERSIONS[] = {30, 50, 6, 40};
+const unsigned char ADDRESS_VERSIONS[] = {111, 196, 6, 40};
 
 string help(char* appName)
 {
@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
             redeemPattern   <<  OP_DUP
                             <<  OP_PUBKEY << 1 << OP_CHECKSIG
                             <<  OP_IF
-                            <<      pushStackItem(CScriptNum::serialize(locktime))
+                            <<      pushStackNum(locktime)
                             <<      OP_CHECKLOCKTIMEVERIFY << OP_DROP
                             <<  OP_ELSE
                             <<      OP_PUBKEY << 0 << OP_CHECKSIG
@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
             redeemPattern   <<  OP_DUP
                             <<  OP_PUBKEY << 1 << OP_CHECKSIG
                             <<  OP_IF
-                            <<      pushStackItem(CScriptNum::serialize(sequence))
+                            <<      pushStackNum(sequence)
                             <<      OP_CHECKSEQUENCEVERIFY << OP_DROP
                             <<  OP_ELSE
                             <<      OP_PUBKEY << 0 << OP_CHECKSIG
