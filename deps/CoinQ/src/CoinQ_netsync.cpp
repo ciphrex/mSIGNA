@@ -160,11 +160,11 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
             if (headersMessage.headers.size() > 0)
             {
                 notifySynchingHeaders();
+                boost::unique_lock<boost::mutex> fileFlushLock(m_fileFlushMutex);
                 for (auto& item: headersMessage.headers)
                 {
                     try
                     {
-                        boost::unique_lock<boost::mutex> fileFlushLock(m_fileFlushMutex);
                         if (m_blockTree.insertHeader(item)) { m_bHeadersSynched = false; }
                     }
                     catch (const std::exception& e)
