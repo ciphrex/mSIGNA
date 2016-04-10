@@ -1,5 +1,5 @@
-$ ./bootstrap.sh
-$ ./b2 toolset=clang threading=multi runtime-link=static  link=static cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++"
+$ /bootstrap.sh
+$ /b2 toolset=clang threading=multi runtime-link=static  link=static cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++"
 
-$ sudo ./bjam toolset=clang threading=multi runtime-link=static link=static address-model=64 cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" variant=release --prefix=/usr/local -j4 install
+$ sudo /bjam toolset=clang threading=multi runtime-link=static link=static address-model=64 cxxflags="-stdlib=libc++" linkflags="-stdlib=libc++" variant=release --prefix=/usr/local -j4 install
 
