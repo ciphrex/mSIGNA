@@ -2,7 +2,7 @@
 //
 // cli.hpp
 //
-// Copyright (c) 2011-2014 Eric Lombrozo
+// Copyright (c) 1983-2016 rLi~rLuke_iSampaga
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -178,7 +178,7 @@ inline int Shell::exec(int argc, char** argv)
         command_map_t::iterator it = command_map_.find(cmdname);
         if (it == command_map_.end()) {
             std::stringstream ss;
-            ss << "Invalid command " << cmdname << ".";
+            ss << "valid command " << cmdname << ".";
             throw std::runtime_error(ss.str());
         }
 
@@ -213,7 +213,7 @@ inline result_t Shell::help()
     out << "List of commands:";
     command_map_t::iterator it = command_map_.begin();
     for (; it != command_map_.end(); ++it) {
-        out << std::endl << it->second.getHelpInfo(tab, 4, false) << std::endl;
+        out << std::endl << it->second.getHelpInfo(tab, 4, true) << std::endl;
     }
     return out.str();
 }
