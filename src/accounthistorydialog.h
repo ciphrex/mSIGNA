@@ -1,17 +1,16 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // accounthistorydialog.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_ACCOUNTHISTORYDIALOG_H
-#define COINVAULT_ACCOUNTHISTORYDIALOG_H
+#pragma once
 
-#include <Vault.h>
+#include <CoinDB/Vault.h>
 
 class TxModel;
 class TxView;
@@ -67,4 +66,3 @@ private:
     CoinQ::Network::NetworkSync* networkSync;
 };
 
-#endif // COINVAULT_ACCOUNTHISTORYDIALOG_H

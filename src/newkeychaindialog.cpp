@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // newkeychaindialogview.cpp
 //
@@ -29,7 +29,7 @@ NewKeychainDialog::NewKeychainDialog(QWidget* parent)
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
 
-    // Key Chain Name
+    // Keychain Name
     QLabel* nameLabel = new QLabel();
     nameLabel->setText(tr("Keychain Name:"));
     nameEdit = new QLineEdit();

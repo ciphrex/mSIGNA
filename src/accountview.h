@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // accountview.h
 //
@@ -8,8 +8,7 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_ACCOUNTVIEW_H
-#define COINVAULT_ACCOUNTVIEW_H
+#pragma once
 
 class QMenu;
 
@@ -23,7 +22,13 @@ public:
     AccountView(QWidget* parent = NULL);
 
     void setMenu(QMenu* menu) { this->menu = menu; }
-    void update();
+
+signals:
+    void updateModel();
+
+public slots:
+    void updateAll();
+    void updateColumns();
 
 protected:
     void contextMenuEvent(QContextMenuEvent* event);
@@ -32,4 +37,3 @@ private:
     QMenu* menu;
 };
 
-#endif // COINVAULT_ACCOUNTVIEW_H

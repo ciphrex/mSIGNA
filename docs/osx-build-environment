@@ -59,6 +59,15 @@ Boost from homebrew on Mountain Lion is built using libstdc++ rather than libc++
     $ make install
     $ cd ..
 
+9) Clone mSIGNA repository, in case you haven't done so, already:
+    $ git clone https://github.com/ciphrex/mSIGNA.git
+
+10) Build qrencode QR Code C library (libqrencode) for os x
+    $ cd mSIGNA/deps/qrencode-3.4.3
+    $ ./configure
+    $ make
+    $ sudo make install
+    $ cd
 
 Mac OS X 10.9.x Mavericks
 =========================
@@ -114,6 +123,16 @@ Mac OS X 10.9.x Mavericks
     $ make
     $ make install
     $ cd ..
+
+12) Clone mSIGNA repository, in case you haven't done so already:
+    $ git clone https://github.com/ciphrex/mSIGNA.git
+
+13) Build qrencode QR Code C library (libqrencode) for os x
+    $ cd mSIGNA/deps/qrencode-3.4.3
+    $ ./configure
+    $ make
+    $ sudo make install
+    $ cd
 
 Clang boost patch (needed for clang 3.4 and up)
 ===============================================

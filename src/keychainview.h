@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // keychainview.h
 //
@@ -8,12 +8,13 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_KEYCHAINVIEW_H
-#define COINVAULT_KEYCHAINVIEW_H
+#pragma once
 
 class QMenu;
 
 #include <QTreeView>
+#include <QList>
+#include <QString>
 
 class KeychainView : public QTreeView
 {
@@ -23,7 +24,12 @@ public:
     KeychainView(QWidget* parent = NULL);
 
     void setMenu(QMenu* menu) { this->menu = menu; }
-    void update();
+
+    QList<QString> getAllKeychains() const;
+    QList<QString> getSelectedKeychains() const;
+
+public slots:
+    void updateColumns();
 
 protected:
     void contextMenuEvent(QContextMenuEvent* event);
@@ -32,4 +38,3 @@ private:
     QMenu* menu;
 };
 
-#endif // COINVAULT_ACCOUNTVIEW_H

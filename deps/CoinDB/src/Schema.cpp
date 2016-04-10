@@ -11,15 +11,20 @@
 
 #include <stdutils/stringutils.h>
 
-#include <uchar_vector.h>
-#include <hash.h>
-#include <CoinNodeData.h>
-#include <hdkeys.h>
-#include <aes.h>
+#include <CoinCore/hash.h>
+#include <CoinCore/CoinNodeData.h>
+#include <CoinCore/MerkleTree.h>
+#include <CoinCore/hdkeys.h>
+#include <CoinCore/aes.h>
+#include <CoinCore/random.h>
 
-#include <CoinQ_script.h>
+#include <logger/logger.h>
 
-#include <logger.h>
+// support for boost serialization
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+
+#include <cstring>
 
 //#define ENABLE_CRYPTO
 
@@ -29,10 +34,11 @@ using namespace CoinDB;
  * class Keychain
  */
 
-Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lock_key, const bytes_t& salt)
-    : name_(name)
+Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const secure_bytes_t& lock_key)
+    : name_(name), hidden_(false)
 {
     if (name.empty() || name[0] == '@') throw std::runtime_error("Invalid keychain name.");
+    if (entropy.size() < 16) throw std::runtime_error("At least 128 bits of entropy must be supplied.");
 
     Coin::HDSeed hdSeed(entropy);
     Coin::HDKeychain hdKeychain(hdSeed.getMasterKey(), hdSeed.getMasterChainCode());
@@ -41,28 +47,48 @@ Keychain::Keychain(const std::string& name, const secure_bytes_t& entropy, const
     parent_fp_ = hdKeychain.parent_fp();
     child_num_ = hdKeychain.child_num();
     chain_code_ = hdKeychain.chain_code();
-    privkey_ = hdKeychain.key();
     pubkey_ = hdKeychain.pubkey();
-    hash_ = hdKeychain.full_hash();
+    privkey_ = hdKeychain.privkey();
+    seed_ = entropy;
+    if (lock_key.empty())
+    {
+        privkey_salt_ = 0;
+        privkey_ciphertext_ = privkey_;
 
-    setPrivateKeyUnlockKey(lock_key, salt);
-    setChainCodeUnlockKey(lock_key, salt);
+        seed_salt_ = 0;
+        seed_ciphertext_ = seed_;
+    }
+    else
+    {
+        privkey_salt_ = AES::random_salt();
+        privkey_ciphertext_ = AES::encrypt(lock_key, privkey_, true, privkey_salt_);
+
+        seed_salt_ = AES::random_salt();
+        seed_ciphertext_ = AES::encrypt(lock_key, seed_, true, seed_salt_);
+    }
+    privkey_.clear();
+    seed_.clear();
+    hash_ = hdKeychain.full_hash();
 }
 
 Keychain& Keychain::operator=(const Keychain& source)
 {
+    base::operator=(source);
+
     depth_ = source.depth_;
     parent_fp_ = source.parent_fp_;
     child_num_ = source.child_num_;
     pubkey_ = source.pubkey_;
 
     chain_code_ = source.chain_code_;
-    chain_code_ciphertext_ = source.chain_code_ciphertext_;
-    chain_code_salt_ = source.chain_code_salt_;
 
     privkey_ = source.privkey_;
     privkey_ciphertext_ = source.privkey_ciphertext_;
     privkey_salt_ = source.privkey_salt_;
+
+    seed_ = source.seed_;
+    seed_ciphertext_ = source.seed_ciphertext_;
+    seed_salt_ = source.seed_salt_;
 
     parent_ = source.parent_;
 
@@ -72,29 +98,50 @@ Keychain& Keychain::operator=(const Keychain& source)
     hashdata += chain_code_;
     hash_ = ripemd160(sha256(hashdata));
 
+    hidden_ = source.hidden_;
+
     return *this;
 }
 
-std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private)
+std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private, const secure_bytes_t& lock_key)
 {
-    if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private child from public keychain.");
-    if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
+    if (get_private && !isPrivate()) throw std::runtime_error("Cannot get private child from nonprivate keychain.");
     if (get_private)
     {
         if (privkey_.empty()) throw std::runtime_error("Private key is locked.");
         Coin::HDKeychain hdkeychain(privkey_, chain_code_, child_num_, parent_fp_, depth_);
         hdkeychain = hdkeychain.getChild(i);
-        std::shared_ptr<Keychain> child(new Keychain());;
+        std::shared_ptr<Keychain> child(new Keychain());
         child->parent_ = get_shared_ptr();
-        secure_bytes_t privkey = hdkeychain.privkey();
-        // Strip leading zero byte if necessary
-        if (privkey.size() > 32)
-            child->privkey_.assign(privkey.begin() + 1, privkey.end());
-        else
-            child->privkey_ = privkey;
-        child->privkey_ = privkey;
         child->pubkey_ = hdkeychain.pubkey();
         child->chain_code_ = hdkeychain.chain_code();
+
+        child->privkey_ = hdkeychain.privkey();
+        if (lock_key.empty())
+        {
+            child->privkey_salt_ = 0;
+            child->privkey_ciphertext_ = privkey_;
+
+            child->seed_salt_ = 0;
+            child->seed_ciphertext_ = seed_;
+        }
+        else
+        {
+            child->privkey_salt_ = AES::random_salt();
+            child->privkey_ciphertext_ = AES::encrypt(lock_key, child->privkey_, true, child->privkey_salt_);
+
+            if (seed_.empty())
+            {
+                child->seed_salt_ = 0;
+            }
+            else
+            {
+                child->seed_salt_ = AES::random_salt();
+                child->seed_ciphertext_ = AES::encrypt(lock_key, seed_, true, child->seed_salt_);
+            }
+        }
+        child->privkey_.clear();
+
         child->child_num_ = hdkeychain.child_num();
         child->parent_fp_ = hdkeychain.parent_fp();
         child->depth_ = hdkeychain.depth();
@@ -121,132 +168,70 @@ std::shared_ptr<Keychain> Keychain::child(uint32_t i, bool get_private)
     }
 }
 
-bool Keychain::setPrivateKeyUnlockKey(const secure_bytes_t& lock_key, const bytes_t& /*salt*/)
-{
-    if (!isPrivate()) throw std::runtime_error("Cannot lock the private key of a public keychain.");
-    if (privkey_.empty()) throw std::runtime_error("Key is locked.");
-
-#ifdef ENABLE_CRYPTO
-    if (lock_key.empty())
-    {
-        privkey_ciphertext_ = privkey_;
-        privkey_salt_.clear(); // empty salt means no encryption
-    }
-    else
-    {
-        // TODO: add real salt, better crypto function
-        privkey_ciphertext_ = aes_encrypt(lock_key, privkey_, 0);
-        privkey_salt_.clear();
-        privkey_salt_.push_back(1);
-    }
-#else
-    privkey_ciphertext_ = privkey_;
-    privkey_salt_.clear();
-#endif
-
-    return true;
-}
-
-bool Keychain::setChainCodeUnlockKey(const secure_bytes_t& lock_key, const bytes_t& /*salt*/)
-{
-    if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
-
-#ifdef ENABLE_CRYPTO
-    if (lock_key.empty())
-    {
-        chain_code_ciphertext_ = chain_code_;
-        chain_code_salt_.clear();
-    }
-    else
-    {
-        // TODO: add real salt, better crypto function
-        chain_code_ciphertext_ = aes_encrypt(lock_key, chain_code_, 0);
-        chain_code_salt_.clear();
-        chain_code_salt_.push_back(1);
-    }
-#else
-    chain_code_ciphertext_ = chain_code_;
-    chain_code_salt_.clear();
-#endif
-
-    return true;
-}
-
-void Keychain::lockPrivateKey() const
+void Keychain::lock() const
 {
     privkey_.clear();
+    seed_.clear();
 }
 
-void Keychain::lockChainCode() const 
+void Keychain::unlock(const secure_bytes_t& lock_key) const
 {
-    chain_code_.clear();
-}
-
-void Keychain::lockAll() const
-{
-    lockPrivateKey();
-    lockChainCode();
-}
-
-bool Keychain::isPrivateKeyLocked() const
-{
-    if (!isPrivate()) throw std::runtime_error("Keychain is not private.");
-    return privkey_.empty();
-}
-
-bool Keychain::isChainCodeLocked() const
-{
-    return chain_code_.empty();
-}
-
-bool Keychain::unlockPrivateKey(const secure_bytes_t& lock_key) const
-{
-    if (!isPrivate()) throw std::runtime_error("Missing private key.");
-    if (!privkey_.empty()) return true; // Already unlocked
-
-#ifdef ENABLE_CRYPTO
-    if (privkey_salt_.empty())
+    if (!isPrivate()) throw std::runtime_error("Cannot unlock a nonprivate keychain.");
+    if (privkey_salt_ == 0)
     {
         privkey_ = privkey_ciphertext_;
     }
     else
     {
-        // TODO: add real salt, better crypto function
-        privkey_ = aes_decrypt(lock_key, privkey_ciphertext_, 0);
+        privkey_ = AES::decrypt(lock_key, privkey_ciphertext_, true, privkey_salt_); 
     }
-#else
-    privkey_ = privkey_ciphertext_;
-#endif
 
-    return true;
-}
-
-bool Keychain::unlockChainCode(const secure_bytes_t& lock_key) const
-{
-    if (!chain_code_.empty()) return true; // Already unlocked
-
-#ifdef ENABLE_CRYPTO
-    if (chain_code_salt_.empty())
+    if (seed_salt_ == 0 || seed_ciphertext_.empty())
     {
-        chain_code_ = chain_code_ciphertext_;
+        seed_ = seed_ciphertext_;
     }
     else
     {
-        // TODO: add real salt, better crypto function
-        chain_code_ = aes_decrypt(lock_key, chain_code_ciphertext_, 0);
+        seed_ = AES::decrypt(lock_key, seed_ciphertext_, true, seed_salt_); 
     }
-#else
-    chain_code_ = chain_code_ciphertext_;
-#endif
+}
 
-    return true;
+bool Keychain::isLocked() const
+{
+    return privkey_.empty();
+}
+
+void Keychain::encrypt(const secure_bytes_t& lock_key)
+{
+    if (!isPrivate()) throw std::runtime_error("Cannot encrypt a nonprivate keychain.");
+    if (isLocked()) throw std::runtime_error("Keychain is locked.");
+
+    privkey_salt_ = AES::random_salt();
+    privkey_ciphertext_ = AES::encrypt(lock_key, privkey_, true, privkey_salt_);
+
+    if (!seed_.empty())
+    {
+        seed_salt_ = AES::random_salt();
+        seed_ciphertext_ = AES::encrypt(lock_key, seed_, true, seed_salt_);
+    }
+}
+
+void Keychain::decrypt()
+{
+    if (!isPrivate()) throw std::runtime_error("Cannot unencrypt a nonprivate keychain.");
+    if (isLocked()) throw std::runtime_error("Keychain is locked.");
+
+    privkey_salt_ = 0;
+    privkey_ciphertext_ = privkey_;
+
+    seed_salt_ = 0;
+    seed_ciphertext_ = seed_;
 }
 
 secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vector<uint32_t>& derivation_path) const
 {
     if (!isPrivate()) throw std::runtime_error("Missing private key.");
-    if (privkey_.empty()) throw std::runtime_error("Private key is locked.");
-    if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
+    if (isLocked()) throw std::runtime_error("Private key is locked.");
 
     // Remove initial zero from privkey if necessary
     secure_bytes_t stripped_privkey = (privkey_.size() > 32) ? secure_bytes_t(privkey_.begin() + 1, privkey_.end()) : privkey_;
@@ -255,26 +240,31 @@ secure_bytes_t Keychain::getSigningPrivateKey(uint32_t i, const std::vector<uint
     return hdkeychain.getPrivateSigningKey(i);
 }
 
-bytes_t Keychain::getSigningPublicKey(uint32_t i, const std::vector<uint32_t>& derivation_path) const
+bytes_t Keychain::getSigningPublicKey(uint32_t i, bool get_compressed, const std::vector<uint32_t>& derivation_path) const
 {
-    if (chain_code_.empty()) throw std::runtime_error("Chain code is locked.");
-
     Coin::HDKeychain hdkeychain(pubkey_, chain_code_, child_num_, parent_fp_, depth_);
     for (auto k: derivation_path) { hdkeychain = hdkeychain.getChild(k); }
-    return hdkeychain.getPublicSigningKey(i);
+    return hdkeychain.getPublicSigningKey(i, get_compressed);
 }
 
 secure_bytes_t Keychain::privkey() const
 {
-    if (!isPrivate()) throw std::runtime_error("Keychain is public.");
-    if (privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
+    if (!isPrivate()) throw std::runtime_error("Keychain is nonprivate.");
+    if (privkey_.empty()) throw std::runtime_error("Keychain is locked.");
     return privkey_;
 }
 
-secure_bytes_t Keychain::chain_code() const
+secure_bytes_t Keychain::seed() const
 {
-    if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
-    return chain_code_;
+    if (!isPrivate()) throw std::runtime_error("Keychain is nonprivate.");
+    if (privkey_.empty()) throw std::runtime_error("Keychain is locked.");
+    if (seed_ciphertext_.empty()) throw std::runtime_error("Keychain has no seed.");
+    return seed_;
+}
+
+bool Keychain::hasSeed() const
+{
+    return !seed_ciphertext_.empty();
 }
 
 void Keychain::importPrivateKey(const Keychain& source)
@@ -283,22 +273,55 @@ void Keychain::importPrivateKey(const Keychain& source)
     privkey_salt_ = source.privkey_salt_;
 }
 
-secure_bytes_t Keychain::extkey(bool get_private) const
+void Keychain::importBIP32(const secure_bytes_t& extkey, const secure_bytes_t& lock_key)
 {
-    if (get_private && !isPrivate()) throw std::runtime_error("Missing private key.");
-    if (get_private && privkey_.empty()) throw std::runtime_error("Keychain private key is locked.");
-    if (chain_code_.empty()) throw std::runtime_error("Keychain chain code is locked.");
+    Coin::HDKeychain hdKeychain(extkey);
 
-    secure_bytes_t key;
-    if (get_private)
+    depth_ = (uint32_t)hdKeychain.depth();
+    parent_fp_ = hdKeychain.parent_fp();
+    child_num_ = hdKeychain.child_num();
+    chain_code_ = hdKeychain.chain_code();
+    privkey_.clear();
+    if (hdKeychain.isPrivate())
     {
+        if (!lock_key.empty())
+        {
+            privkey_salt_ = AES::random_salt();
+            privkey_ciphertext_ = AES::encrypt(lock_key, hdKeychain.key(), true, privkey_salt_);
+        }
+        else
+        {
+            privkey_salt_ = 0;
+            privkey_ciphertext_ = hdKeychain.key();
+        }
+    }
+    else
+    {
+        privkey_salt_ = 0;
+        privkey_ciphertext_.clear();
+    }
+
+    pubkey_ = hdKeychain.pubkey();
+    hash_ = hdKeychain.full_hash();
+}
+
+secure_bytes_t Keychain::exportBIP32(bool export_private) const
+{
+    secure_bytes_t key;
+
+    if (export_private)
+    {
+        if (!isPrivate()) throw std::runtime_error("Keychain is nonprivate.");
+        if (isLocked()) throw std::runtime_error("Keychain is locked.");
+
+        // Remove initial zero from privkey if necessary
         key = (privkey_.size() > 32) ? secure_bytes_t(privkey_.begin() + 1, privkey_.end()) : privkey_;
     }
     else
     {
         key = pubkey_;
     }
-    // Remove initial zero from privkey if necessary
+
     return Coin::HDKeychain(key, chain_code_, child_num_, parent_fp_, depth_).extkey();
 }
 
@@ -306,7 +329,11 @@ void Keychain::clearPrivateKey()
 {
     privkey_.clear();
     privkey_ciphertext_.clear();
-    privkey_salt_.clear();
+    privkey_salt_ = 0;
+
+    seed_.clear();
+    seed_ciphertext_.clear();
+    seed_salt_ = 0;
 }
 
 
@@ -314,19 +341,19 @@ void Keychain::clearPrivateKey()
  * class Key
  */
 
-Key::Key(const std::shared_ptr<Keychain>& keychain, uint32_t index)
+Key::Key(const std::shared_ptr<Keychain>& keychain, uint32_t index, bool compressed)
 {
     root_keychain_ = keychain->root();
     derivation_path_ = keychain->derivation_path();
     index_ = index;
 
-    pubkey_ = keychain->getSigningPublicKey(index_);
+    pubkey_ = keychain->getSigningPublicKey(index_, compressed);
     updatePrivate();
 }
 
 secure_bytes_t Key::privkey() const
 {
-    if (!is_private_ || root_keychain_->isPrivateKeyLocked() || root_keychain_->isChainCodeLocked()) return secure_bytes_t();
+    if (!is_private_ || root_keychain_->isLocked()) return secure_bytes_t();
     return root_keychain_->getSigningPrivateKey(index_, derivation_path_);
 }
 
@@ -334,8 +361,7 @@ secure_bytes_t Key::privkey() const
 secure_bytes_t Key::try_privkey() const
 {
     if (!is_private_) throw std::runtime_error("Key::privkey - cannot get private key from nonprivate key object.");
-    if (root_keychain_->isPrivateKeyLocked()) throw std::runtime_error("Key::privkey - private key is locked.");
-    if (root_keychain_->isChainCodeLocked()) throw std::runtime_error("Key::privkey - chain code is locked.");
+    if (root_keychain_->isLocked()) throw std::runtime_error("Key::privkey - private key is locked.");
 
     return root_keychain_->getSigningPrivateKey(index_, derivation_path_);
 }
@@ -345,8 +371,8 @@ secure_bytes_t Key::try_privkey() const
  * class Account
  */
 
-Account::Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size, uint32_t time_created)
-    : name_(name), minsigs_(minsigs), keychains_(keychains), unused_pool_size_(unused_pool_size), time_created_(time_created)
+Account::Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size, uint32_t time_created, bool compressed_keys)
+    : name_(name), minsigs_(minsigs), keychains_(keychains), unused_pool_size_(unused_pool_size), time_created_(time_created), compressed_keys_(compressed_keys)
 {
     // TODO: Use exception classes
     if (name_.empty() || name[0] == '@') throw std::runtime_error("Invalid account name.");
@@ -367,6 +393,8 @@ void Account::updateHash()
     data.push_back((unsigned char)minsigs_);
     for (auto& keychain_hash: keychain_hashes) { data += keychain_hash; }
 
+    if (!compressed_keys_) { data.push_back(0x00); }
+
     hash_ = ripemd160(sha256(data));
 }
 
@@ -376,15 +404,18 @@ AccountInfo Account::accountInfo() const
     for (auto& keychain: keychains_) { keychain_names.push_back(keychain->name()); }
 
     std::vector<std::string> bin_names;
-    for (auto& bin: bins_) { bin_names.push_back(bin->name()); }
+    uint32_t issued_script_count = 0;
+    for (auto& bin: bins_)
+    {
+        bin_names.push_back(bin->name());
+        if (bin->next_script_index() > 0)
+        {
+            issued_script_count += (bin->next_script_index() - 1);
+        }
+    }
 
-    return AccountInfo(id_, name_, minsigs_, keychain_names, unused_pool_size_, time_created_, bin_names);
+    return AccountInfo(id_, name_, minsigs_, keychain_names, issued_script_count, unused_pool_size_, time_created_, bin_names, compressed_keys_);
 }
-
-
-/*
- * class AccountBin
- */
 
 std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
 {
@@ -394,23 +425,86 @@ std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
     return bin;
 }
 
+
+/*
+ * class AccountBin
+ */
+
 AccountBin::AccountBin(std::shared_ptr<Account> account, uint32_t index, const std::string& name)
-    : account_(account), index_(index), name_(name), script_count_(0), next_script_index_(0)
+    : account_(account), index_(index), name_(name), script_count_(0), next_script_index_(0), minsigs_(account->minsigs())
 {
     if (index == 0) throw std::runtime_error("Account bin index cannot be zero.");
     if (index == CHANGE_INDEX && name != CHANGE_BIN_NAME) throw std::runtime_error("Account bin index reserved for change.");
     if (index == DEFAULT_INDEX && name != DEFAULT_BIN_NAME) throw std::runtime_error("Account bin index reserved for default."); 
+
+    updateHash();
 }
 
-bool AccountBin::loadKeychains(bool get_private)
+std::string AccountBin::account_name() const
 {
-    if (!keychains_.empty()) return false;
-    for (auto& keychain: account()->keychains())
+    return account() ? account()->name() : std::string("@null");
+}
+
+SigningScriptVector AccountBin::generateSigningScripts()
+{
+    SigningScriptVector signingscripts;
+    for (uint32_t i = 0; i < next_script_index_; i++)
     {
-        std::shared_ptr<Keychain> child(keychain->child(index_, get_private));
-        keychains_.insert(child);
+        std::string label;
+        auto it = script_label_map_.find(i);
+        if (it != script_label_map_.end())   { label = it->second; }
+        SigningScript::status_t status = (index_ == CHANGE_INDEX) ? SigningScript::CHANGE : SigningScript::ISSUED;
+        std::shared_ptr<SigningScript> signingscript(new SigningScript(shared_from_this(), i, label, status));
+        signingscripts.push_back(signingscript);
     }
-    return true;
+
+    script_count_ = next_script_index_ + unused_pool_size();
+    for (uint32_t i = next_script_index_; i < script_count_; i++)
+    {
+        std::shared_ptr<SigningScript> signingscript(new SigningScript(shared_from_this(), i));
+        signingscripts.push_back(signingscript);
+    }
+
+    return signingscripts;
+}
+
+uint32_t AccountBin::unused_pool_size() const
+{
+    std::shared_ptr<Account> account = account_.lock();
+    return account ? account->unused_pool_size() : DEFAULT_UNUSED_POOL_SIZE;
+}
+
+void AccountBin::loadKeychains() const
+{
+    if (!keychains__.empty()) return;
+    if (!account())
+    {
+        // If we do not have an account for this bin we cannot derive the keychains, so use the stored values.
+        keychains__ = keychains_;
+    }
+    else
+    {
+        for (auto& keychain: account()->keychains())
+        {
+            std::shared_ptr<Keychain> child(keychain->child(index_));
+            keychains__.insert(child);
+        }
+    }
+}
+
+void AccountBin::updateHash()
+{
+    loadKeychains();
+
+    std::vector<bytes_t> keychain_hashes;
+    for (auto& keychain: keychains__) { keychain_hashes.push_back(keychain->hash()); }
+    std::sort(keychain_hashes.begin(), keychain_hashes.end());
+
+    uchar_vector data;
+    data.push_back((unsigned char)minsigs_);
+    for (auto& keychain_hash: keychain_hashes) { data += keychain_hash; }
+
+    hash_ = ripemd160(sha256(data));
 }
 
 std::shared_ptr<SigningScript> AccountBin::newSigningScript(const std::string& label)
@@ -425,6 +519,26 @@ void AccountBin::markSigningScriptIssued(uint32_t script_index)
         next_script_index_ = script_index + 1;
 }
 
+void AccountBin::makeExport(const std::string& name)
+{
+    name_ = name;
+    loadKeychains();
+    keychains_ = keychains__;
+    for (auto& keychain: keychains_) { keychain->name(""); }
+    index_ = 0;
+    account_.reset();
+}
+
+void AccountBin::makeImport()
+{
+    updateHash();
+    keychains_.clear();
+}
+
+void AccountBin::setScriptLabel(uint32_t index, const std::string& label)
+{
+    if (!label.empty()) { script_label_map_[index] = label; }
+}
 
 
 /*
@@ -458,10 +572,12 @@ std::vector<SigningScript::status_t> SigningScript::getStatusFlags(int status)
 SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t index, const std::string& label, status_t status)
     : account_(account_bin->account()), account_bin_(account_bin), index_(index), label_(label), status_(status)
 {
-    account_bin_->loadKeychains();
-    for (auto& keychain: account_bin_->keychains())
+    if (!account_) throw std::runtime_error("SigningScript::SigningScript() - account is null.");
+
+    auto& keychains = account_bin_->keychains();
+    for (auto& keychain: keychains)
     {
-        std::shared_ptr<Key> key(new Key(keychain, index));
+        std::shared_ptr<Key> key(new Key(keychain, index, account_->compressed_keys()));
         keys_.push_back(key);
     }
 
@@ -470,9 +586,17 @@ SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t i
 
     std::vector<bytes_t> pubkeys;
     for (auto& key: keys_) { pubkeys.push_back(key->pubkey()); }
-    CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, account_->minsigs(), pubkeys);
+    CoinQ::Script::Script script(CoinQ::Script::Script::PAY_TO_MULTISIG_SCRIPT_HASH, account_bin->minsigs(), pubkeys);
     txinscript_ = script.txinscript(CoinQ::Script::Script::EDIT);
     txoutscript_ = script.txoutscript();
+
+    account_bin_->setScriptLabel(index, label);
+}
+
+void SigningScript::label(const std::string& label)
+{
+    label_ = label;
+    account_bin_->setScriptLabel(index_, label);
 }
 
 void SigningScript::status(status_t status)
@@ -481,26 +605,61 @@ void SigningScript::status(status_t status)
     if (status > UNUSED) account_bin_->markSigningScriptIssued(index_);
 }
 
+void SigningScript::markUsed()
+{
+	if (account_bin_->index() == AccountBin::CHANGE_INDEX)
+	{
+		status_ = CHANGE;
+	}
+	else
+	{
+		status_ = USED;
+	}
+
+	account_bin_->markSigningScriptIssued(index_);
+}
+
 
 /*
  * class BlockHeader
  */
 
-void BlockHeader::fromCoinClasses(const Coin::CoinBlockHeader& blockheader, uint32_t height)
+void BlockHeader::fromCoinCore(const Coin::CoinBlockHeader& blockheader, uint32_t height)
 {
-    hash_ = blockheader.getHashLittleEndian();
+    hash_ = blockheader.hash();
     height_ = height;
-    version_ = blockheader.version;
-    prevhash_ = blockheader.prevBlockHash;
-    merkleroot_ = blockheader.merkleRoot;
-    timestamp_ = blockheader.timestamp;
-    bits_ = blockheader.bits;
-    nonce_ = blockheader.nonce;
+    version_ = blockheader.version();
+    prevhash_ = blockheader.prevBlockHash();
+    merkleroot_ = blockheader.merkleRoot();
+    timestamp_ = blockheader.timestamp();
+    bits_ = blockheader.bits();
+    nonce_ = blockheader.nonce();
 }
 
-Coin::CoinBlockHeader BlockHeader::toCoinClasses() const
+Coin::CoinBlockHeader BlockHeader::toCoinCore() const
 {
     return Coin::CoinBlockHeader(version_, timestamp_, bits_, nonce_, prevhash_, merkleroot_);
+}
+
+std::string BlockHeader::toJson() const
+{
+    std::stringstream ss;
+    ss << "{"
+       << "\"hash\":\"" << uchar_vector(hash_).getHex() << "\","
+       << "\"height\":" << height_ << ","
+       << "\"version\":" << version_ << ","
+       << "\"prevhash\":\"" << uchar_vector(prevhash_).getHex() << "\","
+       << "\"merkleroot\":\"" << uchar_vector(merkleroot_).getHex() << "\","
+       << "\"timestamp\":" << timestamp_ << ","
+       << "\"bits\":" << bits_ << ","
+       << "\"nonce\":" << nonce_
+       << "}";
+    return ss.str();
+}
+
+void BlockHeader::updateHash()
+{
+    hash_ = Coin::CoinBlockHeader(version_, timestamp_, bits_, nonce_, prevhash_, merkleroot_).hash();
 }
 
 
@@ -508,7 +667,7 @@ Coin::CoinBlockHeader BlockHeader::toCoinClasses() const
  * class MerkleBlock
  */
 
-void MerkleBlock::fromCoinClasses(const Coin::MerkleBlock& merkleblock, uint32_t height)
+void MerkleBlock::fromCoinCore(const Coin::MerkleBlock& merkleblock, uint32_t height)
 {
     blockheader_ = std::shared_ptr<BlockHeader>(new BlockHeader(merkleblock.blockHeader, height));
     txcount_ = merkleblock.nTxs;
@@ -517,15 +676,35 @@ void MerkleBlock::fromCoinClasses(const Coin::MerkleBlock& merkleblock, uint32_t
     flags_ = merkleblock.flags;
 }
 
-Coin::MerkleBlock MerkleBlock::toCoinClasses() const
+Coin::MerkleBlock MerkleBlock::toCoinCore() const
 {
     Coin::MerkleBlock merkleblock;
-    merkleblock.blockHeader = blockheader_->toCoinClasses();
+    merkleblock.blockHeader = blockheader_->toCoinCore();
     merkleblock.nTxs = txcount_;
     merkleblock.hashes.assign(hashes_.begin(), hashes_.end());
     for (auto& hash: merkleblock.hashes) { std::reverse(hash.begin(), hash.end()); }
     merkleblock.flags = flags_;
     return merkleblock;
+}
+
+std::string MerkleBlock::toJson() const
+{
+    std::stringstream ss;
+    ss << "{"
+       << "\"header\":" << blockheader_->toJson() << ","
+       << "\"txcount\":" << txcount_ << ","
+       << "\"hashes\":[";
+    bool addComma = false;
+    for (auto& hash: hashes_)
+    {
+        if (addComma)   { ss << ","; }
+        else            { addComma = true; }
+        ss << "\"" << uchar_vector(hash).getHex() << "\""; 
+    }
+    ss << "],"
+       << "\"flags\":\"" << uchar_vector(flags_).getHex() << "\""
+       << "}";
+    return ss.str();
 }
 
 
@@ -535,22 +714,24 @@ Coin::MerkleBlock MerkleBlock::toCoinClasses() const
 
 TxIn::TxIn(const Coin::TxIn& coin_txin)
 {
-    outhash_ = coin_txin.getOutpointHash();
-    outindex_ = coin_txin.getOutpointIndex();
-    script_ = coin_txin.scriptSig;
-    sequence_ = coin_txin.sequence;
+	fromCoinCore(coin_txin);
 }
 
 TxIn::TxIn(const bytes_t& raw)
 {
     Coin::TxIn coin_txin(raw);
+	fromCoinCore(coin_txin);
+}
+
+void TxIn::fromCoinCore(const Coin::TxIn& coin_txin)
+{
     outhash_ = coin_txin.getOutpointHash();
     outindex_ = coin_txin.getOutpointIndex();
     script_ = coin_txin.scriptSig;
     sequence_ = coin_txin.sequence;
 }
 
-Coin::TxIn TxIn::toCoinClasses() const
+Coin::TxIn TxIn::toCoinCore() const
 {
     Coin::TxIn coin_txin;
     coin_txin.previousOut = Coin::OutPoint(outhash_, outindex_);
@@ -559,9 +740,47 @@ Coin::TxIn TxIn::toCoinClasses() const
     return coin_txin;
 }
 
+bytes_t TxIn::unsigned_script() const
+{
+    using namespace CoinQ::Script;
+
+    Script script(script_);
+    script.clearSigs();
+    return script.txinscript(Script::EDIT);
+}
+
 bytes_t TxIn::raw() const
 {
-    return toCoinClasses().getSerialized();
+    return toCoinCore().getSerialized();
+}
+
+void TxIn::outpoint(std::shared_ptr<TxOut> outpoint)
+{
+    outpoint_ = outpoint;
+    if (!outpoint) return;
+
+    std::shared_ptr<Tx> tx = outpoint->tx();
+    // TODO: Tx exception class
+    if (outindex_ != outpoint->txindex())
+        throw std::runtime_error("TxIn::outpoint - incorrect outindex.");
+    if (!tx)
+        throw std::runtime_error("TxIn::outpoint - tx is null.");
+    if (tx->status() == Tx::UNSIGNED)
+        throw std::runtime_error("TxIn::outpoint - tx is missing signatures.");
+    if (outhash_ != tx->hash())
+        throw std::runtime_error("TxIn::outpoint - incorrect outhash.");
+}
+
+std::string TxIn::toJson() const
+{
+    std::stringstream ss;
+    ss << "{"
+       << "\"outhash\":\"" << uchar_vector(outhash_).getHex() << "\","
+       << "\"outindex\":" << outindex_ << ","
+       << "\"script\":\"" << uchar_vector(script_).getHex() << "\","
+       << "\"sequence\":" << sequence_
+       << "}";
+    return ss.str();
 }
 
 
@@ -608,7 +827,7 @@ std::vector<TxOut::role_t> TxOut::getRoleFlags(int flags)
 }
 
 TxOut::TxOut(uint64_t value, std::shared_ptr<SigningScript> signingscript)
-    : value_(value)
+    : value_(value), status_(UNSPENT)
 {
     this->signingscript(signingscript);
 }
@@ -638,12 +857,12 @@ void TxOut::signingscript(std::shared_ptr<SigningScript> signingscript)
 
     script_ = signingscript->txoutscript();
     receiving_account_ = signingscript->account();
-    receiving_label_ = signingscript->label();
+    if (receiving_label_.empty()) { receiving_label_ = signingscript->label(); }
     account_bin_ = signingscript->account_bin();
     signingscript_ = signingscript;
 }
 
-Coin::TxOut TxOut::toCoinClasses() const
+Coin::TxOut TxOut::toCoinCore() const
 {
     Coin::TxOut coin_txout;
     coin_txout.value = value_;
@@ -653,7 +872,25 @@ Coin::TxOut TxOut::toCoinClasses() const
 
 bytes_t TxOut::raw() const
 {
-    return toCoinClasses().getSerialized();
+    return toCoinCore().getSerialized();
+}
+
+std::string TxOut::toJson() const
+{
+    std::stringstream ss;
+    ss << "{"
+       << "\"value\":" << value_ << ","
+       << "\"script\":\"" << uchar_vector(script_).getHex() << "\","
+       << "\"sending_label\":\"" << sending_label_ << "\","
+       << "\"receiving_label\":\"" << receiving_label_ << "\"";
+
+    if (signingscript_ && signingscript_->contact())
+    {
+        ss << ",\"sender_username\":\"" << signingscript_->contact()->username() << "\"";
+    }
+
+    ss << "}";
+    return ss.str(); 
 }
 
 
@@ -662,17 +899,16 @@ bytes_t TxOut::raw() const
  */
 
 // static
-std::string Tx::getStatusString(int status)
+std::string Tx::getStatusString(int status, bool lowercase)
 {
     std::vector<std::string> flags;
-    if (status & UNSIGNED) flags.push_back("UNSIGNED");
-    if (status & UNSENT) flags.push_back("UNSENT");
-    if (status & SENT) flags.push_back("SENT");
-    if (status & PROPAGATED) flags.push_back("PROPAGATED");
-    if (status & CONFLICTING) flags.push_back("CONFLICTING");
-    if (status & CANCELED) flags.push_back("CANCELED");
-    if (status & CONFIRMED) flags.push_back("CONFIRMED");
-    if (flags.empty()) return "NO_STATUS";
+    if (status & UNSIGNED) flags.push_back(lowercase ? "unsigned" : "UNSIGNED");
+    if (status & UNSENT) flags.push_back(lowercase ? "unsent" : "UNSENT");
+    if (status & SENT) flags.push_back(lowercase ? "send" : "SENT");
+    if (status & PROPAGATED) flags.push_back(lowercase ? "propagated" : "PROPAGATED");
+    if (status & CANCELED) flags.push_back(lowercase ? "canceled" : "CANCELED");
+    if (status & CONFIRMED) flags.push_back(lowercase ? "confirmed" : "CONFIRMED");
+    if (flags.empty()) return lowercase ? "no_status" : "NO_STATUS";
     return stdutils::delimited_list(flags, " | ");
 }
 
@@ -684,13 +920,12 @@ std::vector<Tx::status_t> Tx::getStatusFlags(int status)
     if (status & UNSENT) flags.push_back(UNSENT);
     if (status & SENT) flags.push_back(SENT);
     if (status & PROPAGATED) flags.push_back(PROPAGATED);
-    if (status & CONFLICTING) flags.push_back(CONFLICTING);
     if (status & CANCELED) flags.push_back(CANCELED);
     if (status & CONFIRMED) flags.push_back(CONFIRMED);
     return flags;
 }
 
-void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp, status_t status)
+void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uint32_t locktime, uint32_t timestamp, status_t status, bool conflicting)
 {
     version_ = version;
 
@@ -715,40 +950,49 @@ void Tx::set(uint32_t version, const txins_t& txins, const txouts_t& txouts, uin
     locktime_ = locktime;
     timestamp_ = timestamp;
 
-    Coin::Transaction coin_tx = toCoinClasses();
+    Coin::Transaction coin_tx = toCoinCore();
 
     if (missingSigCount())  { status_ = UNSIGNED; }
-    else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
+    else                    { status_ = status; hash_ = coin_tx.hash(); }
+
+    conflicting_ = conflicting;
 
     coin_tx.clearScriptSigs();
-    unsigned_hash_ = coin_tx.getHashLittleEndian();
+    unsigned_hash_ = coin_tx.hash();
+    updateTotals();
 }
 
-void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status)
+void Tx::set(Coin::Transaction coin_tx, uint32_t timestamp, status_t status, bool conflicting)
 {
-    LOGGER(trace) << "Tx::set - fromCoinClasses(coin_tx);" << std::endl;
-    fromCoinClasses(coin_tx);
+    //LOGGER(trace) << "Tx::set - fromCoinCore(coin_tx);" << std::endl;
+    fromCoinCore(coin_tx);
 
     timestamp_ = timestamp;
 
     if (missingSigCount())  { status_ = UNSIGNED; }
-    else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
+    else                    { status_ = status; hash_ = coin_tx.hash(); }
+
+    conflicting_ = conflicting;
 
     coin_tx.clearScriptSigs();
-    unsigned_hash_ = coin_tx.getHashLittleEndian();
+    unsigned_hash_ = coin_tx.hash();
+    updateTotals();
 }
 
-void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status)
+void Tx::set(const bytes_t& raw, uint32_t timestamp, status_t status, bool conflicting)
 {
     Coin::Transaction coin_tx(raw);
-    fromCoinClasses(coin_tx);
+    fromCoinCore(coin_tx);
     timestamp_ = timestamp;
 
     if (missingSigCount())  { status_ = UNSIGNED; }
-    else                    { status_ = status; hash_ = coin_tx.getHashLittleEndian(); }
+    else                    { status_ = status; hash_ = coin_tx.hash(); }
+
+    conflicting_ = conflicting;
 
     coin_tx.clearScriptSigs();
-    unsigned_hash_ = coin_tx.getHashLittleEndian();
+    unsigned_hash_ = coin_tx.hash();
+    updateTotals();
 }
 
 bool Tx::updateStatus(status_t status /* = NO_STATUS */)
@@ -778,7 +1022,7 @@ bool Tx::updateStatus(status_t status /* = NO_STATUS */)
             status_ = status;
         }
 
-        hash_ = toCoinClasses().getHashLittleEndian();
+        hash_ = toCoinCore().hash();
         return true;
     }
 
@@ -792,12 +1036,12 @@ bool Tx::updateStatus(status_t status /* = NO_STATUS */)
     return false;
 }
 
-Coin::Transaction Tx::toCoinClasses() const
+Coin::Transaction Tx::toCoinCore() const
 {
     Coin::Transaction coin_tx;
     coin_tx.version = version_;
-    for (auto& txin:  txins_) { coin_tx.inputs.push_back(txin->toCoinClasses()); }
-    for (auto& txout: txouts_) { coin_tx.outputs.push_back(txout->toCoinClasses()); }
+    for (auto& txin:  txins_) { coin_tx.inputs.push_back(txin->toCoinCore()); }
+    for (auto& txout: txouts_) { coin_tx.outputs.push_back(txout->toCoinCore()); }
     coin_tx.lockTime = locktime_;
     return coin_tx;
 }
@@ -817,7 +1061,31 @@ void Tx::blockheader(std::shared_ptr<BlockHeader> blockheader)
 
 bytes_t Tx::raw() const
 {
-    return toCoinClasses().getSerialized();
+    return toCoinCore().getSerialized();
+}
+
+void Tx::updateTotals()
+{
+    have_all_outpoints_ = true;
+    txin_total_ = 0;
+    for (auto& txin: txins_)
+    {
+        std::shared_ptr<TxOut> outpoint = txin->outpoint();
+        if (!outpoint)
+        {
+            have_all_outpoints_ = false;
+        }
+        else
+        {
+            txin_total_ += outpoint->value();
+        }
+    }
+
+    txout_total_ = 0;
+    for (auto& txout: txouts_)
+    {
+        txout_total_ += txout->value(); 
+    }
 }
 
 void Tx::shuffle_txins()
@@ -834,7 +1102,7 @@ void Tx::shuffle_txouts()
     for (auto& txout: txouts_) { txout->txindex(i++); }
 }
 
-void Tx::fromCoinClasses(const Coin::Transaction& coin_tx)
+void Tx::fromCoinCore(const Coin::Transaction& coin_tx)
 {
     version_ = coin_tx.version;
 
@@ -886,5 +1154,86 @@ std::set<bytes_t> Tx::missingSigPubkeys() const
         for (auto& txinpubkey: txinpubkeys) { pubkeys.insert(txinpubkey); }
     } 
     return pubkeys;
+}
+
+std::set<bytes_t> Tx::presentSigPubkeys() const
+{
+    std::set<bytes_t> pubkeys;
+
+    using namespace CoinQ::Script;
+    Signer signer(toCoinCore(), true);
+    for (auto& script: signer.getScripts())
+    {
+        std::vector<bytes_t> txinpubkeys = script.presentsigs();
+        for (auto& txinpubkey: txinpubkeys) { pubkeys.insert(txinpubkey); }
+    } 
+    return pubkeys;
+}
+
+CoinQ::Script::Signer Tx::signer() const
+{
+    return CoinQ::Script::Signer(toCoinCore(), true);
+}
+
+std::string Tx::toJson(bool includeRawHex, bool includeSerialized) const
+{
+    std::stringstream ss;
+    ss << "{"
+       << "\"version\":" << version_ << ","
+       << "\"locktime\":" << locktime_ << ","
+       << "\"hash\":\"" << uchar_vector(hash()).getHex() << "\","
+       << "\"unsignedhash\":\"" << uchar_vector(unsigned_hash()).getHex() << "\","
+       << "\"status\":\"" << getStatusString(status_) << "\","
+       << "\"height\":";
+    if (blockheader_)   { ss << blockheader_->height(); }
+    else                { ss << "null"; }
+    ss << ","
+       << "\"txins\":[";
+    bool addComma = false;
+    for (auto& txin: txins_)
+    {
+        if (addComma)   { ss << ","; }
+        else            { addComma = true; }
+        ss << txin->toJson();
+    }
+    ss << "],"
+       << "\"txouts\":[";
+    addComma = false;
+    for (auto& txout: txouts_)
+    {
+        if (addComma)   { ss << ","; }
+        else            { addComma = true; }
+        ss << txout->toJson();
+    }
+    ss << "]";
+
+    if (includeRawHex)
+    {
+        ss << ",\"rawtx\":\"" << uchar_vector(raw()).getHex() << "\"";
+    }
+
+    if (includeSerialized)
+    {
+        ss << ",\"serializedtx\":\"" << toSerialized() << "\"";
+    }
+
+    ss << "}";
+    return ss.str();
+}
+
+std::string Tx::toSerialized() const
+{
+    std::stringstream ss;
+    boost::archive::text_oarchive oa(ss);
+    oa << *this;
+    return ss.str();
+}
+
+void Tx::fromSerialized(const std::string& serialized)
+{
+    std::stringstream ss;
+    ss << serialized;
+    boost::archive::text_iarchive ia(ss);
+    ia >> *this;
 }
 

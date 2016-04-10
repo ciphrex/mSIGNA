@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // createtxdialogview.cpp
 //
@@ -9,13 +9,16 @@
 // All Rights Reserved.
 
 #include "createtxdialog.h"
+#include "unspenttxoutmodel.h"
+#include "unspenttxoutview.h"
 #include "numberformats.h"
+#include "currencyvalidator.h"
 
 #include "settings.h"
 #include "coinparams.h"
 
-#include <uchar_vector.h>
-#include <CoinQ_script.h>
+#include <stdutils/uchar_vector.h>
+#include <CoinQ/CoinQ_script.h>
 
 #include <QDialogButtonBox>
 #include <QPushButton>
@@ -23,79 +26,42 @@
 #include <QVBoxLayout>
 #include <QComboBox>
 #include <QLineEdit>
-#include <QRegExpValidator>
+#include <QCheckBox>
 #include <QLabel>
 
 #include <QMessageBox>
 
 #include <stdexcept>
 
-/*
-// TODO: move all display/formatting stuff to its own module
+const int COIN_CONTROL_VIEW_MIN_WIDTH = 700;
+const int COIN_CONTROL_VIEW_MIN_HEIGHT = 200;
 
-static const QRegExp AMOUNT_REGEXP("(([1-9]\\d{0,6}|1\\d{7}|20\\d{6}|0|)(\\.\\d{0,8})?|21000000(\\.0{0,8})?)");
-
-// disallow more than 8 decimals and amounts > 21 million
-static uint64_t btcStringToSatoshis(const std::string& btcString)
-{
-    uint32_t whole = 0;
-    uint32_t frac = 0;
-
-    unsigned int i = 0;
-    bool stateWhole = true;
-    for (auto& c: btcString) {
-        i++;
-        if (stateWhole) {
-            if (c == '.') {
-                stateWhole = false;
-                i = 0;
-                continue;
-            }
-            else if (i > 8 || c < '0' || c > '9') {
-                throw std::runtime_error("Invalid amount.");
-            }
-            whole *= 10;
-            whole += (uint32_t)(c - '0');
-        }
-        else {
-            if (i > 8 || c < '0' || c > '9') {
-                throw std::runtime_error("Invalid amount.");
-            }
-            frac *= 10;
-            frac += (uint32_t)(c - '0');
-        }
-    }
-    if (frac > 0) {
-        while (i < 8) {
-            i++;
-            frac *= 10;
-        }
-    }
-    uint64_t value = (uint64_t)whole * 100000000ull + frac;
-    if (value > 2100000000000000ull) {
-        throw std::runtime_error("Invalid amount.");
-    }
-
-    return value;
-}
-*/
-TxOutLayout::TxOutLayout(QWidget* parent)
+TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol, uint64_t currencyMax, unsigned int currencyDecimals, QWidget* parent)
     : QHBoxLayout(parent)
 {
     // Base58 version bytes
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
 
+    // Coin parameters
+    this->currencyDivisor = currencyDivisor;
+    this->currencySymbol = currencySymbol;
+    this->currencyMax = currencyMax;
+    this->currencyDecimals = currencyDecimals;
+
     QLabel* addressLabel = new QLabel(tr("Address:"));
     addressEdit = new QLineEdit();
     addressEdit->setFixedWidth(300);
 
-    QLabel* amountLabel = new QLabel(tr("Amount:"));
+    QLabel* amountLabel = new QLabel(tr("Amount") + " (" + currencySymbol + "):");
     amountEdit = new QLineEdit();
-    amountEdit->setValidator(new QRegExpValidator(AMOUNT_REGEXP, this));
+    amountEdit->setFixedWidth(100);
+    amountEdit->setAlignment(Qt::AlignRight);
+    amountEdit->setValidator(new CurrencyValidator(currencyMax, currencyDecimals, this));
 
     QLabel* recipientLabel = new QLabel(tr("For:"));
     recipientEdit = new QLineEdit();
+    recipientEdit->setFixedWidth(100);
 
     removeButton = new QPushButton(tr("Remove"));
 
@@ -127,12 +93,12 @@ bytes_t TxOutLayout::getScript() const
 
 void TxOutLayout::setValue(uint64_t value)
 {
-    amountEdit->setText(QString::number(value/100000000.0, 'g', 8));
+    amountEdit->setText(QString::number(value/(1.0 * currencyDivisor), 'g', 8));
 }
 
 uint64_t TxOutLayout::getValue() const
 {
-    return btcStringToSatoshis(amountEdit->text().toStdString());
+    return decimalStringToInteger(amountEdit->text().toStdString(), currencyMax, currencyDivisor, currencyDecimals);
 }
 
 // TODO: call this field the label rather than the recipient
@@ -153,34 +119,112 @@ void TxOutLayout::removeWidgets()
     }
 }
 
-CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest& paymentRequest, QWidget* parent)
-    : QDialog(parent), status(SAVE_ONLY)
+CoinControlWidget::CoinControlWidget(CoinDB::Vault* vault, const QString& accountName, QWidget* parent)
+    : QWidget(parent)
 {
+    model = new UnspentTxOutModel(vault, accountName, this);
+    view = new UnspentTxOutView(this);
+    view->setModel(model);
+    view->setMinimumWidth(COIN_CONTROL_VIEW_MIN_WIDTH);
+    view->setMinimumHeight(COIN_CONTROL_VIEW_MIN_HEIGHT);
+
+    QItemSelectionModel* selectionModel = view->selectionModel();
+    connect(selectionModel, &QItemSelectionModel::selectionChanged,
+            this, &CoinControlWidget::updateTotal);
+
+    QLabel* inputsLabel = new QLabel(tr("Select Inputs:"));
+
+    QLabel* totalLabel = new QLabel(tr("Input total") + " (" + getCurrencySymbol() + "):");
+    totalEdit = new QLineEdit();
+    totalEdit->setAlignment(Qt::AlignRight);
+    totalEdit->setReadOnly(true);
+    totalEdit->setText("0");
+
+    QHBoxLayout* totalLayout = new QHBoxLayout();
+    totalLayout->addWidget(totalLabel);
+    totalLayout->addWidget(totalEdit);
+
+    QVBoxLayout* layout = new QVBoxLayout(this);
+    layout->setSizeConstraint(QLayout::SetFixedSize);
+    layout->addWidget(inputsLabel);
+    layout->addWidget(view);
+    layout->addLayout(totalLayout);
+    setLayout(layout);
+}
+
+std::vector<unsigned long> CoinControlWidget::getInputTxOutIds() const
+{
+    std::vector<unsigned long> ids;
+
+    QItemSelectionModel* selectionModel = view->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+
+    for (auto& index: indexes)
+    {
+        QStandardItem* item = model->item(index.row(), 1);
+        ids.push_back((unsigned long)item->data(Qt::UserRole).toInt());
+    }
+
+    return ids; 
+}
+
+void CoinControlWidget::updateAll()
+{
+    if (model)  { model->update(); }
+    if (view)   { view->update(); }
+}
+
+void CoinControlWidget::refreshView()
+{
+    if (!isHidden())
+    {
+        hide();
+        show();
+    }
+}
+
+void CoinControlWidget::updateTotal(const QItemSelection& /*selected*/, const QItemSelection& /*deselected*/)
+{
+    QItemSelectionModel* selectionModel = view->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+
+    uint64_t total = 0;
+    for (auto& index: indexes)
+    {
+        QStandardItem* amountItem = model->item(index.row(), 0);
+        QString strAmount = amountItem->data(Qt::UserRole).toString();
+        total += strtoull(strAmount.toStdString().c_str(), NULL, 10);
+    }
+
+    //QString amount(QString::number(total/(1.0 * model->getCurrencyDivisor()), 'g', 8));
+    QString amount(getFormattedCurrencyAmount(total));
+    totalEdit->setText(amount);
+}
+
+CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName, const PaymentRequest& paymentRequest, QWidget* parent)
+    : QDialog(parent), status(SAVE)
+{
+    // Coin parameters
+    currencyDivisor = getCurrencyDivisor(); //getCoinParams().currency_divisor();
+    currencySymbol = getCurrencySymbol(); //getCoinParams().currency_symbol();
+    currencyMax = getCurrencyMax(); //getCoinParams().currency_max();
+    currencyDecimals = getCurrencyDecimals(); //getCoinParams().currency_decimals();
+    defaultFee = getDefaultFee(); // getCoinParams().default_fee();
+
     // Buttons
-    signAndSendButton = new QPushButton(tr("Sign and Send"));
-    signAndSaveButton = new QPushButton(tr("Sign and Save"));
+    signButton = new QPushButton(tr("Sign"));
     saveButton = new QPushButton(tr("Save Unsigned"));
     cancelButton = new QPushButton(tr("Cancel"));
     cancelButton->setDefault(true);
-/*
-    QDialogButtonBox* buttonBox = new QDialogButtonBox(
-                                        QDialogButtonBox::Ok |
-                                        QDialogButtonBox::Cancel);
 
-*/
     QDialogButtonBox* buttonBox = new QDialogButtonBox;
-    buttonBox->addButton(signAndSendButton, QDialogButtonBox::ActionRole);
-    buttonBox->addButton(signAndSaveButton, QDialogButtonBox::ActionRole);
+    buttonBox->addButton(signButton, QDialogButtonBox::ActionRole);
     buttonBox->addButton(saveButton, QDialogButtonBox::AcceptRole);
     buttonBox->addButton(cancelButton, QDialogButtonBox::RejectRole);
 
-    connect(signAndSendButton, &QPushButton::clicked, [this]() { status = SIGN_AND_SEND; accept(); });
-    connect(signAndSaveButton, &QPushButton::clicked, [this]() { status = SIGN_AND_SAVE; accept(); });
+    connect(signButton, &QPushButton::clicked, [this]() { status = SIGN; accept(); });
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
-
-    // Prompt
-    QLabel* promptLabel = new QLabel(tr("Add Outputs:"));
 
     // Account
     QLabel* accountLabel = new QLabel(tr("Account:"));
@@ -192,14 +236,24 @@ CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest&
     accountLayout->addWidget(accountComboBox);
 
     // Fee
-    QLabel* feeLabel = new QLabel(tr("Fee:"));
+    QLabel* feeLabel = new QLabel(tr("Fee") + " (" + currencySymbol + "):");
     feeEdit = new QLineEdit();
-    feeEdit->setValidator(new QRegExpValidator(AMOUNT_REGEXP));
-    feeEdit->setText("0.0005"); // TODO: suggest more intelligently
+    feeEdit->setValidator(new CurrencyValidator(currencyMax, currencyDecimals, this));
+    feeEdit->setText(getFormattedCurrencyAmount(defaultFee, HIDE_TRAILING_DECIMALS)); // TODO: suggest more intelligently
 
     QHBoxLayout* feeLayout = new QHBoxLayout();
     feeLayout->addWidget(feeLabel);
     feeLayout->addWidget(feeEdit);
+
+    // Coin control
+    coinControlCheckBox = new QCheckBox(tr("Enable Coin Control"));
+    coinControlCheckBox->setChecked(false);
+    coinControlWidget = new CoinControlWidget(vault, accountName, this);
+    coinControlWidget->hide();
+    connect(coinControlCheckBox, SIGNAL(stateChanged(int)), this, SLOT(switchCoinControl(int)));
+
+    // Prompt
+    QLabel* addOutputsLabel = new QLabel(tr("Add Outputs:"));
 
     // TxOuts
     txOutVBoxLayout = new QVBoxLayout();
@@ -211,15 +265,17 @@ CreateTxDialog::CreateTxDialog(const QString& accountName, const PaymentRequest&
     connect(addTxOutButton, SIGNAL(clicked()), this, SLOT(addTxOut()));
 
     mainLayout = new QVBoxLayout(this);
-    mainLayout->addWidget(promptLabel);
     mainLayout->addLayout(accountLayout);
     mainLayout->addLayout(feeLayout);
+    mainLayout->addWidget(coinControlCheckBox);
+    mainLayout->addWidget(coinControlWidget);
+    mainLayout->addWidget(addOutputsLabel);
     mainLayout->addLayout(txOutVBoxLayout);
     mainLayout->addWidget(addTxOutButton);
     mainLayout->addWidget(buttonBox);
+    mainLayout->setSizeConstraint(QLayout::SetFixedSize);
     setLayout(mainLayout);
 }
-
 
 QString CreateTxDialog::getAccountName() const
 {
@@ -228,7 +284,13 @@ QString CreateTxDialog::getAccountName() const
 
 uint64_t CreateTxDialog::getFeeValue() const
 {
-    return btcStringToSatoshis(feeEdit->text().toStdString());
+    return decimalStringToInteger(feeEdit->text().toStdString(), currencyMax, currencyDivisor, currencyDecimals);
+}
+
+std::vector<unsigned long> CreateTxDialog::getInputTxOutIds() const
+{
+    if (!coinControlCheckBox->isChecked()) return std::vector<unsigned long>();
+    return coinControlWidget->getInputTxOutIds();
 }
 
 std::vector<std::shared_ptr<CoinDB::TxOut>> CreateTxDialog::getTxOuts()
@@ -272,13 +334,30 @@ std::vector<TaggedOutput> CreateTxDialog::getOutputs()
     return outputs;
 }
 
+void CreateTxDialog::switchCoinControl(int state)
+{
+    if (state == Qt::Checked)
+    {
+        coinControlWidget->updateAll();
+        coinControlWidget->show();
+    }
+    else
+    {
+        coinControlWidget->hide();
+    }
+}
+
 void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
 {
-    TxOutLayout* txOutLayout = new TxOutLayout();
+    TxOutLayout* txOutLayout = new TxOutLayout(currencyDivisor, currencySymbol, currencyMax, currencyDecimals);
     txOutLayouts.insert(txOutLayout);
+    setRemoveEnabled(txOutLayouts.size() > 1);
     QPushButton* removeButton = txOutLayout->getRemoveButton();
     connect(removeButton, &QPushButton::clicked, [=]() { this->removeTxOut(txOutLayout); });
     txOutVBoxLayout->addLayout(txOutLayout);
+
+    // Windows repaint workaround
+    coinControlWidget->refreshView();
 
     if (paymentRequest.hasAddress()) {
         txOutLayout->setAddress(paymentRequest.address());
@@ -296,7 +375,21 @@ void CreateTxDialog::addTxOut(const PaymentRequest& paymentRequest)
 void CreateTxDialog::removeTxOut(TxOutLayout* txOutLayout)
 {
     txOutLayouts.erase(txOutLayout);
+    setRemoveEnabled(txOutLayouts.size() > 1);
     txOutLayout->removeWidgets();
+    txOutVBoxLayout->removeItem(txOutLayout);    
     delete txOutLayout;
+
+    // Windows repaint workaround
+    coinControlWidget->refreshView();
+}
+
+
+void CreateTxDialog::setRemoveEnabled(bool enabled)
+{
+    for (auto& layout: txOutLayouts)
+    {
+        layout->getRemoveButton()->setEnabled(enabled);
+    } 
 }
 

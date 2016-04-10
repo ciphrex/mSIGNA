@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // paymentrequest.cpp
 //
@@ -11,9 +11,9 @@
 #include "paymentrequest.h"
 #include "numberformats.h"
 
-#include <Base58Check.h>
+#include <CoinCore/Base58Check.h>
 
-#include <typedefs.h>
+#include <CoinQ/CoinQ_typedefs.h>
 
 #include <QUrl>
 #include <QUrlQuery>
@@ -26,6 +26,9 @@ const unsigned char VALID_ADDRESS_VERSIONS[] = { 0x00, 0x05 };
 const int VALID_VERSION_COUNT = sizeof(VALID_ADDRESS_VERSIONS)/sizeof(unsigned char);
 const char* BASE58_CHARS = BITCOIN_BASE58_CHARS;
 const unsigned int ADDRESS_DATA_SIZE = 20;
+const uint64_t CURRENCY_MAX = 0xffffffffffffffffull;
+const uint64_t CURRENCY_DIVISOR = 100000000ull;
+const unsigned int CURRENCY_DECIMALS = 8;
 
 PaymentRequest::PaymentRequest(const QUrl& url)
 {
@@ -76,7 +79,7 @@ uint64_t PaymentRequest::parseAmount(const QString& amountString)
 {
     // TODO: handle small amounts correctly
     QString mantissa;
-    int exponent;
+    unsigned int exponent;
     if (amountString.contains('X')) {
         QString exp = amountString.section('X', 1);
         if (exp.size() != 1 || exp[0] < '0' || exp[0] > '8') {
@@ -87,11 +90,12 @@ uint64_t PaymentRequest::parseAmount(const QString& amountString)
     }
     else {
         mantissa = amountString;
-        exponent = 8;
+        exponent = CURRENCY_DECIMALS;
     }
-    uint64_t value = btcStringToSatoshis(mantissa.toStdString());
-    for (int i = 8; i > exponent; i--) { value /= 10; }
-    return value;
+
+    uint64_t divisor = CURRENCY_DIVISOR;
+    for (unsigned int i = CURRENCY_DECIMALS; i > exponent; i--) { divisor *= 10; }
+    return decimalStringToInteger(mantissa.toStdString(), CURRENCY_MAX, divisor, CURRENCY_DECIMALS);
 }
 
 QString PaymentRequest::toJson() const

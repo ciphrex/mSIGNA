@@ -1,10 +1,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // txview.cpp
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
@@ -15,23 +15,25 @@
 #include <QContextMenuEvent>
 
 TxView::TxView(QWidget* parent)
-    : QTreeView(parent), accountHistoryModel(NULL), menu(NULL)
+    : QTreeView(parent), m_model(nullptr), m_menu(nullptr)
 {
+    setSelectionBehavior(QAbstractItemView::SelectRows);
 }
 
 void TxView::setModel(TxModel* model)
 {
     QTreeView::setModel(model);
-    accountHistoryModel = model;
+    m_model = model;
 }
 
-void TxView::update()
+void TxView::updateColumns()
 {
-    for (int i = 0; i < model()->columnCount(); i++) { resizeColumnToContents(i); }
+    if (!m_model) return;
+    for (int i = 0; i < m_model->columnCount(); i++) { resizeColumnToContents(i); }
 }
 
 void TxView::contextMenuEvent(QContextMenuEvent* event)
 {
-    if (menu) menu->exec(event->globalPos());
+    if (m_menu) m_menu->exec(event->globalPos());
 }
 

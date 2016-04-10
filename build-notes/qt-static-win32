@@ -21,7 +21,7 @@ export INSTALLPREFIX=/opt/mingw64
 make
 make install
 
-build CoinVault:
+build mSIGNA:
 #use the correct quake:
 export PATH=/opt/mingw64/host/bin:$PATH
 ./build-all.sh mingw64

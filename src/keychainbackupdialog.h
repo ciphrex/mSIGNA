@@ -1,21 +1,20 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // keychainbackupdialog.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_KEYCHAINBACKUPDIALOG_H
-#define COINVAULT_KEYCHAINBACKUPDIALOG_H
+#pragma once
 
 class QTextEdit;
 
 #include <QDialog>
 
-#include <CoinQ_typedefs.h>
+#include <CoinQ/CoinQ_typedefs.h>
 
 class KeychainBackupDialog : public QDialog
 {
@@ -32,4 +31,3 @@ private:
     QTextEdit* keychainBackupEdit;
 };
 
-#endif // COINVAULT_KEYCHAINBACKUPDIALOG_H

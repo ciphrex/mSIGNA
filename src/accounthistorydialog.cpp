@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // accounthistorydialog.cpp
 //
@@ -26,8 +26,8 @@
 #include <QUrl>
 #include <QDesktopServices>
 
-#include <Vault.h>
-#include <CoinQ_netsync.h>
+#include <CoinDB/Vault.h>
+#include <CoinQ/CoinQ_netsync.h>
 
 AccountHistoryDialog::AccountHistoryDialog(CoinDB::Vault* vault, const QString& accountName, CoinQ::Network::NetworkSync* networkSync, QWidget* parent)
     : QDialog(parent), currentRow(-1)
@@ -74,7 +74,7 @@ void AccountHistoryDialog::updateCurrentTx(const QModelIndex& current, const QMo
             signTxAction->setEnabled(false);
         }
 
-        if (networkSync && networkSync->isConnected() && type == CoinDB::Tx::UNSENT) {
+        if (networkSync && networkSync->connected() && type == CoinDB::Tx::UNSENT) {
             sendTxAction->setEnabled(true);
         }
         else {
@@ -112,8 +112,9 @@ void AccountHistoryDialog::signTx()
 void AccountHistoryDialog::sendTx()
 {
     try {
-        accountHistoryModel->sendTx(currentRow, networkSync);
-        accountHistoryView->update();
+        throw std::runtime_error("Unsupported operation.");
+        //accountHistoryModel->sendTx(currentRow, networkSync);
+        //accountHistoryView->update();
     }
     catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Error"), e.what());

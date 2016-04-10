@@ -2,17 +2,17 @@
 //
 // CoinQ_blocks.h 
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef _COINQ_BLOCKS_H_
-#define _COINQ_BLOCKS_H_
+#pragma once
 
+#include "CoinQ_exceptions.h"
 #include "CoinQ_signals.h"
 #include "CoinQ_slots.h"
 
-#include <CoinNodeData.h>
+#include <CoinCore/CoinNodeData.h>
 
 #include <set>
 #include <map>
@@ -95,19 +95,24 @@ public:
 
     virtual void setGenesisBlock(const Coin::CoinBlockHeader& header) = 0;
 
+    virtual bool isEmpty() const = 0;
+
     // returns true if new header added, false if header already exists
     // throws runtime_error if header invalid or parent not known
 //    virtual bool insertHeader(const Coin::CoinBlockHeader& header) = 0;
-    virtual bool insertHeader(const Coin::CoinBlockHeader& header, bool bCheckProofOfWork) = 0;
+    virtual bool insertHeader(const Coin::CoinBlockHeader& header, bool bCheckProofOfWork, bool bReplaceTip) = 0;
 
     // returns true if header removed, false if header unknown
     virtual bool deleteHeader(const uchar_vector& hash) = 0;
  
     virtual bool hasHeader(const uchar_vector& hash) const = 0;
-    virtual ChainHeader getHeader(const uchar_vector& hash) const = 0;
-    virtual ChainHeader getHeader(int height) const = 0; // Use -1 to get top block
-    virtual ChainHeader getHeaderBefore(uint32_t timestamp) const = 0;
+    virtual const ChainHeader& getHeader(const uchar_vector& hash) const = 0;
+    virtual const ChainHeader& getHeader(int height) const = 0; // Use -1 to get top block
+    virtual const ChainHeader& getTip() const = 0;
+    virtual int getTipHeight() const = 0;
+    virtual const ChainHeader& getHeaderBefore(uint32_t timestamp) const = 0;
 
+    virtual const uchar_vector& getBestHash() const = 0;
     virtual int getBestHeight() const = 0;
     virtual BigInt getTotalWork() const = 0;
 
@@ -120,6 +125,8 @@ public:
 class CoinQBlockTreeMem : public ICoinQBlockTree
 {
 private:
+    bool bFlushed;
+
     typedef std::map<uchar_vector, ChainHeader> header_hash_map_t;
     header_hash_map_t mHeaderHashMap;
 
@@ -146,9 +153,9 @@ protected:
 
 public:
     CoinQBlockTreeMem(bool _bCheckTimestamp = true, bool _bCheckProofOfWork = true)
-        : mBestHeight(-1), mTotalWork(0), pHead(NULL), bCheckTimestamp(_bCheckTimestamp), bCheckProofOfWork(_bCheckProofOfWork) { }
+        : bFlushed(true), mBestHeight(-1), mTotalWork(0), pHead(NULL), bCheckTimestamp(_bCheckTimestamp), bCheckProofOfWork(_bCheckProofOfWork) { }
     CoinQBlockTreeMem(const Coin::CoinBlockHeader& header, bool _bCheckTimestamp = true, bool _bCheckProofOfWork = true)
-        : mBestHeight(-1), mTotalWork(0), pHead(NULL), bCheckTimestamp(_bCheckTimestamp), bCheckProofOfWork(_bCheckProofOfWork) { setGenesisBlock(header); }
+        : bFlushed(true), mBestHeight(-1), mTotalWork(0), pHead(NULL), bCheckTimestamp(_bCheckTimestamp), bCheckProofOfWork(_bCheckProofOfWork) { setGenesisBlock(header); }
 
     void subscribeAddBestChain(chain_header_slot_t slot) { notifyAddBestChain.connect(slot); }
     void subscribeRemoveBestChain(chain_header_slot_t slot) { notifyRemoveBestChain.connect(slot); }
@@ -163,14 +170,18 @@ public:
     void clearReorg() { notifyReorg.clear();; }
 
     void setGenesisBlock(const Coin::CoinBlockHeader& header);
-    bool insertHeader(const Coin::CoinBlockHeader& header, bool bCheckProofOfWork = true);
+    bool isEmpty() const { return pHead == nullptr; }
+    bool insertHeader(const Coin::CoinBlockHeader& header, bool bCheckProofOfWork = true, bool bReplaceTip = false);
     bool deleteHeader(const uchar_vector& hash);
 
     bool hasHeader(const uchar_vector& hash) const;
-    ChainHeader getHeader(const uchar_vector& hash) const;
-    ChainHeader getHeader(int height) const;
-    ChainHeader getHeaderBefore(uint32_t timestamp) const;
+    const ChainHeader& getHeader(const uchar_vector& hash) const;
+    const ChainHeader& getHeader(int height) const;
+    const ChainHeader& getTip() const;
+    int getTipHeight() const;
+    const ChainHeader& getHeaderBefore(uint32_t timestamp) const;
 
+    const uchar_vector& getBestHash() const { return getHeader(-1).hash(); }
     int getBestHeight() const { return mBestHeight; }
     BigInt getTotalWork() const { return mTotalWork; }
 
@@ -179,8 +190,11 @@ public:
     int getConfirmations(const uchar_vector& hash) const;
     void clear() { mHeaderHashMap.clear(); mHeaderHeightMap.clear(); mBestHeight = -1; mTotalWork = 0; pHead = NULL; }
 
-    void loadFromFile(const std::string& filename, bool bCheckProofOfWork = true);
+    typedef std::function<bool(const CoinQBlockTreeMem&)> callback_t;
+    void loadFromFile(const std::string& filename, bool bCheckProofOfWork = true, callback_t callback = nullptr); 
+
     void flushToFile(const std::string& filename);
+
+    bool flushed() const { return bFlushed; }
 };
 
-#endif // _COINQ_BLOCKS_H_

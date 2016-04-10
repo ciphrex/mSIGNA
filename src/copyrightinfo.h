@@ -1,21 +1,16 @@
 ///////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // copyrightinfo.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef VAULT_COPYRIGHTINFO_H
-#define VAULT_COPYRIGHTINFO_H
+#pragma once
 
 #include <QString>
 
-const int COPYRIGHTPADDINGRIGHT = 20;
-const int COPYRIGHTPADDINGBOTTOM = 10;
+const QString& getCopyrightText();
 
-const QString COPYRIGHTTEXT("Copyright (c) 2013-2014 Ciphrex LLC, All Rights Reserved");
-
-#endif //  VAULT_COPYRIGHTINFO_H

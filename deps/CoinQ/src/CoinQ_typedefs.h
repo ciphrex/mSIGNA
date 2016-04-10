@@ -9,6 +9,8 @@
 #ifndef COINQ_TYPEDEFS_H
 #define COINQ_TYPEDEFS_H
 
+#include <vector>
+
 typedef std::vector<unsigned char> bytes_t;
 typedef std::vector<unsigned char> secure_bytes_t;
 

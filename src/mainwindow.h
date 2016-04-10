@@ -1,15 +1,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // mainwindow.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef VAULT_MAINWINDOW_H
-#define VAULT_MAINWINDOW_H
+#pragma once
 
 class QAction;
 class QActionGroup;
@@ -29,14 +28,20 @@ class TxModel;
 class TxView;
 
 class TxActions;
+class SignatureActions;
 
 class RequestPaymentDialog;
 
-#include <CoinQ_netsync.h>
+#include <CoinDB/SynchedVault.h>
+//#include <CoinQ/CoinQ_netsync.h>
 
 #include "paymentrequest.h"
 
 #include <QMainWindow>
+
+#include <vector>
+
+enum fontsize_t { SMALL_FONTS , MEDIUM_FONTS , LARGE_FONTS };
 
 class MainWindow : public QMainWindow
 {
@@ -52,17 +57,30 @@ public:
     void saveSettings();
     void clearSettings();
 
-    void loadBlockTree();
+    enum network_state_t {
+        NETWORK_STATE_STOPPED,
+        NETWORK_STATE_STARTED,
+        NETWORK_STATE_SYNCHING,
+        NETWORK_STATE_SYNCHED
+    };
+
+    void loadHeaders();
     void tryConnect();
+    bool isConnected() const { return networkState >= NETWORK_STATE_STARTED; }
+    bool isSynched() const { return networkState == NETWORK_STATE_SYNCHED; }
 
     void updateStatusMessage(const QString& message);
 
 signals:
     void status(const QString& message);
+    void headersLoadProgress(const QString& message);
     void updateSyncHeight(int height);
     void updateBestHeight(int height);
 
     void signal_error(const QString& message);
+
+    void vaultOpened(CoinDB::Vault* vault);
+    void vaultClosed();
 
     void signal_connectionOpen();
     void signal_connectionClosed();
@@ -71,47 +89,66 @@ signals:
     void signal_networkTimeout();
     void signal_networkDoneSync();
 
+    void signal_newTx();
+    void signal_newBlock();
+    void signal_refreshAccounts();
+
     void signal_addBestChain(const chain_header_t& header);
     void signal_removeBestChain(const chain_header_t& header);
 
+    void signal_currencyUnitChanged();
+
     void unsignedTx();
+
+public slots:
+    //////////////////////////////
+    // URL/FILE/COMMAND OPERATIONS
+    void processUrl(const QUrl& url);
+    void processFile(const QString& fileName);
+    void processCommand(const QString& command, const std::vector<QString>& args);
 
 protected:
     void closeEvent(QCloseEvent* event);
     void dragEnterEvent(QDragEnterEvent* event);
     void dropEvent(QDropEvent* event);
 
-    enum network_state_t {
-        NETWORK_STATE_UNKNOWN,
-        NETWORK_STATE_NOT_CONNECTED,
-        NETWORK_STATE_SYNCHING,
-        NETWORK_STATE_SYNCHED
-    };
-
 protected slots:
+    void updateFonts(int fontSize);
     void updateSyncLabel();
-    void updateNetworkState(network_state_t newState = NETWORK_STATE_UNKNOWN);
+    void updateNetworkState(network_state_t newState);
     void updateVaultStatus(const QString& name = QString());
     void showError(const QString& errorMsg);
     void showUpdate(const QString& updateMsg);
 
 private slots:
-    ///?/////?/////////
+    ////////////////////
+    // GLOBAL OPERATIONS
+    void selectCurrencyUnit();
+    void selectCurrencyUnit(const QString& newCurrencyUnitPrefix);
+    void selectTrailingDecimals(bool newShowTrailingDecimals);
+
+    ///////////////////
     // VAULT OPERATIONS
     void newVault(QString fileName = QString());
     void openVault(QString fileName = QString());
-//    void backupVault();
+    void importVault(QString fileName = QString());
+    void exportVault(QString fileName = QString(), bool exportPrivKeys = true);
     void closeVault();
 
     //////////////////////
     // KEYCHAIN OPERATIONS
     void newKeychain();
-    void unlockKeychain();
-    void lockKeychain();
+    bool unlockKeychain(QString name = QString());
+    void lockKeychain(QString name = QString());
     void lockAllKeychains();
+    int  setKeychainPassphrase(const QString& keychainName = QString());
+    int  makeKeychainBackup(const QString& keychainName = QString());
     void importKeychain(QString fileName = QString());
     void exportKeychain(bool exportPrivate);
-    void backupKeychain();
+    void importBIP32();
+    void viewBIP32(bool viewPrivate);
+    void importBIP39();
+    void viewBIP39();
 //    void mergeKeychains();
 //    void removeKeychain();
 //    void renameKeychain();
@@ -123,8 +160,7 @@ private slots:
     void newAccount();
     void importAccount(QString fileName = QString());
     void exportAccount();
-//    void importAccount();
-//    void exportAccount();
+    void exportSharedAccount();
     void deleteAccount();
 //    void renameAccount();
     void viewAccountHistory();
@@ -133,6 +169,7 @@ private slots:
     void viewUnsignedTxs();
     void updateCurrentAccount(const QModelIndex& current, const QModelIndex& previous);
     void updateSelectedAccounts(const QItemSelection& selected, const QItemSelection& deselected);
+    void refreshAccounts();
 
     /////////////////////////
     // TRANSACTION OPERATIONS
@@ -142,27 +179,25 @@ private slots:
     void createRawTx();
     void createTx(const PaymentRequest& paymentRequest = PaymentRequest());
     void signRawTx();
-    //void newTx(const coin_tx_t& tx);
-    void newTx(const bytes_t& hash);
+    void newTx();
     void sendRawTx();
 
-    ///////////////////
-    // BLOCK OPERATIONS
-    void resync();
-    void doneSync(); // initial headers sync
-    void doneResync(); // full block resync
+    //////////////////////////////
+    // BLOCK OPERATIONS AND EVENTS
+    void syncBlocks();
+    void fetchingHeaders();
+    void headersSynched();
+    void fetchingBlocks();
+    void blocksSynched();
     void addBestChain(const chain_header_t& header);
     void removeBestChain(const chain_header_t& header);
-    //void newBlock(const chain_block_t& block);
-    void newBlock(const bytes_t& hash, int height);
+    void newBlock();
 
     /////////////////////
     // NETWORK OPERATIONS
     void startNetworkSync();
     void stopNetworkSync();
-    void resyncBlocks();
-    void stopResyncBlocks();
-    void promptResync();
+    void promptSync();
     void connectionOpen();
     void connectionClosed();
     void networkStatus(const QString& status);
@@ -180,22 +215,23 @@ private slots:
     // STATUS UPDATES
     void errorStatus(const QString& message);
 
-    //////////////////////////////
-    // URL/FILE/COMMAND OPERATIONS
-    void processUrl(const QUrl& url);
-    void processFile(const QString& fileName);
-    void processCommand(const QString& command);
-
 private:
+    int fontSize;
+
     // License accepted?
     bool licenseAccepted;
-
-    QString lastVaultDir;
 
     void createActions();
     void createMenus();
     void createToolBars();
     void createStatusBar();
+
+    const int MAX_RECENTS = 4; 
+    QList<QString> recents;
+    void addToRecents(const QString& filename);
+    void loadRecents();
+    void saveRecents();
+    void updateRecentsMenu();
 
     bool maybeSave();
 
@@ -205,21 +241,30 @@ private:
     QString strippedName(const QString &fullFileName);
 
     QString curFile;
+    QString currencyUnitPrefix;
+    bool showTrailingDecimals;
 
     //void updateBestHeight(int newHeight);
 
     // selects account with index i. returns true iff account with that index exists and was selected.
     bool selectAccount(int i);
+    bool selectAccount(const QString& account);
+    QString selectedAccount;
+
+    CoinDB::SynchedVault synchedVault;
 
     // network
-    CoinQ::Network::NetworkSync networkSync;
+    //CoinQ::Network::NetworkSync networkSync;
 
     // menus
     QMenu* fileMenu;
+    QMenu* recentsMenu;
     QMenu* keychainMenu;
     QMenu* accountMenu;
     QMenu* txMenu;
     QMenu* networkMenu;
+    QMenu* fontsMenu;
+    QMenu* currencyUnitMenu;
     QMenu* helpMenu;
 
     // toolbars
@@ -231,12 +276,16 @@ private:
     QToolBar* txToolBar;
 
     // application actions
+    QAction* selectCurrencyUnitAction;
     QAction* quitAction;
+    bool bQuitting;
 
     // vault actions
     QAction* newVaultAction;
     QAction* openVaultAction;
-    QAction* backupVaultAction;
+    QAction* importVaultAction;
+    QAction* exportVaultAction;
+    QAction* exportPublicVaultAction;
     QAction* closeVaultAction;
 
     // keychain actions
@@ -244,6 +293,8 @@ private:
     QAction* unlockKeychainAction;
     QAction* lockKeychainAction;
     QAction* lockAllKeychainsAction;
+    QAction* setKeychainPassphraseAction;
+    QAction* makeKeychainBackupAction;
     bool     importPrivate;
     QAction* importPrivateAction;
     QAction* importPublicAction;
@@ -251,13 +302,18 @@ private:
     QAction* importKeychainAction;
     QAction* exportPrivateKeychainAction;
     QAction* exportPublicKeychainAction;
-    QAction* backupKeychainAction;
+    QAction* importBIP32Action;
+    QAction* viewPrivateBIP32Action;
+    QAction* viewPublicBIP32Action;
+    QAction* importBIP39Action;
+    QAction* viewBIP39Action;
 
     // account actions
     QAction* quickNewAccountAction;
     QAction* newAccountAction;
     QAction* importAccountAction;
     QAction* exportAccountAction;
+    QAction* exportSharedAccountAction;
     QAction* deleteAccountAction;
     QAction* viewAccountHistoryAction;
     QAction* viewScriptsAction;
@@ -277,26 +333,34 @@ private:
     int bestHeight;
     QLabel* syncLabel;
     QLabel* networkStateLabel;
-    bool connected;
-    bool doneHeaderSync;
     QString blockTreeFile;
     QString host;
     int port;
     bool autoConnect;
-    int resyncHeight;
     QAction* connectAction;
+    QAction* shortConnectAction;
     QAction* disconnectAction;
-    QAction* resyncAction;
-    QAction* stopResyncAction;
+    QAction* shortDisconnectAction;
     QAction* networkSettingsAction;
 
     // network sync state
     network_state_t networkState;
 
-    // network sync icons
-    QPixmap* notConnectedIcon;
+    // network state icons
+    QPixmap* stoppedIcon;
     QMovie* synchingMovie;
     QPixmap* synchedIcon;
+
+    // font actions
+    QActionGroup* fontSizeGroup;
+    QAction* smallFontsAction;
+    QAction* mediumFontsAction;
+    QAction* largeFontsAction;
+
+    // currency unit actions
+    QActionGroup* currencyUnitGroup;
+    QList<QAction*> currencyUnitActions;
+    QAction* showTrailingDecimalsAction;
 
     // about/help actions
     QAction* aboutAction;
@@ -313,8 +377,9 @@ private:
     TxModel *txModel;
     TxView *txView;
 
-    // tab actions
+    // categorized actions
     TxActions* txActions;
+    SignatureActions* signatureActions;
 
     // models
     QItemSelectionModel* keychainSelectionModel;
@@ -324,4 +389,3 @@ private:
     RequestPaymentDialog* requestPaymentDialog;
 };
 
-#endif // VAULT_MAINWINDOW_H

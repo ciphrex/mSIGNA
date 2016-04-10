@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // quicknewaccountdialog.cpp
 //
@@ -16,6 +16,8 @@
 #include <QLineEdit>
 #include <QComboBox>
 #include <QLabel>
+#include <QDateTimeEdit>
+#include <QCalendarWidget>
 
 #include <stdexcept>
 
@@ -61,13 +63,33 @@ QuickNewAccountDialog::QuickNewAccountDialog(QWidget* parent)
     policyLayout->addWidget(ofLabel);
     policyLayout->addWidget(maxSigComboBox);
 
+    // Creation Time
+    QDateTime localDateTime = QDateTime::currentDateTime();
+    QLabel* creationTimeLabel = new QLabel(tr("Creation Time ") + "(" + localDateTime.timeZoneAbbreviation() + "):");
+    creationTimeEdit = new QDateTimeEdit(QDateTime::currentDateTime());
+    creationTimeEdit->setDisplayFormat("yyyy.MM.dd hh:mm:ss");
+    creationTimeEdit->setCalendarPopup(true);
+    calendarWidget = new QCalendarWidget(this);
+    creationTimeEdit->setCalendarWidget(calendarWidget);
+
+    QHBoxLayout* creationTimeLayout = new QHBoxLayout();
+    creationTimeLayout->setSizeConstraint(QLayout::SetNoConstraint);
+    creationTimeLayout->addWidget(creationTimeLabel);
+    creationTimeLayout->addWidget(creationTimeEdit);
+
     // Main Layout 
     QVBoxLayout *mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
     mainLayout->addLayout(nameLayout);
     mainLayout->addLayout(policyLayout);
+    mainLayout->addLayout(creationTimeLayout);
     mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
+}
+
+QuickNewAccountDialog::~QuickNewAccountDialog()
+{
+    delete calendarWidget;
 }
 
 QString QuickNewAccountDialog::getName() const
@@ -83,4 +105,9 @@ int QuickNewAccountDialog::getMinSigs() const
 int QuickNewAccountDialog::getMaxSigs() const
 {
     return maxSigComboBox->currentIndex() + 1;
+}
+
+qint64 QuickNewAccountDialog::getCreationTime() const
+{
+    return creationTimeEdit->dateTime().toMSecsSinceEpoch();
 }

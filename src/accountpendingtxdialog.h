@@ -1,15 +1,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // accounthistorydialog.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_ACCOUNTHISTORYDIALOG_H
-#define COINVAULT_ACCOUNTHISTORYDIALOG_H
+#pragma once
 
 #include <Vault.h>
 
@@ -30,4 +29,3 @@ private:
     TxView* accountHistoryView;
 };
 
-#endif // COINVAULT_ACCOUNTHISTORYDIALOG_H

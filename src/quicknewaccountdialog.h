@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // quicknewaccountdialog.h
 //
@@ -12,6 +12,8 @@
 
 class QLineEdit;
 class QComboBox;
+class QDateTimeEdit;
+class QCalendarWidget;
 
 #include <QDialog>
 
@@ -21,14 +23,18 @@ class QuickNewAccountDialog : public QDialog
 
 public:
     QuickNewAccountDialog(QWidget* parent = NULL);
+    ~QuickNewAccountDialog();
 
     QString getName() const;
     int getMinSigs() const;
     int getMaxSigs() const;
+    qint64 getCreationTime() const;
 
 private:
     QLineEdit* nameEdit;
     QComboBox* minSigComboBox;
     QComboBox* maxSigComboBox;
+    QDateTimeEdit* creationTimeEdit;
+    QCalendarWidget* calendarWidget;
 };
 

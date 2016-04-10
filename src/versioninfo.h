@@ -1,24 +1,24 @@
 ///////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // versioninfo.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef VAULT_VERSIONINFO_H
-#define VAULT_VERSIONINFO_H
+#pragma once
 
 #include <QString>
 
-const int VERSIONPADDINGRIGHT = 20;
-const int VERSIONPADDINGBOTTOM = 30;
-
-const QString VERSIONTEXT("Version 0.1.2 beta");
+const QString& getVersionText();
 
 const QString& getCommitHash();
 const QString& getShortCommitHash();
 
-#endif //  VAULT_VERSIONINFO_H
+uint32_t getSchemaVersion();
+const QString& getSchemaVersionText();
+
+uint32_t getOpenSSLVersionNumber();
+const QString& getOpenSSLVersionText();

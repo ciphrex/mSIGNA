@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // keychainmodel.h
 //
@@ -8,14 +8,13 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_KEYCHAINMODEL_H
-#define COINVAULT_KEYCHAINMODEL_H
+#pragma once
 
 #include <QStandardItemModel>
 
-#include <Vault.h>
+#include <CoinDB/Vault.h>
 
-#include <CoinQ_typedefs.h>
+#include <CoinQ/CoinQ_typedefs.h>
 
 class KeychainModel : public QStandardItemModel
 {
@@ -28,13 +27,24 @@ public:
     void update();
 
     void exportKeychain(const QString& keychainName, const QString& fileName, bool exportPrivate) const;
-    void importKeychain(const QString& keychainName, const QString& fileName, bool& importPrivate);
+    QString importKeychain(const QString& fileName, bool& importPrivate);
     bool exists(const QString& keychainName) const;
     bool isPrivate(const QString& keychainName) const;
+    bool isLocked(const QString& keychainName) const;
     bool isEncrypted(const QString& keychainName) const;
-    void unlockKeychain(const QString& keychainName, const secure_bytes_t& unlockKey);
+    bool hasSeed(const QString& keychainName) const;
+    bool unlockKeychain(const QString& keychainName, const secure_bytes_t& unlockKey = secure_bytes_t());
     void lockKeychain(const QString& keychainName);
     void lockAllKeychains();
+    void encryptKeychain(const QString& keychainName, const secure_bytes_t& lockKey = secure_bytes_t());
+    void decryptKeychain(const QString& keychainName);
+
+    QString getName(int row) const;
+
+    enum Status { PUBLIC, UNLOCKED, LOCKED };
+    int getStatus(int row) const;
+    bool isEncrypted(int row) const;
+    bool hasSeed(int row) const { return hasSeed(getName(row)); } // TODO: get this without requerying DB
 
     bytes_t getExtendedKeyBytes(const QString& keychainName, bool getPrivate = false, const bytes_t& decryptionKey = bytes_t()) const;
 
@@ -45,9 +55,9 @@ public:
 
 signals:
     void error(const QString& message);
+    void keychainChanged();
 
 private:
     CoinDB::Vault* vault;
 };
 
-#endif // COINVAULT_ACCOUNTMODEL_H

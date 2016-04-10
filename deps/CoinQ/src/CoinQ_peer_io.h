@@ -2,19 +2,19 @@
 //
 // CoinQ_peer_io.h 
 //
-// Copyright (c) 2012-2013 Eric Lombrozo
+// Copyright (c) 2012-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef _COINQ_PEER_IO_H_
-#define _COINQ_PEER_IO_H_
+#pragma once
 
 #include "CoinQ_signals.h"
 #include "CoinQ_slots.h"
 
-#include <numericdata.h>
+#include <CoinCore/typedefs.h>
+#include <CoinCore/numericdata.h>
 
-#include <iostream>
+#include <logger/logger.h>
 
 #include <queue>
 
@@ -44,7 +44,7 @@ typedef boost::asio::ip::tcp tcp;
 class Peer;
 
 typedef std::function<void(Peer&)>                                  peer_slot_t;
-typedef std::function<void(Peer&, int, const std::string&)>         peer_closed_slot_t;
+typedef std::function<void(Peer&, const std::string&, int)>         peer_error_slot_t;
 
 typedef std::function<void(Peer&, const Coin::CoinNodeMessage&)>    peer_message_slot_t;
 typedef std::function<void(Peer&, const Coin::HeadersMessage&)>     peer_headers_slot_t;
@@ -59,7 +59,7 @@ class Peer
 {
 public:
     Peer(io_service_t& io_service, const std::string& host = "", const std::string& port = "", uint32_t magic_bytes = 0, uint32_t protocol_version = 0, const std::string& user_agent = std::string(), uint32_t start_height = 0, bool relay = true) :
-        io_service_(io_service),
+        //io_service_(io_service),
         strand_(io_service),
         resolver_(io_service),
         socket_(io_service),
@@ -99,12 +99,14 @@ public:
     void subscribeTx(peer_tx_slot_t slot) { notifyTx.connect(slot); }
     void subscribeAddr(peer_addr_slot_t slot) { notifyAddr.connect(slot); }
     void subscribeInv(peer_inv_slot_t slot) { notifyInv.connect(slot); }
+    void subscribeProtocolError(peer_error_slot_t slot) { notifyProtocolError.connect(slot); }
 
     void subscribeStart(peer_slot_t slot) { notifyStart.connect(slot); }
     void subscribeStop(peer_slot_t slot) { notifyStop.connect(slot); }
     void subscribeOpen(peer_slot_t slot) { notifyOpen.connect(slot); }
     void subscribeTimeout(peer_slot_t slot) { notifyTimeout.connect(slot); }
-    void subscribeClose(peer_closed_slot_t slot) { notifyClose.connect(slot); }
+    void subscribeClose(peer_slot_t slot) { notifyClose.connect(slot); }
+    void subscribeConnectionError(peer_error_slot_t slot) { notifyConnectionError.connect(slot); }
 
     static const unsigned char DEFAULT_Ipv6[];
 
@@ -119,17 +121,58 @@ public:
     std::string resolved_name() const { std::stringstream ss; ss << endpoint_.address().to_string() << ":" << endpoint_.port(); return ss.str(); }
     std::string name() const { std::stringstream ss; ss << host_ << ":" << port_; return ss.str(); }
 
-    void getTx(const uchar_vector& hash)
+    void getTx(const bytes_t& hash)
     {
+        if (hash.size() != 32)
+        {
+            std::stringstream err;
+            err << "Invalid transaction hash requested: " << uchar_vector(hash).getHex();
+            LOGGER(error) << "Peer::getTx() - " << err.str() << std::endl;
+            notifyProtocolError(*this, err.str(), -1);
+            return;
+        }
+
         Coin::InventoryItem tx(MSG_TX, hash);
         Coin::Inventory inv;
         inv.addItem(tx);
         Coin::GetDataMessage getData(inv);
         send(getData);
     }
- 
-    void getBlock(const uchar_vector& hash)
+
+    void getTxs(const hashvector_t& txhashes)
     {
+        using namespace Coin;
+
+        if (txhashes.empty()) return;
+        Inventory inv;
+        for (auto& hash: txhashes)
+        {
+            if (hash.size() != 32)
+            {
+                std::stringstream err;
+                err << "Invalid transaction hash requested: " << uchar_vector(hash).getHex();
+                LOGGER(error) << "Peer::getTxs() - " << err.str() << std::endl;
+                notifyProtocolError(*this, err.str(), -1);
+                return;
+            }
+
+            inv.addItem(InventoryItem(MSG_TX, hash));
+        }
+        GetDataMessage getData(inv);
+        send(getData);
+    }
+ 
+    void getBlock(const bytes_t& hash)
+    {
+        if (hash.size() != 32)
+        {
+            std::stringstream err;
+            err << "Invalid block hash requested: " << uchar_vector(hash).getHex();
+            LOGGER(error) << "Peer::getBlock() - " << err.str() << std::endl;
+            notifyProtocolError(*this, err.str(), -1);
+            return;
+        }
+
         Coin::InventoryItem block(MSG_BLOCK, hash);
         Coin::Inventory inv;
         inv.addItem(block);
@@ -137,8 +180,17 @@ public:
         send(getData); 
     }
 
-    void getFilteredBlock(const uchar_vector& hash)
+    void getFilteredBlock(const bytes_t& hash)
     {
+        if (hash.size() != 32)
+        {
+            std::stringstream err;
+            err << "Invalid block hash requested: " << uchar_vector(hash).getHex();
+            LOGGER(error) << "Peer::getFilteredBlock() - " << err.str() << std::endl;
+            notifyProtocolError(*this, err.str(), -1);
+            return;
+        }
+
         Coin::InventoryItem block(MSG_FILTERED_BLOCK, hash);
         Coin::Inventory inv;
         inv.addItem(block);
@@ -148,6 +200,27 @@ public:
 
     void getHeaders(const std::vector<uchar_vector>& locatorHashes, const uchar_vector& hashStop = g_zero32bytes)
     {
+        for (auto& hash: locatorHashes)
+        {
+            if (hash.size() != 32)
+            {
+                std::stringstream err;
+                err << "Invalid locator hash: " << uchar_vector(hash).getHex();
+                LOGGER(error) << "Peer::getHeaders() - " << err.str() << std::endl;
+                notifyProtocolError(*this, err.str(), -1);
+                return;
+            }
+        }
+
+        if (hashStop.size() != 32)
+        {
+            std::stringstream err;
+            err << "Invalid hash stop: " << uchar_vector(hashStop).getHex();
+            LOGGER(error) << "Peer::getHeaders() - " << err.str() << std::endl;
+            notifyProtocolError(*this, err.str(), -1);
+            return;
+        }
+
         Coin::GetHeadersMessage getHeaders(protocol_version_, locatorHashes, hashStop);
         send(getHeaders);
     }
@@ -161,6 +234,27 @@ public:
 
     void getBlocks(const std::vector<uchar_vector>& locatorHashes, const uchar_vector& hashStop = g_zero32bytes)
     {
+        for (auto& hash: locatorHashes)
+        {
+            if (hash.size() != 32)
+            {
+                std::stringstream err;
+                err << "Invalid locator hash: " << uchar_vector(hash).getHex();
+                LOGGER(error) << "Peer::getBlocks() - " << err.str() << std::endl;
+                notifyProtocolError(*this, err.str(), -1);
+                return;
+            }
+        }
+
+        if (hashStop.size() != 32)
+        {
+            std::stringstream err;
+            err << "Invalid hash stop: " << uchar_vector(hashStop).getHex();
+            LOGGER(error) << "Peer::getBlocks() - " << err.str() << std::endl;
+            notifyProtocolError(*this, err.str(), -1);
+            return;
+        }
+
         Coin::GetBlocksMessage getBlocks(protocol_version_, locatorHashes, hashStop);
         send(getBlocks);
     }
@@ -186,7 +280,7 @@ public:
 
 private:
     // ASIO environment
-    io_service_t& io_service_;
+    //io_service_t& io_service_;
     io_service_t::strand strand_;
     tcp::resolver resolver_;
     tcp::socket socket_;
@@ -223,16 +317,19 @@ private:
     CoinQSignal<Peer&, const Coin::Transaction&>        notifyTx;
     CoinQSignal<Peer&, const Coin::AddrMessage&>        notifyAddr;
     CoinQSignal<Peer&, const Coin::Inventory&>          notifyInv;
+    CoinQSignal<Peer&, const std::string&, int>         notifyProtocolError;
 
     CoinQSignal<Peer&>                                  notifyStart;
     CoinQSignal<Peer&>                                  notifyStop;
     CoinQSignal<Peer&>                                  notifyOpen;
-    CoinQSignal<Peer&, int, const std::string&>         notifyClose;
+    CoinQSignal<Peer&>                                  notifyClose;
+    CoinQSignal<Peer&, const std::string&, int>         notifyConnectionError;
 
     CoinQSignal<Peer&>                                  notifyTimeout;
 
-    static const unsigned int READ_BUFFER_SIZE = 1024;
+    static const unsigned int READ_BUFFER_SIZE = 262144;
     unsigned char read_buffer[READ_BUFFER_SIZE];
+    std::size_t min_read_bytes;
 
     uchar_vector read_message;
     uchar_vector write_message;
@@ -244,8 +341,9 @@ private:
     void do_write(boost::shared_ptr<uchar_vector> data);
     void do_send(const Coin::CoinNodeMessage& message); // calls do_write from the strand thread 
     void do_handshake();
+    void do_stop();
+    void do_clearSendQueue();
 };
 
 }
 
-#endif // _COINQ_PEER_IO_H_

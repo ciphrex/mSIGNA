@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // requestpaymentdialog.h
 //
@@ -8,10 +8,10 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_REQUESTPAYMENTDIALOG_H
-#define COINVAULT_REQUESTPAYMENTDIALOG_H
+#pragma once
 
 class AccountModel;
+class AccountView;
 
 #include <QDialog>
 
@@ -24,7 +24,7 @@ class RequestPaymentDialog : public QDialog
     Q_OBJECT
     
 public:
-    explicit RequestPaymentDialog(AccountModel* accountModel, QWidget *parent = 0);
+    explicit RequestPaymentDialog(AccountModel* accountModel, AccountView* accountView, QWidget *parent = 0);
     ~RequestPaymentDialog();
 
 public slots:
@@ -33,6 +33,7 @@ public slots:
 
 private slots:
     void setAccounts(const QStringList& accountNames);
+    void setQRCode(const QString& address);
 
     void on_newInvoiceButton_clicked();
     void on_addressClipboardButton_clicked();
@@ -44,6 +45,6 @@ private:
     Ui::RequestPaymentDialog *ui;
 
     AccountModel* accountModel_;
+    AccountView* accountView_;
 };
 
-#endif // COINVAULT_REQUESTPAYMENTDIALOG_H

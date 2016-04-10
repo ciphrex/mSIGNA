@@ -1,15 +1,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // resyncdialog.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_RESYNCDIALOG_H
-#define COINVAULT_RESYNCDIALOG_H
+#pragma once
 
 class QLineEdit;
 
@@ -28,4 +27,3 @@ private:
     QLineEdit* resyncHeightEdit;
 };
 
-#endif // COINVAULT_RESYNCDIALOG_H

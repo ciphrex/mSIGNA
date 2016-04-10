@@ -1,12 +1,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // mainwindow.cpp
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
+
+#include "mainwindow.h"
 
 #include <QtWidgets>
 #include <QDir>
@@ -15,20 +17,19 @@
 #include <QInputDialog>
 #include <QItemSelectionModel>
 
-#include "settings.h"
-#include "versioninfo.h"
-#include "copyrightinfo.h"
+#include "entropysource.h"
 
-#include "mainwindow.h"
+#include "settings.h"
+//#include "versioninfo.h"
+//#include "copyrightinfo.h"
+
+#include "stylesheets.h"
 
 // Random
-#include <random.h>
+#include "entropysource.h"
 
 // Coin scripts
-#include <CoinQ_script.h>
-
-// Network
-#include <CoinQ_netsync.h>
+#include <CoinQ/CoinQ_script.h>
 
 // Models/Views
 #include "accountmodel.h"
@@ -42,6 +43,8 @@
 #include "txactions.h"
 
 // Dialogs
+#include "aboutdialog.h"
+#include "entropydialog.h"
 #include "newkeychaindialog.h"
 #include "quicknewaccountdialog.h"
 #include "newaccountdialog.h"
@@ -52,14 +55,30 @@
 #include "requestpaymentdialog.h"
 #include "networksettingsdialog.h"
 #include "keychainbackupdialog.h"
+#include "viewbip32dialog.h"
+#include "importbip32dialog.h"
+#include "keychainbackupwizard.h"
+#include "viewbip39dialog.h"
+#include "importbip39dialog.h"
 #include "passphrasedialog.h"
-#include "resyncdialog.h"
+#include "setpassphrasedialog.h"
+#include "currencyunitdialog.h"
+#include "signaturedialog.h"
+//#include "resyncdialog.h"
 
 // Logging
 #include "severitylogger.h"
 
 // Coin Parameters
 #include "coinparams.h"
+
+// File System
+#include "docdir.h"
+
+// Passphrases
+#include <CoinDB/Passphrase.h>
+
+#include <typeinfo>
 
 boost::mutex repaintMutex;
 
@@ -68,21 +87,21 @@ using namespace std;
 
 MainWindow::MainWindow() :
     licenseAccepted(false),
-    networkSync(getCoinParams()),
+    synchedVault(getCoinParams()),
+    bQuitting(false),
     syncHeight(0),
     bestHeight(0),
-    connected(false),
-    doneHeaderSync(false),
-    networkState(NETWORK_STATE_NOT_CONNECTED),
+    networkState(NETWORK_STATE_STOPPED),
     accountModel(nullptr),
-    keychainModel(nullptr)
+    keychainModel(nullptr),
+    txActions(nullptr)
 {
     loadSettings();
-
+    loadRecents();
     createActions();
-    createMenus();
     createToolBars();
     createStatusBar();
+
 
     //setCurrentFile("");
     setUnifiedTitleAndToolBarOnMac(true);
@@ -92,7 +111,7 @@ MainWindow::MainWindow() :
     keychainView = new KeychainView();
     keychainView->setModel(keychainModel);
     keychainView->setSelectionMode(KeychainView::MultiSelection);
-    keychainView->setMenu(keychainMenu);
+    connect(keychainModel, SIGNAL(keychainChanged()), keychainView, SLOT(updateColumns()));
 
     keychainSelectionModel = keychainView->selectionModel();
     connect(keychainSelectionModel, &QItemSelectionModel::currentChanged,
@@ -100,29 +119,64 @@ MainWindow::MainWindow() :
     connect(keychainSelectionModel, &QItemSelectionModel::selectionChanged,
             this, &MainWindow::updateSelectedKeychains);
 
+    //synchedVault.subscribeKeychainUnlocked([this](const std::string& /*keychain_name*/) { keychainModel->update(); });
+    //synchedVault.subscribeKeychainLocked([this](const std::string& /*keychain_name*/) { keychainModel->update(); });
+
     // Account tab page
-    accountModel = new AccountModel();
+    accountModel = new AccountModel(synchedVault);
     accountView = new AccountView();
     accountView->setModel(accountModel);
-    accountView->setMenu(accountMenu);
+    accountView->updateColumns();
+    connect(accountView, SIGNAL(updateModel()), accountModel, SLOT(update()));
+    connect(keychainModel, SIGNAL(keychainChanged()), accountModel, SLOT(update()));
 
-    networkSync.subscribeTx([&](const Coin::Transaction& tx) {
-        try {
-            accountModel->insertTx(tx);
-        }
-        catch (const std::exception& e) {
-            // TODO
-        }
-    });
-//    networkSync.subscribeBlock([&](const ChainBlock& block) { accountModel->insertBlock(block); });
-    networkSync.subscribeMerkleBlock([&](const ChainMerkleBlock& merkleBlock) { accountModel->insertMerkleBlock(merkleBlock); });
-    networkSync.subscribeBlockTreeChanged([&]() { doneHeaderSync = false; emit updateBestHeight(networkSync.getBestHeight()); });
-
+/*
     qRegisterMetaType<bytes_t>("bytes_t");
     connect(accountModel, SIGNAL(newTx(const bytes_t&)), this, SLOT(newTx(const bytes_t&)));
     connect(accountModel, SIGNAL(newBlock(const bytes_t&, int)), this, SLOT(newBlock(const bytes_t&, int)));
     connect(accountModel, &AccountModel::updateSyncHeight, [this](int height) { emit updateSyncHeight(height); });
+*/
+
     connect(accountModel, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
+
+    synchedVault.subscribeBestHeaderChanged([this](uint32_t height, const bytes_t& /*hash*/) { emit updateBestHeight((int)height); });
+    synchedVault.subscribeSyncHeaderChanged([this](uint32_t height, const bytes_t& /*hash*/) { emit updateSyncHeight((int)height); });
+
+    synchedVault.subscribeStatusChanged([this](CoinDB::SynchedVault::status_t status) {
+        switch (status)
+        {
+        case CoinDB::SynchedVault::STOPPED:
+            networkStopped();
+            break;
+        case CoinDB::SynchedVault::STARTING:
+            networkStarted();
+            break;
+        case CoinDB::SynchedVault::SYNCHING_HEADERS:
+            fetchingHeaders();
+            break;
+        case CoinDB::SynchedVault::SYNCHING_BLOCKS:
+            fetchingBlocks();
+            break;
+        case CoinDB::SynchedVault::SYNCHED:
+            blocksSynched();
+            break;
+        default:
+            break;
+        }
+    });
+
+    synchedVault.subscribeConnectionError([this](const std::string& error, int /*code*/) { emit signal_connectionClosed(); emit signal_error(tr("Connection error: ") + QString::fromStdString(error)); });
+    connect(this, SIGNAL(signal_connectionClosed()), this, SLOT(stopNetworkSync()));
+    //synchedVault.subscribeVaultError([this](const std::string& error, int /*code*/) { emit signal_error(tr("Vault error: ") + QString::fromStdString(error)); });
+    connect(this, SIGNAL(signal_error(const QString&)), this, SLOT(showError(const QString&)));
+
+    synchedVault.subscribeTxInserted([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
+    synchedVault.subscribeTxUpdated([this](std::shared_ptr<CoinDB::Tx> /*tx*/) { if (isSynched()) emit signal_newTx(); });
+    synchedVault.subscribeMerkleBlockInserted([this](std::shared_ptr<CoinDB::MerkleBlock> /*merkleblock*/) { emit signal_newBlock(); });
+
+    connect(this, SIGNAL(signal_newTx()), this, SLOT(newTx()));
+    connect(this, SIGNAL(signal_newBlock()), this, SLOT(newBlock()));
+    connect(this, SIGNAL(signal_refreshAccounts()), this, SLOT(refreshAccounts()));
 
     accountSelectionModel = accountView->selectionModel();
     connect(accountSelectionModel, &QItemSelectionModel::currentChanged,
@@ -138,18 +192,59 @@ MainWindow::MainWindow() :
 
     txView = new TxView();
     txView->setModel(txModel);
-    txActions = new TxActions(txModel, txView, &networkSync);
+    txActions = new TxActions(txModel, txView, accountModel, keychainModel, &synchedVault, this);
+    connect(txActions, SIGNAL(txsChanged()), this, SLOT(refreshAccounts()));
     connect(txActions, SIGNAL(error(const QString&)), this, SLOT(showError(const QString&)));
 
+    // Menus
+    createMenus();
+    updateRecentsMenu();
+    accountView->setMenu(accountMenu);
     txView->setMenu(txActions->getMenu());
+    keychainView->setMenu(keychainMenu);
 
     tabWidget = new QTabWidget();
-    tabWidget->addTab(keychainView, tr("Keychains"));
     tabWidget->addTab(accountView, tr("Accounts"));
     tabWidget->addTab(txView, tr("Transactions"));
+    tabWidget->addTab(keychainView, tr("Keychains"));
     setCentralWidget(tabWidget);
 
-    requestPaymentDialog = new RequestPaymentDialog(accountModel, this);
+    connect(txActions, SIGNAL(setCurrentWidget(QWidget*)), tabWidget, SLOT(setCurrentWidget(QWidget*))); 
+
+    requestPaymentDialog = new RequestPaymentDialog(accountModel, accountView, this);
+
+    // Vault open and close
+    synchedVault.subscribeVaultOpened([this](CoinDB::Vault* vault) { emit vaultOpened(vault); });
+    synchedVault.subscribeVaultClosed([this]() { emit vaultClosed(); });
+
+    connect(this, &MainWindow::vaultOpened, [this](CoinDB::Vault* vault) {
+        keychainModel->setVault(vault);
+        keychainModel->update();
+        keychainView->updateColumns();
+
+        accountModel->update();
+        accountView->updateColumns();
+
+        txModel->setVault(vault);
+        txModel->update();
+        txView->updateColumns();
+
+        selectAccount(0);
+    });
+    connect(this, &MainWindow::vaultClosed, [this]() {
+        if (bQuitting) return;
+        keychainModel->setVault(nullptr);
+        keychainModel->update();
+
+        accountModel->update();
+
+        txModel->setVault(nullptr);
+        txModel->update();
+        txView->updateColumns();
+
+        updateStatusMessage(tr("Closed vault"));
+        updateRecentsMenu();
+    });
 
     // status updates
     connect(this, &MainWindow::status, [this](const QString& message) { updateStatusMessage(message); });
@@ -157,22 +252,32 @@ MainWindow::MainWindow() :
         LOGGER(debug) << "MainWindow::updateBestHeight emitted. New best height: " << height << std::endl;
         syncHeight = height;
         updateSyncLabel();
-        updateNetworkState();
     });
     connect(this, &MainWindow::updateBestHeight, [this](int height) {
         LOGGER(debug) << "MainWindow::updateBestHeight emitted. New best height: " << height << std::endl;
         bestHeight = height;
         updateSyncLabel();
-        updateNetworkState();
+    });
+
+    connect(this, &MainWindow::signal_currencyUnitChanged, [this]() {
+        refreshAccounts();
     });
 
     setAcceptDrops(true);
+
+    updateFonts(fontSize);
 }
 
-void MainWindow::loadBlockTree()
+void MainWindow::loadHeaders()
 {
-    networkSync.initBlockTree(blockTreeFile.toStdString(), false);
-    emit updateBestHeight(networkSync.getBestHeight());
+    synchedVault.loadHeaders(blockTreeFile.toStdString(), false,
+        [this](const CoinQBlockTreeMem& blockTree) {
+            std::stringstream progress;
+            progress << "Height: " << blockTree.getBestHeight() << " / " << "Total Work: " << blockTree.getTotalWork().getDec();
+            emit headersLoadProgress(QString::fromStdString(progress.str()));
+            return true;
+        });
+    emit updateBestHeight(synchedVault.getBestHeight());
 }
 
 void MainWindow::tryConnect()
@@ -188,18 +293,13 @@ void MainWindow::updateStatusMessage(const QString& message)
 //    statusBar()->showMessage(message);
 }
 
-void MainWindow::closeEvent(QCloseEvent * /*event*/)
+void MainWindow::closeEvent(QCloseEvent* event)
 {
-    networkSync.stop();
+    bQuitting = true;
+    synchedVault.stopSync();
     saveSettings();
-/*
-    if (maybeSave()) {
-        writeSettings();
-        event->accept();
-    } else {
-        event->ignore();
-    }
-*/
+    joinEntropyThread();
+    event->accept();
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent* event)
@@ -223,6 +323,37 @@ void MainWindow::dropEvent(QDropEvent* event)
     QMessageBox::information(this, tr("Drop Event"), mimeData->text());
 }
 
+void MainWindow::updateFonts(int fontSize)
+{
+    switch (fontSize)
+    {
+    case SMALL_FONTS:
+        smallFontsAction->setChecked(true);
+        setStyleSheet(getSmallFontsStyle());
+        break;
+
+    case MEDIUM_FONTS:
+        mediumFontsAction->setChecked(true);
+        setStyleSheet(getMediumFontsStyle());
+        break;
+
+    case LARGE_FONTS:
+        largeFontsAction->setChecked(true);
+        setStyleSheet(getLargeFontsStyle());
+        break;
+
+    default:
+        return;
+    }
+
+    accountView->updateColumns();
+    keychainView->updateColumns();
+    txView->updateColumns();
+            
+    QSettings settings("Ciphrex", getDefaultSettings().getSettingsRoot());
+    settings.setValue("fontsize", fontSize);
+}
+
 void MainWindow::updateSyncLabel()
 {
     syncLabel->setText(QString::number(syncHeight) + "/" + QString::number(bestHeight));
@@ -230,35 +361,33 @@ void MainWindow::updateSyncLabel()
 
 void MainWindow::updateNetworkState(network_state_t newState)
 {
-    if (newState == NETWORK_STATE_UNKNOWN) {
-        if (!connected) {
-            newState = NETWORK_STATE_NOT_CONNECTED;
-        }
-        else if (syncHeight != bestHeight && (!doneHeaderSync || accountModel->getNumAccounts() > 0)) {
-            newState = NETWORK_STATE_SYNCHING;
-        }
-        else {
-            doneHeaderSync = true;
-            newState = NETWORK_STATE_SYNCHED;
-        }
-    }
-
-    if (newState != networkState) {
+    if (newState != networkState)
+    {
         networkState = newState;
-        switch (networkState) {
-        case NETWORK_STATE_NOT_CONNECTED:
-            networkStateLabel->setPixmap(*notConnectedIcon);
+        switch (networkState)
+        {
+        case NETWORK_STATE_STOPPED:
+            networkStateLabel->setPixmap(*stoppedIcon);
+            emit signal_refreshAccounts();
             break;
+        case NETWORK_STATE_STARTED:
         case NETWORK_STATE_SYNCHING:
             networkStateLabel->setMovie(synchingMovie);
             break;
         case NETWORK_STATE_SYNCHED:
             networkStateLabel->setPixmap(*synchedIcon);
+            emit signal_refreshAccounts();
             break;
         default:
             // We should never get here
             ;
         }
+
+        connectAction->setEnabled(!isConnected());
+        shortConnectAction->setEnabled(!isConnected());
+        disconnectAction->setEnabled(isConnected());
+        shortDisconnectAction->setEnabled(isConnected());
+        sendRawTxAction->setEnabled(isConnected());
     }
 }
 
@@ -267,12 +396,17 @@ void MainWindow::updateVaultStatus(const QString& name)
     bool isOpen = !name.isEmpty();
 
     // vault actions
+    importVaultAction->setEnabled(isOpen);
+    exportVaultAction->setEnabled(isOpen);
+    exportPublicVaultAction->setEnabled(isOpen);
     closeVaultAction->setEnabled(isOpen);
 
     // keychain actions
     newKeychainAction->setEnabled(isOpen);
     lockAllKeychainsAction->setEnabled(keychainModel && keychainModel->rowCount());
     importKeychainAction->setEnabled(isOpen);
+    importBIP32Action->setEnabled(isOpen);
+    importBIP39Action->setEnabled(isOpen);
 
     // account actions
     quickNewAccountAction->setEnabled(isOpen);
@@ -291,6 +425,8 @@ void MainWindow::updateVaultStatus(const QString& name)
     else {
         setWindowTitle(getDefaultSettings().getAppName());
     }
+
+    if (txActions) txActions->updateVaultStatus();
 }
 
 void MainWindow::showError(const QString& errorMsg)
@@ -304,47 +440,88 @@ void MainWindow::showUpdate(const QString& updateMsg)
     QMessageBox::information(this, tr("Update"), updateMsg);
 }
 
+void MainWindow::selectCurrencyUnit()
+{
+    try
+    {
+        CurrencyUnitDialog dlg(this);
+        if (dlg.exec())
+        {
+            QString newCurrencyUnitPrefix = dlg.getCurrencyUnitPrefix();
+            if (newCurrencyUnitPrefix != currencyUnitPrefix)
+            {
+                currencyUnitPrefix = newCurrencyUnitPrefix;
+                saveSettings();
+                setCurrencyUnitPrefix(currencyUnitPrefix);
+                emit signal_currencyUnitChanged();
+            }
+        }
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::createTx - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::selectCurrencyUnit(const QString& newCurrencyUnitPrefix)
+{
+    if (newCurrencyUnitPrefix != currencyUnitPrefix)
+    {
+        currencyUnitPrefix = newCurrencyUnitPrefix;
+        saveSettings();
+        setCurrencyUnitPrefix(currencyUnitPrefix);
+        emit signal_currencyUnitChanged();
+    }
+}
+
+void MainWindow::selectTrailingDecimals(bool newShowTrailingDecimals)
+{
+    if (newShowTrailingDecimals != showTrailingDecimals)
+    {
+        showTrailingDecimals = newShowTrailingDecimals;
+        saveSettings();
+        setTrailingDecimals(showTrailingDecimals);
+        emit signal_currencyUnitChanged();
+    }
+}
+
 void MainWindow::newVault(QString fileName)
 {
     if (fileName.isEmpty()) {
         fileName = QFileDialog::getSaveFileName(
             this,
             tr("Create New Vault"),
-            lastVaultDir,
+            getDocDir(),
             tr("Vaults (*.vault)"));
     }
     if (fileName.isEmpty()) return;
 
     QFileInfo fileInfo(fileName);
-    lastVaultDir = fileInfo.dir().absolutePath();
+    setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
-    try {
-        accountModel->create(fileName);
-        accountView->update();
-
-        keychainModel->setVault(accountModel->getVault());
-        keychainModel->update();
-        keychainView->update();
-
-        txModel->setVault(accountModel->getVault());
-        txModel->update();
-        txView->update();
-
+    try
+    {
+        synchedVault.openVault(fileName.toStdString(), true, SCHEMA_VERSION, getCoinParams().network_name());
         updateVaultStatus(fileName);
-
-        // TODO: prompt user to unlock chain codes.
-        accountModel->getVault()->unlockChainCodes(uchar_vector("1234"));
+        addToRecents(fileName);
     }
-    catch (const exception& e) {
+    catch (const CoinDB::VaultFailedToOpenDatabaseException& e)
+    {
+        LOGGER(error) << "MainWindow::newVault - VaultFailedToOpenDatabaseException: " << e.dberror() << std::endl;
+        showError(tr("Error creating database: ") + QString::fromStdString(e.dberror()));
+    }
+    catch (const exception& e)
+    {
         LOGGER(debug) << "MainWindow::newVault - " << e.what() << std::endl;
         showError(e.what());
     }
 }
 
-void MainWindow::promptResync()
+void MainWindow::promptSync()
 {
-    if (!connected) {
+    if (!isConnected())
+    {
         QMessageBox msgBox;
         msgBox.setText(tr("You are not connected to network."));
         msgBox.setInformativeText(tr("Would you like to connect to network to synchronize your accounts?"));
@@ -354,8 +531,9 @@ void MainWindow::promptResync()
             startNetworkSync();
         }
     }
-    else {
-        resync();
+    else
+    {
+        syncBlocks();
     }
 }
 
@@ -365,7 +543,7 @@ void MainWindow::openVault(QString fileName)
         fileName = QFileDialog::getOpenFileName(
             this,
             tr("Open Vault"),
-            lastVaultDir,
+            getDocDir(),
             tr("Vaults (*.vault)"));
     }
     if (fileName.isEmpty()) return;
@@ -373,37 +551,132 @@ void MainWindow::openVault(QString fileName)
     fileName = QFileInfo(fileName).absoluteFilePath();
 
     QFileInfo fileInfo(fileName);
-    lastVaultDir = fileInfo.dir().absolutePath();
+    setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
-    try {
-        loadVault(fileName);
-        updateVaultStatus(fileName);
-        selectAccount(0);
-        updateStatusMessage(tr("Opened ") + fileName);
+    try
+    {
+        try
+        {
+            closeVault();
+            synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name(), false);
+        }
+        catch (const CoinDB::VaultNeedsSchemaMigrationException& e)
+        {
+            QMessageBox msgBox;
+            msgBox.setText(tr("File was created using schema ") + QString::number(e.schema_version()) + tr(". Current schema version is ") + QString::number(e.current_version())
+                + tr("."));
+            msgBox.setInformativeText(tr("Schema can be upgraded. Would you like to make a backup and migrate the file to the new schema now?"));
+            msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+            msgBox.setDefaultButton(QMessageBox::Cancel);
+            if (msgBox.exec() != QMessageBox::Ok) return;
 
-        promptResync();
+            // Construct backup file name. xxxxx.vault will be copied to xxxxx.<schema version>.vault - if file already exists, then xxxxx1.<schema version>.vault will be tried, etc...
+            QString baseFileName;
+            QString extension;
+            QString backupFileName;
+            if (fileName.right(6).toLower() == ".vault")
+            {
+                baseFileName = fileName.left(fileName.size() - 6);
+                extension = ".vault";
+            }
+            else
+            {
+                baseFileName = fileName;
+                extension = "";
+            }
+
+            int n = 0;
+            while (true)
+            {
+                QString nString = (n > 0 ? QString::number(n) : QString());
+                backupFileName = baseFileName + nString + ".schema" + QString::number(e.schema_version()) + extension;
+                if (QFile::copy(fileName, backupFileName)) break;
+
+                n++;
+            }
+
+            synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name(), true);
+            QMessageBox::information(this, tr("Backup Made"), tr("Your vault file has been backed up to ") + backupFileName);
+        }
+            
+        updateVaultStatus(fileName);
+        updateStatusMessage(tr("Opened ") + fileName);
+        addToRecents(fileName);
+        //if (synchedVault.isConnected()) { synchedVault.syncBlocks(); }
+        //promptSync();
     }
-    catch (const exception& e) {
-        LOGGER(debug) << "MainWindow::openVault - " << e.what() << std::endl;
+    catch (const CoinDB::VaultWrongSchemaVersionException& e)
+    {
+        LOGGER(error) << "MainWindow::openVault - VaultWrongSchemaVersionException." << std::endl;
+        showError(tr("This vault file was created using schema version ") + QString::number(e.schema_version()) +
+            tr(". You are currently using schema version ") + QString::number(SCHEMA_VERSION) + tr(". Please export the account using a compatible version of this program and import it into a newly created vault."));
+    }
+    catch (const CoinDB::VaultWrongNetworkException& e)
+    {
+        LOGGER(error) << "MainWindow::openVault - VaultWrongNetworkException." << std::endl;
+        showError(tr("This vault file was created for the ") + QString::fromStdString(e.network()) + tr(" network.")); 
+    }
+    catch (const CoinDB::VaultFailedToOpenDatabaseException& e)
+    {
+        LOGGER(error) << "MainWindow::openVault - VaultFailedToOpenDatabaseException: " << e.dberror() << std::endl;
+        showError(tr("Error opening database: \n") + QString::fromStdString(e.dberror()));
+    }
+    catch (const exception& e)
+    {
+        LOGGER(error) << "MainWindow::openVault - " << e.what() << " " << typeid(e).name() << std::endl;
+        showError(e.what());
+    }
+    catch (...)
+    {
+        LOGGER(error) << "MainWindow::openVault - exception type not known." << std::endl;
+        showError(tr("Error opening database. Either this is an unsupported filetype or the file is corrupt."));
+    } 
+}
+
+void MainWindow::importVault(QString /* fileName */)
+{
+}
+
+void MainWindow::exportVault(QString fileName, bool exportPrivKeys)
+{
+    if (fileName.isEmpty()) {
+        fileName = QFileDialog::getSaveFileName(
+            this,
+            tr("Export Vault"),
+            getDocDir(),
+            tr("Portable Vault (*.vault.all)"));
+    }
+    if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    setDocDir(fileInfo.dir().absolutePath());
+    saveSettings();
+
+    try
+    {
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        synchedVault.getVault()->exportVault(fileName.toStdString(), exportPrivKeys);
+    }
+    catch (const exception& e)
+    {
+        LOGGER(debug) << "MainWindow::exportVault - " << e.what() << std::endl;
         showError(e.what());
     }
 }
 
 void MainWindow::closeVault()
 {
-    try {
-        networkSync.stopResync();
-
-        accountModel->close();
-        keychainModel->setVault(NULL);
-        txModel->setVault(NULL);
-        txView->update();
-
+    try
+    {
+        synchedVault.closeVault();
         updateVaultStatus();
-        updateStatusMessage(tr("Closed vault"));
     }
-    catch (const exception& e) {
+    catch (const exception& e)
+    {
         LOGGER(debug) << "MainWindow::closeVault - " << e.what() << std::endl;
         showError(e.what());
     }
@@ -412,17 +685,48 @@ void MainWindow::closeVault()
 void MainWindow::newKeychain()
 {
     try {
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
         NewKeychainDialog dlg(this);
         if (dlg.exec()) {
             QString name = dlg.getName();
             //unsigned long numKeys = dlg.getNumKeys();
             //updateStatusMessage(tr("Generating ") + QString::number(numKeys) + tr(" keys..."));
 
-            // TODO: Randomize using user input for entropy
-            accountModel->newKeychain(name, random_bytes(32));
-            accountModel->update();
+            if (keychainModel->exists(name)) throw std::runtime_error("A keychain with that name already exists.");
+
+            {
+                // TODO: Randomize using user input for entropy
+                secure_bytes_t seed = getRandomBytes(32);
+
+                // Prompt user to write down and verify word list
+                KeychainBackupWizard backupWizard(name, seed, this);
+                if (!backupWizard.exec()) return;
+/*
+                while (true)
+                {
+                    try
+                    {
+                        ImportBIP39Dialog checkDlg(name, this);
+                        if (!checkDlg.exec()) return; // User canceled out
+
+                        secure_bytes_t seed2 = checkDlg.getSeed();
+                        if (seed == seed2) break;
+                        else throw std::runtime_error("Wordlists do not match.");
+                    }
+                    catch (const exception& e)
+                    {
+                        showError(e.what());
+                    } 
+                }
+*/
+                CoinDB::VaultLock lock(synchedVault);
+                if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+                synchedVault.getVault()->newKeychain(name.toStdString(), seed);
+            }
+
             keychainModel->update();
-            keychainView->update();
+            keychainView->updateColumns();
             tabWidget->setCurrentWidget(keychainView);
             updateStatusMessage(tr("Created keychain ") + name);
         }
@@ -433,50 +737,69 @@ void MainWindow::newKeychain()
     }    
 }
 
-void MainWindow::unlockKeychain()
+bool MainWindow::unlockKeychain(QString name)
 {
-    QModelIndex index = keychainSelectionModel->currentIndex();
-    int row = index.row();
-    if (row < 0)
-    {
-        showError(tr("No keychain is selected."));
-        return;
-    }
-
-    QStandardItem* nameItem = keychainModel->item(row, 0);
-    QString name = nameItem->data(Qt::DisplayRole).toString();
-    secure_bytes_t hash;
-    if (keychainModel->isEncrypted(name))
-    {
-        PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
-        if (!dlg.exec()) return;
-
-        // TODO: proper hash
-        hash = sha256_2(dlg.getPassphrase().toStdString());
-    }
-
     try
     {
-        keychainModel->unlockKeychain(name, hash);
+        if (name.isNull())
+        {
+            QModelIndex index = keychainSelectionModel->currentIndex();
+            int row = index.row();
+            if (row < 0)
+            {
+                showError(tr("No keychain is selected."));
+                return false;
+            }
+
+            QStandardItem* nameItem = keychainModel->item(row, 0);
+            name = nameItem->data(Qt::DisplayRole).toString();
+        }
+
+        secure_bytes_t hash;
+        if (keychainModel->isEncrypted(name))
+        {
+            PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
+            while (true)
+            {
+                if (!dlg.exec()) return false;
+
+                try
+                {
+                    hash = passphraseHash(dlg.getPassphrase().toStdString());
+                    break;
+                }
+                catch (const std::exception& e)
+                {
+                    showError(e.what());
+                }
+            }
+        }
+
+        return keychainModel->unlockKeychain(name, hash);
     }
-    catch (const CoinDB::KeychainPrivateKeyUnlockFailedException& e)
+    catch (const std::exception& e)
     {
-        throw std::runtime_error(tr("Invalid passphrase.").toStdString());
+        showError(e.what());
     }
+
+    return false;
 }
 
-void MainWindow::lockKeychain()
+void MainWindow::lockKeychain(QString name)
 {
-    QModelIndex index = keychainSelectionModel->currentIndex();
-    int row = index.row();
-    if (row < 0)
+    if (name.isNull())
     {
-        showError(tr("No keychain is selected."));
-        return;
-    }
+        QModelIndex index = keychainSelectionModel->currentIndex();
+        int row = index.row();
+        if (row < 0)
+        {
+            showError(tr("No keychain is selected."));
+            return;
+        }
 
-    QStandardItem* nameItem = keychainModel->item(row, 0);
-    QString name = nameItem->data(Qt::DisplayRole).toString();
+        QStandardItem* nameItem = keychainModel->item(row, 0);
+        name = nameItem->data(Qt::DisplayRole).toString();
+    }
 
     keychainModel->lockKeychain(name);
 }
@@ -486,21 +809,222 @@ void MainWindow::lockAllKeychains()
     keychainModel->lockAllKeychains();
 }
 
+int MainWindow::setKeychainPassphrase(const QString& keychainName)
+{
+    QString name;
+    bool bLocked;
+    bool bEncrypted;
+    if (keychainName.isEmpty())
+    {
+        QModelIndex index = keychainSelectionModel->currentIndex();
+        int row = index.row();
+        if (row < 0)
+        {
+            showError(tr("No keychain is selected."));
+            return QDialog::Rejected;
+        }
+
+        bLocked = (keychainModel->getStatus(row) == KeychainModel::LOCKED);
+        bEncrypted = keychainModel->isEncrypted(row);
+
+        QStandardItem* nameItem = keychainModel->item(row, 0);
+        name = nameItem->data(Qt::DisplayRole).toString();
+    }
+    else
+    {
+        if (!keychainModel->exists(keychainName))
+        {
+            showError(tr("Keychain not found."));
+            return QDialog::Rejected;
+        }
+
+        bLocked = keychainModel->isLocked(keychainName);
+        bEncrypted = keychainModel->isEncrypted(keychainName);
+
+        name = keychainName;
+    } 
+
+    try
+    {
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        if (bLocked && !unlockKeychain(name)) return QDialog::Rejected;
+
+        SetPassphraseDialog dlg(tr("keychain \"") + name + "\"", tr("WARNING: IF YOU FORGET THIS PASSPHRASE THERE IS NO WAY TO RECOVER IT!!!"), this);
+        while (dlg.exec())
+        {
+            try
+            {
+                QString passphrase = dlg.getPassphrase();
+                if (passphrase.isEmpty())
+                {
+                    QString prompt(tr("You did not enter a passphrase."));
+                    if (bEncrypted)
+                    {
+                        prompt += tr(" Are you sure you want to remove keychain encryption from ") + name + "?";
+                    }
+                    else
+                    {
+                        prompt += tr(" Leave keychain ") + name + tr(" unencrypted?");
+                    } 
+                        
+                    if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"), prompt))
+                    {
+                        keychainModel->decryptKeychain(name);
+                        if (bLocked) { lockKeychain(name); }
+                        return QDialog::Accepted;
+                    }
+                }
+                else
+                {
+                    secure_bytes_t hash = passphraseHash(dlg.getPassphrase().toStdString());
+                    keychainModel->encryptKeychain(name, hash); 
+                    if (bLocked) { lockKeychain(name); }
+                    return QDialog::Accepted;
+                }
+            }
+            catch (const std::exception& e)
+            {
+                showError(e.what());
+            }
+        }
+    }
+    catch (const exception& e)
+    {
+        LOGGER(error) << "MainWindow::setKeychainPassphrase - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
+        showError(e.what());
+    }
+
+    return QDialog::Rejected;
+
+    SetPassphraseDialog dlg(tr("keychain \"") + name + "\"", tr("WARNING: IF YOU FORGET THIS PASSPHRASE THERE IS NO WAY TO RECOVER IT!!!"), this);
+    while (dlg.exec())
+    {
+        try
+        {
+            QString passphrase = dlg.getPassphrase();
+            if (passphrase.isEmpty())
+            {
+                QString prompt(tr("You did not enter a passphrase."));
+                if (bEncrypted)
+                {
+                    prompt += tr(" Are you sure you want to remove keychain encryption from ") + name + "?";
+                }
+                else
+                {
+                    prompt += tr(" Leave keychain ") + name + tr(" unencrypted?");
+                } 
+                    
+                if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"), prompt))
+                {
+                    keychainModel->decryptKeychain(name);
+                    if (bLocked) { keychainModel->lockKeychain(name); }
+                    return QDialog::Accepted;
+                }
+            }
+            else
+            {
+                secure_bytes_t hash = passphraseHash(dlg.getPassphrase().toStdString());
+                keychainModel->encryptKeychain(name, hash); 
+                if (bLocked) { keychainModel->lockKeychain(name); }
+                return QDialog::Accepted;
+            }
+        }
+        catch (const std::exception& e)
+        {
+            showError(e.what());
+        }
+    }
+
+    return QDialog::Rejected;
+}
+
+int MainWindow::makeKeychainBackup(const QString& keychainName)
+{
+    QString name;
+    bool bLocked;
+    if (keychainName.isEmpty())
+    {
+        QModelIndex index = keychainSelectionModel->currentIndex();
+        int row = index.row();
+        if (row < 0) {
+            showError(tr("No keychain is selected."));
+            return QDialog::Rejected;
+        }
+
+        if (!keychainModel->hasSeed(row))
+        {
+            showError(tr("Entropy seed for keychain is not known. Please use another backup format."));
+            return QDialog::Rejected;
+        }
+
+        bLocked = (keychainModel->getStatus(row) == KeychainModel::LOCKED);
+
+        QStandardItem* nameItem = keychainModel->item(row, 0);
+        name = nameItem->data(Qt::DisplayRole).toString();
+    }
+    else
+    {
+        if (!keychainModel->exists(keychainName))
+        {
+            showError(tr("Keychain not found."));
+            return QDialog::Rejected;
+        }
+
+        if (!keychainModel->hasSeed(keychainName))
+        {
+            showError(tr("Entropy seed for keychain is not known. Please use another backup format."));
+            return QDialog::Rejected;
+        }
+
+        bLocked = keychainModel->isLocked(keychainName);
+
+        name = keychainName;
+    } 
+
+    try
+    {
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        if (bLocked && !unlockKeychain(name)) return QDialog::Rejected;
+
+        secure_bytes_t seed = synchedVault.getVault()->exportBIP39(name.toStdString());
+
+        KeychainBackupWizard wizard(name, seed, this);
+        if (bLocked) { lockKeychain(name); }
+        return wizard.exec();
+    }
+    catch (const exception& e)
+    {
+        LOGGER(error) << "MainWindow::makeKeychainBackup - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
+        showError(e.what());
+    }
+
+    return QDialog::Rejected;
+}
+
 void MainWindow::importKeychain(QString fileName)
 {
     if (fileName.isEmpty()) {
         fileName = QFileDialog::getOpenFileName(
             this,
             tr("Import Keychain"),
-            lastVaultDir,
-            tr("Keychains") + "(*.keys)");
+            getDocDir(),
+            tr("Keychains") + "(*.priv *.pub)");
     }
     if (fileName.isEmpty()) return;
 
     QFileInfo fileInfo(fileName);
-    lastVaultDir = fileInfo.dir().absolutePath();
+    setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
+/*
     bool ok;
     QString name = QFileInfo(fileName).baseName();
     while (true) {
@@ -517,14 +1041,15 @@ void MainWindow::importKeychain(QString fileName)
         }
         break;
     }
+*/
 
     try {
         updateStatusMessage(tr("Importing keychain..."));
-        bool isPrivate = importPrivate; // importPrivate is a user setting. isPrivate is whether or not this particular keychain is private.
-        keychainModel->importKeychain(name, fileName, isPrivate);
-        keychainView->update();
+        bool isPrivate = true; //importPrivate; // importPrivate is a user setting. isPrivate is whether or not this particular keychain is private.
+        QString keychainName = keychainModel->importKeychain(fileName, isPrivate);
+        keychainView->updateColumns();
         tabWidget->setCurrentWidget(keychainView);
-        updateStatusMessage(tr("Imported ") + (isPrivate ? tr("private") : tr("public")) + tr(" keychain ") + name);
+        updateStatusMessage(tr("Imported ") + (isPrivate ? tr("private") : tr("public")) + tr(" keychain ") + keychainName);
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::importKeychain - " << e.what() << std::endl;
@@ -541,50 +1066,77 @@ void MainWindow::exportKeychain(bool exportPrivate)
         return;
     }
 
-    QStandardItem* typeItem = keychainModel->item(row, 1);
-    int lockFlags = typeItem->data(Qt::UserRole).toInt();
-    bool isPrivate = lockFlags & (1 << 1);
-    bool isLocked = lockFlags & 1;
-
-    if (exportPrivate && !isPrivate) {
-        showError(tr("Cannot export private keys for public keychain."));
+    int status = keychainModel->getStatus(row);
+    if (exportPrivate && status == KeychainModel::PUBLIC)
+    {
+        showError(tr("Keychain is nonprivate."));
         return;
     }
 
-    if (exportPrivate && isLocked) {
-        showError(tr("Cannot export private keys for locked keychain."));
-        return;
-    }
+    QString name = keychainModel->getName(row);
 
-    QStandardItem* nameItem = keychainModel->item(row, 0);
-    QString name = nameItem->data(Qt::DisplayRole).toString();
+    bool bLocked = exportPrivate && (status == KeychainModel::LOCKED);
+    if (bLocked && !unlockKeychain(name)) return;
 
-    QString fileName = name + (exportPrivate ? ".priv.keys" : ".pub.keys");
+    QString fileName = name + (exportPrivate ? ".priv" : ".pub");
 
     fileName = QFileDialog::getSaveFileName(
         this,
         tr("Exporting ") + (exportPrivate ? tr("Private") : tr("Public")) + tr(" Keychain - ") + name,
-        lastVaultDir + "/" + fileName,
-        tr("Keychains (*.keys)"));
+        getDocDir() + "/" + fileName,
+        tr("Keychains (*.priv *.pub)"));
 
-    if (fileName.isEmpty()) return;
+    if (fileName.isEmpty())
+    {
+        if (bLocked) { lockKeychain(name); }
+        return;
+    }
 
     QFileInfo fileInfo(fileName);
-    lastVaultDir = fileInfo.dir().absolutePath();
+    setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
     try {
         updateStatusMessage(tr("Exporting ") + (exportPrivate ? tr("private") : tr("public")) + tr("  keychain...") + name);
         keychainModel->exportKeychain(name, fileName, exportPrivate);
+        if (bLocked) { lockKeychain(name); }
         updateStatusMessage(tr("Saved ") + fileName);
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::exportKeychain - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
         showError(e.what());
     }
 }
 
-void MainWindow::backupKeychain()
+void MainWindow::importBIP32()
+{
+    ImportBIP32Dialog dlg(this);
+    while (dlg.exec() == QDialog::Accepted)
+    {
+        try
+        {
+            secure_bytes_t extkey = dlg.getExtendedKey();
+            string name = dlg.getName().toStdString();
+
+            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+            CoinDB::VaultLock lock(synchedVault);
+            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+            /*std::shared_ptr<Keychain> keychain =*/ synchedVault.getVault()->importBIP32(name, extkey);
+            keychainModel->update();
+            keychainView->updateColumns();
+            tabWidget->setCurrentWidget(keychainView);
+            break;
+        }
+        catch (const exception& e)
+        {
+            LOGGER(error) << "MainWindow::importBIP32 - " << e.what() << std::endl;
+            showError(e.what());
+        }        
+    }
+}
+
+void MainWindow::viewBIP32(bool viewPrivate)
 {
     QModelIndex index = keychainSelectionModel->currentIndex();
     int row = index.row();
@@ -593,26 +1145,117 @@ void MainWindow::backupKeychain()
         return;
     }
 
+    int status = keychainModel->getStatus(row);
+    if (viewPrivate && status == KeychainModel::PUBLIC)
+    {
+        showError(tr("Keychain is nonprivate."));
+        return;
+    }
+
+    bool bLocked = viewPrivate && (status == KeychainModel::LOCKED);
+
     QStandardItem* nameItem = keychainModel->item(row, 0);
     QString name = nameItem->data(Qt::DisplayRole).toString();
 
     try {
-        bytes_t extendedKey;
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
 
-        if (keychainModel->isPrivate(name)) {
-            // TODO: prompt user for decryption key
+        if (bLocked && !unlockKeychain(name)) return;
+
+        secure_bytes_t extendedKey = synchedVault.getVault()->exportBIP32(name.toStdString(), viewPrivate);
+/*
+        if (viewPrivate)
+        {
+            if (!keychainModel->isPrivate(name)) throw std::runtime_error("Keychain is not private.");
+            bool isLocked = keychainModel->isLocked(name);
+            if (isLocked) { unlockKeychain(); }
             extendedKey = keychainModel->getExtendedKeyBytes(name, true);
+            if (isLocked) { lockKeychain(); }
         }
-        else {
+        else
+        {
             extendedKey = keychainModel->getExtendedKeyBytes(name);
         }
+*/
 
-        KeychainBackupDialog dlg(tr("Keychain information"));
-        dlg.setExtendedKey(extendedKey);
+        ViewBIP32Dialog dlg(name, extendedKey, this);
+        if (bLocked) { lockKeychain(name); }
         dlg.exec();
     }
     catch (const exception& e) {
-        LOGGER(debug) << "MainWindow::backupKeychain - " << e.what() << std::endl;
+        LOGGER(error) << "MainWindow::viewBIP32 - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
+        showError(e.what());
+    }
+}
+
+void MainWindow::importBIP39()
+{
+    ImportBIP39Dialog dlg(this);
+    while (dlg.exec() == QDialog::Accepted)
+    {
+        try
+        {
+            secure_bytes_t seed = dlg.getSeed();
+            string name = dlg.getName().toStdString();
+
+            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+            CoinDB::VaultLock lock(synchedVault);
+            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+            synchedVault.getVault()->newKeychain(name, seed);
+            keychainModel->update();
+            keychainView->updateColumns();
+            tabWidget->setCurrentWidget(keychainView);
+            break;
+        }
+        catch (const exception& e)
+        {
+            LOGGER(error) << "MainWindow::importBIP39 - " << e.what() << std::endl;
+            showError(e.what());
+        }        
+    }
+}
+
+void MainWindow::viewBIP39()
+{
+    QModelIndex index = keychainSelectionModel->currentIndex();
+    int row = index.row();
+    if (row < 0) {
+        showError(tr("No keychain is selected."));
+        return;
+    }
+
+    int hasSeed = keychainModel->hasSeed(row);
+    if (!hasSeed)
+    {
+        showError(tr("Keychain does not contain seed."));
+        return;
+    }
+
+    int status = keychainModel->getStatus(row);
+    bool bLocked = status == KeychainModel::LOCKED;
+
+    QStandardItem* nameItem = keychainModel->item(row, 0);
+    QString name = nameItem->data(Qt::DisplayRole).toString();
+
+    try {
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        if (bLocked && !unlockKeychain(name)) return;
+
+        secure_bytes_t seed = synchedVault.getVault()->exportBIP39(name.toStdString());
+
+        ViewBIP39Dialog dlg(name, seed, this);
+        if (bLocked) { lockKeychain(name); }
+        dlg.exec();
+    }
+    catch (const exception& e) {
+        LOGGER(error) << "MainWindow::viewBIP39 - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
         showError(e.what());
     }
 }
@@ -623,27 +1266,33 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
     if (row == -1) {
         exportPrivateKeychainAction->setEnabled(false);
         exportPublicKeychainAction->setEnabled(false);
-        backupKeychainAction->setEnabled(false);
+        viewPrivateBIP32Action->setEnabled(false);
+        viewPublicBIP32Action->setEnabled(false);
+        viewBIP39Action->setEnabled(false);
     }
     else {
-        QStandardItem* typeItem = keychainModel->item(row, 1);
-        int lockFlags = typeItem->data(Qt::UserRole).toInt();
-        bool isPrivate = lockFlags & (1 << 1);
-        bool isLocked = lockFlags & 1;
+        int status = keychainModel->getStatus(row);
+        bool hasSeed = keychainModel->hasSeed(row);
 
-        unlockKeychainAction->setEnabled(isPrivate && isLocked);
-        lockKeychainAction->setEnabled(isPrivate && !isLocked);
-        exportPrivateKeychainAction->setEnabled(isPrivate);
+        unlockKeychainAction->setEnabled(status == KeychainModel::LOCKED);
+        lockKeychainAction->setEnabled(status == KeychainModel::UNLOCKED);
+        setKeychainPassphraseAction->setEnabled(status != KeychainModel::PUBLIC);
+        exportPrivateKeychainAction->setEnabled(status != KeychainModel::PUBLIC);
         exportPublicKeychainAction->setEnabled(true);
-        backupKeychainAction->setEnabled(true);
+        viewPrivateBIP32Action->setEnabled(status != KeychainModel::PUBLIC);
+        viewPublicBIP32Action->setEnabled(true);
+        viewBIP39Action->setEnabled(status != KeychainModel::PUBLIC && hasSeed);
+        makeKeychainBackupAction->setEnabled(status != KeychainModel::PUBLIC && hasSeed);
     }
 }
 
 void MainWindow::updateSelectedKeychains(const QItemSelection& /*selected*/, const QItemSelection& /*deselected*/)
 {
+/*
     int selectionCount = keychainView->selectionModel()->selectedRows(0).size();
     bool isSelected = selectionCount > 0;
     newAccountAction->setEnabled(isSelected);
+*/
 }
 
 bool MainWindow::selectAccount(int i)
@@ -652,6 +1301,22 @@ bool MainWindow::selectAccount(int i)
     QItemSelection selection(accountModel->index(i, 0), accountModel->index(i, accountModel->columnCount() - 1));
     accountView->selectionModel()->select(selection, QItemSelectionModel::SelectCurrent);
     return true;
+}
+
+bool MainWindow::selectAccount(const QString& account)
+{
+    // TODO: find a better implementation
+    for (int i = 0; i < accountModel->rowCount(); i++)
+    {
+        QStandardItem* item = accountModel->item(i, 0);
+        if (item->text() == account)
+        {
+            QItemSelection selection(accountModel->index(i, 0), accountModel->index(i, accountModel->columnCount() - 1));
+            accountView->selectionModel()->select(selection, QItemSelectionModel::SelectCurrent);
+            return true;
+        }
+    }
+    return false;
 }
 
 void MainWindow::updateCurrentAccount(const QModelIndex& /*current*/, const QModelIndex& /*previous*/)
@@ -671,18 +1336,20 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
     QModelIndexList indexes = selectionModel->selectedRows(0);
     bool isSelected = indexes.size() > 0;
     if (isSelected) {
-        QString accountName = accountModel->data(indexes.at(0)).toString();
-        txModel->setAccount(accountName);
+        selectedAccount = accountModel->data(indexes.at(0)).toString();
+        txModel->setAccount(selectedAccount);
         txModel->update();
-        txView->update();
-        tabWidget->setTabText(2, tr("Transactions - ") + accountName);
-        requestPaymentDialog->setCurrentAccount(accountName);
+        txView->updateColumns();
+        tabWidget->setTabText(1, tr("Transactions - ") + selectedAccount);
+        requestPaymentDialog->setCurrentAccount(selectedAccount);
     }
     else {
-        tabWidget->setTabText(2, tr("Transactions"));
+        selectedAccount = "";
+        tabWidget->setTabText(1, tr("Transactions"));
     }
     deleteAccountAction->setEnabled(isSelected);
     exportAccountAction->setEnabled(isSelected);
+    exportSharedAccountAction->setEnabled(isSelected);
     viewAccountHistoryAction->setEnabled(isSelected);
     viewScriptsAction->setEnabled(isSelected);
     requestPaymentAction->setEnabled(isSelected);
@@ -690,10 +1357,34 @@ void MainWindow::updateSelectedAccounts(const QItemSelection& /*selected*/, cons
     viewUnsignedTxsAction->setEnabled(isSelected);
 }
 
+void MainWindow::refreshAccounts()
+{
+    LOGGER(trace) << "MainWindow::refreshAccounts()" << std::endl;
+
+    if (bQuitting) return;
+
+    QString prevSelectedAccount = selectedAccount;
+    accountModel->update();
+    accountView->updateColumns();
+
+    if (prevSelectedAccount != selectedAccount)
+    {
+        selectAccount(prevSelectedAccount);
+    }
+    else
+    {
+        txModel->update();
+        txView->updateColumns();
+    }
+}
+
 void MainWindow::quickNewAccount()
 {
+    if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
     QuickNewAccountDialog dlg(this);
-    while (dlg.exec()) {
+    while (dlg.exec())
+    {
         try {
             QString accountName = dlg.getName();
             if (accountName.isEmpty())
@@ -708,23 +1399,44 @@ void MainWindow::quickNewAccount()
             const int MAX_KEYCHAIN_INDEX = 1000;
             int i = 0;
             QList<QString> keychainNames;
-            while (keychainNames.size() < dlg.getMaxSigs() && ++i <= MAX_KEYCHAIN_INDEX) {
-                QString keychainName = accountName + "_" + QString::number(i);
+            QList<secure_bytes_t> keychainSeeds;
+            while (keychainNames.size() < dlg.getMaxSigs() && ++i <= MAX_KEYCHAIN_INDEX)
+            {
+                QString keychainName = accountName + " " + QString::number(i);
                 if (!keychainModel->exists(keychainName))
+                {
+                    // TODO: Randomize using user input for seed entropy
                     keychainNames << keychainName;
+                    keychainSeeds << getRandomBytes(32);
+                }
             }
+
             if (i > MAX_KEYCHAIN_INDEX)
                 throw std::runtime_error(tr("Ran out of keychain indices.").toStdString());
 
-            for (auto& keychainName: keychainNames) {
-                // TODO: Randomize using user input for entropy
-                accountModel->newKeychain(keychainName, random_bytes(32));
+            // Require user to copy down the wordlists
+            KeychainBackupWizard backupDlg(keychainNames, keychainSeeds, this);
+            if (!backupDlg.exec()) return;
+
+            {
+                CoinDB::VaultLock lock(synchedVault);
+                if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+                int i = 0;
+                for (auto& keychainName: keychainNames)
+                {
+                    const secure_bytes_t& keychainSeed = keychainSeeds.at(i++);
+                    synchedVault.getVault()->newKeychain(keychainName.toStdString(), keychainSeed);
+                }
+
+                accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames, dlg.getCreationTime());
             }
 
-            accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames);
             accountModel->update();
+            accountView->updateColumns();
             keychainModel->update();
-            keychainView->update();
+            keychainView->updateColumns();
+            selectAccount(accountName);
             tabWidget->setCurrentWidget(accountView);
             updateStatusMessage(tr("Created account ") + accountName);
             break;
@@ -737,27 +1449,31 @@ void MainWindow::quickNewAccount()
 
 void MainWindow::newAccount()
 {
-    QItemSelectionModel* selectionModel = keychainView->selectionModel();
-    QModelIndexList indexes = selectionModel->selectedRows(0);
-
-    QList<QString> keychainNames;
-    for (auto& index: indexes) {
-        keychainNames << keychainModel->data(index).toString();
-    }
-
     try {
-        NewAccountDialog dlg(keychainNames, this);
+        QList<QString> allKeychains = keychainView->getAllKeychains();
+        if (allKeychains.size() == 0)
+        {
+            QMessageBox msgBox;
+            msgBox.setText(tr("No keychains exist in this vault. In order to create an account you need to have at least one keychain. Would you like to create one now?"));
+            msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+            msgBox.setDefaultButton(QMessageBox::Yes);
+            if (msgBox.exec() == QMessageBox::Yes) { newKeychain(); }
+            return;
+        }
+        NewAccountDialog dlg(allKeychains, keychainView->getSelectedKeychains(), this);
         if (dlg.exec()) {
-            accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames());
-            accountView->update();
+            accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames(), dlg.getCreationTime());
+            accountView->updateColumns();
+            selectAccount(dlg.getName());
             tabWidget->setCurrentWidget(accountView);
-            networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
-            if (connected) resync();
+            synchedVault.updateBloomFilter();
+            //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
+            if (isConnected()) syncBlocks();
         }
     }
     catch (const exception& e) {
         // TODO: Handle other possible errors.
-        showError(tr("No keychains selected."));
+        showError(e.what());
     }
 }
 
@@ -767,16 +1483,17 @@ void MainWindow::importAccount(QString fileName)
         fileName = QFileDialog::getOpenFileName(
             this,
             tr("Import Account"),
-            lastVaultDir,
-            tr("Account") + "(*.acct)");
+            getDocDir(),
+            tr("Account") + "(*.acct *.sharedacct)");
     }
 
     if (fileName.isEmpty()) return;
 
     QFileInfo fileInfo(fileName);
-    lastVaultDir = fileInfo.dir().absolutePath();
+    setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
+/*
     bool ok;
     QString name = QFileInfo(fileName).baseName();
     while (true) {
@@ -792,18 +1509,21 @@ void MainWindow::importAccount(QString fileName)
         }
         break;
     }
+*/
 
     try {
+        synchedVault.suspendBlockUpdates();
         updateStatusMessage(tr("Importing account..."));
-        accountModel->importAccount(name, fileName);
-        accountModel->update();
-        accountView->update();
+        QString accountName = accountModel->importAccount(fileName);
+        accountView->updateColumns();
         keychainModel->update();
-        keychainView->update();
+        keychainView->updateColumns();
+        selectAccount(accountName);
         tabWidget->setCurrentWidget(accountView);
-        networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
-        updateStatusMessage(tr("Imported account ") + name);
-        promptResync();
+        synchedVault.updateBloomFilter();
+        updateStatusMessage(tr("Imported account ") + accountName);
+        if (synchedVault.isConnected()) { synchedVault.syncBlocks(); }
+        //promptSync();
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::importAccount - " << e.what() << std::endl;
@@ -828,22 +1548,58 @@ void MainWindow::exportAccount()
     fileName = QFileDialog::getSaveFileName(
         this,
         tr("Exporting Account - ") + name,
-        lastVaultDir + "/" + fileName,
+        getDocDir() + "/" + fileName,
         tr("Accounts (*.acct)"));
 
     if (fileName.isEmpty()) return;
 
     QFileInfo fileInfo(fileName);
-    lastVaultDir = fileInfo.dir().absolutePath();
+    setDocDir(fileInfo.dir().absolutePath());
     saveSettings();
 
     try {
         updateStatusMessage(tr("Exporting account ") + name + "...");
-        accountModel->exportAccount(name, fileName);
+        accountModel->exportAccount(name, fileName, false);
         updateStatusMessage(tr("Saved ") + fileName);
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::exportAccount - " << e.what() << std::endl;
+        showError(e.what());
+    }
+}
+
+void MainWindow::exportSharedAccount()
+{
+    QItemSelectionModel* selectionModel = accountView->selectionModel();
+    QModelIndexList indexes = selectionModel->selectedRows(0);
+    if (indexes.isEmpty()) {
+        showError(tr("No account selected."));
+        return;
+    }
+
+    QString name = accountModel->data(indexes.at(0)).toString();
+
+    QString fileName = name + ".sharedacct";
+
+    fileName = QFileDialog::getSaveFileName(
+        this,
+        tr("Exporting Shared Account - ") + name,
+        getDocDir() + "/" + fileName,
+        tr("Accounts (*.sharedacct)"));
+
+    if (fileName.isEmpty()) return;
+
+    QFileInfo fileInfo(fileName);
+    setDocDir(fileInfo.dir().absolutePath());
+    saveSettings();
+
+    try {
+        updateStatusMessage(tr("Exporting shared account ") + name + "...");
+        accountModel->exportAccount(name, fileName, true);
+        updateStatusMessage(tr("Saved ") + fileName);
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::exportSharedAccount - " << e.what() << std::endl;
         showError(e.what());
     }
 }
@@ -862,8 +1618,9 @@ void MainWindow::deleteAccount()
     if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"), tr("Are you sure you want to delete account ") + accountName + "?")) {
         try {
             accountModel->deleteAccount(accountName);
-            accountView->update();
-            networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
+            accountView->updateColumns();
+            synchedVault.updateBloomFilter();
+            //networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
         }
         catch (const exception& e) {
             LOGGER(debug) << "MainWindow::deleteAccount - " << e.what() << std::endl;
@@ -874,6 +1631,7 @@ void MainWindow::deleteAccount()
 
 void MainWindow::viewAccountHistory()
 {
+/*
     QItemSelectionModel* selectionModel = accountView->selectionModel();
     QModelIndexList indexes = selectionModel->selectedRows(0);
     if (indexes.isEmpty()) {
@@ -894,6 +1652,7 @@ void MainWindow::viewAccountHistory()
         LOGGER(debug) << "MainWindow::viewAccountHistory - " << e.what() << std::endl;
         showError(e.what());
     }
+*/
 }
 
 void MainWindow::viewScripts()
@@ -965,9 +1724,9 @@ void MainWindow::insertRawTx()
     try {
         RawTxDialog dlg(tr("Add Raw Transaction:"));
         if (dlg.exec() && accountModel->insertRawTx(dlg.getRawTx())) {
-            accountView->update();
+            accountView->updateColumns();
             txModel->update();
-            txView->update();
+            txView->updateColumns();
             tabWidget->setCurrentWidget(txView);
         } 
     }
@@ -979,6 +1738,12 @@ void MainWindow::insertRawTx()
 
 void MainWindow::createRawTx()
 {
+    if (!synchedVault.isVaultOpen())
+    {
+        showError(tr("No vault is open."));
+        return;
+    }
+
     QItemSelectionModel* selectionModel = accountView->selectionModel();
     QModelIndexList indexes = selectionModel->selectedRows(0);
     if (indexes.isEmpty()) {
@@ -988,7 +1753,7 @@ void MainWindow::createRawTx()
  
     QString accountName = accountModel->data(indexes.at(0)).toString();
 
-    CreateTxDialog dlg(accountName);
+    CreateTxDialog dlg(accountModel->getVault(), accountName, PaymentRequest(), this);
     while (dlg.exec()) {
         try {
             std::vector<TaggedOutput> outputs = dlg.getOutputs();
@@ -1008,6 +1773,12 @@ void MainWindow::createRawTx()
 
 void MainWindow::createTx(const PaymentRequest& paymentRequest)
 {
+    if (!synchedVault.isVaultOpen())
+    {
+        showError(tr("No vault is open."));
+        return;
+    }
+
     QItemSelectionModel* selectionModel = accountView->selectionModel();
     QModelIndexList indexes = selectionModel->selectedRows(0);
     if (indexes.isEmpty()) {
@@ -1017,35 +1788,71 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
  
     QString accountName = accountModel->data(indexes.at(0)).toString();
 
-    CreateTxDialog dlg(accountName, paymentRequest);
+    CreateTxDialog dlg(accountModel->getVault(), accountName, paymentRequest, this);
     bool saved = false;
     while (!saved && dlg.exec()) {
         try {
-            CreateTxDialog::status_t status = dlg.getStatus();
-            bool sign = status == CreateTxDialog::SIGN_AND_SEND || status == CreateTxDialog::SIGN_AND_SAVE;
-            std::shared_ptr<CoinDB::Tx> tx = accountModel->createTx(dlg.getAccountName(), dlg.getTxOuts(), dlg.getFeeValue());
-            tx = accountModel->insertTx(tx, sign);
+            std::shared_ptr<CoinDB::Tx> tx = accountModel->getVault()->createTx(
+                dlg.getAccountName().toStdString(),
+                1,
+                0,
+                dlg.getInputTxOutIds(),
+                dlg.getTxOuts(),
+                dlg.getFeeValue(),
+                0,
+                true);
+            if (!tx) throw std::runtime_error(tr("Error creating transaction.").toStdString());
+
             saved = true;
-            txModel->update();
-            txView->update();
+            newTx();
+
             tabWidget->setCurrentWidget(txView);
+
+            if (dlg.getStatus() == CreateTxDialog::SIGN)
+            {
+                // First try to sign with unlocked keychains
+                std::vector<std::string> keychains;
+                tx = accountModel->getVault()->signTx(tx->id(), keychains, true);
+                txModel->update();
+
+                if (tx->status() == CoinDB::Tx::UNSIGNED)
+                {
+                    // If still unsigned, pop open dialog
+                    SignatureDialog dlg(synchedVault, tx->unsigned_hash(), this);
+                    connect(&dlg, &SignatureDialog::error, [this](const QString& msg) { showError(msg); });
+                    connect(&dlg, &SignatureDialog::txUpdated, [this]() { txModel->update(); });
+                    connect(&dlg, &SignatureDialog::keychainsUpdated, [this]() { keychainModel->update(); });
+                    dlg.exec();
+                }
+                else if (isConnected())
+                {
+                    // TODO: Create new dialog for sending confirmation.
+                    QMessageBox sendPrompt;
+                    sendPrompt.setText(tr("Transaction is fully signed. Would you like to send?"));
+                    sendPrompt.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                    sendPrompt.setDefaultButton(QMessageBox::Yes);
+                    if (sendPrompt.exec() == QMessageBox::Yes)
+                    {
+                        if (!synchedVault.isConnected()) throw std::runtime_error(tr("Connection was lost.").toStdString());
+
+                        Coin::Transaction coin_tx = tx->toCoinCore();
+                        synchedVault.sendTx(coin_tx);
+                    }
+                }
+            }
+/*
             if (status == CreateTxDialog::SIGN_AND_SEND) {
                 // TODO: Clean up signing and sending code
                 if (tx->status() == CoinDB::Tx::UNSIGNED) {
                     throw std::runtime_error(tr("Could not send - transaction still missing signatures.").toStdString());
                 }
-                if (!connected) {
+                if (!isConnected()) {
                     throw std::runtime_error(tr("Must be connected to network to send.").toStdString());
                 }
-                Coin::Transaction coin_tx = tx->toCoinClasses();
-                networkSync.sendTx(coin_tx);
-
-                // TODO: Check transaction has propagated before changing status
-                tx->updateStatus(CoinDB::Tx::PROPAGATED);
-                accountModel->getVault()->insertTx(tx);
+                Coin::Transaction coin_tx = tx->toCoinCore();
+                synchedVault.sendTx(coin_tx);
             }
-            txModel->update();
-            txView->update();
+*/
             return;
         }
         catch (const exception& e) {
@@ -1075,7 +1882,7 @@ void MainWindow::signRawTx()
 
 void MainWindow::sendRawTx()
 {
-    if (!connected) {
+    if (!isConnected()) {
         showError(tr("Must be connected to send raw transaction"));
         return;
     }
@@ -1085,7 +1892,8 @@ void MainWindow::sendRawTx()
         if (dlg.exec()) {
             bytes_t rawTx = dlg.getRawTx();
             Coin::Transaction tx(rawTx);
-            networkSync.sendTx(tx);
+            synchedVault.sendTx(tx);
+            //networkSync.sendTx(tx);
             updateStatusMessage(tr("Sent tx " ) + QString::fromStdString(tx.getHashLittleEndian().getHex()) + tr(" to peer"));
         }
     }
@@ -1095,97 +1903,61 @@ void MainWindow::sendRawTx()
     }
 }
 
-void MainWindow::newTx(const bytes_t& hash)
+void MainWindow::newTx()
 {
-    QString message = tr("Added transaction ") + QString::fromStdString(uchar_vector(hash).getHex());
-//    updateStatusMessage(tr("Added transaction ") + QString::fromStdString(uchar_vector(hash).getHex()));
-    emit status(message);
-
-    txModel->update();
-    txView->update();
+    refreshAccounts();
 }
 
-void MainWindow::newBlock(const bytes_t& hash, int height)
+void MainWindow::newBlock()
 {
-    if (height > syncHeight) {
-        emit updateSyncHeight(height);
-    }
-    QString message = tr("Inserted block ") + QString::fromStdString(uchar_vector(hash).getHex()) + tr(" height: ") + QString::number(height);
-//    updateStatusMessage(tr("Inserted block ") + QString::fromStdString(uchar_vector(hash).getHex()) + tr(" height: ") + QString::number(height));
-    emit status(message);
-
-    txModel->update();
-    txView->update();
+    if (isSynched() || syncHeight % 10 == 0) { refreshAccounts(); }
 }
 
+void MainWindow::syncBlocks()
+{
+    updateStatusMessage(tr("Synchronizing vault"));
 /*
-void MainWindow::newTx(const coin_tx_t& tx)
-{
-    QString hash = QString::fromStdString(tx.getHashLittleEndian().getHex());
-    try {
-        if (accountModel->insertTx(tx)) {
-            accountView->update();
-            updateStatusMessage(tr("Received transaction ") + hash);
-        }
-    }
-    catch (const exception& e) {
-        LOGGER(debug) << "MainWindow::newTx - " << hash.toStdString() << " : " << e.what();
-        updateStatusMessage(tr("Error attempting to insert transaction ") + hash);
-    }
-}
-
-void MainWindow::newBlock(const chain_block_t& block)
-{
-    QString hash = QString::fromStdString(block.blockHeader.getHashLittleEndian().getHex());
-    updateStatusMessage(tr("Received block ") + hash + tr(" with height ") + QString::number(block.height));
-    if (accountModel->isOpen()) {
-        try {
-            updateStatusaccountModel->insertBlock(block);
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::newBlock - " << hash.toStdString() << " : " << e.what();
-            showError(e.what());
-        }
-    }
-    updateBestHeight(networkSync.getBestHeight());
-}
-*/
-
-void MainWindow::resync()
-{
-    updateStatusMessage(tr("Resynchronizing vault"));
     uint32_t startTime = accountModel->getMaxFirstBlockTimestamp();
     std::vector<bytes_t> locatorHashes = accountModel->getLocatorHashes();
     for (auto& hash: locatorHashes) {
-        LOGGER(debug) << "MainWindow::resync() - hash: " << uchar_vector(hash).getHex() << std::endl;
+        LOGGER(debug) << "MainWindow::syncBlocks() - hash: " << uchar_vector(hash).getHex() << std::endl;
     }
-    networkSync.resync(locatorHashes, startTime);
+    networkSync.syncBlocks(locatorHashes, startTime);
+*/
+    synchedVault.syncBlocks();
 }
 
-void MainWindow::doneSync()
+void MainWindow::fetchingHeaders()
 {
-    doneHeaderSync = true;
-    emit updateBestHeight(networkSync.getBestHeight());
-//    updateStatusMessage(tr("Finished headers sync"));
-    emit status(tr("Finished headers sync"));
-    //networkStateLabel->setPixmap(*synchedIcon);
-    if (accountModel->isOpen()) {
-        try {
-            resync();
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::doneSync - " << e.what() << std::endl;
-//            updateStatusMessage(QString::fromStdString(e.what()));
-            emit status(QString::fromStdString(e.what()));
-        }
-    }
+    updateNetworkState(NETWORK_STATE_SYNCHING);
+    emit status(tr("Synching headers"));
 }
 
-void MainWindow::doneResync()
+void MainWindow::headersSynched()
 {
-    stopResyncAction->setEnabled(false);
-//    updateStatusMessage(tr("Finished resynch"));
-    emit status(tr("Finished resynch"));
+    emit updateBestHeight(synchedVault.getBestHeight());
+    emit status(tr("Finished loading headers."));
+    if (synchedVault.isVaultOpen()) {
+    try {
+        syncBlocks();
+    }
+    catch (const exception& e) {
+        LOGGER(debug) << "MainWindow::doneHeaderSync - " << e.what() << std::endl;
+        emit status(QString::fromStdString(e.what()));
+    }
+}
+}
+
+void MainWindow::fetchingBlocks()
+{
+    updateNetworkState(NETWORK_STATE_SYNCHING);
+    emit status(tr("Synching blocks"));
+}
+
+void MainWindow::blocksSynched()
+{
+    updateNetworkState(NETWORK_STATE_SYNCHED);
+    emit status(tr("Finished block sync"));
 }
 
 void MainWindow::addBestChain(const chain_header_t& header)
@@ -1197,45 +1969,36 @@ void MainWindow::removeBestChain(const chain_header_t& header)
 {
     bytes_t hash = header.getHashLittleEndian();
     LOGGER(debug) << "MainWindow::removeBestChain - " << uchar_vector(hash).getHex() << std::endl;
-    //accountModel->deleteMerkleBlock(hash);    
-    int diff = bestHeight - networkSync.getBestHeight();
+    
+    int diff = bestHeight - synchedVault.getBestHeight();
+    //int diff = bestHeight - networkSync.getBestHeight();
     if (diff >= 0) {
         QString message = tr("Reorganization of ") + QString::number(diff + 1) + tr(" blocks");
-//        updateStatusMessage(tr("Reorganization of ") + QString::number(diff + 1) + tr(" blocks"));
         emit status(message);
-        emit updateBestHeight(networkSync.getBestHeight());
+        emit updateBestHeight(synchedVault.getBestHeight());
+        //emit updateBestHeight(networkSync.getBestHeight());
     }
 }
 
 void MainWindow::connectionOpen()
 {
-//    updateStatusMessage(tr("Connection opened"));
     QString message = tr("Connected to ") + host + ":" + QString::number(port);
-//    updateStatusMessage(tr("Connected to ") + host + ":" + QString::number(port));
     emit status(message);
-//    networkStateLabel->setText(tr("Connected to ") + host + ":" + QString::number(port));
 }
 
 void MainWindow::connectionClosed()
 {
-    doneHeaderSync = false;
-//    updateStatusMessage(tr("Connection closed"));
     emit status(tr("Connection closed"));
-    // networkStateLabel->setPixmap(*notConnectedIcon);    
-//    updateStatusMessage(tr("Disconneted"));
-//    networkStateLabel->setText(tr("Disconnected"));
 }
 
 void MainWindow::startNetworkSync()
 {
-    connectAction->setEnabled(false);
-    //networkStateLabel->setMovie(synchingMovie);
+    //connectAction->setEnabled(false);
     try {
         QString message(tr("Connecting to ") + host + ":" + QString::number(port) + "...");
         updateStatusMessage(message);
-//        updateStatusMessage(tr("Connecting to ") + host + ":" + QString::number(port) + "...");
-        networkSync.start(host.toStdString(), port);
-        updateNetworkState();
+        //networkStarted();
+        synchedVault.startSync(host.toStdString(), port);
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::startNetworkSync - " << e.what() << std::endl;
@@ -1246,39 +2009,18 @@ void MainWindow::startNetworkSync()
 void MainWindow::stopNetworkSync()
 {
     disconnectAction->setEnabled(false);
-    try {
+    shortDisconnectAction->setEnabled(false);
+    try
+    {
         updateStatusMessage(tr("Disconnecting..."));
-        networkSync.stop();
+        synchedVault.stopSync();
     }
-    catch (const exception& e) {
+    catch (const exception& e)
+    {
+        networkStopped();
         LOGGER(debug) << "MainWindow::stopNetworkSync - " << e.what() << std::endl;
         showError(e.what());
     }
-}
-
-void MainWindow::resyncBlocks()
-{
-    if (!connected) {
-        showError(tr("Must be connected to resync."));
-    }
-
-    ResyncDialog dlg(resyncHeight, networkSync.getBestHeight());
-    if (dlg.exec()) {
-        stopResyncAction->setEnabled(true);
-        resyncHeight = dlg.getResyncHeight();
-        try {
-            networkSync.resync(resyncHeight);
-        }
-        catch (const exception& e) {
-            LOGGER(debug) << "MainWindow::resyncBlocks - " << e.what() << std::endl;
-            showError(e.what());
-        }
-    }
-}
-
-void MainWindow::stopResyncBlocks()
-{
-    networkSync.stopResync();
 }
 
 void MainWindow::networkStatus(const QString& status)
@@ -1289,62 +2031,42 @@ void MainWindow::networkStatus(const QString& status)
 void MainWindow::networkError(const QString& error)
 {
     QString message = tr("Network Error: ") + error;
-//    updateStatusMessage(tr("Network Error: ") + error);
     emit status(message);
-    connected = false;
-    disconnectAction->setEnabled(false);
-    connectAction->setEnabled(true);
-    sendRawTxAction->setEnabled(false);
-
-    //boost::lock_guard<boost::mutex> lock(repaintMutex);
-    //networkStateLabel->setText(tr("Disconnected"));
 }
 
 void MainWindow::networkStarted()
 {
-    connected = true;
-    connectAction->setEnabled(false);
-    disconnectAction->setEnabled(true);
-    resyncAction->setEnabled(true);
-    sendRawTxAction->setEnabled(true);
-//    updateStatusMessage(tr("Network started"));
+    updateNetworkState(NETWORK_STATE_STARTED);
     emit status(tr("Network started"));
 }
 
 // TODO: put common state change operations into common functions
 void MainWindow::networkStopped()
 {
-    connected = false;
-    updateNetworkState();
-    resyncAction->setEnabled(false);
-    disconnectAction->setEnabled(false);
-    connectAction->setEnabled(true);
-    sendRawTxAction->setEnabled(false);
+    disconnectAction->setText(tr("Disconnect from ") + host);
+    updateNetworkState(NETWORK_STATE_STOPPED);
+    emit status(tr("Network stopped"));
 }
 
 void MainWindow::networkTimeout()
 {
-    connected = false;
-//    updateStatusMessage(tr("Network timed out"));
     emit status(tr("Network timed out"));
-    disconnectAction->setEnabled(false);
-    connectAction->setEnabled(true);
-    sendRawTxAction->setEnabled(false);
-    //networkStateLabel->setText(tr("Disconnected"));
-    // TODO: Attempt reconnect
 }
 
 void MainWindow::networkSettings()
 {
     // TODO: Add a connect button to dialog.
-    NetworkSettingsDialog dlg(host, port, autoConnect);
+    NetworkSettingsDialog dlg(host, port, autoConnect, this);
     if (dlg.exec()) {
         host = dlg.getHost();
         port = dlg.getPort();
         autoConnect = dlg.getAutoConnect();
         connectAction->setText(tr("Connect to ") + host);
+        if (!isConnected()) {
+            disconnectAction->setText(tr("Disconnect from ") + host);
+        }
 
-        QSettings settings("Ciphrex", getDefaultSettings().getAppName());
+        QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
         settings.setValue("host", host);
         settings.setValue("port", port);
     }
@@ -1352,16 +2074,19 @@ void MainWindow::networkSettings()
 
 void MainWindow::about()
 {
+    AboutDialog dlg(this);
+    dlg.exec();
+/*
    QMessageBox::about(this, tr("About ") + getDefaultSettings().getAppName(),
-            tr("<b>") + getDefaultSettings().getAppName() + "(TM) " + VERSIONTEXT + "</b><br />" +
-            "Commit: " + getCommitHash() + "<br />" + COPYRIGHTTEXT);
+            tr("<b>") + getDefaultSettings().getAppName() + "(TM) " + getVersionText() + "</b><br />" +
+            "Commit: " + getCommitHash() + "<br />" + "Schema version: " + QString::number(getSchemaVersion()) + "<br />" + getCopyrightText());
+*/
 }
 
 void MainWindow::errorStatus(const QString& message)
 {
     LOGGER(debug) << "MainWindow::errorStatus - " << message.toStdString() << std::endl;
     QString error = tr("Error - ") + message;
-//    updateStatusMessage(tr("Error - ") + message);
     emit status(error);
 }
 
@@ -1398,17 +2123,30 @@ void MainWindow::processFile(const QString& fileName)
     }
 }
 
-void MainWindow::processCommand(const QString& command)
+void MainWindow::processCommand(const QString& command, const std::vector<QString>& args)
 {
     LOGGER(trace) << "MainWindow::processCommand - " << command.toStdString() << std::endl;
-    if (command == "clearsettings") {
+    if (command == "clearsettings")
+    {
         clearSettings();
     }
-    else if (command == "unlicense") {
+    else if (command == "unlicense")
+    {
         licenseAccepted = false;
         saveSettings();
     }
-    else {
+    else if (command == "resize")
+    {
+        if (args.size() != 2)
+        {
+            LOGGER(error) << "MainWindow::processCommand - invalid args for command resize." << std::endl;
+            return;
+        }
+
+        resize(args[0].toInt(), args[1].toInt());
+    }
+    else
+    {
         LOGGER(trace) << "MainWindow::processCommand - unhandled command: " << command.toStdString() << std::endl;
     }
 }
@@ -1416,6 +2154,10 @@ void MainWindow::processCommand(const QString& command)
 void MainWindow::createActions()
 {
     // application actions
+    selectCurrencyUnitAction = new QAction(tr("Select Currency Units..."), this);
+    selectCurrencyUnitAction->setStatusTip(tr("Select the currency unit"));
+    connect(selectCurrencyUnitAction, SIGNAL(triggered()), this, SLOT(selectCurrencyUnit()));
+
     quitAction = new QAction(tr("&Quit ") + getDefaultSettings().getAppName(), this);
     quitAction->setShortcuts(QKeySequence::Quit);
     quitAction->setStatusTip(tr("Quit the application"));
@@ -1432,6 +2174,21 @@ void MainWindow::createActions()
     openVaultAction->setStatusTip(tr("Open an existing vault"));
     connect(openVaultAction, SIGNAL(triggered()), this, SLOT(openVault())); 
 
+    importVaultAction = new QAction(tr("&Import Vault..."), this);
+    importVaultAction->setStatusTip("Import vault from portable file");
+    importVaultAction->setEnabled(false);
+    connect(importVaultAction, SIGNAL(triggered()), this, SLOT(importVault()));
+
+    exportVaultAction = new QAction(tr("&Export Vault..."), this);
+    exportVaultAction->setStatusTip("Export vault to portable file");
+    exportVaultAction->setEnabled(false);
+    connect(exportVaultAction, &QAction::triggered, [=]() { this->exportVault(QString(), false); });
+
+    exportPublicVaultAction = new QAction(tr("&Export Public Vault..."), this);
+    exportPublicVaultAction->setStatusTip("Export public vault to portable file");
+    exportPublicVaultAction->setEnabled(false);
+    connect(exportPublicVaultAction, &QAction::triggered, [=]() { this->exportVault(QString(), true); });
+
     closeVaultAction = new QAction(QIcon(":/icons/closevault.png"), tr("Close Vault"), this);
     closeVaultAction->setStatusTip(tr("Close vault"));
     closeVaultAction->setEnabled(false);
@@ -1443,20 +2200,30 @@ void MainWindow::createActions()
     newKeychainAction->setEnabled(false);
     connect(newKeychainAction, SIGNAL(triggered()), this, SLOT(newKeychain()));
 
-    unlockKeychainAction = new QAction(tr("Unlock keychain..."), this);
+    unlockKeychainAction = new QAction(tr("Unlock Keychain..."), this);
     unlockKeychainAction->setStatusTip(tr("Unlock keychain"));
     unlockKeychainAction->setEnabled(false);
     connect(unlockKeychainAction, SIGNAL(triggered()), this, SLOT(unlockKeychain()));
 
-    lockKeychainAction = new QAction(tr("Lock keychain"), this);
+    lockKeychainAction = new QAction(tr("Lock Keychain"), this);
     lockKeychainAction->setStatusTip(tr("Lock keychain"));
     lockKeychainAction->setEnabled(false);
     connect(lockKeychainAction, SIGNAL(triggered()), this, SLOT(lockKeychain()));
 
-    lockAllKeychainsAction = new QAction(tr("Lock all keychains"), this);
+    lockAllKeychainsAction = new QAction(tr("Lock All Keychains"), this);
     lockAllKeychainsAction->setStatusTip(tr("Lock all keychains"));
     lockAllKeychainsAction->setEnabled(false);
     connect(lockAllKeychainsAction, SIGNAL(triggered()), this, SLOT(lockAllKeychains()));
+
+    setKeychainPassphraseAction = new QAction(tr("Set Keychain Passphrase..."), this);
+    setKeychainPassphraseAction->setStatusTip(tr("Set the encryption passphrase for the keychain"));
+    setKeychainPassphraseAction->setEnabled(false);
+    connect(setKeychainPassphraseAction, SIGNAL(triggered()), this, SLOT(setKeychainPassphrase()));
+
+    makeKeychainBackupAction = new QAction(tr("Make Keychain Backup..."), this);
+    makeKeychainBackupAction->setStatusTip(tr("Open keychain backup wizard"));
+    makeKeychainBackupAction->setEnabled(false);
+    connect(makeKeychainBackupAction, SIGNAL(triggered()), this, SLOT(makeKeychainBackup()));
 
     importPrivateAction = new QAction(tr("Private Imports"), this);
     importPrivateAction->setCheckable(true);
@@ -1474,25 +2241,45 @@ void MainWindow::createActions()
     importPrivateAction->setChecked(true);
     importPrivate = true;
 
-    importKeychainAction = new QAction(tr("Import Keychain..."), this);
+    importKeychainAction = new QAction(tr("From File..."), this);
     importKeychainAction->setStatusTip(tr("Import keychain from file"));
     importKeychainAction->setEnabled(false);
     connect(importKeychainAction, SIGNAL(triggered()), this, SLOT(importKeychain()));
 
-    exportPrivateKeychainAction = new QAction(tr("Export Private Keychain..."), this);
+    exportPrivateKeychainAction = new QAction(tr("To File (private)..."), this);
     exportPrivateKeychainAction->setStatusTip(tr("Export private keychain to file"));
     exportPrivateKeychainAction->setEnabled(false);
     connect(exportPrivateKeychainAction, &QAction::triggered, [=]() { this->exportKeychain(true); });
 
-    exportPublicKeychainAction = new QAction(tr("Export Public Keychain..."), this);
+    exportPublicKeychainAction = new QAction(tr("To File (public)..."), this);
     exportPublicKeychainAction->setStatusTip(tr("Export public keychain to file"));
     exportPublicKeychainAction->setEnabled(false);
     connect(exportPublicKeychainAction, &QAction::triggered, [=]() { this->exportKeychain(false); });
 
-    backupKeychainAction = new QAction(tr("Backup Keychain..."), this);
-    backupKeychainAction->setStatusTip(tr("Make paper backup"));
-    backupKeychainAction->setEnabled(false);
-    connect(backupKeychainAction, SIGNAL(triggered()), this, SLOT(backupKeychain()));
+    importBIP32Action = new QAction(tr("From BIP32..."), this);
+    importBIP32Action->setStatusTip(tr("Import keychain from BIP32 master key"));
+    importBIP32Action->setEnabled(false);
+    connect(importBIP32Action, SIGNAL(triggered()), this, SLOT(importBIP32()));
+
+    viewPrivateBIP32Action = new QAction(tr("To BIP32 (private)..."), this);
+    viewPrivateBIP32Action->setStatusTip(tr("View private BIP32 master key"));
+    viewPrivateBIP32Action->setEnabled(false);
+    connect(viewPrivateBIP32Action, &QAction::triggered, [=]() { this->viewBIP32(true); });
+
+    viewPublicBIP32Action = new QAction(tr("To BIP32 (public)..."), this);
+    viewPublicBIP32Action->setStatusTip(tr("View public BIP32 master key"));
+    viewPublicBIP32Action->setEnabled(false);
+    connect(viewPublicBIP32Action, &QAction::triggered, [=]() { this->viewBIP32(false); });
+
+    importBIP39Action = new QAction(tr("From Wordlist..."), this);
+    importBIP39Action->setStatusTip(tr("Import keychain from BIP39 wordlist"));
+    importBIP39Action->setEnabled(false);
+    connect(importBIP39Action, SIGNAL(triggered()), this, SLOT(importBIP39()));
+
+    viewBIP39Action = new QAction(tr("To Wordlist (private)..."), this);
+    viewBIP39Action->setStatusTip(tr("View private BIP39 wordlist"));
+    viewBIP39Action->setEnabled(false);
+    connect(viewBIP39Action, SIGNAL(triggered()), this, SLOT(viewBIP39()));
 
     // account actions
     quickNewAccountAction = new QAction(QIcon(":/icons/magicwand.png"), tr("Account &Wizard..."), this);
@@ -1500,17 +2287,17 @@ void MainWindow::createActions()
     quickNewAccountAction->setEnabled(false);
     connect(quickNewAccountAction, SIGNAL(triggered()), this, SLOT(quickNewAccount()));
 
-    newAccountAction = new QAction(QIcon(":/icons/money.png"), tr("Create &Account..."), this);
+    newAccountAction = new QAction(QIcon(":/icons/account_32x32.png"), tr("New &Account..."), this);
     newAccountAction->setStatusTip(tr("Create a new account with selected keychains"));
     newAccountAction->setEnabled(false);
     connect(newAccountAction, SIGNAL(triggered()), this, SLOT(newAccount()));
 
-    requestPaymentAction = new QAction(QIcon(":/icons/cashregister.png"), tr("Request Payment..."), this);
-    requestPaymentAction->setStatusTip(tr("Get a new address to request a payment"));
+    requestPaymentAction = new QAction(QIcon(":/icons/left-arrow-icon.png"), tr("Receive..."), this);
+    requestPaymentAction->setStatusTip(tr("Create an invoice"));
     requestPaymentAction->setEnabled(false);
     connect(requestPaymentAction, SIGNAL(triggered()), this, SLOT(requestPayment()));
 
-    sendPaymentAction = new QAction(QIcon(":/icons/payment.png"), tr("Send Payment..."), this);
+    sendPaymentAction = new QAction(QIcon(":/icons/right-arrow-icon.png"), tr("Send..."), this);
     sendPaymentAction->setStatusTip(tr("Create a new transaction to send payment"));
     sendPaymentAction->setEnabled(false);
     connect(sendPaymentAction, SIGNAL(triggered()), this, SLOT(createTx()));
@@ -1525,6 +2312,11 @@ void MainWindow::createActions()
     exportAccountAction->setEnabled(false);
     connect(exportAccountAction, SIGNAL(triggered()), this, SLOT(exportAccount()));
 
+    exportSharedAccountAction = new QAction(tr("Export Shared Account..."), this);
+    exportSharedAccountAction->setStatusTip(tr("Export a shared account"));
+    exportSharedAccountAction->setEnabled(false);
+    connect(exportSharedAccountAction, SIGNAL(triggered()), this, SLOT(exportSharedAccount()));
+
     deleteAccountAction = new QAction(tr("Delete Account"), this);
     deleteAccountAction->setStatusTip(tr("Delete current account"));
     deleteAccountAction->setEnabled(false);
@@ -1535,12 +2327,12 @@ void MainWindow::createActions()
     viewAccountHistoryAction->setEnabled(false);
     connect(viewAccountHistoryAction, SIGNAL(triggered()), this, SLOT(viewAccountHistory()));
 
-    viewScriptsAction = new QAction(tr("View Scripts"), this);
-    viewScriptsAction->setStatusTip(tr("View scripts for active account"));
+    viewScriptsAction = new QAction(tr("View Addresses..."), this);
+    viewScriptsAction->setStatusTip(tr("View addresses for active account"));
     viewScriptsAction->setEnabled(false);
     connect(viewScriptsAction, SIGNAL(triggered()), this, SLOT(viewScripts()));
     
-    viewUnsignedTxsAction = new QAction(tr("View Unsigned Transactions"), this);
+    viewUnsignedTxsAction = new QAction(tr("View Unsigned Transactions..."), this);
     viewUnsignedTxsAction->setStatusTip(tr("View transactions pending signature"));
     viewUnsignedTxsAction->setEnabled(false);
     connect(viewUnsignedTxsAction, SIGNAL(triggered()), this, SLOT(viewUnsignedTxs()));
@@ -1572,96 +2364,70 @@ void MainWindow::createActions()
     connect(sendRawTxAction, SIGNAL(triggered()), this, SLOT(sendRawTx()));
 
     // network actions
-    connectAction = new QAction(QIcon(":/icons/connect.png"), tr("Connect to ") + host, this);
+    connectAction = new QAction(QIcon(":/icons/connect.png"), tr("Connect To ") + host, this);
     connectAction->setStatusTip(tr("Connect to a p2p node"));
     connectAction->setEnabled(true);
 
-    disconnectAction = new QAction(QIcon(":/icons/disconnect.png"), tr("Disconnect from ") + host, this);
+    shortConnectAction = new QAction(QIcon(":/icons/connect.png"), tr("Connect"), this);
+    shortConnectAction->setStatusTip(tr("Connect to a p2p node"));
+    shortConnectAction->setEnabled(true);
+
+    disconnectAction = new QAction(QIcon(":/icons/disconnect.png"), tr("Disconnect From ") + host, this);
     disconnectAction->setStatusTip(tr("Disconnect from p2p node"));
     disconnectAction->setEnabled(false);
 
-    resyncAction = new QAction(tr("Resync..."), this);
-    resyncAction->setStatusTip(tr("Resync from a specific height"));
-    resyncAction->setEnabled(false);
-
-    stopResyncAction = new QAction(tr("Stop Resync"), this);
-    stopResyncAction->setStatusTip(tr("Stop resync"));
-    stopResyncAction->setEnabled(false);
+    shortDisconnectAction = new QAction(QIcon(":/icons/disconnect.png"), tr("Disconnect"), this);
+    shortDisconnectAction->setStatusTip(tr("Disconnect from p2p node"));
+    shortDisconnectAction->setEnabled(false);
 
     connect(connectAction, SIGNAL(triggered()), this, SLOT(startNetworkSync()));
+    connect(shortConnectAction, SIGNAL(triggered()), this, SLOT(startNetworkSync()));
     connect(disconnectAction, SIGNAL(triggered()), this, SLOT(stopNetworkSync()));
-    connect(resyncAction, SIGNAL(triggered()), this, SLOT(resyncBlocks()));
-    connect(stopResyncAction, SIGNAL(triggered()), this, SLOT(stopResyncBlocks()));
-
-/*    connect(this, SIGNAL(status(const QString&)), this, SLOT(networkStatus(const QString&)));
-    connect(this, SIGNAL(signal_error(const QString&)), this, SLOT(networkError(const QString&)));
-    connect(this, SIGNAL(signal_connectionOpen()), this, SLOT(connectionOpen()));
-    connect(this, SIGNAL(signal_connectionClosed()), this, SLOT(connectionClosed()));
-    connect(this, SIGNAL(signal_networkStarted()), this, SLOT(networkStarted()));
-    connect(this, SIGNAL(signal_networkStopped()), this, SLOT(networkStopped()));
-    connect(this, SIGNAL(signal_networkTimeout()), this, SLOT(networkTimeout()));
-    connect(this, SIGNAL(signal_networkDoneSync()), this, SLOT(doneSync()));
-*/
-    networkSync.subscribeStatus([this](const std::string& message) {
-        LOGGER(debug) << "status slot" << std::endl;
-        networkStatus(QString::fromStdString(message)); 
-    });
-
-    networkSync.subscribeError([this](const std::string& error) {
-        LOGGER(debug) << "error slot" << std::endl;
-        networkError(QString::fromStdString(error));
-    });
-
-    networkSync.subscribeOpen([this]() {
-        LOGGER(debug) << "open slot" << std::endl;
-        connectionOpen();
-    });
-
-    networkSync.subscribeClose([this]() {
-        LOGGER(debug) << "close slot" << std::endl;
-        connectionClosed();
-    });
-
-    networkSync.subscribeStarted([this]() {
-        LOGGER(debug) << "started slot" << std::endl;
-        networkStarted();
-    });
-
-    networkSync.subscribeStopped([this]() {
-        LOGGER(debug) << "stopped slot" << std::endl;
-        networkStopped();
-    });
-
-    networkSync.subscribeTimeout([this]() {
-        LOGGER(debug) << "timeout slot" << std::endl;
-        networkTimeout();
-    });
-
-    networkSync.subscribeDoneSync([this]() {
-        LOGGER(debug) << "done sync slot" << std::endl;
-        doneSync();
-    });
-
-/*
-    qRegisterMetaType<chain_header_t>("chain_header_t");
-    connect(this, SIGNAL(signal_addBestChain(const chain_header_t&)), this, SLOT(addBestChain(const chain_header_t&)));
-    connect(this, SIGNAL(signal_removeBestChain(const chain_header_t&)), this, SLOT(removeBestChain(const chain_header_t&)));
-*/
-
-    networkSync.subscribeAddBestChain([this](const chain_header_t& header) {
-        LOGGER(debug) << "add best chain slot" << std::endl;
-        addBestChain(header);
-    });
-
-    networkSync.subscribeRemoveBestChain([this](const chain_header_t& header) {
-        LOGGER(debug) << "remove best chain slot" << std::endl;
-        removeBestChain(header);
-    });
+    connect(shortDisconnectAction, SIGNAL(triggered()), this, SLOT(stopNetworkSync()));
 
     networkSettingsAction = new QAction(tr("Settings..."), this);
     networkSettingsAction->setStatusTip(tr("Configure network settings"));
     networkSettingsAction->setEnabled(true);
     connect(networkSettingsAction, SIGNAL(triggered()), this, SLOT(networkSettings()));
+
+    // font actions
+    smallFontsAction = new QAction(tr("&Small"), this);
+    smallFontsAction->setCheckable(true);
+    smallFontsAction->setStatusTip(tr("Use small fonts"));
+    connect(smallFontsAction, &QAction::triggered, [this]() { updateFonts(SMALL_FONTS); });
+
+    mediumFontsAction = new QAction(tr("&Medium"), this);
+    mediumFontsAction->setCheckable(true);
+    mediumFontsAction->setStatusTip(tr("Use medium fonts"));
+    connect(mediumFontsAction, &QAction::triggered, [this]() { updateFonts(MEDIUM_FONTS); });
+
+    largeFontsAction = new QAction(tr("&Large"), this);
+    largeFontsAction->setCheckable(true);
+    largeFontsAction->setStatusTip(tr("Use large fonts"));
+    connect(largeFontsAction, &QAction::triggered, [this]() { updateFonts(LARGE_FONTS); });
+
+    fontSizeGroup = new QActionGroup(this);
+    fontSizeGroup->addAction(smallFontsAction);
+    fontSizeGroup->addAction(mediumFontsAction);
+    fontSizeGroup->addAction(largeFontsAction);
+
+    // currency unit actions
+    currencyUnitGroup = new QActionGroup(this);
+    for (auto& prefix: getValidCurrencyPrefixes())
+    {
+        QAction* currencyUnitAction = new QAction(prefix + getCoinParams().currency_symbol(), this);
+        currencyUnitAction->setCheckable(true);
+        if (currencyUnitPrefix == prefix) { currencyUnitAction->setChecked(true); }
+        connect(currencyUnitAction, &QAction::triggered, [this, prefix]() { selectCurrencyUnit(prefix); });
+        currencyUnitGroup->addAction(currencyUnitAction);
+        currencyUnitActions << currencyUnitAction;
+    }
+
+    showTrailingDecimalsAction = new QAction(tr("Show Trailing Decimals"), this);
+    showTrailingDecimalsAction->setCheckable(true);
+    showTrailingDecimalsAction->setStatusTip(tr("Show trailing zeros in decimals"));
+    connect(showTrailingDecimalsAction, &QAction::toggled, [this]() { selectTrailingDecimals(showTrailingDecimalsAction->isChecked()); });
+    showTrailingDecimalsAction->setChecked(showTrailingDecimals);
 
     // about/help actions
     aboutAction = new QAction(tr("About..."), this);
@@ -1676,45 +2442,35 @@ void MainWindow::createMenus()
     fileMenu = menuBar()->addMenu(tr("&File"));
     fileMenu->addAction(newVaultAction);
     fileMenu->addAction(openVaultAction);
+    recentsMenu = fileMenu->addMenu(QIcon(":/icons/open_recent_32x32.png"), tr("Open Recent"));
+
     fileMenu->addAction(closeVaultAction);
-    // fileMenu->addAction(importVaultAction);
-    // fileMenu->addAction(exportVaultAction);
+    fileMenu->addSeparator();
+    fileMenu->addAction(importVaultAction);
+    fileMenu->addAction(exportVaultAction);
+    fileMenu->addAction(exportPublicVaultAction);
+   // fileMenu->addSeparator();
+  //  fileMenu->addAction(selectCurrencyUnitAction);
     fileMenu->addSeparator();
     fileMenu->addAction(quitAction);    
 
-    keychainMenu = menuBar()->addMenu(tr("&Keychains"));
-    keychainMenu->addAction(quickNewAccountAction);
-    keychainMenu->addSeparator();
-    keychainMenu->addAction(newKeychainAction);
-    keychainMenu->addAction(newAccountAction);
-    keychainMenu->addSeparator();
-    keychainMenu->addAction(unlockKeychainAction);
-    keychainMenu->addAction(lockKeychainAction);
-    keychainMenu->addAction(lockAllKeychainsAction);
-    keychainMenu->addSeparator()->setText(tr("Import Mode"));
-    keychainMenu->addAction(importPrivateAction);
-    keychainMenu->addAction(importPublicAction);
-    keychainMenu->addSeparator();
-    keychainMenu->addAction(importKeychainAction);
-    keychainMenu->addAction(exportPrivateKeychainAction);
-    keychainMenu->addAction(exportPublicKeychainAction);
-    keychainMenu->addSeparator();
-    keychainMenu->addAction(backupKeychainAction);
-
     accountMenu = menuBar()->addMenu(tr("&Accounts"));
-    accountMenu->addAction(requestPaymentAction);
     accountMenu->addAction(sendPaymentAction);
+    accountMenu->addAction(requestPaymentAction);
     accountMenu->addSeparator();
     //accountMenu->addAction(deleteAccountAction);
     //accountMenu->addSeparator();
     accountMenu->addAction(importAccountAction);
     accountMenu->addAction(exportAccountAction);
+    accountMenu->addAction(exportSharedAccountAction);
     accountMenu->addSeparator();
     //accountMenu->addAction(viewAccountHistoryAction);
     accountMenu->addAction(viewScriptsAction);
-    accountMenu->addSeparator();
-    accountMenu->addAction(viewUnsignedTxsAction);
+    //accountMenu->addSeparator();
+    //accountMenu->addAction(viewUnsignedTxsAction);
 
+    menuBar()->addMenu(txActions->getMenu());
+/*
     txMenu = menuBar()->addMenu(tr("&Transactions"));
     txMenu->addAction(insertRawTxAction);
     //txMenu->addSeparator();
@@ -1724,18 +2480,69 @@ void MainWindow::createMenus()
     //txMenu->addAction(createTxAction);
     //txMenu->addSeparator();
     txMenu->addAction(sendRawTxAction);
+*/
+
+    keychainMenu = menuBar()->addMenu(tr("&Keychains"));
+    keychainMenu->addAction(newAccountAction);
+    keychainMenu->addAction(newKeychainAction);
+    keychainMenu->addSeparator();
+    keychainMenu->addAction(unlockKeychainAction);
+    keychainMenu->addAction(lockKeychainAction);
+    keychainMenu->addAction(lockAllKeychainsAction);
+    keychainMenu->addAction(setKeychainPassphraseAction);
+    keychainMenu->addSeparator();
+    keychainMenu->addAction(makeKeychainBackupAction);
+
+/*
+    keychainMenu->addSeparator()->setText(tr("Import Mode"));
+    keychainMenu->addAction(importPrivateAction);
+    keychainMenu->addAction(importPublicAction);
+*/
+    keychainMenu->addSeparator();
+
+    QMenu* importKeychainMenu = keychainMenu->addMenu(tr("Import Keychain"));
+    importKeychainMenu->addAction(importKeychainAction);
+    importKeychainMenu->addAction(importBIP32Action);
+    importKeychainMenu->addAction(importBIP39Action);
+
+    QMenu* exportKeychainMenu = keychainMenu->addMenu(tr("Export Keychain"));
+    exportKeychainMenu->addAction(exportPrivateKeychainAction);
+    exportKeychainMenu->addAction(exportPublicKeychainAction);
+    exportKeychainMenu->addSeparator();
+    exportKeychainMenu->addAction(viewPrivateBIP32Action);
+    exportKeychainMenu->addAction(viewPublicBIP32Action);
+    exportKeychainMenu->addSeparator();
+    exportKeychainMenu->addAction(viewBIP39Action);
+
+    keychainMenu->addSeparator();
+    keychainMenu->addAction(quickNewAccountAction);
 
     networkMenu = menuBar()->addMenu(tr("&Network"));
     networkMenu->addAction(connectAction);
     networkMenu->addAction(disconnectAction);
     networkMenu->addSeparator();
-    networkMenu->addAction(resyncAction);
-    networkMenu->addAction(stopResyncAction);
-    networkMenu->addSeparator();
     networkMenu->addAction(networkSettingsAction);
 
     menuBar()->addSeparator();
 
+    fontsMenu = menuBar()->addMenu(tr("Fonts"));
+    fontsMenu->addSeparator()->setText(tr("Font Size"));
+    fontsMenu->addAction(smallFontsAction);
+    fontsMenu->addAction(mediumFontsAction);
+    fontsMenu->addAction(largeFontsAction);
+
+    currencyUnitMenu = menuBar()->addMenu(tr("Currency Units"));
+    currencyUnitMenu->addSeparator()->setText(tr("Currency Unit"));
+    for (auto& currencyUnitAction: currencyUnitActions)
+    {
+        currencyUnitMenu->addAction(currencyUnitAction);
+    }
+    currencyUnitMenu->addSeparator();
+    currencyUnitMenu->addAction(showTrailingDecimalsAction);
+
+    menuBar()->addSeparator();
+
+    
     helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAction);
 }
@@ -1745,34 +2552,26 @@ void MainWindow::createToolBars()
     // TODO: rename toolbars more appropriately
 
     fileToolBar = addToolBar(tr("File"));
+    fileToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     fileToolBar->addAction(newVaultAction);
     fileToolBar->addAction(openVaultAction);
     fileToolBar->addAction(closeVaultAction);
 
-    keychainToolBar = addToolBar(tr("Keychains"));
-    keychainToolBar->addAction(quickNewAccountAction);
-    keychainToolBar->addAction(newKeychainAction);
-    keychainToolBar->addAction(newAccountAction);
-
     accountToolBar = addToolBar(tr("Accounts"));
-    accountToolBar->addAction(requestPaymentAction);
+    accountToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     accountToolBar->addAction(sendPaymentAction);
+    accountToolBar->addAction(requestPaymentAction);
+
+    keychainToolBar = addToolBar(tr("Keychains"));
+    keychainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    keychainToolBar->addAction(newAccountAction);
+    keychainToolBar->addAction(newKeychainAction);
+    keychainToolBar->addAction(quickNewAccountAction);
 
     networkToolBar = addToolBar(tr("Network"));
-    networkToolBar->addAction(connectAction);
-    networkToolBar->addAction(disconnectAction);
-
-/*
-    editToolBar = addToolBar(tr("Edit"));
-    editToolBar->addAction(newKeychainAction);
-    editToolBar->addAction(newAccountAction);
-    editToolBar->addAction(deleteAccountAction);
-
-    txToolBar = addToolBar(tr("Transactions"));
-    txToolBar->addAction(insertRawTxAction);
-    txToolBar->addAction(createRawTxAction);
-    txToolBar->addAction(signRawTxAction);
-*/
+    networkToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    networkToolBar->addAction(shortConnectAction);
+    networkToolBar->addAction(shortDisconnectAction);
 }
 
 void MainWindow::createStatusBar()
@@ -1781,11 +2580,11 @@ void MainWindow::createStatusBar()
     updateSyncLabel();
 
     networkStateLabel = new QLabel();
-    notConnectedIcon = new QPixmap(":/icons/vault_status_icons/36x22/nc-icon-36x22.gif");
+    stoppedIcon = new QPixmap(":/icons/vault_status_icons/36x22/nc-icon-36x22.gif");
     synchingMovie = new QMovie(":/icons/vault_status_icons/36x22/synching-icon-animated-36x22.gif");
     synchingMovie->start();
     synchedIcon = new QPixmap(":/icons/vault_status_icons/36x22/synched-icon-36x22.gif");
-    networkStateLabel->setPixmap(*notConnectedIcon);
+    networkStateLabel->setPixmap(*stoppedIcon);
 
     statusBar()->addPermanentWidget(syncLabel);
     statusBar()->addPermanentWidget(networkStateLabel);
@@ -1795,59 +2594,111 @@ void MainWindow::createStatusBar()
 
 void MainWindow::loadSettings()
 {
-    QSettings settings("Ciphrex", getDefaultSettings().getAppName());
-    QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
-    QSize size = settings.value("size", QSize(800, 400)).toSize();
-    resize(size);
-    move(pos);
+    {
+        QSettings settings("Ciphrex", getDefaultSettings().getSettingsRoot());
+        QPoint pos = settings.value("pos", QPoint(200, 200)).toPoint();
+        QSize size = settings.value("size", QSize(800, 400)).toSize();
+        resize(size);
+        move(pos);
 
-    licenseAccepted = settings.value("licenseaccepted", false).toBool();
+        fontSize = settings.value("fontsize", MEDIUM_FONTS).toInt();
 
-    blockTreeFile = settings.value("blocktreefile", getDefaultSettings().getDataDir() + "/blocktree.dat").toString();
-    host = settings.value("host", "localhost").toString();
-    port = settings.value("port", getCoinParams().default_port()).toInt();
-    autoConnect = settings.value("autoconnect", false).toBool();
-    resyncHeight = settings.value("resyncheight", 0).toInt();
+        licenseAccepted = settings.value("licenseaccepted", false).toBool();
+    }
 
-    lastVaultDir = settings.value("lastvaultdir", getDefaultSettings().getDocumentDir()).toString();
+    {
+        QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
+        currencyUnitPrefix = settings.value("currencyunitprefix", "").toString();
+        showTrailingDecimals = settings.value("showtrailingdecimals", true).toBool();
+        setTrailingDecimals(showTrailingDecimals);
+        blockTreeFile = settings.value("blocktreefile", getDefaultSettings().getDataDir() + "/blocktree.dat").toString();
+        host = settings.value("host", "localhost").toString();
+        port = settings.value("port", getCoinParams().default_port()).toInt();
+        autoConnect = settings.value("autoconnect", false).toBool();
+
+        setDocDir(settings.value("lastvaultdir", getDefaultSettings().getDocumentDir()).toString());
+    }
 }
 
 void MainWindow::saveSettings()
 {
-    QSettings settings("Ciphrex", getDefaultSettings().getAppName());
-    settings.setValue("pos", pos());
-    settings.setValue("size", size());
-    settings.setValue("licenseaccepted", licenseAccepted);
-    settings.setValue("blocktreefile", blockTreeFile);
-    settings.setValue("host", host);
-    settings.setValue("port", port);
-    settings.setValue("autoconnect", autoConnect);
-    settings.setValue("resyncheight", resyncHeight);
-    settings.setValue("lastvaultdir", lastVaultDir);
+    {
+        QSettings settings("Ciphrex", getDefaultSettings().getSettingsRoot());
+        settings.setValue("pos", pos());
+        settings.setValue("size", size());
+        settings.setValue("licenseaccepted", licenseAccepted);
+    }
+
+    {
+        QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
+        settings.setValue("currencyunitprefix", currencyUnitPrefix);
+        settings.setValue("showtrailingdecimals", showTrailingDecimals);
+        settings.setValue("blocktreefile", blockTreeFile);
+        settings.setValue("host", host);
+        settings.setValue("port", port);
+        settings.setValue("autoconnect", autoConnect);
+        settings.setValue("lastvaultdir", getDocDir());
+    }
 }
 
 void MainWindow::clearSettings()
 {
-    QSettings settings("Ciphrex", getDefaultSettings().getAppName());
+    QSettings settings("Ciphrex", getDefaultSettings().getSettingsRoot());
     settings.clear();
     loadSettings();
 }
 
 void MainWindow::loadVault(const QString &fileName)
 {
-    accountModel->load(fileName);
-    accountView->update();
-    keychainModel->setVault(accountModel->getVault());
-    keychainModel->update();
-    keychainView->update();
-    txModel->setVault(accountModel->getVault());
-    txModel->update();
-    txView->update();
-
-    newKeychainAction->setEnabled(true);
-
-    // TODO: Prompt user to unlock chain codes
-    accountModel->getVault()->unlockChainCodes(uchar_vector("1234"));
-
-    networkSync.setBloomFilter(accountModel->getBloomFilter(0.0001, 0, 0));
+    synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name());
 }
+
+void MainWindow::addToRecents(const QString& fileName)
+{
+    while (recents.removeOne(fileName));
+    recents.prepend(fileName);
+    while (recents.size() > MAX_RECENTS) { recents.removeLast(); }
+    saveRecents();
+}
+
+void MainWindow::loadRecents()
+{
+    QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
+
+    recents.clear();
+    int nRecents = settings.beginReadArray("recents");
+    for (int i = 0; i < nRecents && recents.size() <= MAX_RECENTS; i++)
+    {
+        settings.setArrayIndex(i);
+        QString filename = settings.value("recentfile").toString();
+        if (recents.count(filename)) continue;
+        recents.append(filename);
+    }
+    settings.endArray();
+}
+
+void MainWindow::saveRecents()
+{
+    QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
+
+    settings.beginWriteArray("recents");
+    for (int i = 0; i < recents.size(); i++)
+    {
+        settings.setArrayIndex(i);
+        settings.setValue("recentfile", recents.at(i)); 
+    }
+    settings.endArray();
+}
+
+// createMenus() must be called before calling updateRecentsMenu()
+void MainWindow::updateRecentsMenu()
+{
+    recentsMenu->clear();
+    for (auto& recent: recents)
+    {
+        QFileInfo fileInfo(recent);
+        QAction* action = recentsMenu->addAction(fileInfo.fileName());
+        connect(action, &QAction::triggered, [=]() { openVault(recent); });
+    } 
+}
+

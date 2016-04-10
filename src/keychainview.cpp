@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // keychainview.cpp
 //
@@ -18,12 +18,38 @@ KeychainView::KeychainView(QWidget* parent)
 {
 }
 
-void KeychainView::update()
+QList<QString> KeychainView::getAllKeychains() const
 {
-    resizeColumnToContents(0);
-    resizeColumnToContents(1);
-    resizeColumnToContents(2);
-    resizeColumnToContents(3);
+    QList<QString> keychainNames;
+    if (model())
+    {
+        for (int i = 0; i < model()->rowCount(); i++)
+        {
+            keychainNames << model()->data(model()->index(i, 0)).toString();
+        }
+    }
+    return keychainNames;
+}
+
+QList<QString> KeychainView::getSelectedKeychains() const
+{
+    QList<QString> keychainNames;
+    if (model())
+    {
+        QModelIndexList indexes = selectionModel()->selectedRows(0);
+
+        for (auto& index: indexes)
+        {
+            keychainNames << model()->data(index).toString();
+        }
+    }
+    return keychainNames;
+}
+
+void KeychainView::updateColumns()
+{
+    if (!model()) return;
+    for (int i = 0; i < model()->columnCount(); i++) { resizeColumnToContents(i); }
 }
 
 void KeychainView::contextMenuEvent(QContextMenuEvent* event)

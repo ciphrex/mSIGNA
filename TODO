@@ -4,24 +4,9 @@ TODO
 UI
 --
 
-- Make account creation simpler and more intuitive (including a "wizard" for typical account types)
-
-- When a transaction is still missing signatures, rather than just showing "Unsigned" show which keychains must still sign.
-
-- Change focus to Account tab when a new account has just been created and select the new account.
-
-- Disable "Create Account" when no keychains are selected."
-
 - Icons for the remaining actions.
 
 - Add toolbars for keychain, account, and transaction actions.
-
-- Make table data noneditable except for names and labels, update database and views when names and labels are modified.
-    * Done for KeychainModel and AccountModel
-        TODO: notify MainWindow of changes, update
-        TODO: TxModel - make labels editable.
-
-- Export all script labels for account, including request labels.
 
 - Add account selection drop down in Transactions tab.
 
@@ -31,8 +16,6 @@ UI
 
 - Add Save As... option to file menu.
 
-- Require exactly one account to be selected always, unless no account exists.
-
 - Allow account selection from drop down in Create Transaction dialog. Use selected account as default.
 
 - Redesign dialog layouts (Create Transaction and Request Payment in particular).
@@ -41,12 +24,10 @@ UI
 
 - Remove extraneous, unused objects from UI classes.
 
-- Force splashscreen it stay up for a minimum of x seconds.
-
 
 General
 -------
 
-- Add notifyError event to CoinQ_peer_io and handle error logging higher up the stack.
+- Use timer to explicitly request transactions in merkle block if sync gets stuck because the bitcoin node already sent us the transactions when a different vault or no vault was open.
 
-- Create datadir. Place debug.log and blockchain.dat in datadir.
+- Filter the mempool ourselves.

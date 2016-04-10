@@ -1,15 +1,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // txview.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_TXVIEW_H
-#define COINVAULT_TXVIEW_H
+#pragma once
 
 class TxModel;
 
@@ -27,16 +26,15 @@ public:
     void setModel(TxModel* model);
     #pragma clang diagnostic pop
 
-    void setMenu(QMenu* menu) { this->menu = menu; }
-    void update();
+    void setMenu(QMenu* menu) { m_menu = menu; }
+    void updateColumns();
 
 protected:
     void contextMenuEvent(QContextMenuEvent* event);
 
 private:
-    TxModel* accountHistoryModel;
+    TxModel* m_model;
 
-    QMenu* menu;
+    QMenu* m_menu;
 };
 
-#endif // COINVAULT_TXVIEW_H

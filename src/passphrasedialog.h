@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // passphrasedialog.h
 //
@@ -14,7 +14,7 @@ class QLineEdit;
 
 #include <QDialog>
 
-#include <CoinQ_typedefs.h>
+#include <CoinQ/CoinQ_typedefs.h>
 
 class PassphraseDialog : public QDialog
 {

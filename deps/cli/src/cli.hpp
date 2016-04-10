@@ -2,7 +2,7 @@
 //
 // cli.hpp
 //
-// Copyright (c) 2011-2013 Eric Lombrozo
+// Copyright (c) 1983-2016 rLi~rLuke_iSampaga
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef _INTERPRETER__HPP_
-#define _INTERPRETER__HPP_
+#pragma once
 
 #include <string>
 #include <vector>
@@ -32,44 +31,155 @@
 #include <sstream>
 #include <iostream>
 
-namespace cli {
+#include <stdarg.h>
+
+namespace cli
+{
 
 typedef std::vector<std::string>    params_t;
 typedef std::string                 result_t;
-typedef result_t                    (*fAction)(bool, const params_t&);
+typedef result_t                    (*fAction)(const params_t&);
 
-class command_map
+class command
 {
 public:
-    command_map(const std::string& proginfo) : proginfo_(proginfo) { }
+    command(fAction cmdfunc, const std::string& cmdname, const std::string& cmddesc, const params_t& reqparams = params_t(), const params_t& optparams = params_t()) : cmdfunc_(cmdfunc), cmdname_(cmdname), cmddesc_(cmddesc), reqparams_(reqparams), optparams_(optparams), ellipsescount_(0)
+    {
+        for (auto& optparam: optparams_)
+            if (optparam == "...") ellipsescount_++;
+    }
 
-    void clear() { command_map_.clear(); }
-    void add(const std::string& cmdname, fAction cmdfunc) { command_map_[cmdname] = cmdfunc; }
+    static params_t params(int count, ...)
+    {
+        va_list ap;
+        va_start (ap, count);
+        params_t params;
+        for (int i = 0; i < count; i++) { params.push_back(va_arg (ap, const char*)); }
+        va_end (ap);
+        return params;
+    }
+
+    result_t operator()(const params_t& params) const { return cmdfunc_(params); }
+
+    const std::string& getName() const { return cmdname_; }
+    bool isValidParamCount(const params_t& params) const
+    {
+        std::size_t nParams = params.size();
+        std::size_t min = reqparams_.size();
+        return nParams >= min && (ellipsescount_ || nParams <= min + optparams_.size());
+    }
+
+    std::string getHelpTemplate() const
+    {
+        std::stringstream ss;
+        ss << cmdname_;
+        for (auto& param: reqparams_) { ss << " <" << param << ">"; }
+        for (auto& param: optparams_)
+        {
+            if (param != "...")       { ss << " [" << param << "]"; }
+            else                      { ss << " ...";               }
+        }
+        return ss.str();
+    }
+
+    unsigned int getMinHelpTab(unsigned int mintab = 0) const
+    {
+        unsigned int tab = cmdname_.size() + 1;
+        for (auto& param: reqparams_) { tab += param.size() + 3; }
+        for (auto& param: optparams_) { tab += param.size() + 3; }
+        tab -= 2 * ellipsescount_;
+        return tab > mintab ? tab : mintab;
+    }
+ 
+    std::string getHelpInfo(unsigned int tab, unsigned int margin, bool singleline) const
+    {
+        std::stringstream ss;
+        if (singleline) { ss << std::left << std::setw(tab + margin) << getHelpTemplate() << cmddesc_; }
+        else            { ss << std::right << std::setw(margin) << " " << getHelpTemplate() << std::endl << std::right << std::setw(margin * 2 + 2) << "- " << cmddesc_; } 
+        return ss.str();
+    }
+
+private:
+    fAction cmdfunc_;
+    std::string cmdname_;
+    std::string cmddesc_;
+    params_t reqparams_;
+    params_t optparams_;
+    unsigned int ellipsescount_;
+};
+
+class Shell
+{
+public:
+    Shell(const std::string& proginfo) : proginfo_(proginfo), tab(0) { }
+
+    void clear() { command_map_.clear(); tab = 0; }
+    void add(const command& cmd)
+    {
+        command_map_.insert(std::pair<std::string, command>(cmd.getName(), cmd));
+        tab = cmd.getMinHelpTab(tab);
+    }
+    result_t exec(const std::string& cmdname, const params_t& params);
     int exec(int argc, char** argv);
 
 private:
     std::string proginfo_;
 
-    typedef std::map<std::string, fAction>  command_map_t;
+    typedef std::map<std::string, command>  command_map_t;
     command_map_t command_map_;
+    unsigned int tab;
 
-    void help();
+    result_t help();
 };
 
-inline int command_map::exec(int argc, char** argv)
+inline result_t Shell::exec(const std::string& cmdname, const params_t& params)
+{
+    if (params.empty() && cmdname == "help")
+    {
+        return help();
+    }
+
+    command_map_t::iterator it = command_map_.find(cmdname);
+    if (it == command_map_.end()) {
+        std::stringstream ss;
+        ss << "Invalid command " << cmdname << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+    bool bHelp = (params.size() == 1 && (params[0] == "-h" || params[0] == "--help"));
+
+    if (!bHelp && it->second.isValidParamCount(params))
+    {
+        return it->second(params);
+    }
+    else
+    {
+        return it->second.getHelpInfo(it->second.getMinHelpTab(), 4, false);
+    }
+}
+
+inline int Shell::exec(int argc, char** argv)
 {
     if (argc == 1) {
         std::cout << proginfo_ << std::endl;
-        std::cout << "Use " << argv[0] << " --help for list of commands." << std::endl;
+        std::cout << "Use " << argv[0] << " help for list of commands." << std::endl;
         return 0;
     }
 
-    std::string command(argv[1]);
+    std::string cmdname(argv[1]);
 
     try {
-        if (command == "-h" || command == "--help") {
-            help();
+        if (cmdname == "help")
+        {
+            std::cout << help() << std::endl;
             return 0;
+        }
+
+        command_map_t::iterator it = command_map_.find(cmdname);
+        if (it == command_map_.end()) {
+            std::stringstream ss;
+            ss << "valid command " << cmdname << ".";
+            throw std::runtime_error(ss.str());
         }
 
         params_t params;
@@ -77,15 +187,16 @@ inline int command_map::exec(int argc, char** argv)
             params.push_back(argv[i]);
         }
 
-        command_map_t::iterator it = command_map_.find(command);
-        if (it == command_map_.end()) {
-            std::stringstream ss;
-            ss << "Invalid command " << command << ".";
-            throw std::runtime_error(ss.str());
-        }
-
         bool bHelp = (params.size() == 1 && (params[0] == "-h" || params[0] == "--help"));
-        std::cout << it->second(bHelp, params) << std::endl;
+
+        if (!bHelp && it->second.isValidParamCount(params))
+        {
+            std::cout << it->second(params) << std::endl;
+        }
+        else
+        {
+            std::cout << it->second.getHelpInfo(it->second.getMinHelpTab(), 4, false) << std::endl;
+        }
     }
     catch (const std::exception& e) {
         std::cout << "Error: " << e.what() << std::endl;
@@ -95,19 +206,17 @@ inline int command_map::exec(int argc, char** argv)
     return 0;
 }
 
-inline void command_map::help()
+inline result_t Shell::help()
 {
     params_t params;
     std::stringstream out;
     out << "List of commands:";
     command_map_t::iterator it = command_map_.begin();
     for (; it != command_map_.end(); ++it) {
-        out << std::endl << it->second(true, params);
+        out << std::endl << it->second.getHelpInfo(tab, 4, true) << std::endl;
     }
-    std::cout << out.str() << std::endl;
+    return out.str();
 }
 
 }
-
-#endif // _INTERPRETER__HPP_
 

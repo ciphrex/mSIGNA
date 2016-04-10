@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // createtxdialog.h
 //
@@ -8,8 +8,10 @@
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_CREATETXDIALOG_H
-#define COINVAULT_CREATETXDIALOG_H
+#pragma once
+
+class UnspentTxOutModel;
+class UnspentTxOutView;
 
 class QTextEdit;
 
@@ -20,19 +22,21 @@ class QTextEdit;
 #include "accountmodel.h"
 #include "paymentrequest.h"
 
-#include <CoinQ_typedefs.h>
+#include <CoinQ/CoinQ_typedefs.h>
 
 class QComboBox;
 class QLineEdit;
+class QCheckBox;
 class QPushButton;
 class QVBoxLayout;
+class QItemSelection;
 
 class TxOutLayout : public QHBoxLayout
 {
     Q_OBJECT
 
 public:
-    TxOutLayout(QWidget* parent = NULL);
+    TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol, uint64_t maxCurrencyValue, unsigned int maxCurrencyDecimals, QWidget* parent = nullptr);
 
     void setAddress(const QString& address);
     QString getAddress() const;
@@ -56,44 +60,81 @@ private:
     QLineEdit* amountEdit;
     QLineEdit* recipientEdit;
     QPushButton* removeButton;
+
+    uint64_t currencyDivisor;
+    QString currencySymbol;
+    uint64_t currencyMax;
+    unsigned int currencyDecimals;
 };
 
+class CoinControlWidget : public QWidget
+{
+    Q_OBJECT
+
+public:
+    CoinControlWidget(CoinDB::Vault* vault, const QString& accountName, QWidget* parent = nullptr);
+
+    std::vector<unsigned long> getInputTxOutIds() const;
+
+    void updateAll();
+
+    // Windows repaint workaround
+    void refreshView();
+
+public slots:
+    void updateTotal(const QItemSelection& selected, const QItemSelection& deselected);
+
+private:
+    UnspentTxOutModel* model;
+    UnspentTxOutView* view;
+    QLineEdit* totalEdit;
+};
 
 class CreateTxDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    CreateTxDialog(const QString& accountName, const PaymentRequest& paymentRequest = PaymentRequest(), QWidget* parent = NULL);
+    CreateTxDialog(const QString& accountName, const PaymentRequest& paymentRequest = PaymentRequest(), QWidget* parent = nullptr);
+    CreateTxDialog(CoinDB::Vault* vault, const QString& accountName, const PaymentRequest& paymentRequest = PaymentRequest(), QWidget* parent = nullptr);
 
     QString getAccountName() const;
     uint64_t getFeeValue() const;
+    std::vector<unsigned long> getInputTxOutIds() const;
     std::vector<std::shared_ptr<CoinDB::TxOut>> getTxOuts();
     std::vector<TaggedOutput> getOutputs();
 
-    enum status_t { SAVE_ONLY, SIGN_AND_SAVE, SIGN_AND_SEND };
+    enum status_t { SAVE, SIGN };
     status_t getStatus() const { return status; }
 
 public slots:
     void addTxOut(const PaymentRequest& paymentRequest = PaymentRequest());
 
 private slots:
+    void switchCoinControl(int state);
     void removeTxOut(TxOutLayout* txOutLayout);
+    void setRemoveEnabled(bool enabled = true);
 
 private:
     QComboBox* accountComboBox;
     QLineEdit* feeEdit;
+    QCheckBox* coinControlCheckBox;
+    CoinControlWidget* coinControlWidget;
     QVBoxLayout* txOutVBoxLayout;
     QVBoxLayout* mainLayout;
 
     std::set<TxOutLayout*> txOutLayouts;
 
-    QPushButton* signAndSendButton;
-    QPushButton* signAndSaveButton;
+    QPushButton* signButton;
     QPushButton* saveButton;
     QPushButton* cancelButton;
 
     status_t status;
+
+    uint64_t currencyDivisor;
+    QString currencySymbol;
+    uint64_t currencyMax;
+    unsigned int currencyDecimals;
+    uint64_t defaultFee;
 };
 
-#endif // COINVAULT_CREATETXDIALOG_H

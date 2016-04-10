@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // keychainbackupdialog.cpp
 //
@@ -10,8 +10,8 @@
 
 #include "keychainbackupdialog.h"
 
-#include <uchar_vector.h>
-#include <Base58Check.h>
+#include <stdutils/uchar_vector.h>
+#include <CoinCore/Base58Check.h>
 
 #include <QDialogButtonBox>
 #include <QHBoxLayout>

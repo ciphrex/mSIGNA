@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // requestpaymentdialogview.cpp
 //
@@ -12,22 +12,28 @@
 #include "ui_requestpaymentdialog.h"
 
 #include "accountmodel.h"
+#include "accountview.h"
 #include "coinparams.h"
 #include "numberformats.h"
+#include "currencyvalidator.h"
 
 #include <QMessageBox>
 #include <QClipboard>
 #include <QRegExpValidator>
 
-RequestPaymentDialog::RequestPaymentDialog(AccountModel* accountModel, QWidget *parent) :
+#include <qrencode.h>
+
+RequestPaymentDialog::RequestPaymentDialog(AccountModel* accountModel, AccountView* accountView, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::RequestPaymentDialog),
-    accountModel_(accountModel)
+    accountModel_(accountModel),
+    accountView_(accountView)
 {
     ui->setupUi(this);
     connect(accountModel_, SIGNAL(updated(const QStringList&)), this, SLOT(setAccounts(const QStringList&)));
 
-    ui->invoiceAmountLineEdit->setValidator(new QRegExpValidator(AMOUNT_REGEXP));
+    ui->invoiceAmountLabel->setText(tr("Amount") + " (" + getCurrencySymbol() + "):");
+    ui->invoiceAmountLineEdit->setValidator(new CurrencyValidator(getCoinParams().currency_max(), getCoinParams().currency_decimals()));
 }
 
 RequestPaymentDialog::~RequestPaymentDialog()
@@ -39,6 +45,25 @@ void RequestPaymentDialog::setAccounts(const QStringList& accountNames)
 {
     ui->accountComboBox->clear();
     ui->accountComboBox->addItems(accountNames);
+}
+
+void RequestPaymentDialog::setQRCode(const QString& address)
+{
+    QRcode* qrcode = QRcode_encodeString(address.toUtf8().data(), 0, QR_ECLEVEL_H, QR_MODE_8, 1);
+    QImage qrImage(qrcode->width + 6, qrcode->width + 6, QImage::Format_RGB32);
+    qrImage.fill(0xffffff);
+    unsigned char* p = qrcode->data;
+    for (int y = 0; y < qrcode->width; y++)
+    {
+        for (int x = 0; x < qrcode->width; x++)
+        {
+            qrImage.setPixel(x + 3, y + 3, ((*p & 1) ? 0x000000 : 0xffffff));
+            p++;
+        }
+    }
+    QRcode_free(qrcode);
+
+    ui->qrLabel->setPixmap(QPixmap::fromImage(qrImage).scaled(ui->qrLabel->width(), ui->qrLabel->height()));
 }
 
 void RequestPaymentDialog::setCurrentAccount(const QString &accountName)
@@ -53,6 +78,7 @@ void RequestPaymentDialog::clearInvoice()
         ui->invoiceDetailsAddressLineEdit->clear();
         ui->invoiceDetailsScriptLineEdit->clear();
         ui->invoiceDetailsUrlLineEdit->clear();
+        ui->qrLabel->clear();
 }
 
 void RequestPaymentDialog::on_newInvoiceButton_clicked()
@@ -62,7 +88,7 @@ void RequestPaymentDialog::on_newInvoiceButton_clicked()
         QString invoiceLabel = ui->invoiceLineEdit->text();
         QString invoiceAmount = ui->invoiceAmountLineEdit->text();
         auto pair = accountModel_->issueNewScript(accountName, invoiceLabel);
-        accountModel_->update();
+        accountView_->updateAll();
         ui->invoiceDetailsLabelLineEdit->setText(invoiceLabel);
         ui->invoiceDetailsAddressLineEdit->setText(pair.first);
         ui->invoiceDetailsScriptLineEdit->setText(QString::fromStdString(uchar_vector(pair.second).getHex()));
@@ -81,6 +107,7 @@ void RequestPaymentDialog::on_newInvoiceButton_clicked()
             nParams++;
         }
         ui->invoiceDetailsUrlLineEdit->setText(url);
+        setQRCode(pair.first);
     }
     catch (const std::exception& e) {
         QMessageBox::critical(this, tr("Error"), QString::fromStdString(e.what()));

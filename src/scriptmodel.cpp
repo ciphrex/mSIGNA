@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // scriptmodel.cpp
 //
@@ -12,7 +12,7 @@
 
 #include "settings.h"
 
-#include <CoinQ_script.h>
+#include <CoinQ/CoinQ_script.h>
 
 #include <QStandardItemModel>
 
@@ -98,3 +98,21 @@ void ScriptModel::update()
         appendRow(row);
     }    
 }
+
+bool ScriptModel::setData(const QModelIndex& /*index*/, const QVariant& /*value*/, int /*role*/)
+{
+    return false;
+}
+
+Qt::ItemFlags ScriptModel::flags(const QModelIndex& index) const
+{
+    // Make the address editable as a workaround so it can be copied to clipboard.
+    // TODO: Script context menu
+    if (index.column() == 0)
+    {
+        return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable;
+    }
+
+    return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+}
+

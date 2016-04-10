@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // newaccountdialog.cpp
 //
@@ -10,27 +10,38 @@
 
 #include "newaccountdialog.h"
 
+#include <QtAlgorithms>
 #include <QDialogButtonBox>
+#include <QPushButton>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLineEdit>
+#include <QListWidget>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QLabel>
+#include <QDateTimeEdit>
+#include <QCalendarWidget>
 
 #include <stdexcept>
 
-NewAccountDialog::NewAccountDialog(const QList<QString>& keychainNames, QWidget* parent)
+NewAccountDialog::NewAccountDialog(const QList<QString>& allKeychains, const QList<QString>& selectedKeychains, QWidget* parent)
     : QDialog(parent)
 {
-    if (keychainNames.isEmpty()) {
-        throw std::runtime_error("Names list cannot be empty.");
+    if (allKeychains.isEmpty()) {
+        throw std::runtime_error(tr("You must first create at least one keychain.").toStdString());
     }
 
-    this->keychainNames = keychainNames;
+    keychainSet = selectedKeychains.toSet();
+
+    QList<QString> keychains = allKeychains;
+    qSort(keychains.begin(), keychains.end());
 
     // Buttons
     QDialogButtonBox* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok
                                      | QDialogButtonBox::Cancel);
+    okButton = buttonBox->button(QDialogButtonBox::Ok);
+    okButton->setEnabled(false);
 
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
@@ -39,50 +50,70 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& keychainNames, QWidget*
     QLabel* nameLabel = new QLabel();
     nameLabel->setText(tr("Account Name:"));
     nameEdit = new QLineEdit();
+    connect(nameEdit, &QLineEdit::textChanged, [this](const QString& /*text*/) { updateEnabled(); });
 
     QHBoxLayout* nameLayout = new QHBoxLayout();
     nameLayout->setSizeConstraint(QLayout::SetNoConstraint);
     nameLayout->addWidget(nameLabel);
     nameLayout->addWidget(nameEdit);
 
-    // Key Chain Names
-    minSigComboBox = new QComboBox();
-
-    QLabel* keychainLabel = new QLabel();
-    keychainLabel->setText(tr("Key Chains:"));
-
-    QString keychainText;
-    for (int i = 0; i < keychainNames.size(); i++) {
-        if (i != 0) { keychainText += ", "; }
-        keychainText += keychainNames.at(i);
-        minSigComboBox->addItem(QString::number(i + 1));        
+    // Keychain List Widget
+    QLabel* selectionLabel = new QLabel(tr("Select keychains:"));
+    keychainListWidget = new QListWidget();
+    for (auto& keychain: keychains)
+    {
+        QCheckBox* checkBox = new QCheckBox(keychain);
+        checkBox->setCheckState(selectedKeychains.count(keychain) ? Qt::Checked : Qt::Unchecked);
+        connect(checkBox, &QCheckBox::stateChanged, [=](int state) { updateSelection(keychain, state); });
+        QListWidgetItem* item = new QListWidgetItem();
+        keychainListWidget->addItem(item);
+        keychainListWidget->setItemWidget(item, checkBox);
     }
-    keychainEdit = new QLineEdit();
-    keychainEdit->setReadOnly(true);
-    keychainEdit->setText(keychainText);
-
-    QHBoxLayout* keychainLayout = new QHBoxLayout();
-    keychainLayout->setSizeConstraint(QLayout::SetNoConstraint);
-    keychainLayout->addWidget(keychainLabel);
-    keychainLayout->addWidget(keychainEdit);
 
     // Minimum Signatures
     QLabel *minSigLabel = new QLabel();
     minSigLabel->setText(tr("Minimum Signatures:"));
 
+    minSigComboBox = new QComboBox();
+    minSigLineEdit = new QLineEdit();
+    minSigLineEdit->setAlignment(Qt::AlignRight);
+    minSigComboBox->setLineEdit(minSigLineEdit);
+
     QHBoxLayout* minSigLayout = new QHBoxLayout();
     minSigLayout->setSizeConstraint(QLayout::SetNoConstraint);
     minSigLayout->addWidget(minSigLabel);
     minSigLayout->addWidget(minSigComboBox);
+    updateMinSigs();
+
+    // Creation Time
+    QDateTime localDateTime = QDateTime::currentDateTime();
+    QLabel* creationTimeLabel = new QLabel(tr("Creation Time ") + "(" + localDateTime.timeZoneAbbreviation() + "):");
+    creationTimeEdit = new QDateTimeEdit(QDateTime::currentDateTime());
+    creationTimeEdit->setDisplayFormat("yyyy.MM.dd hh:mm:ss");
+    creationTimeEdit->setCalendarPopup(true);
+    calendarWidget = new QCalendarWidget(this);
+    creationTimeEdit->setCalendarWidget(calendarWidget);
+
+    QHBoxLayout* creationTimeLayout = new QHBoxLayout();
+    creationTimeLayout->setSizeConstraint(QLayout::SetNoConstraint);
+    creationTimeLayout->addWidget(creationTimeLabel);
+    creationTimeLayout->addWidget(creationTimeEdit);
 
     // Main Layout 
     QVBoxLayout *mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
     mainLayout->addLayout(nameLayout);
-    mainLayout->addLayout(keychainLayout);
+    mainLayout->addWidget(selectionLabel);
+    mainLayout->addWidget(keychainListWidget);
     mainLayout->addLayout(minSigLayout);
+    mainLayout->addLayout(creationTimeLayout);
     mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
+}
+
+NewAccountDialog::~NewAccountDialog()
+{
+    delete calendarWidget;
 }
 
 QString NewAccountDialog::getName() const
@@ -94,3 +125,46 @@ int NewAccountDialog::getMinSigs() const
 {
     return minSigComboBox->currentIndex() + 1;
 }
+
+qint64 NewAccountDialog::getCreationTime() const
+{
+    return creationTimeEdit->dateTime().toMSecsSinceEpoch();
+}
+
+void NewAccountDialog::updateSelection(const QString& keychain, int state)
+{
+    if (state == Qt::Checked)
+    {
+        keychainSet.insert(keychain);
+    }
+    else
+    {
+        keychainSet.remove(keychain);
+    }
+
+    updateMinSigs();
+    updateEnabled();
+}
+
+void NewAccountDialog::updateMinSigs()
+{
+    int maxSigs = minSigComboBox->count();
+
+    // Increase maximum
+    for (int i = maxSigs + 1; i <= keychainSet.size(); i++)
+    {
+        minSigComboBox->addItem(QString::number(i));        
+    }
+
+    // Decrease maximum
+    while (minSigComboBox->count() > keychainSet.size())
+    {
+        minSigComboBox->removeItem(minSigComboBox->count() - 1);
+    }
+}
+
+void NewAccountDialog::updateEnabled()
+{
+    okButton->setEnabled(!nameEdit->text().isEmpty() && keychainSet.size() > 0);
+}
+

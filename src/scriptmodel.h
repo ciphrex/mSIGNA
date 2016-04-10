@@ -1,19 +1,18 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // scriptmodel.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_SCRIPTMODEL_H
-#define COINVAULT_SCRIPTMODEL_H
+#pragma once
 
 #include <QStandardItemModel>
 
-#include <Vault.h>
+#include <CoinDB/Vault.h>
 
 class ScriptModel : public QStandardItemModel
 {
@@ -27,6 +26,10 @@ public:
     void setAccount(const QString& accountName);
     void update();
 
+    // Overriden methods
+    bool setData(const QModelIndex& index, const QVariant& value, int role);
+    Qt::ItemFlags flags(const QModelIndex& index) const;
+
 private:
     void initColumns();
 
@@ -34,4 +37,3 @@ private:
     QString accountName; // empty when not loaded
 };
 
-#endif // COINVAULT_SCRIPTMODEL_H

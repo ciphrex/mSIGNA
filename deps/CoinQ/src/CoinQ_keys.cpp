@@ -8,7 +8,7 @@
 
 #include "CoinQ_keys.h"
 
-#include <Base58Check.h>
+#include <CoinCore/Base58Check.h>
 
 #include <fstream>
 

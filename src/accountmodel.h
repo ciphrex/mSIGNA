@@ -1,23 +1,23 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // accountmodel.h
 //
-// Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2013-2014 Eric Lombrozo
 //
 // All Rights Reserved.
 
-#ifndef COINVAULT_ACCOUNTMODEL_H
-#define COINVAULT_ACCOUNTMODEL_H
+#pragma once
 
 #include <QStandardItemModel>
 
 #include <QPair>
+#include <QDateTime>
 
-#include <Vault.h>
+#include <CoinQ/CoinQ_typedefs.h>
 
-#include <CoinQ_typedefs.h>
+#include <CoinDB/SynchedVault.h>
 
 class TaggedOutput
 {
@@ -41,26 +41,19 @@ class AccountModel : public QStandardItemModel
     Q_OBJECT
 
 public:
-    AccountModel();
-    ~AccountModel() { if (vault) delete vault; }
+    AccountModel(CoinDB::SynchedVault& synchedVault);
+    ~AccountModel() { };
 
-    void update();
+    CoinDB::Vault* getVault() const;
+    bool isOpen() const { return m_synchedVault.isVaultOpen(); }
 
-    // Vault operations
-    void create(const QString& fileName);
-    void load(const QString& fileName);
-    void close();
-    bool isOpen() const { return (vault != NULL); }
-    Coin::BloomFilter getBloomFilter(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags = 0) const;
-
-    // Key Chain operations
-    void newKeychain(const QString& name, const secure_bytes_t& entropy);
+    static const unsigned int DEFAULT_LOOKAHEAD = 25;
 
     // Account operations
-    void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames);
+    void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch = QDateTime::currentDateTime().toMSecsSinceEpoch(), unsigned int unusedPoolSize = DEFAULT_LOOKAHEAD);
     bool accountExists(const QString& name) const;
-    void exportAccount(const QString& name, const QString& filePath) const;
-    void importAccount(const QString& name, const QString& filePath);
+    void exportAccount(const QString& name, const QString& filePath, bool shared) const;
+    QString importAccount(const QString& filePath);
     void deleteAccount(const QString& name);
     QPair<QString, bytes_t> issueNewScript(const QString& accountName, const QString& label); // returns qMakePair<address, script>
     uint32_t getMaxFirstBlockTimestamp() const; // the timestamp for latest acceptable first block
@@ -69,6 +62,7 @@ public:
     bool insertRawTx(const bytes_t& rawTx);
     std::shared_ptr<CoinDB::Tx> insertTx(std::shared_ptr<CoinDB::Tx> tx, bool sign = false);
     std::shared_ptr<CoinDB::Tx> createTx(const QString& accountName, std::vector<std::shared_ptr<CoinDB::TxOut>> txouts, uint64_t fee);
+    std::shared_ptr<CoinDB::Tx> createTx(const QString& accountName, const std::vector<unsigned long>& coinids, std::vector<std::shared_ptr<CoinDB::TxOut>> txouts, uint64_t fee);
     bytes_t createRawTx(const QString& accountName, const std::vector<TaggedOutput>& outputs, uint64_t fee);
     // TODO: not sure I'm too happy about exposing Coin:Vault::Tx
     std::shared_ptr<CoinDB::Tx> insertTx(const Coin::Transaction& coinTx, CoinDB::Tx::status_t status = CoinDB::Tx::PROPAGATED, bool sign = false);
@@ -76,12 +70,13 @@ public:
     bytes_t signRawTx(const bytes_t& rawTx);
 
     // Block operations
+    uint32_t getBestHeight() const;
     std::vector<bytes_t> getLocatorHashes() const;
     bool insertBlock(const ChainBlock& block);
     bool insertMerkleBlock(const ChainMerkleBlock& merkleBlock);
     bool deleteMerkleBlock(const bytes_t& hash);
 
-    CoinDB::Vault* getVault() const { return vault; }
+    //CoinDB::Vault* getVault() const { return vault; }
     int getNumAccounts() const { return numAccounts; }
 
     // Overridden methods
@@ -97,11 +92,17 @@ signals:
 
     void error(const QString& message);
 
-private:
-    unsigned char base58_versions[2];
+public slots:
+    void update();
 
-    CoinDB::Vault* vault;
+private:
+    void setColumns();
+
+    unsigned char base58_versions[2];
+    QString currencySymbol;
+
+    //CoinDB::Vault* vault;
+    CoinDB::SynchedVault& m_synchedVault;
     int numAccounts;
 };
 
-#endif // COINVAULT_ACCOUNTMODEL_H
