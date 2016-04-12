@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // versioninfo.h
 //
@@ -11,9 +11,6 @@
 #pragma once
 
 #include <QString>
-
-int getVersionPaddingRight();
-int getVersionPaddingBottom();
 
 const QString& getVersionText();
 

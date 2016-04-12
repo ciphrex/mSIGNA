@@ -1,4 +1,5 @@
 INITIAL_CXX_FLAGS += -Wall
+
 ifdef DEBUG
     INITIAL_CXX_FLAGS += -g
 else

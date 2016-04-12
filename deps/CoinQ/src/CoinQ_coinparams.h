@@ -33,6 +33,7 @@ public:
         uint64_t currency_divisor,
         const char* currency_symbol,
         uint64_t currency_max,
+        uint64_t default_fee,
         Coin::hashfunc_t block_header_hash_function,
         Coin::hashfunc_t block_header_pow_hash_function,
         const Coin::CoinBlockHeader& genesis_block) :
@@ -46,10 +47,14 @@ public:
     currency_divisor_(currency_divisor),
     currency_symbol_(currency_symbol),
     currency_max_(currency_max),
+    default_fee_(default_fee),
     block_header_hash_function_(block_header_hash_function),
     block_header_pow_hash_function_(block_header_pow_hash_function),
     genesis_block_(genesis_block)
     {
+        address_versions_[0] = pay_to_pubkey_hash_version_;
+        address_versions_[1] = pay_to_script_hash_version_;
+
         currency_decimals_ = 0;
         uint64_t i = currency_divisor_;
         while (i > 1)
@@ -64,11 +69,13 @@ public:
     const char*                     default_port() const { return default_port_; }
     uint8_t                         pay_to_pubkey_hash_version() const { return pay_to_pubkey_hash_version_; }
     uint8_t                         pay_to_script_hash_version() const { return pay_to_script_hash_version_; }
+    const unsigned char*            address_versions() const { return address_versions_; }
     const char*                     network_name() const { return network_name_; }
     const char*                     url_prefix() const { return url_prefix_; }
     uint64_t                        currency_divisor() const { return currency_divisor_; }
     const char*                     currency_symbol() const { return currency_symbol_; }
     uint64_t                        currency_max() const { return currency_max_; }
+    uint64_t                        default_fee() const { return default_fee_; }
     unsigned int                    currency_decimals() const { return currency_decimals_; }
     Coin::hashfunc_t                block_header_hash_function() const { return block_header_hash_function_; }
     Coin::hashfunc_t                block_header_pow_hash_function() const { return block_header_pow_hash_function_; }
@@ -80,11 +87,13 @@ private:
     const char*             default_port_;
     uint8_t                 pay_to_pubkey_hash_version_;
     uint8_t                 pay_to_script_hash_version_;
+    unsigned char           address_versions_[2];
     const char*             network_name_;
     const char*             url_prefix_;
     uint64_t                currency_divisor_;
     const char*             currency_symbol_;
     uint64_t                currency_max_;
+    uint64_t                default_fee_;
     unsigned int            currency_decimals_;
     Coin::hashfunc_t        block_header_hash_function_;
     Coin::hashfunc_t        block_header_pow_hash_function_;

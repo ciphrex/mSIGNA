@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // main.cpp
 //
@@ -77,10 +77,18 @@ int main(int argc, char* argv[])
 
     try {
         // Allow selecting a different network than bitcoin at startup.
+        // If passed argument is an existing file, don't treat it as a network name.
         if (argc > 1)
         {
-            if (std::string(argv[1]) == "select")   { selectNetwork("");      }
-            else                                    { selectNetwork(argv[1]); }
+            if (std::string(argv[1]) == "select")
+            {
+                selectNetwork("");
+            }
+            else if (std::string(argv[1]) == "network")
+            {
+                if (argc < 3) throw std::runtime_error("No network name specified.");
+                selectNetwork(argv[2]);
+            }
         }
         getDefaultSettings();
         setCurrencyUnit();
@@ -114,16 +122,16 @@ int main(int argc, char* argv[])
     splash.setAutoFillBackground(true);
 
     app.processEvents();
-    splash.showMessage("\n  Loading settings...");
+    splash.showProgressMessage("Loading settings...");
     MainWindow mainWin; // constructor loads settings
-    QObject::connect(&mainWin, &MainWindow::status, [&](const QString& message) { splash.showMessage(QString("\n ") + message); });
+    QObject::connect(&mainWin, &MainWindow::status, [&](const QString& message) { splash.showProgressMessage(message); });
     QObject::connect(&mainWin, &MainWindow::headersLoadProgress, [&](const QString& message)
     {
-        splash.showMessage(QString("\n Loading block headers... ") + message);
+        splash.showProgressMessage(QString("Loading block headers... ") + message);
         app.processEvents();
     });
 
-    splash.showMessage("\n  Starting command server...");
+    splash.showProgressMessage("Starting command server...");
     app.processEvents();
     if (!commandServer.start()) {
         LOGGER(debug) << "Could not start command server." << std::endl;
@@ -137,7 +145,7 @@ int main(int argc, char* argv[])
         });
     }
 
-    splash.showMessage("\n  Loading block headers...");
+    splash.showProgressMessage("Loading block headers...");
     app.processEvents();
     mainWin.loadHeaders();
 
@@ -148,7 +156,7 @@ int main(int argc, char* argv[])
     timer.async_wait([&](const boost::system::error_code& /*ec*/) { waiting = false; });
     timer_io.run();
 
-    splash.showMessage("\n  Initializing...");
+    splash.showProgressMessage("Initializing...");
     app.processEvents();
     while (waiting) { usleep(200); }
     timer_io.stop();

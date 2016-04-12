@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // accountmodel.cpp
 //
@@ -111,7 +111,7 @@ CoinDB::Vault* AccountModel::getVault() const
 } 
 
 
-void AccountModel::newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch)
+void AccountModel::newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch, unsigned int unusedPoolSize)
 {
     CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
@@ -122,7 +122,7 @@ void AccountModel::newAccount(const QString& name, unsigned int minsigs, const Q
     for (auto& name: keychainNames) { keychain_names.push_back(name.toStdString()); }
 
     uint64_t secsSinceEpoch = (uint64_t)msecsSinceEpoch / 1000;
-    vault->newAccount(name.toStdString(), minsigs, keychain_names, 25, secsSinceEpoch);
+    vault->newAccount(name.toStdString(), minsigs, keychain_names, unusedPoolSize, secsSinceEpoch);
     update();
 }
 

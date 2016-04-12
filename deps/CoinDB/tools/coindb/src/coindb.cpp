@@ -21,6 +21,7 @@
 
 #include <CoinCore/Base58Check.h>
 #include <CoinCore/random.h>
+#include <CoinQ/CoinQ_coinparams.h>
 
 #include <logger/logger.h>
 
@@ -32,7 +33,8 @@
 
 #include <boost/algorithm/string.hpp>
 
-const std::string COINDB_VERSION = "v0.5.2";
+const std::string COINDB_VERSION = "v0.7.5";
+const std::string DEFAULT_NETWORK = "bitcoin";
 
 using namespace std;
 using namespace odb::core;
@@ -44,7 +46,9 @@ std::string g_dbpasswd;
 // Global operations
 cli::result_t cmd_create(const cli::params_t& params)
 {
-    Vault vault(g_dbuser, g_dbpasswd, params[0], true);
+    string network = params.size() > 1 ? params[1] : DEFAULT_NETWORK;
+
+    Vault vault(g_dbuser, g_dbpasswd, params[0], true, SCHEMA_VERSION, network);
 
     stringstream ss;
     ss << "Vault " << params[0] << " created.";
@@ -54,14 +58,34 @@ cli::result_t cmd_create(const cli::params_t& params)
 cli::result_t cmd_info(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    string network = vault.getNetwork();
     uint32_t schema_version = vault.getSchemaVersion();
     uint32_t horizon_timestamp = vault.getHorizonTimestamp();
 
     stringstream ss;
-    ss << "filename:            " << params[0] << endl
+    ss << "db file:             " << params[0] << endl
+       << "network:             " << network << endl
        << "schema version:      " << schema_version << endl
        << "horizon timestamp:   " << horizon_timestamp; 
     return ss.str();
+}
+
+cli::result_t cmd_migrate(const cli::params_t& params)
+{
+    Vault vault;
+    try
+    {
+        vault.open(g_dbuser, g_dbpasswd, params[0], false, SCHEMA_VERSION, string(), false);
+    }
+    catch (const VaultNeedsSchemaMigrationException& e)
+    {
+        vault.open(g_dbuser, g_dbpasswd, params[0], false, SCHEMA_VERSION, string(), true);
+        stringstream ss;
+        ss << "Vault " << params[0] << " migrated from schema " << e.schema_version() << " to schema " << e.current_version() << ".";
+        return ss.str();
+    }
+
+    return "Schema is already current.";
 }
 
 cli::result_t cmd_exportvault(const cli::params_t& params)
@@ -88,6 +112,58 @@ cli::result_t cmd_importvault(const cli::params_t& params)
 
     stringstream ss;
     ss << "Vault " << params[0] << " imported from " << params[1] << ".";
+    return ss.str();
+}
+
+// Contact operations
+cli::result_t cmd_contactinfo(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    shared_ptr<Contact> contact = vault.getContact(params[1]);
+    stringstream ss;
+    ss << "Contact Information" << endl
+       << "===================" << endl
+       << "  username: " << contact->username();
+    return ss.str(); 
+}
+
+cli::result_t cmd_newcontact(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    shared_ptr<Contact> contact = vault.newContact(params[1]);
+    stringstream ss;
+    ss << "Added contact " << contact->username() << ".";
+    return ss.str(); 
+}
+
+cli::result_t cmd_renamecontact(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    shared_ptr<Contact> contact = vault.renameContact(params[1], params[2]);
+    stringstream ss;
+    ss << "Renamed contact " << params[1] << " to " << contact->username() << ".";
+    return ss.str(); 
+}
+
+cli::result_t cmd_listcontacts(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    ContactVector contacts = vault.getAllContacts();
+
+    // TODO: format output
+    stringstream ss;
+    ss << "Contacts" << endl
+       << "========";
+
+    for (auto& contact: contacts)
+    {
+        ss << endl << contact->username();
+    }
+
     return ss.str();
 }
 
@@ -335,7 +411,26 @@ cli::result_t cmd_newaccount(const cli::params_t& params)
         keychain_names.push_back(params[i]);
 
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
-    vault.newAccount(params[1], minsigs, keychain_names);
+    vault.newAccount(params[1], minsigs, keychain_names, 25, time(NULL));
+
+    stringstream ss;
+    ss << "Added account " << params[1] << " to vault " << params[0] << ".";
+    return ss.str();
+}
+
+cli::result_t cmd_newuncompressedaccount(const cli::params_t& params)
+{
+    uint32_t minsigs = strtoull(params[2].c_str(), NULL, 10);
+    size_t keychain_count = params.size() - 3;
+    if (keychain_count > 15) throw std::runtime_error("Maximum number of keychains supported is 15.");
+    if (minsigs > keychain_count) throw std::runtime_error("Minimum signatures cannot exceed number of keychains.");
+
+    std::vector<std::string> keychain_names;
+    for (size_t i = 3; i < params.size(); i++)
+        keychain_names.push_back(params[i]);
+
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    vault.newAccount(params[1], minsigs, keychain_names, 25, time(NULL), false);
 
     stringstream ss;
     ss << "Added account " << params[1] << " to vault " << params[0] << ".";
@@ -398,6 +493,18 @@ cli::result_t cmd_exportaccount(const cli::params_t& params)
     return ss.str();
 }
 
+cli::result_t cmd_exportsharedaccount(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+
+    std::string output_file = params.size() > 2 ? params[2] : (params[1] + ".sharedacct");
+    vault.exportAccount(params[1], output_file, false);
+
+    stringstream ss;
+    ss << "Account " << params[1] << " exported to " << output_file << ".";
+    return ss.str();
+}
+
 cli::result_t cmd_importaccount(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
@@ -437,6 +544,9 @@ cli::result_t cmd_listbins(const cli::params_t& params)
 cli::result_t cmd_issuescript(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    CoinQ::NetworkSelector networkSelector(vault.getNetwork());
+    const CoinQ::CoinParams& coinParams = networkSelector.getCoinParams();
+
     std::string account_name;
     if (params[1] != "@null") account_name = params[1];
     std::string label = params.size() > 2 ? params[2] : std::string("");
@@ -444,7 +554,7 @@ cli::result_t cmd_issuescript(const cli::params_t& params)
     uint32_t index = params.size() > 4 ? strtoull(params[4].c_str(), NULL, 10) : 0;
     std::shared_ptr<SigningScript> script = vault.issueSigningScript(account_name, bin_name, label, index);
 
-    std::string address = getAddressFromScript(script->txoutscript());
+    std::string address = CoinQ::Script::getAddressForTxOutScript(script->txoutscript(), coinParams.address_versions());
 
     stringstream ss;
     ss << "account:     " << params[1] << endl
@@ -453,6 +563,33 @@ cli::result_t cmd_issuescript(const cli::params_t& params)
        << "label:       " << label << endl
        << "script:      " << uchar_vector(script->txoutscript()).getHex() << endl
        << "address:     " << address;
+    return ss.str(); 
+}
+
+cli::result_t cmd_invoicecontact(const cli::params_t& params)
+{
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    CoinQ::NetworkSelector networkSelector(vault.getNetwork());
+    const CoinQ::CoinParams& coinParams = networkSelector.getCoinParams();
+
+    std::string account_name;
+    if (params[1] != "@null") account_name = params[1];
+    std::string username = params[2];
+    std::string label = params.size() > 3 ? params[3] : std::string("");
+    std::string bin_name = params.size() > 4 ? params[4] : std::string(DEFAULT_BIN_NAME);
+    uint32_t index = params.size() > 5 ? strtoull(params[5].c_str(), NULL, 10) : 0;
+    std::shared_ptr<SigningScript> script = vault.issueSigningScript(account_name, bin_name, label, index, username);
+
+    std::string address = CoinQ::Script::getAddressForTxOutScript(script->txoutscript(), coinParams.address_versions());
+
+    stringstream ss;
+    ss << "account:     " << params[1] << endl
+       << "account bin: " << bin_name << endl
+       << "index:       " << script->index() << endl
+       << "label:       " << label << endl
+       << "script:      " << uchar_vector(script->txoutscript()).getHex() << endl
+       << "address:     " << address << endl
+       << "username:    " << username;
     return ss.str(); 
 }
 
@@ -467,12 +604,15 @@ cli::result_t cmd_listscripts(const cli::params_t& params)
     int flags = params.size() > 3 ? (int)strtoul(params[3].c_str(), NULL, 0) : ((int)SigningScript::ISSUED | (int)SigningScript::USED);
     
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    CoinQ::NetworkSelector networkSelector(vault.getNetwork());
+    const CoinQ::CoinParams& coinParams = networkSelector.getCoinParams();
+
     vector<SigningScriptView> scriptViews = vault.getSigningScriptViews(account_name, bin_name, flags);
 
     stringstream ss;
     ss << formattedScriptHeader();
     for (auto& scriptView: scriptViews)
-        ss << endl << formattedScript(scriptView);
+        ss << endl << formattedScript(scriptView, coinParams);
     return ss.str();
 }
 
@@ -487,12 +627,42 @@ cli::result_t cmd_history(const cli::params_t& params)
     bool hide_change = params.size() > 3 ? params[3] == "true" : true;
     
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    CoinQ::NetworkSelector networkSelector(vault.getNetwork());
+    const CoinQ::CoinParams& coinParams = networkSelector.getCoinParams();
+
     uint32_t best_height = vault.getBestHeight();
     vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name, TxOut::ROLE_BOTH, TxOut::BOTH, Tx::ALL, hide_change);
     stringstream ss;
     ss << formattedTxOutViewHeader();
     for (auto& txOutView: txOutViews)
-        ss << endl << formattedTxOutView(txOutView, best_height);
+        ss << endl << formattedTxOutView(txOutView, best_height, coinParams);
+    return ss.str();
+}
+
+cli::result_t cmd_historycsv(const cli::params_t& params)
+{
+    std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
+    if (account_name == "@all") account_name = "";
+
+    std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
+    if (bin_name == "@all") bin_name = "";
+
+    bool hide_change = params.size() > 3 ? params[3] == "true" : true;
+    
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    CoinQ::NetworkSelector networkSelector(vault.getNetwork());
+    const CoinQ::CoinParams& coinParams = networkSelector.getCoinParams();
+
+    uint32_t best_height = vault.getBestHeight();
+    vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name, TxOut::ROLE_BOTH, TxOut::BOTH, Tx::ALL, hide_change);
+    stringstream ss;
+    bool bNewLine = false;
+    for (auto& txOutView: txOutViews)
+    {
+        if (bNewLine)   { ss << endl; }
+        else            { bNewLine = true; }
+        ss << formattedTxOutViewCSV(txOutView, best_height, coinParams);
+    }
     return ss.str();
 }
 
@@ -503,12 +673,15 @@ cli::result_t cmd_unspent(const cli::params_t& params)
     uint32_t min_confirmations = params.size() > 2 ? strtoul(params[2].c_str(), NULL, 0) : 0;
 
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    CoinQ::NetworkSelector networkSelector(vault.getNetwork());
+    const CoinQ::CoinParams& coinParams = networkSelector.getCoinParams();
+
     uint32_t best_height = vault.getBestHeight();
     vector<TxOutView> txOutViews = vault.getUnspentTxOutViews(account_name, min_confirmations);
     stringstream ss;
     ss << formattedUnspentTxOutViewHeader();
     for (auto& txOutView: txOutViews)
-        ss << endl << formattedUnspentTxOutView(txOutView, best_height);
+        ss << endl << formattedUnspentTxOutView(txOutView, best_height, coinParams);
     return ss.str();
 }
 
@@ -523,12 +696,43 @@ cli::result_t cmd_unsigned(const cli::params_t& params)
     bool hide_change = params.size() > 3 ? params[3] == "true" : true;
     
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    CoinQ::NetworkSelector networkSelector(vault.getNetwork());
+    const CoinQ::CoinParams& coinParams = networkSelector.getCoinParams();
+
     uint32_t best_height = vault.getBestHeight();
     vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name, TxOut::ROLE_BOTH, TxOut::BOTH, Tx::UNSIGNED, hide_change);
     stringstream ss;
     ss << formattedTxOutViewHeader();
     for (auto& txOutView: txOutViews)
-        ss << endl << formattedTxOutView(txOutView, best_height);
+        ss << endl << formattedTxOutView(txOutView, best_height, coinParams);
+    return ss.str();
+}
+
+cli::result_t cmd_unsignedhashes(const cli::params_t& params)
+{
+    std::string account_name = params.size() > 1 ? params[1] : std::string("@all");
+    if (account_name == "@all") account_name = "";
+
+    std::string bin_name = params.size() > 2 ? params[2] : std::string("@all");
+    if (bin_name == "@all") bin_name = "";
+
+    bool hide_change = params.size() > 3 ? params[3] == "true" : true;
+    
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    vector<TxOutView> txOutViews = vault.getTxOutViews(account_name, bin_name, TxOut::ROLE_BOTH, TxOut::BOTH, Tx::UNSIGNED, hide_change);
+    stringstream ss;
+    std::set<std::string> hashes;
+    for (auto& txOutView: txOutViews)
+    {
+        if (txOutView.tx_status != Tx::UNSIGNED) continue;
+        bytes_t txhash = txOutView.tx_unsigned_hash;
+        hashes.insert(uchar_vector(txhash).getHex());
+    }
+    for (auto& hash: hashes)
+    {
+        ss << hash << endl;
+    }
+ 
     return ss.str();
 }
 
@@ -587,6 +791,9 @@ cli::result_t cmd_listtxs(const cli::params_t& params)
 cli::result_t cmd_txinfo(const cli::params_t& params)
 {
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    CoinQ::NetworkSelector networkSelector(vault.getNetwork());
+    const CoinQ::CoinParams& coinParams = networkSelector.getCoinParams();
+
     std::shared_ptr<Tx> tx;
     bytes_t hash = uchar_vector(params[1]);
     if (hash.size() == 32)
@@ -613,7 +820,7 @@ cli::result_t cmd_txinfo(const cli::params_t& params)
 
     ss << endl << endl << formattedTxOutHeader();
     for (auto& txout: tx->txouts())
-        ss << endl << formattedTxOut(txout);
+        ss << endl << formattedTxOut(txout, coinParams);
     
     return ss.str();
 }
@@ -713,13 +920,15 @@ cli::result_t cmd_newrawtx(const cli::params_t& params)
     const size_t MAX_VERSION_LEN = 2;
 
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    CoinQ::NetworkSelector networkSelector(vault.getNetwork());
+    const CoinQ::CoinParams& coinParams = networkSelector.getCoinParams();
 
     // Get outputs
     size_t i = 2;
     txouts_t txouts;
     do
     {
-        bytes_t txoutscript  = getTxOutScriptForAddress(params[i++], BASE58_VERSIONS);
+        bytes_t txoutscript  = getTxOutScriptForAddress(params[i++], coinParams.address_versions());
         uint64_t value = strtoull(params[i++].c_str(), NULL, 0);
         std::shared_ptr<TxOut> txout(new TxOut(value, txoutscript));
         txouts.push_back(txout);
@@ -801,6 +1010,29 @@ cli::result_t cmd_deletetx(const cli::params_t& params)
     ss << "Tx deleted.";
     return ss.str();
 }
+
+cli::result_t cmd_consolidate(const cli::params_t& params)
+{
+    using namespace CoinQ::Script;
+
+    Vault vault(g_dbuser, g_dbpasswd, params[0], false);
+    CoinQ::NetworkSelector networkSelector(vault.getNetwork());
+    const CoinQ::CoinParams& coinParams = networkSelector.getCoinParams();
+
+    string account_name(params[1]);
+    uint32_t max_tx_size = strtoul(params[2].c_str(), NULL, 0);
+    bytes_t txoutscript = getTxOutScriptForAddress(params[3], coinParams.address_versions());
+    uint64_t min_fee = params.size() > 4 ? strtoull(params[4].c_str(), NULL, 0) : 0;
+    uint32_t min_confirmations = params.size() > 5 ? strtoul(params[5].c_str(), NULL, 0) : 1;
+    uint32_t tx_version = params.size() > 6 ? strtoul(params[6].c_str(), NULL, 0) : 1;
+    uint32_t tx_locktime = params.size() > 7 ? strtoul(params[7].c_str(), NULL, 0) : 0;
+
+    txs_t txs = vault.consolidateTxOuts(account_name, max_tx_size, tx_version, tx_locktime, ids_t(), txoutscript, min_fee, min_confirmations, false);
+
+    stringstream ss;
+    for (auto& tx: txs) { ss << uchar_vector(tx->raw()).getHex() << endl; }
+    return ss.str();
+} 
 
 cli::result_t cmd_signingrequest(const cli::params_t& params)
 {
@@ -1057,7 +1289,7 @@ cli::result_t cmd_randombytes(const cli::params_t& params)
 int main(int argc, char* argv[])
 {
     stringstream helpMessage;
-    helpMessage << "CoinDB by Eric Lombrozo " << COINDB_VERSION << " - " << DBMS;
+    helpMessage << "CoinDB by Eric Lombrozo " << COINDB_VERSION << " - Schema " << SCHEMA_VERSION << " - " << DBMS;
 
     using namespace cli;
     Shell shell(helpMessage.str());
@@ -1067,11 +1299,17 @@ int main(int argc, char* argv[])
         &cmd_create,
         "create",
         "create a new vault",
-        command::params(1, "db file")));
+        command::params(1, "db file"),
+        command::params(1, "network = bitcoin")));
     shell.add(command(
         &cmd_info,
         "info",
         "display general information about file",
+        command::params(1, "db file")));
+    shell.add(command(
+        &cmd_migrate,
+        "migrate",
+        "migrate schema version",
         command::params(1, "db file")));
     shell.add(command(
         &cmd_exportvault,
@@ -1085,6 +1323,28 @@ int main(int argc, char* argv[])
         "import vault contents from portable file",
         command::params(2, "db file", "portable file"),
         command::params(1, "import private keys = true")));
+
+    // Contact operations
+    shell.add(command(
+        &cmd_contactinfo,
+        "contactinfo",
+        "display contact information",
+        command::params(2,"db file", "username")));
+    shell.add(command(
+        &cmd_newcontact,
+        "newcontact",
+        "add a new contact",
+        command::params(2, "db file", "username")));
+    shell.add(command(
+        &cmd_renamecontact,
+        "renamecontact",
+        "change a contact's username",
+        command::params(3, "db file", "old username", "new username")));
+    shell.add(command(
+        &cmd_listcontacts,
+        "listcontacts",
+        "display list of contacts",
+        command::params(1, "db file")));
 
     // Keychain operations
     shell.add(command(
@@ -1167,6 +1427,12 @@ int main(int argc, char* argv[])
         command::params(4, "db file", "account name", "minsigs", "keychain 1"),
         command::params(3, "keychain 2", "keychain 3", "...")));
     shell.add(command(
+        &cmd_newuncompressedaccount,
+        "newuncompressedaccount",
+        "create a new account with uncompressed public keys using specified keychains",
+        command::params(4, "db file", "account name", "minsigs", "keychain 1"),
+        command::params(3, "keychain 2", "keychain 3", "...")));
+    shell.add(command(
         &cmd_renameaccount,
         "renameaccount",
         "rename an account",
@@ -1188,6 +1454,12 @@ int main(int argc, char* argv[])
         command::params(2, "db file", "account name"),
         command::params(1, "output file = *.acct")));
     shell.add(command(
+        &cmd_exportsharedaccount,
+        "exportsharedaccount",
+        "export shared account to file",
+        command::params(2, "db file", "account name"),
+        command::params(1, "output file = *.sharedacct")));
+    shell.add(command(
         &cmd_importaccount,
         "importaccount",
         "import account from file",
@@ -1204,6 +1476,12 @@ int main(int argc, char* argv[])
         command::params(2, "db file", "account name"),
         command::params(3, "label", (std::string("bin name = ") + DEFAULT_BIN_NAME).c_str(), "index = 0")));
     shell.add(command(
+        &cmd_invoicecontact,
+        "invoicecontact",
+        "create an invoice for a contact ",
+        command::params(3, "db file", "account name", "username"),
+        command::params(3, "label", (std::string("bin name = ") + DEFAULT_BIN_NAME).c_str(), "index = 0")));
+    shell.add(command(
         &cmd_listscripts,
         "listscripts",
         "display list of signing scripts (flags: UNUSED=1, CHANGE=2, PENDING=4, RECEIVED=8, CANCELED=16)",
@@ -1216,6 +1494,12 @@ int main(int argc, char* argv[])
         command::params(1, "db file"),
         command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
     shell.add(command(
+        &cmd_historycsv,
+        "historycsv",
+        "display transaction history in csv format",
+        command::params(1, "db file"),
+        command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
+    shell.add(command(
         &cmd_unspent,
         "unspent",
         "display unspent outputs",
@@ -1225,6 +1509,12 @@ int main(int argc, char* argv[])
         &cmd_unsigned,
         "unsigned",
         "display unsigned transactions",
+        command::params(1, "db file"),
+        command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
+    shell.add(command(
+        &cmd_unsignedhashes,
+        "unsignedhashes",
+        "display unsigned transaction hashes",
         command::params(1, "db file"),
         command::params(3, "account name = @all", "bin name = @all", "hide change = true")));
     shell.add(command(
@@ -1296,6 +1586,12 @@ int main(int argc, char* argv[])
         "deletetx",
         "delete a transaction",
         command::params(2, "db file", "tx hash or id")));
+    shell.add(command(
+        &cmd_consolidate,
+        "consolidate",
+        "consolidate transaction outputs",
+        command::params(4, "db file", "account name", "max tx size(bytes)", "address"),
+        command::params(4, "min fee = 0", "min confirmations = 1", "version = 1", "locktime = 0")));
     shell.add(command(
         &cmd_signingrequest,
         "signingrequest",

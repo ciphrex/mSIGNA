@@ -14,6 +14,8 @@
 #include <CoinCore/typedefs.h>
 #include <CoinCore/numericdata.h>
 
+#include <logger/logger.h>
+
 #include <queue>
 
 #include <boost/shared_ptr.hpp>
@@ -121,6 +123,15 @@ public:
 
     void getTx(const bytes_t& hash)
     {
+        if (hash.size() != 32)
+        {
+            std::stringstream err;
+            err << "Invalid transaction hash requested: " << uchar_vector(hash).getHex();
+            LOGGER(error) << "Peer::getTx() - " << err.str() << std::endl;
+            notifyProtocolError(*this, err.str(), -1);
+            return;
+        }
+
         Coin::InventoryItem tx(MSG_TX, hash);
         Coin::Inventory inv;
         inv.addItem(tx);
@@ -134,13 +145,34 @@ public:
 
         if (txhashes.empty()) return;
         Inventory inv;
-        for (auto& hash: txhashes) { inv.addItem(InventoryItem(MSG_TX, hash)); }
+        for (auto& hash: txhashes)
+        {
+            if (hash.size() != 32)
+            {
+                std::stringstream err;
+                err << "Invalid transaction hash requested: " << uchar_vector(hash).getHex();
+                LOGGER(error) << "Peer::getTxs() - " << err.str() << std::endl;
+                notifyProtocolError(*this, err.str(), -1);
+                return;
+            }
+
+            inv.addItem(InventoryItem(MSG_TX, hash));
+        }
         GetDataMessage getData(inv);
         send(getData);
     }
  
     void getBlock(const bytes_t& hash)
     {
+        if (hash.size() != 32)
+        {
+            std::stringstream err;
+            err << "Invalid block hash requested: " << uchar_vector(hash).getHex();
+            LOGGER(error) << "Peer::getBlock() - " << err.str() << std::endl;
+            notifyProtocolError(*this, err.str(), -1);
+            return;
+        }
+
         Coin::InventoryItem block(MSG_BLOCK, hash);
         Coin::Inventory inv;
         inv.addItem(block);
@@ -150,6 +182,15 @@ public:
 
     void getFilteredBlock(const bytes_t& hash)
     {
+        if (hash.size() != 32)
+        {
+            std::stringstream err;
+            err << "Invalid block hash requested: " << uchar_vector(hash).getHex();
+            LOGGER(error) << "Peer::getFilteredBlock() - " << err.str() << std::endl;
+            notifyProtocolError(*this, err.str(), -1);
+            return;
+        }
+
         Coin::InventoryItem block(MSG_FILTERED_BLOCK, hash);
         Coin::Inventory inv;
         inv.addItem(block);
@@ -159,6 +200,27 @@ public:
 
     void getHeaders(const std::vector<uchar_vector>& locatorHashes, const uchar_vector& hashStop = g_zero32bytes)
     {
+        for (auto& hash: locatorHashes)
+        {
+            if (hash.size() != 32)
+            {
+                std::stringstream err;
+                err << "Invalid locator hash: " << uchar_vector(hash).getHex();
+                LOGGER(error) << "Peer::getHeaders() - " << err.str() << std::endl;
+                notifyProtocolError(*this, err.str(), -1);
+                return;
+            }
+        }
+
+        if (hashStop.size() != 32)
+        {
+            std::stringstream err;
+            err << "Invalid hash stop: " << uchar_vector(hashStop).getHex();
+            LOGGER(error) << "Peer::getHeaders() - " << err.str() << std::endl;
+            notifyProtocolError(*this, err.str(), -1);
+            return;
+        }
+
         Coin::GetHeadersMessage getHeaders(protocol_version_, locatorHashes, hashStop);
         send(getHeaders);
     }
@@ -172,6 +234,27 @@ public:
 
     void getBlocks(const std::vector<uchar_vector>& locatorHashes, const uchar_vector& hashStop = g_zero32bytes)
     {
+        for (auto& hash: locatorHashes)
+        {
+            if (hash.size() != 32)
+            {
+                std::stringstream err;
+                err << "Invalid locator hash: " << uchar_vector(hash).getHex();
+                LOGGER(error) << "Peer::getBlocks() - " << err.str() << std::endl;
+                notifyProtocolError(*this, err.str(), -1);
+                return;
+            }
+        }
+
+        if (hashStop.size() != 32)
+        {
+            std::stringstream err;
+            err << "Invalid hash stop: " << uchar_vector(hashStop).getHex();
+            LOGGER(error) << "Peer::getBlocks() - " << err.str() << std::endl;
+            notifyProtocolError(*this, err.str(), -1);
+            return;
+        }
+
         Coin::GetBlocksMessage getBlocks(protocol_version_, locatorHashes, hashStop);
         send(getBlocks);
     }

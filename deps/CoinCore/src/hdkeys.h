@@ -62,6 +62,13 @@ public:
         : std::runtime_error("Keychain is invalid.") { }
 };
 
+class InvalidHDKeychainPathException : public std::runtime_error
+{
+public:
+    InvalidHDKeychainPathException()
+        : std::runtime_error("Keychain path is invalid.") { }
+};
+
 class HDKeychain
 {
 public:
@@ -91,6 +98,7 @@ public:
 
     bytes_t privkey() const;
     const bytes_t& pubkey() const { return pubkey_; }
+    bytes_t uncompressed_pubkey() const;
 
     bool isPrivate() const { return (key_.size() == 33 && key_[0] == 0x00); }
     bytes_t hash() const; // hash is ripemd160(sha256(pubkey))
@@ -99,6 +107,7 @@ public:
 
     HDKeychain getPublic() const;
     HDKeychain getChild(uint32_t i) const;
+    HDKeychain getChild(const std::string& path) const;
     HDKeychain getChildNode(uint32_t i, bool private_derivation = false) const
     {
         uint32_t mask = private_derivation ? 0x80000000ull : 0x00000000ull;
@@ -113,10 +122,10 @@ public:
     }
 
     // Precondition: i >= 1
-    bytes_t getPublicSigningKey(uint32_t i) const
+    bytes_t getPublicSigningKey(uint32_t i, bool bCompressed = true) const
     {
 //        if (i == 0) throw std::runtime_error("Signing key index cannot be zero.");
-        return getChild(i).pubkey();
+        return bCompressed ? getChild(i).pubkey() : getChild(i).uncompressed_pubkey();
     }
 
     static void setVersions(uint32_t priv_version, uint32_t pub_version) { priv_version_ = priv_version; pub_version_ = pub_version; }

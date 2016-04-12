@@ -37,11 +37,13 @@ public:
     SynchedVault(const CoinQ::CoinParams& coinParams = CoinQ::getBitcoinParams());
     ~SynchedVault();
 
+    const CoinQ::CoinParams& getCoinParams() const { return m_networkSync.getCoinParams(); }
+
     void loadHeaders(const std::string& blockTreeFile, bool bCheckProofOfWork = false, CoinQBlockTreeMem::callback_t callback = nullptr);
     bool areHeadersLoaded() const { return m_bBlockTreeLoaded; }
 
-    void openVault(const std::string& dbname, bool bCreate = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
-    void openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
+    void openVault(const std::string& dbname, bool bCreate = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = false);
+    void openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = false);
     void closeVault();
     bool isVaultOpen() const { return (m_vault != nullptr); }
     Vault* getVault() const { return m_vault; }
@@ -91,8 +93,11 @@ public:
     Signals::Connection subscribeBlockTreeError(ErrorSignal::Slot slot) { return m_notifyBlockTreeError.connect(slot); }
 
     // P2P network state events
+    Signals::Connection subscribePeerConnected(VoidSignal::Slot slot) { return m_notifyPeerConnected.connect(slot); }
+    Signals::Connection subscribePeerDisconnected(VoidSignal::Slot slot) { return m_notifyPeerDisconnected.connect(slot); }
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return m_notifyTxInserted.connect(slot); }
     Signals::Connection subscribeTxUpdated(TxSignal::Slot slot) { return m_notifyTxUpdated.connect(slot); }
+    Signals::Connection subscribeTxDeleted(TxSignal::Slot slot) { return m_notifyTxDeleted.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return m_notifyMerkleBlockInserted.connect(slot); }
     Signals::Connection subscribeTxInsertionError(TxErrorSignal::Slot slot) { return m_notifyTxInsertionError.connect(slot); }
     Signals::Connection subscribeMerkleBlockInsertionError(MerkleBlockErrorSignal::Slot slot) { return m_notifyMerkleBlockInsertionError.connect(slot); }
@@ -150,8 +155,11 @@ private:
     ErrorSignal                 m_notifyBlockTreeError;
 
     // P2P network state events
+    VoidSignal                  m_notifyPeerConnected;
+    VoidSignal                  m_notifyPeerDisconnected;
     TxSignal                    m_notifyTxInserted;
     TxSignal                    m_notifyTxUpdated;
+    TxSignal                    m_notifyTxDeleted;
     MerkleBlockSignal           m_notifyMerkleBlockInserted;
     TxErrorSignal               m_notifyTxInsertionError;
     MerkleBlockErrorSignal      m_notifyMerkleBlockInsertionError;

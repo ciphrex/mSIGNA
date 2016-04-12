@@ -42,9 +42,21 @@ void showStep(const string& chainname, const HDKeychain& pub, const HDKeychain& 
     showKey(prv);
 }
 
-int main()
+int main(int argc, char* argv[])
 {
     try {
+        if (argc == 3)
+        {
+            bytes_t extkey;
+            if (!fromBase58Check(std::string(argv[1]), extkey))
+                throw runtime_error("Invalid extended key.");
+
+            HDKeychain keychain(extkey);
+            keychain = keychain.getChild(std::string(argv[2]));
+            showKey(keychain);
+            return 0;
+        }
+
         // Set version
         HDKeychain::setVersions(0x0488ADE4, 0x0488B21E);
 

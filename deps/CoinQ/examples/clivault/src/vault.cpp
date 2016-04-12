@@ -944,7 +944,7 @@ cli::result_t cmd_locatorhashes(bool bHelp, const cli::params_t& params)
 
 int main(int argc, char** argv)
 {
-    cli::command_map cmds("CoinVault by Eric Lombrozo v0.0.1");
+    cli::command_map cmds("clivault by Eric Lombrozo v0.0.1");
     cmds.add("create", &cmd_create);
     cmds.add("setversion", &cmd_setversion);
     cmds.add("getversion", &cmd_getversion);

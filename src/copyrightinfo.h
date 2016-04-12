@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // copyrightinfo.h
 //
@@ -11,9 +11,6 @@
 #pragma once
 
 #include <QString>
-
-int getCopyrightPaddingRight();
-int getCopyrightPaddingBottom();
 
 const QString& getCopyrightText();
 

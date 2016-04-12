@@ -79,6 +79,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
     {
         LOGGER(trace) << "SynchedVault - connection opened." << std::endl;
         m_bConnected = true;
+        m_notifyPeerConnected();
     });
 
     m_networkSync.subscribeClose([this]()
@@ -86,6 +87,7 @@ SynchedVault::SynchedVault(const CoinQ::CoinParams& coinParams) :
         LOGGER(trace) << "SynchedVault - connection closed." << std::endl;
         m_bConnected = false;
         m_bSynching = false;
+        m_notifyPeerDisconnected();
     });
 
     m_networkSync.subscribeStarted([this]()
@@ -310,20 +312,30 @@ void SynchedVault::loadHeaders(const std::string& blockTreeFile, bool bCheckProo
 }
 
 // Vault operations
-void SynchedVault::openVault(const std::string& dbname, bool bCreate, uint32_t version, const std::string& network)
+void SynchedVault::openVault(const std::string& dbname, bool bCreate, uint32_t version, const std::string& network, bool migrate)
 {
-    openVault("", "", dbname, bCreate, version, network);
+    openVault("", "", dbname, bCreate, version, network, migrate);
 }
 
-void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate, uint32_t version, const std::string& network)
+void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool bCreate, uint32_t version, const std::string& network, bool migrate)
 {
-    LOGGER(trace) << "SynchedVault::openVault(" << dbuser << ", ..., " << dbname << ", " << (bCreate ? "true" : "false") << ", " << version << ", " << network << ")" << std::endl;
+    LOGGER(trace) << "SynchedVault::openVault(" << dbuser << ", ..., " << dbname << ", " << (bCreate ? "true" : "false") << ", " << version << ", " << network << ", " << (migrate ? "true" : "false") << ")" << std::endl;
 
     {
         std::lock_guard<std::mutex> lock(m_vaultMutex);
         m_notifyVaultClosed();
         if (m_vault) delete m_vault;
-        m_vault = new Vault(dbuser, dbpasswd, dbname, bCreate, version, network);
+        m_vault = new Vault;
+        try
+        {
+            m_vault->open(dbuser, dbpasswd, dbname, bCreate, version, network, migrate);
+        }
+        catch (const std::exception& e)
+        {
+            delete m_vault;
+            m_vault = nullptr;
+            throw;
+        }
 
         std::shared_ptr<BlockHeader> blockheader = m_vault->getBestBlockHeader();
         if (blockheader)    { updateSyncHeader(blockheader->height(), blockheader->hash()); }
@@ -337,6 +349,7 @@ void SynchedVault::openVault(const std::string& dbuser, const std::string& dbpas
             if (tx->status() == Tx::PROPAGATED) { m_networkSync.addToMempool(tx->hash()); }
             m_notifyTxUpdated(tx);
         });
+        m_vault->subscribeTxDeleted([this](std::shared_ptr<Tx> tx) { m_notifyTxDeleted(tx); });
         m_vault->subscribeMerkleBlockInserted([this](std::shared_ptr<MerkleBlock> merkleblock)
         {
             updateSyncHeader(merkleblock->blockheader()->height(), merkleblock->blockheader()->hash());
@@ -447,6 +460,41 @@ void SynchedVault::updateBloomFilter()
     m_networkSync.setBloomFilter(m_vault->getBloomFilter(0.001, 0, 0));
 }
 
+// This function recursively tries to send dependencies.
+// TODO: We might want to make recursive sending optional and allowing an exception to be thrown instead if any dependency is still unpropagated.
+void recursiveSendTx(Vault& vault, CoinQ::Network::NetworkSync& networkSync, std::shared_ptr<Tx>& tx)
+{
+    if (tx->status() == Tx::UNSIGNED)
+        throw std::runtime_error("Transaction is missing signatures.");
+
+    // Send any unsent dependencies first.
+    // TODO: Write a new protected method to 
+    for (auto& txin: tx->txins())
+    {
+        try
+        {
+            std::shared_ptr<Tx> dependencyTx = vault.getTx(txin->outhash());
+            if (dependencyTx->status() == Tx::UNSIGNED)
+                throw std::runtime_error("Transaction depends on another transaction that is missing signatures.");
+
+            // Only try sending dependencies that have not confirmed. 
+            if (dependencyTx->status() == Tx::UNSENT || dependencyTx->status() == Tx::PROPAGATED)
+            {
+                recursiveSendTx(vault, networkSync, dependencyTx);
+            }
+        }
+        catch (const TxNotFoundException& e)
+        {
+            // Ignore dependencies we do not have.
+        }
+    }
+
+    Coin::Transaction coin_tx = tx->toCoinCore();
+    networkSync.sendTx(coin_tx);
+    uchar_vector txhash(tx->hash());
+    networkSync.getTx(txhash); // To ensure propagation
+}
+
 std::shared_ptr<Tx> SynchedVault::sendTx(const bytes_t& hash)
 {
     LOGGER(trace) << "SynchedVault::sendTx(" << uchar_vector(hash).getHex() << ")" << std::endl;
@@ -457,14 +505,7 @@ std::shared_ptr<Tx> SynchedVault::sendTx(const bytes_t& hash)
     if (!m_vault) throw std::runtime_error("No vault is open.");
 
     std::shared_ptr<Tx> tx = m_vault->getTx(hash);
-    if (tx->status() == Tx::UNSIGNED)
-        throw std::runtime_error("Transaction is missing signatures.");
-
-    Coin::Transaction coin_tx = tx->toCoinCore();
-    m_networkSync.sendTx(coin_tx);
-    uchar_vector txhash(tx->hash());
-    m_networkSync.getTx(txhash); // To ensure propagation
-
+    recursiveSendTx(*m_vault, m_networkSync, tx);
     return tx;
 }
 
@@ -478,14 +519,7 @@ std::shared_ptr<Tx> SynchedVault::sendTx(unsigned long tx_id)
     if (!m_vault) throw std::runtime_error("No vault is open.");
 
     std::shared_ptr<Tx> tx = m_vault->getTx(tx_id);
-    if (tx->status() == Tx::UNSIGNED)
-        throw std::runtime_error("Transaction is missing signatures.");
-
-    Coin::Transaction coin_tx = tx->toCoinCore();
-    m_networkSync.sendTx(coin_tx);
-    uchar_vector txhash(tx->hash());
-    m_networkSync.getTx(txhash); // To ensure propagation
-
+    recursiveSendTx(*m_vault, m_networkSync, tx);
     return tx;
 }
 
@@ -538,8 +572,11 @@ void SynchedVault::clearAllSlots()
     m_notifySyncHeaderChanged.clear();
     m_notifyConnectionError.clear();
 
+    m_notifyPeerConnected.clear();
+    m_notifyPeerDisconnected.clear();
     m_notifyTxInserted.clear();
     m_notifyTxUpdated.clear();
+    m_notifyTxDeleted.clear();
     m_notifyMerkleBlockInserted.clear();
     m_notifyTxInsertionError.clear();
     m_notifyMerkleBlockInsertionError.clear();

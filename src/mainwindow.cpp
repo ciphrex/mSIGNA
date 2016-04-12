@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // mainwindow.cpp
 //
@@ -57,9 +57,13 @@
 #include "keychainbackupdialog.h"
 #include "viewbip32dialog.h"
 #include "importbip32dialog.h"
+#include "keychainbackupwizard.h"
+#include "viewbip39dialog.h"
+#include "importbip39dialog.h"
 #include "passphrasedialog.h"
 #include "setpassphrasedialog.h"
 #include "currencyunitdialog.h"
+#include "signaturedialog.h"
 //#include "resyncdialog.h"
 
 // Logging
@@ -124,7 +128,7 @@ MainWindow::MainWindow() :
     accountView->setModel(accountModel);
     accountView->updateColumns();
     connect(accountView, SIGNAL(updateModel()), accountModel, SLOT(update()));
-    connect(keychainModel, SLOT(keychainChanged()), accountModel, SLOT(update()));
+    connect(keychainModel, SIGNAL(keychainChanged()), accountModel, SLOT(update()));
 
 /*
     qRegisterMetaType<bytes_t>("bytes_t");
@@ -402,6 +406,7 @@ void MainWindow::updateVaultStatus(const QString& name)
     lockAllKeychainsAction->setEnabled(keychainModel && keychainModel->rowCount());
     importKeychainAction->setEnabled(isOpen);
     importBIP32Action->setEnabled(isOpen);
+    importBIP39Action->setEnabled(isOpen);
 
     // account actions
     quickNewAccountAction->setEnabled(isOpen);
@@ -465,6 +470,17 @@ void MainWindow::selectCurrencyUnit(const QString& newCurrencyUnitPrefix)
         currencyUnitPrefix = newCurrencyUnitPrefix;
         saveSettings();
         setCurrencyUnitPrefix(currencyUnitPrefix);
+        emit signal_currencyUnitChanged();
+    }
+}
+
+void MainWindow::selectTrailingDecimals(bool newShowTrailingDecimals)
+{
+    if (newShowTrailingDecimals != showTrailingDecimals)
+    {
+        showTrailingDecimals = newShowTrailingDecimals;
+        saveSettings();
+        setTrailingDecimals(showTrailingDecimals);
         emit signal_currencyUnitChanged();
     }
 }
@@ -540,7 +556,50 @@ void MainWindow::openVault(QString fileName)
 
     try
     {
-        synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name());
+        try
+        {
+            closeVault();
+            synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name(), false);
+        }
+        catch (const CoinDB::VaultNeedsSchemaMigrationException& e)
+        {
+            QMessageBox msgBox;
+            msgBox.setText(tr("File was created using schema ") + QString::number(e.schema_version()) + tr(". Current schema version is ") + QString::number(e.current_version())
+                + tr("."));
+            msgBox.setInformativeText(tr("Schema can be upgraded. Would you like to make a backup and migrate the file to the new schema now?"));
+            msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+            msgBox.setDefaultButton(QMessageBox::Cancel);
+            if (msgBox.exec() != QMessageBox::Ok) return;
+
+            // Construct backup file name. xxxxx.vault will be copied to xxxxx.<schema version>.vault - if file already exists, then xxxxx1.<schema version>.vault will be tried, etc...
+            QString baseFileName;
+            QString extension;
+            QString backupFileName;
+            if (fileName.right(6).toLower() == ".vault")
+            {
+                baseFileName = fileName.left(fileName.size() - 6);
+                extension = ".vault";
+            }
+            else
+            {
+                baseFileName = fileName;
+                extension = "";
+            }
+
+            int n = 0;
+            while (true)
+            {
+                QString nString = (n > 0 ? QString::number(n) : QString());
+                backupFileName = baseFileName + nString + ".schema" + QString::number(e.schema_version()) + extension;
+                if (QFile::copy(fileName, backupFileName)) break;
+
+                n++;
+            }
+
+            synchedVault.openVault(fileName.toStdString(), false, SCHEMA_VERSION, getCoinParams().network_name(), true);
+            QMessageBox::information(this, tr("Backup Made"), tr("Your vault file has been backed up to ") + backupFileName);
+        }
+            
         updateVaultStatus(fileName);
         updateStatusMessage(tr("Opened ") + fileName);
         addToRecents(fileName);
@@ -561,7 +620,7 @@ void MainWindow::openVault(QString fileName)
     catch (const CoinDB::VaultFailedToOpenDatabaseException& e)
     {
         LOGGER(error) << "MainWindow::openVault - VaultFailedToOpenDatabaseException: " << e.dberror() << std::endl;
-        showError(tr("Error opening database: ") + QString::fromStdString(e.dberror()) + tr(". Either this is an unsupported filetype or the file is corrupt."));
+        showError(tr("Error opening database: \n") + QString::fromStdString(e.dberror()));
     }
     catch (const exception& e)
     {
@@ -638,10 +697,32 @@ void MainWindow::newKeychain()
 
             {
                 // TODO: Randomize using user input for entropy
+                secure_bytes_t seed = getRandomBytes(32);
+
+                // Prompt user to write down and verify word list
+                KeychainBackupWizard backupWizard(name, seed, this);
+                if (!backupWizard.exec()) return;
+/*
+                while (true)
+                {
+                    try
+                    {
+                        ImportBIP39Dialog checkDlg(name, this);
+                        if (!checkDlg.exec()) return; // User canceled out
+
+                        secure_bytes_t seed2 = checkDlg.getSeed();
+                        if (seed == seed2) break;
+                        else throw std::runtime_error("Wordlists do not match.");
+                    }
+                    catch (const exception& e)
+                    {
+                        showError(e.what());
+                    } 
+                }
+*/
                 CoinDB::VaultLock lock(synchedVault);
                 if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
-                secure_bytes_t entropy = getRandomBytes(32);
-                synchedVault.getVault()->newKeychain(name.toStdString(), entropy);
+                synchedVault.getVault()->newKeychain(name.toStdString(), seed);
             }
 
             keychainModel->update();
@@ -656,27 +737,31 @@ void MainWindow::newKeychain()
     }    
 }
 
-void MainWindow::unlockKeychain()
+bool MainWindow::unlockKeychain(QString name)
 {
-    QModelIndex index = keychainSelectionModel->currentIndex();
-    int row = index.row();
-    if (row < 0)
-    {
-        showError(tr("No keychain is selected."));
-        return;
-    }
-
     try
     {
-        QStandardItem* nameItem = keychainModel->item(row, 0);
-        QString name = nameItem->data(Qt::DisplayRole).toString();
+        if (name.isNull())
+        {
+            QModelIndex index = keychainSelectionModel->currentIndex();
+            int row = index.row();
+            if (row < 0)
+            {
+                showError(tr("No keychain is selected."));
+                return false;
+            }
+
+            QStandardItem* nameItem = keychainModel->item(row, 0);
+            name = nameItem->data(Qt::DisplayRole).toString();
+        }
+
         secure_bytes_t hash;
         if (keychainModel->isEncrypted(name))
         {
             PassphraseDialog dlg(tr("Enter unlock passphrase for ") + name + tr(":"));
             while (true)
             {
-                if (!dlg.exec()) return;
+                if (!dlg.exec()) return false;
 
                 try
                 {
@@ -690,26 +775,31 @@ void MainWindow::unlockKeychain()
             }
         }
 
-        keychainModel->unlockKeychain(name, hash);
+        return keychainModel->unlockKeychain(name, hash);
     }
     catch (const std::exception& e)
     {
         showError(e.what());
     }
+
+    return false;
 }
 
-void MainWindow::lockKeychain()
+void MainWindow::lockKeychain(QString name)
 {
-    QModelIndex index = keychainSelectionModel->currentIndex();
-    int row = index.row();
-    if (row < 0)
+    if (name.isNull())
     {
-        showError(tr("No keychain is selected."));
-        return;
-    }
+        QModelIndex index = keychainSelectionModel->currentIndex();
+        int row = index.row();
+        if (row < 0)
+        {
+            showError(tr("No keychain is selected."));
+            return;
+        }
 
-    QStandardItem* nameItem = keychainModel->item(row, 0);
-    QString name = nameItem->data(Qt::DisplayRole).toString();
+        QStandardItem* nameItem = keychainModel->item(row, 0);
+        name = nameItem->data(Qt::DisplayRole).toString();
+    }
 
     keychainModel->lockKeychain(name);
 }
@@ -719,40 +809,96 @@ void MainWindow::lockAllKeychains()
     keychainModel->lockAllKeychains();
 }
 
-void MainWindow::setKeychainPassphrase()
+int MainWindow::setKeychainPassphrase(const QString& keychainName)
 {
-    if (!synchedVault.isVaultOpen())
+    QString name;
+    bool bLocked;
+    bool bEncrypted;
+    if (keychainName.isEmpty())
     {
-        showError(tr("No vault is open."));
-        return;
+        QModelIndex index = keychainSelectionModel->currentIndex();
+        int row = index.row();
+        if (row < 0)
+        {
+            showError(tr("No keychain is selected."));
+            return QDialog::Rejected;
+        }
+
+        bLocked = (keychainModel->getStatus(row) == KeychainModel::LOCKED);
+        bEncrypted = keychainModel->isEncrypted(row);
+
+        QStandardItem* nameItem = keychainModel->item(row, 0);
+        name = nameItem->data(Qt::DisplayRole).toString();
+    }
+    else
+    {
+        if (!keychainModel->exists(keychainName))
+        {
+            showError(tr("Keychain not found."));
+            return QDialog::Rejected;
+        }
+
+        bLocked = keychainModel->isLocked(keychainName);
+        bEncrypted = keychainModel->isEncrypted(keychainName);
+
+        name = keychainName;
+    } 
+
+    try
+    {
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        if (bLocked && !unlockKeychain(name)) return QDialog::Rejected;
+
+        SetPassphraseDialog dlg(tr("keychain \"") + name + "\"", tr("WARNING: IF YOU FORGET THIS PASSPHRASE THERE IS NO WAY TO RECOVER IT!!!"), this);
+        while (dlg.exec())
+        {
+            try
+            {
+                QString passphrase = dlg.getPassphrase();
+                if (passphrase.isEmpty())
+                {
+                    QString prompt(tr("You did not enter a passphrase."));
+                    if (bEncrypted)
+                    {
+                        prompt += tr(" Are you sure you want to remove keychain encryption from ") + name + "?";
+                    }
+                    else
+                    {
+                        prompt += tr(" Leave keychain ") + name + tr(" unencrypted?");
+                    } 
+                        
+                    if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"), prompt))
+                    {
+                        keychainModel->decryptKeychain(name);
+                        if (bLocked) { lockKeychain(name); }
+                        return QDialog::Accepted;
+                    }
+                }
+                else
+                {
+                    secure_bytes_t hash = passphraseHash(dlg.getPassphrase().toStdString());
+                    keychainModel->encryptKeychain(name, hash); 
+                    if (bLocked) { lockKeychain(name); }
+                    return QDialog::Accepted;
+                }
+            }
+            catch (const std::exception& e)
+            {
+                showError(e.what());
+            }
+        }
+    }
+    catch (const exception& e)
+    {
+        LOGGER(error) << "MainWindow::setKeychainPassphrase - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
+        showError(e.what());
     }
 
-    QModelIndex index = keychainSelectionModel->currentIndex();
-    int row = index.row();
-    if (row < 0)
-    {
-        showError(tr("No keychain is selected."));
-        return;
-    }
-
-    int status = keychainModel->getStatus(row);
-
-    if (status == KeychainModel::PUBLIC)
-    {
-        showError(tr("Keychain is public."));
-        return;
-    }
-
-    QStandardItem* nameItem = keychainModel->item(row, 0);
-    QString name = nameItem->text();
-
-    bool bLocked = status == KeychainModel::LOCKED;
-    bool bEncrypted = keychainModel->isEncrypted(row);
-    if (bLocked && bEncrypted)
-    {
-        showError(tr("Keychain must first be unlocked."));
-        return;
-    }
+    return QDialog::Rejected;
 
     SetPassphraseDialog dlg(tr("keychain \"") + name + "\"", tr("WARNING: IF YOU FORGET THIS PASSPHRASE THERE IS NO WAY TO RECOVER IT!!!"), this);
     while (dlg.exec())
@@ -774,19 +920,17 @@ void MainWindow::setKeychainPassphrase()
                     
                 if (QMessageBox::Yes == QMessageBox::question(this, tr("Confirm"), prompt))
                 {
-                    if (bLocked) { keychainModel->unlockKeychain(name); }
                     keychainModel->decryptKeychain(name);
                     if (bLocked) { keychainModel->lockKeychain(name); }
-                    return;
+                    return QDialog::Accepted;
                 }
             }
             else
             {
                 secure_bytes_t hash = passphraseHash(dlg.getPassphrase().toStdString());
-                if (bLocked) { keychainModel->unlockKeychain(name); }
                 keychainModel->encryptKeychain(name, hash); 
-                keychainModel->lockKeychain(name);
-                return;
+                if (bLocked) { keychainModel->lockKeychain(name); }
+                return QDialog::Accepted;
             }
         }
         catch (const std::exception& e)
@@ -794,6 +938,75 @@ void MainWindow::setKeychainPassphrase()
             showError(e.what());
         }
     }
+
+    return QDialog::Rejected;
+}
+
+int MainWindow::makeKeychainBackup(const QString& keychainName)
+{
+    QString name;
+    bool bLocked;
+    if (keychainName.isEmpty())
+    {
+        QModelIndex index = keychainSelectionModel->currentIndex();
+        int row = index.row();
+        if (row < 0) {
+            showError(tr("No keychain is selected."));
+            return QDialog::Rejected;
+        }
+
+        if (!keychainModel->hasSeed(row))
+        {
+            showError(tr("Entropy seed for keychain is not known. Please use another backup format."));
+            return QDialog::Rejected;
+        }
+
+        bLocked = (keychainModel->getStatus(row) == KeychainModel::LOCKED);
+
+        QStandardItem* nameItem = keychainModel->item(row, 0);
+        name = nameItem->data(Qt::DisplayRole).toString();
+    }
+    else
+    {
+        if (!keychainModel->exists(keychainName))
+        {
+            showError(tr("Keychain not found."));
+            return QDialog::Rejected;
+        }
+
+        if (!keychainModel->hasSeed(keychainName))
+        {
+            showError(tr("Entropy seed for keychain is not known. Please use another backup format."));
+            return QDialog::Rejected;
+        }
+
+        bLocked = keychainModel->isLocked(keychainName);
+
+        name = keychainName;
+    } 
+
+    try
+    {
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        if (bLocked && !unlockKeychain(name)) return QDialog::Rejected;
+
+        secure_bytes_t seed = synchedVault.getVault()->exportBIP39(name.toStdString());
+
+        KeychainBackupWizard wizard(name, seed, this);
+        if (bLocked) { lockKeychain(name); }
+        return wizard.exec();
+    }
+    catch (const exception& e)
+    {
+        LOGGER(error) << "MainWindow::makeKeychainBackup - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
+        showError(e.what());
+    }
+
+    return QDialog::Rejected;
 }
 
 void MainWindow::importKeychain(QString fileName)
@@ -860,14 +1073,10 @@ void MainWindow::exportKeychain(bool exportPrivate)
         return;
     }
 
-    if (exportPrivate && status == KeychainModel::LOCKED)
-    {
-        // TODO: prompt for unlock
-        showError(tr("Keychain is locked."));
-        return;
-    }
-
     QString name = keychainModel->getName(row);
+
+    bool bLocked = exportPrivate && (status == KeychainModel::LOCKED);
+    if (bLocked && !unlockKeychain(name)) return;
 
     QString fileName = name + (exportPrivate ? ".priv" : ".pub");
 
@@ -877,7 +1086,11 @@ void MainWindow::exportKeychain(bool exportPrivate)
         getDocDir() + "/" + fileName,
         tr("Keychains (*.priv *.pub)"));
 
-    if (fileName.isEmpty()) return;
+    if (fileName.isEmpty())
+    {
+        if (bLocked) { lockKeychain(name); }
+        return;
+    }
 
     QFileInfo fileInfo(fileName);
     setDocDir(fileInfo.dir().absolutePath());
@@ -886,10 +1099,12 @@ void MainWindow::exportKeychain(bool exportPrivate)
     try {
         updateStatusMessage(tr("Exporting ") + (exportPrivate ? tr("private") : tr("public")) + tr("  keychain...") + name);
         keychainModel->exportKeychain(name, fileName, exportPrivate);
+        if (bLocked) { lockKeychain(name); }
         updateStatusMessage(tr("Saved ") + fileName);
     }
     catch (const exception& e) {
         LOGGER(debug) << "MainWindow::exportKeychain - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
         showError(e.what());
     }
 }
@@ -930,6 +1145,15 @@ void MainWindow::viewBIP32(bool viewPrivate)
         return;
     }
 
+    int status = keychainModel->getStatus(row);
+    if (viewPrivate && status == KeychainModel::PUBLIC)
+    {
+        showError(tr("Keychain is nonprivate."));
+        return;
+    }
+
+    bool bLocked = viewPrivate && (status == KeychainModel::LOCKED);
+
     QStandardItem* nameItem = keychainModel->item(row, 0);
     QString name = nameItem->data(Qt::DisplayRole).toString();
 
@@ -937,6 +1161,8 @@ void MainWindow::viewBIP32(bool viewPrivate)
         if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
         CoinDB::VaultLock lock(synchedVault);
         if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+
+        if (bLocked && !unlockKeychain(name)) return;
 
         secure_bytes_t extendedKey = synchedVault.getVault()->exportBIP32(name.toStdString(), viewPrivate);
 /*
@@ -955,15 +1181,44 @@ void MainWindow::viewBIP32(bool viewPrivate)
 */
 
         ViewBIP32Dialog dlg(name, extendedKey, this);
+        if (bLocked) { lockKeychain(name); }
         dlg.exec();
     }
     catch (const exception& e) {
         LOGGER(error) << "MainWindow::viewBIP32 - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
         showError(e.what());
     }
 }
 
-void MainWindow::backupKeychain()
+void MainWindow::importBIP39()
+{
+    ImportBIP39Dialog dlg(this);
+    while (dlg.exec() == QDialog::Accepted)
+    {
+        try
+        {
+            secure_bytes_t seed = dlg.getSeed();
+            string name = dlg.getName().toStdString();
+
+            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+            CoinDB::VaultLock lock(synchedVault);
+            if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+            synchedVault.getVault()->newKeychain(name, seed);
+            keychainModel->update();
+            keychainView->updateColumns();
+            tabWidget->setCurrentWidget(keychainView);
+            break;
+        }
+        catch (const exception& e)
+        {
+            LOGGER(error) << "MainWindow::importBIP39 - " << e.what() << std::endl;
+            showError(e.what());
+        }        
+    }
+}
+
+void MainWindow::viewBIP39()
 {
     QModelIndex index = keychainSelectionModel->currentIndex();
     int row = index.row();
@@ -972,26 +1227,35 @@ void MainWindow::backupKeychain()
         return;
     }
 
+    int hasSeed = keychainModel->hasSeed(row);
+    if (!hasSeed)
+    {
+        showError(tr("Keychain does not contain seed."));
+        return;
+    }
+
+    int status = keychainModel->getStatus(row);
+    bool bLocked = status == KeychainModel::LOCKED;
+
     QStandardItem* nameItem = keychainModel->item(row, 0);
     QString name = nameItem->data(Qt::DisplayRole).toString();
 
     try {
-        bytes_t extendedKey;
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
+        CoinDB::VaultLock lock(synchedVault);
+        if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
 
-        if (keychainModel->isPrivate(name)) {
-            // TODO: prompt user for decryption key
-            extendedKey = keychainModel->getExtendedKeyBytes(name, true);
-        }
-        else {
-            extendedKey = keychainModel->getExtendedKeyBytes(name);
-        }
+        if (bLocked && !unlockKeychain(name)) return;
 
-        KeychainBackupDialog dlg(tr("Keychain information"));
-        dlg.setExtendedKey(extendedKey);
+        secure_bytes_t seed = synchedVault.getVault()->exportBIP39(name.toStdString());
+
+        ViewBIP39Dialog dlg(name, seed, this);
+        if (bLocked) { lockKeychain(name); }
         dlg.exec();
     }
     catch (const exception& e) {
-        LOGGER(debug) << "MainWindow::backupKeychain - " << e.what() << std::endl;
+        LOGGER(error) << "MainWindow::viewBIP39 - " << e.what() << std::endl;
+        if (bLocked) { lockKeychain(name); }
         showError(e.what());
     }
 }
@@ -1004,19 +1268,21 @@ void MainWindow::updateCurrentKeychain(const QModelIndex& current, const QModelI
         exportPublicKeychainAction->setEnabled(false);
         viewPrivateBIP32Action->setEnabled(false);
         viewPublicBIP32Action->setEnabled(false);
-        backupKeychainAction->setEnabled(false);
+        viewBIP39Action->setEnabled(false);
     }
     else {
         int status = keychainModel->getStatus(row);
+        bool hasSeed = keychainModel->hasSeed(row);
 
         unlockKeychainAction->setEnabled(status == KeychainModel::LOCKED);
         lockKeychainAction->setEnabled(status == KeychainModel::UNLOCKED);
-        setKeychainPassphraseAction->setEnabled(status == KeychainModel::UNLOCKED || (status == KeychainModel::LOCKED && !keychainModel->isEncrypted(row)));
-        exportPrivateKeychainAction->setEnabled(status == KeychainModel::UNLOCKED);
+        setKeychainPassphraseAction->setEnabled(status != KeychainModel::PUBLIC);
+        exportPrivateKeychainAction->setEnabled(status != KeychainModel::PUBLIC);
         exportPublicKeychainAction->setEnabled(true);
-        viewPrivateBIP32Action->setEnabled(status == KeychainModel::UNLOCKED);
+        viewPrivateBIP32Action->setEnabled(status != KeychainModel::PUBLIC);
         viewPublicBIP32Action->setEnabled(true);
-        backupKeychainAction->setEnabled(true);
+        viewBIP39Action->setEnabled(status != KeychainModel::PUBLIC && hasSeed);
+        makeKeychainBackupAction->setEnabled(status != KeychainModel::PUBLIC && hasSeed);
     }
 }
 
@@ -1117,7 +1383,8 @@ void MainWindow::quickNewAccount()
     if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
 
     QuickNewAccountDialog dlg(this);
-    while (dlg.exec()) {
+    while (dlg.exec())
+    {
         try {
             QString accountName = dlg.getName();
             if (accountName.isEmpty())
@@ -1132,23 +1399,39 @@ void MainWindow::quickNewAccount()
             const int MAX_KEYCHAIN_INDEX = 1000;
             int i = 0;
             QList<QString> keychainNames;
-            while (keychainNames.size() < dlg.getMaxSigs() && ++i <= MAX_KEYCHAIN_INDEX) {
+            QList<secure_bytes_t> keychainSeeds;
+            while (keychainNames.size() < dlg.getMaxSigs() && ++i <= MAX_KEYCHAIN_INDEX)
+            {
                 QString keychainName = accountName + " " + QString::number(i);
                 if (!keychainModel->exists(keychainName))
+                {
+                    // TODO: Randomize using user input for seed entropy
                     keychainNames << keychainName;
+                    keychainSeeds << getRandomBytes(32);
+                }
             }
+
             if (i > MAX_KEYCHAIN_INDEX)
                 throw std::runtime_error(tr("Ran out of keychain indices.").toStdString());
 
-            for (auto& keychainName: keychainNames) {
-                // TODO: Randomize using user input for entropy
+            // Require user to copy down the wordlists
+            KeychainBackupWizard backupDlg(keychainNames, keychainSeeds, this);
+            if (!backupDlg.exec()) return;
+
+            {
                 CoinDB::VaultLock lock(synchedVault);
                 if (!synchedVault.isVaultOpen()) throw std::runtime_error("No vault is open.");
-                secure_bytes_t entropy = getRandomBytes(32);
-                synchedVault.getVault()->newKeychain(keychainName.toStdString(), entropy);
+
+                int i = 0;
+                for (auto& keychainName: keychainNames)
+                {
+                    const secure_bytes_t& keychainSeed = keychainSeeds.at(i++);
+                    synchedVault.getVault()->newKeychain(keychainName.toStdString(), keychainSeed);
+                }
+
+                accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames, dlg.getCreationTime());
             }
 
-            accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames, dlg.getCreationTime());
             accountModel->update();
             accountView->updateColumns();
             keychainModel->update();
@@ -1509,8 +1792,6 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
     bool saved = false;
     while (!saved && dlg.exec()) {
         try {
-            CreateTxDialog::status_t status = dlg.getStatus();
-            bool sign = status == CreateTxDialog::SIGN_AND_SEND || status == CreateTxDialog::SIGN_AND_SAVE;
             std::shared_ptr<CoinDB::Tx> tx = accountModel->getVault()->createTx(
                 dlg.getAccountName().toStdString(),
                 1,
@@ -1520,16 +1801,46 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 dlg.getFeeValue(),
                 0,
                 true);
-            if (!tx) throw std::runtime_error("Error creating transaction.");
+            if (!tx) throw std::runtime_error(tr("Error creating transaction.").toStdString());
 
             saved = true;
-            newTx();            
-            if (sign)
+            newTx();
+
+            tabWidget->setCurrentWidget(txView);
+
+            if (dlg.getStatus() == CreateTxDialog::SIGN)
             {
+                // First try to sign with unlocked keychains
                 std::vector<std::string> keychains;
                 tx = accountModel->getVault()->signTx(tx->id(), keychains, true);
+                txModel->update();
+
+                if (tx->status() == CoinDB::Tx::UNSIGNED)
+                {
+                    // If still unsigned, pop open dialog
+                    SignatureDialog dlg(synchedVault, tx->unsigned_hash(), this);
+                    connect(&dlg, &SignatureDialog::error, [this](const QString& msg) { showError(msg); });
+                    connect(&dlg, &SignatureDialog::txUpdated, [this]() { txModel->update(); });
+                    connect(&dlg, &SignatureDialog::keychainsUpdated, [this]() { keychainModel->update(); });
+                    dlg.exec();
+                }
+                else if (isConnected())
+                {
+                    // TODO: Create new dialog for sending confirmation.
+                    QMessageBox sendPrompt;
+                    sendPrompt.setText(tr("Transaction is fully signed. Would you like to send?"));
+                    sendPrompt.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                    sendPrompt.setDefaultButton(QMessageBox::Yes);
+                    if (sendPrompt.exec() == QMessageBox::Yes)
+                    {
+                        if (!synchedVault.isConnected()) throw std::runtime_error(tr("Connection was lost.").toStdString());
+
+                        Coin::Transaction coin_tx = tx->toCoinCore();
+                        synchedVault.sendTx(coin_tx);
+                    }
+                }
             }
-            tabWidget->setCurrentWidget(txView);
+/*
             if (status == CreateTxDialog::SIGN_AND_SEND) {
                 // TODO: Clean up signing and sending code
                 if (tx->status() == CoinDB::Tx::UNSIGNED) {
@@ -1541,6 +1852,7 @@ void MainWindow::createTx(const PaymentRequest& paymentRequest)
                 Coin::Transaction coin_tx = tx->toCoinCore();
                 synchedVault.sendTx(coin_tx);
             }
+*/
             return;
         }
         catch (const exception& e) {
@@ -1843,7 +2155,7 @@ void MainWindow::createActions()
 {
     // application actions
     selectCurrencyUnitAction = new QAction(tr("Select Currency Units..."), this);
-    selectCurrencyUnitAction->setStatusTip(tr("Select the curr3ncy unit"));
+    selectCurrencyUnitAction->setStatusTip(tr("Select the currency unit"));
     connect(selectCurrencyUnitAction, SIGNAL(triggered()), this, SLOT(selectCurrencyUnit()));
 
     quitAction = new QAction(tr("&Quit ") + getDefaultSettings().getAppName(), this);
@@ -1888,25 +2200,30 @@ void MainWindow::createActions()
     newKeychainAction->setEnabled(false);
     connect(newKeychainAction, SIGNAL(triggered()), this, SLOT(newKeychain()));
 
-    unlockKeychainAction = new QAction(tr("Unlock keychain..."), this);
+    unlockKeychainAction = new QAction(tr("Unlock Keychain..."), this);
     unlockKeychainAction->setStatusTip(tr("Unlock keychain"));
     unlockKeychainAction->setEnabled(false);
     connect(unlockKeychainAction, SIGNAL(triggered()), this, SLOT(unlockKeychain()));
 
-    lockKeychainAction = new QAction(tr("Lock keychain"), this);
+    lockKeychainAction = new QAction(tr("Lock Keychain"), this);
     lockKeychainAction->setStatusTip(tr("Lock keychain"));
     lockKeychainAction->setEnabled(false);
     connect(lockKeychainAction, SIGNAL(triggered()), this, SLOT(lockKeychain()));
 
-    lockAllKeychainsAction = new QAction(tr("Lock all keychains"), this);
+    lockAllKeychainsAction = new QAction(tr("Lock All Keychains"), this);
     lockAllKeychainsAction->setStatusTip(tr("Lock all keychains"));
     lockAllKeychainsAction->setEnabled(false);
     connect(lockAllKeychainsAction, SIGNAL(triggered()), this, SLOT(lockAllKeychains()));
 
-    setKeychainPassphraseAction = new QAction(tr("Set keychain passphrase..."), this);
+    setKeychainPassphraseAction = new QAction(tr("Set Keychain Passphrase..."), this);
     setKeychainPassphraseAction->setStatusTip(tr("Set the encryption passphrase for the keychain"));
     setKeychainPassphraseAction->setEnabled(false);
     connect(setKeychainPassphraseAction, SIGNAL(triggered()), this, SLOT(setKeychainPassphrase()));
+
+    makeKeychainBackupAction = new QAction(tr("Make Keychain Backup..."), this);
+    makeKeychainBackupAction->setStatusTip(tr("Open keychain backup wizard"));
+    makeKeychainBackupAction->setEnabled(false);
+    connect(makeKeychainBackupAction, SIGNAL(triggered()), this, SLOT(makeKeychainBackup()));
 
     importPrivateAction = new QAction(tr("Private Imports"), this);
     importPrivateAction->setCheckable(true);
@@ -1924,40 +2241,45 @@ void MainWindow::createActions()
     importPrivateAction->setChecked(true);
     importPrivate = true;
 
-    importKeychainAction = new QAction(tr("Import Keychain..."), this);
+    importKeychainAction = new QAction(tr("From File..."), this);
     importKeychainAction->setStatusTip(tr("Import keychain from file"));
     importKeychainAction->setEnabled(false);
     connect(importKeychainAction, SIGNAL(triggered()), this, SLOT(importKeychain()));
 
-    exportPrivateKeychainAction = new QAction(tr("Export Private Keychain..."), this);
+    exportPrivateKeychainAction = new QAction(tr("To File (private)..."), this);
     exportPrivateKeychainAction->setStatusTip(tr("Export private keychain to file"));
     exportPrivateKeychainAction->setEnabled(false);
     connect(exportPrivateKeychainAction, &QAction::triggered, [=]() { this->exportKeychain(true); });
 
-    exportPublicKeychainAction = new QAction(tr("Export Public Keychain..."), this);
+    exportPublicKeychainAction = new QAction(tr("To File (public)..."), this);
     exportPublicKeychainAction->setStatusTip(tr("Export public keychain to file"));
     exportPublicKeychainAction->setEnabled(false);
     connect(exportPublicKeychainAction, &QAction::triggered, [=]() { this->exportKeychain(false); });
 
-    importBIP32Action = new QAction(tr("Import BIP32 Master Key..."), this);
+    importBIP32Action = new QAction(tr("From BIP32..."), this);
     importBIP32Action->setStatusTip(tr("Import keychain from BIP32 master key"));
     importBIP32Action->setEnabled(false);
     connect(importBIP32Action, SIGNAL(triggered()), this, SLOT(importBIP32()));
 
-    viewPrivateBIP32Action = new QAction(tr("View Private BIP32 Master Key..."), this);
+    viewPrivateBIP32Action = new QAction(tr("To BIP32 (private)..."), this);
     viewPrivateBIP32Action->setStatusTip(tr("View private BIP32 master key"));
     viewPrivateBIP32Action->setEnabled(false);
     connect(viewPrivateBIP32Action, &QAction::triggered, [=]() { this->viewBIP32(true); });
 
-    viewPublicBIP32Action = new QAction(tr("View Public BIP32 Master Key..."), this);
+    viewPublicBIP32Action = new QAction(tr("To BIP32 (public)..."), this);
     viewPublicBIP32Action->setStatusTip(tr("View public BIP32 master key"));
     viewPublicBIP32Action->setEnabled(false);
     connect(viewPublicBIP32Action, &QAction::triggered, [=]() { this->viewBIP32(false); });
 
-    backupKeychainAction = new QAction(tr("Backup Keychain..."), this);
-    backupKeychainAction->setStatusTip(tr("Make paper backup"));
-    backupKeychainAction->setEnabled(false);
-    connect(backupKeychainAction, SIGNAL(triggered()), this, SLOT(backupKeychain()));
+    importBIP39Action = new QAction(tr("From Wordlist..."), this);
+    importBIP39Action->setStatusTip(tr("Import keychain from BIP39 wordlist"));
+    importBIP39Action->setEnabled(false);
+    connect(importBIP39Action, SIGNAL(triggered()), this, SLOT(importBIP39()));
+
+    viewBIP39Action = new QAction(tr("To Wordlist (private)..."), this);
+    viewBIP39Action->setStatusTip(tr("View private BIP39 wordlist"));
+    viewBIP39Action->setEnabled(false);
+    connect(viewBIP39Action, SIGNAL(triggered()), this, SLOT(viewBIP39()));
 
     // account actions
     quickNewAccountAction = new QAction(QIcon(":/icons/magicwand.png"), tr("Account &Wizard..."), this);
@@ -2005,12 +2327,12 @@ void MainWindow::createActions()
     viewAccountHistoryAction->setEnabled(false);
     connect(viewAccountHistoryAction, SIGNAL(triggered()), this, SLOT(viewAccountHistory()));
 
-    viewScriptsAction = new QAction(tr("View Scripts"), this);
-    viewScriptsAction->setStatusTip(tr("View scripts for active account"));
+    viewScriptsAction = new QAction(tr("View Addresses..."), this);
+    viewScriptsAction->setStatusTip(tr("View addresses for active account"));
     viewScriptsAction->setEnabled(false);
     connect(viewScriptsAction, SIGNAL(triggered()), this, SLOT(viewScripts()));
     
-    viewUnsignedTxsAction = new QAction(tr("View Unsigned Transactions"), this);
+    viewUnsignedTxsAction = new QAction(tr("View Unsigned Transactions..."), this);
     viewUnsignedTxsAction->setStatusTip(tr("View transactions pending signature"));
     viewUnsignedTxsAction->setEnabled(false);
     connect(viewUnsignedTxsAction, SIGNAL(triggered()), this, SLOT(viewUnsignedTxs()));
@@ -2042,7 +2364,7 @@ void MainWindow::createActions()
     connect(sendRawTxAction, SIGNAL(triggered()), this, SLOT(sendRawTx()));
 
     // network actions
-    connectAction = new QAction(QIcon(":/icons/connect.png"), tr("Connect to ") + host, this);
+    connectAction = new QAction(QIcon(":/icons/connect.png"), tr("Connect To ") + host, this);
     connectAction->setStatusTip(tr("Connect to a p2p node"));
     connectAction->setEnabled(true);
 
@@ -2050,7 +2372,7 @@ void MainWindow::createActions()
     shortConnectAction->setStatusTip(tr("Connect to a p2p node"));
     shortConnectAction->setEnabled(true);
 
-    disconnectAction = new QAction(QIcon(":/icons/disconnect.png"), tr("Disconnect from ") + host, this);
+    disconnectAction = new QAction(QIcon(":/icons/disconnect.png"), tr("Disconnect From ") + host, this);
     disconnectAction->setStatusTip(tr("Disconnect from p2p node"));
     disconnectAction->setEnabled(false);
 
@@ -2101,6 +2423,12 @@ void MainWindow::createActions()
         currencyUnitActions << currencyUnitAction;
     }
 
+    showTrailingDecimalsAction = new QAction(tr("Show Trailing Decimals"), this);
+    showTrailingDecimalsAction->setCheckable(true);
+    showTrailingDecimalsAction->setStatusTip(tr("Show trailing zeros in decimals"));
+    connect(showTrailingDecimalsAction, &QAction::toggled, [this]() { selectTrailingDecimals(showTrailingDecimalsAction->isChecked()); });
+    showTrailingDecimalsAction->setChecked(showTrailingDecimals);
+
     // about/help actions
     aboutAction = new QAction(tr("About..."), this);
     aboutAction->setStatusTip(tr("About ") + getDefaultSettings().getAppName());
@@ -2138,8 +2466,8 @@ void MainWindow::createMenus()
     accountMenu->addSeparator();
     //accountMenu->addAction(viewAccountHistoryAction);
     accountMenu->addAction(viewScriptsAction);
-    accountMenu->addSeparator();
-    accountMenu->addAction(viewUnsignedTxsAction);
+    //accountMenu->addSeparator();
+    //accountMenu->addAction(viewUnsignedTxsAction);
 
     menuBar()->addMenu(txActions->getMenu());
 /*
@@ -2162,25 +2490,32 @@ void MainWindow::createMenus()
     keychainMenu->addAction(lockKeychainAction);
     keychainMenu->addAction(lockAllKeychainsAction);
     keychainMenu->addAction(setKeychainPassphraseAction);
+    keychainMenu->addSeparator();
+    keychainMenu->addAction(makeKeychainBackupAction);
+
 /*
     keychainMenu->addSeparator()->setText(tr("Import Mode"));
     keychainMenu->addAction(importPrivateAction);
     keychainMenu->addAction(importPublicAction);
 */
     keychainMenu->addSeparator();
-    keychainMenu->addAction(importKeychainAction);
-    keychainMenu->addAction(exportPrivateKeychainAction);
-    keychainMenu->addAction(exportPublicKeychainAction);
-    keychainMenu->addSeparator();
-    keychainMenu->addAction(importBIP32Action);
-    keychainMenu->addAction(viewPrivateBIP32Action);
-    keychainMenu->addAction(viewPublicBIP32Action);
+
+    QMenu* importKeychainMenu = keychainMenu->addMenu(tr("Import Keychain"));
+    importKeychainMenu->addAction(importKeychainAction);
+    importKeychainMenu->addAction(importBIP32Action);
+    importKeychainMenu->addAction(importBIP39Action);
+
+    QMenu* exportKeychainMenu = keychainMenu->addMenu(tr("Export Keychain"));
+    exportKeychainMenu->addAction(exportPrivateKeychainAction);
+    exportKeychainMenu->addAction(exportPublicKeychainAction);
+    exportKeychainMenu->addSeparator();
+    exportKeychainMenu->addAction(viewPrivateBIP32Action);
+    exportKeychainMenu->addAction(viewPublicBIP32Action);
+    exportKeychainMenu->addSeparator();
+    exportKeychainMenu->addAction(viewBIP39Action);
+
     keychainMenu->addSeparator();
     keychainMenu->addAction(quickNewAccountAction);
-/*
-    keychainMenu->addSeparator();
-    keychainMenu->addAction(backupKeychainAction);
-*/
 
     networkMenu = menuBar()->addMenu(tr("&Network"));
     networkMenu->addAction(connectAction);
@@ -2202,6 +2537,8 @@ void MainWindow::createMenus()
     {
         currencyUnitMenu->addAction(currencyUnitAction);
     }
+    currencyUnitMenu->addSeparator();
+    currencyUnitMenu->addAction(showTrailingDecimalsAction);
 
     menuBar()->addSeparator();
 
@@ -2272,6 +2609,8 @@ void MainWindow::loadSettings()
     {
         QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
         currencyUnitPrefix = settings.value("currencyunitprefix", "").toString();
+        showTrailingDecimals = settings.value("showtrailingdecimals", true).toBool();
+        setTrailingDecimals(showTrailingDecimals);
         blockTreeFile = settings.value("blocktreefile", getDefaultSettings().getDataDir() + "/blocktree.dat").toString();
         host = settings.value("host", "localhost").toString();
         port = settings.value("port", getCoinParams().default_port()).toInt();
@@ -2293,6 +2632,7 @@ void MainWindow::saveSettings()
     {
         QSettings settings("Ciphrex", getDefaultSettings().getNetworkSettingsPath());
         settings.setValue("currencyunitprefix", currencyUnitPrefix);
+        settings.setValue("showtrailingdecimals", showTrailingDecimals);
         settings.setValue("blocktreefile", blockTreeFile);
         settings.setValue("host", host);
         settings.setValue("port", port);

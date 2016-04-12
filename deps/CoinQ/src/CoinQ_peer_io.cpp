@@ -8,8 +8,6 @@
 
 #include "CoinQ_peer_io.h"
 
-#include <logger/logger.h>
-
 #include <sstream>
 
 using namespace CoinQ;

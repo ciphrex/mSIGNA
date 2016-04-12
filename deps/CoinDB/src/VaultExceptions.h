@@ -23,6 +23,7 @@ enum ErrorCodes
     VAULT_WRONG_NETWORK,
     VAULT_FAILED_TO_OPEN_DATABASE,
     VAULT_MISSING_TXS,
+    VAULT_NEEDS_SCHEMA_MIGRATION,
 
     // Chain code errors
     CHAINCODE_LOCKED = 201,
@@ -57,6 +58,8 @@ enum ErrorCodes
     TX_OUTPUT_NOT_FOUND,
     TX_MISMATCH,
     TX_NOT_SIGNED,
+    TX_INVALID_OUTPUTS,
+    TX_OUTPUT_SCRIPT_NOT_IN_USER_WHITELIST,
 
     // Block header errors
     BLOCKHEADER_NOT_FOUND = 701,
@@ -68,7 +71,20 @@ enum ErrorCodes
     MERKLETX_BAD_INSERTION_ORDER = 901,
     MERKLETX_MISMATCH,
     MERKLETX_FAILED_TO_CONNECT,
-    MERKLETX_INVALID_HEIGHT
+    MERKLETX_INVALID_HEIGHT,
+
+    // SigningScript errors
+    SIGNINGSCRIPT_NOT_FOUND = 1001,
+
+    // User errors
+    USER_NOT_FOUND = 1101,
+    USER_ALREADY_EXISTS,
+    USER_INVALID_USERNAME,
+
+    // Contact errors
+    CONTACT_NOT_FOUND = 1201,
+    CONTACT_ALREADY_EXISTS,
+    CONTACT_INVALID_USERNAME
 };
 
 // VAULT EXCEPTIONS
@@ -126,6 +142,19 @@ public:
 
 private:
     hashvector_t txhashes_;
+};
+
+class VaultNeedsSchemaMigrationException : public VaultException
+{
+public:
+    explicit VaultNeedsSchemaMigrationException(const std::string& vault_name, uint32_t schema_version, uint32_t current_version) : VaultException("Schema migration required.", VAULT_NEEDS_SCHEMA_MIGRATION, vault_name), schema_version_(schema_version), current_version_(current_version) { }
+
+    uint32_t schema_version() const { return schema_version_; }
+    uint32_t current_version() const { return current_version_; }
+
+private:
+    uint32_t schema_version_;
+    uint32_t current_version_;
 };
 
 // CHAIN CODE EXCEPTIONS
@@ -259,7 +288,16 @@ public:
 class AccountInsufficientFundsException : public AccountException
 {
 public:
-    explicit AccountInsufficientFundsException(const std::string& account_name) : AccountException("Insufficient funds.", ACCOUNT_INSUFFICIENT_FUNDS, account_name) { }
+    explicit AccountInsufficientFundsException(const std::string& account_name, uint64_t requested, uint64_t available, const std::string& username = std::string()) : AccountException("Insufficient funds.", ACCOUNT_INSUFFICIENT_FUNDS, account_name), requested_(requested), available_(available), username_(username) { }
+    uint64_t requested() const { return requested_; }
+    uint64_t available() const { return available_; }
+    const std::string& username() const { return username_; }
+    void username(const std::string& username) { username_ = username; }
+
+private:
+    uint64_t requested_;
+    uint64_t available_;
+    std::string username_;
 };
 
 class AccountCannotIssueChangeScriptException : public AccountException
@@ -333,7 +371,7 @@ public:
 class TxOutputNotFoundException : public TxException
 {
 public:
-    explicit TxOutputNotFoundException(const bytes_t& outhash = bytes_t(), int outindex = -1) : TxException("Transaction output not found.", TX_OUTPUT_NOT_FOUND, outhash),  outindex_(outindex) { }
+    explicit TxOutputNotFoundException(const bytes_t& outhash = bytes_t(), int outindex = -1) : TxException("Transaction output not found.", TX_OUTPUT_NOT_FOUND, outhash), outindex_(outindex) { }
 
     int outindex() const { return outindex_; }
 
@@ -351,6 +389,24 @@ class TxNotSignedException : public TxException
 {
 public:
     explicit TxNotSignedException(const bytes_t& hash = bytes_t()) : TxException("Transaction is not signed.", TX_NOT_SIGNED, hash) { }
+};
+
+class TxInvalidOutputsException : public TxException
+{
+public:
+    explicit TxInvalidOutputsException() : TxException("Transaction outputs are invalid.", TX_INVALID_OUTPUTS, bytes_t()) { }
+};
+
+class TxOutputScriptNotInUserWhitelistException : public TxException
+{
+public:
+    explicit TxOutputScriptNotInUserWhitelistException(const std::string& username, const bytes_t& txoutscript) : TxException("Transaction output script is not in user whitelist.", TX_OUTPUT_SCRIPT_NOT_IN_USER_WHITELIST, bytes_t()), username_(username), txoutscript_(txoutscript) { }
+    const std::string& username() const { return username_; }
+    const bytes_t& txoutscript() const { return txoutscript_; }
+
+protected:
+    std::string username_;
+    bytes_t txoutscript_;
 };
 
 // BLOCK HEADER EXCEPTIONS
@@ -445,5 +501,82 @@ public:
     explicit MerkleTxInvalidHeightException(const bytes_t& blockhash, uint32_t height, const bytes_t& txhash, unsigned int txindex, unsigned int txtotal) : MerkleTxException("Merkleblock has invalid height.", MERKLETX_INVALID_HEIGHT, blockhash, height, txhash, txindex, txtotal) { }
 };
 
+// SIGNING SCRIPT EXCEPTIONS
+class SigningScriptException : public stdutils::custom_error
+{
+public:
+    virtual ~SigningScriptException() throw() { }
+
+protected:
+    explicit SigningScriptException(const std::string& what, int code) : stdutils::custom_error(what, code) { }
+};
+
+class SigningScriptNotFoundException : public SigningScriptException
+{
+public:
+    explicit SigningScriptNotFoundException() : SigningScriptException("Signing script not found.", SIGNINGSCRIPT_NOT_FOUND) { }
+};
+
+// USER EXCEPTIONS
+class UserException : public stdutils::custom_error
+{
+public:
+    virtual ~UserException() throw() { }
+    const std::string& username() const { return username_; }
+
+protected:
+    explicit UserException(const std::string& what, int code, const std::string& username) : stdutils::custom_error(what, code), username_(username) { }
+
+    std::string username_;
+};
+
+class UserNotFoundException : public UserException
+{
+public:
+    explicit UserNotFoundException(const std::string& username) : UserException("User not found.", USER_NOT_FOUND, username) { }
+};
+
+class UserAlreadyExistsException : public UserException
+{
+public:
+    explicit UserAlreadyExistsException(const std::string& username) : UserException("User already exists.", USER_ALREADY_EXISTS, username) { }
+};
+
+class UserInvalidUsernameException : public UserException
+{
+public:
+    explicit UserInvalidUsernameException(const std::string& username) : UserException("Invalid user username.", USER_INVALID_USERNAME, username) { }
+};
+
+// CONTACT EXCEPTIONS
+class ContactException : public stdutils::custom_error
+{
+public:
+    virtual ~ContactException() throw() { }
+    const std::string& username() const { return username_; }
+
+protected:
+    explicit ContactException(const std::string& what, int code, const std::string& username) : stdutils::custom_error(what, code), username_(username) { }
+
+    std::string username_;
+};
+
+class ContactNotFoundException : public ContactException
+{
+public:
+    explicit ContactNotFoundException(const std::string& username) : ContactException("Contact not found.", CONTACT_NOT_FOUND, username) { }
+};
+
+class ContactAlreadyExistsException : public ContactException
+{
+public:
+    explicit ContactAlreadyExistsException(const std::string& username) : ContactException("Contact already exists.", CONTACT_ALREADY_EXISTS, username) { }
+};
+
+class ContactInvalidUsernameException : public ContactException
+{
+public:
+    explicit ContactInvalidUsernameException(const std::string& username) : ContactException("Invalid contact username.", CONTACT_INVALID_USERNAME, username) { }
+};
 
 }

@@ -10,6 +10,7 @@
 #pragma once
 
 #include <string>
+#include <sstream>
 
 namespace stdutils
 {
@@ -27,6 +28,14 @@ inline std::string delimited_list(const C& items, const std::string& delimiter)
         rval += item;
     }
     return rval;
+}
+
+template<class OutIt>
+inline void explode(const std::string& input, char delimiter, OutIt output)
+{
+    std::istringstream buffer(input);
+    std::string item;
+    while (std::getline(buffer, item, delimiter)) { *output++ = item; }
 }
 
 }

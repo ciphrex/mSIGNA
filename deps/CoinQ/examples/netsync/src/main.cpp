@@ -8,14 +8,14 @@
 //
 // All Rights Reserved.
 
+#include <CoinQ/CoinQ_netsync.h>
+#include <CoinQ/CoinQ_coinparams.h>
+
 #include <CoinCore/CoinNodeData.h>
 #include <CoinCore/MerkleTree.h>
 #include <CoinCore/BloomFilter.h>
 #include <CoinCore/typedefs.h>
 #include <CoinCore/random.h>
-
-#include <CoinQ/CoinQ_netsync.h>
-#include <CoinQ/CoinQ_coinparams.h>
 
 #include <stdutils/stringutils.h>
 

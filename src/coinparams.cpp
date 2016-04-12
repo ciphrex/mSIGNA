@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // coinparams.cpp
 //
@@ -22,10 +22,12 @@ const CoinQ::CoinParams& getCoinParams(const std::string& network_name)
     return selector.getCoinParams(network_name);
 }
 
+bool userTrailingDecimals = true;
 QString currencySymbol;
 uint64_t currencyDivisor;
 int currencyDecimals;
 uint64_t currencyMax;
+uint64_t defaultFee;
 
 QStringList getValidCurrencyPrefixes()
 {
@@ -72,11 +74,26 @@ void setCurrencyUnitPrefix(const QString& unitPrefix)
     }
 }
 
-QString getFormattedCurrencyAmount(int64_t value)
+void setTrailingDecimals(bool show)
+{
+    userTrailingDecimals = show;
+}
+
+QString getFormattedCurrencyAmount(int64_t value, TrailingDecimalsFlag flag)
 {
     if (currencyDivisor == 0) throw std::runtime_error("Invalid currency unit.");
 
-    return QString::number(value/(1.0 * currencyDivisor), 'f', currencyDecimals);
+    QString formattedAmount = QString::number(value/(1.0 * currencyDivisor), 'f', currencyDecimals);
+
+    if ((flag == HIDE_TRAILING_DECIMALS || (flag == USER_TRAILING_DECIMALS && !userTrailingDecimals)) && currencyDecimals > 0)
+    {
+        int newLength = formattedAmount.length();
+        while (newLength > 0 && formattedAmount[newLength - 1] == '0') { newLength--; }
+        if (newLength > 0 && formattedAmount[newLength - 1] == '.') { newLength--; }
+        formattedAmount = formattedAmount.left(newLength);
+    }
+
+    return formattedAmount;
 }
 
 const QString& getCurrencySymbol()
@@ -99,3 +116,7 @@ uint64_t getCurrencyMax()
     return currencyMax;
 }
 
+uint64_t getDefaultFee()
+{
+    return getCoinParams().default_fee();
+}

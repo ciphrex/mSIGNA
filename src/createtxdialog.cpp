@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // createtxdialogview.cpp
 //
@@ -202,35 +202,27 @@ void CoinControlWidget::updateTotal(const QItemSelection& /*selected*/, const QI
 }
 
 CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName, const PaymentRequest& paymentRequest, QWidget* parent)
-    : QDialog(parent), status(SAVE_ONLY)
+    : QDialog(parent), status(SAVE)
 {
     // Coin parameters
     currencyDivisor = getCurrencyDivisor(); //getCoinParams().currency_divisor();
     currencySymbol = getCurrencySymbol(); //getCoinParams().currency_symbol();
     currencyMax = getCurrencyMax(); //getCoinParams().currency_max();
     currencyDecimals = getCurrencyDecimals(); //getCoinParams().currency_decimals();
+    defaultFee = getDefaultFee(); // getCoinParams().default_fee();
 
     // Buttons
-    signAndSendButton = new QPushButton(tr("Sign and Send"));
-    signAndSaveButton = new QPushButton(tr("Sign and Save"));
+    signButton = new QPushButton(tr("Sign"));
     saveButton = new QPushButton(tr("Save Unsigned"));
     cancelButton = new QPushButton(tr("Cancel"));
     cancelButton->setDefault(true);
-/*
-    QDialogButtonBox* buttonBox = new QDialogButtonBox(
-                                        QDialogButtonBox::Ok |
-                                        QDialogButtonBox::Cancel);
-
-*/
 
     QDialogButtonBox* buttonBox = new QDialogButtonBox;
-    buttonBox->addButton(signAndSendButton, QDialogButtonBox::ActionRole);
-    buttonBox->addButton(signAndSaveButton, QDialogButtonBox::ActionRole);
+    buttonBox->addButton(signButton, QDialogButtonBox::ActionRole);
     buttonBox->addButton(saveButton, QDialogButtonBox::AcceptRole);
     buttonBox->addButton(cancelButton, QDialogButtonBox::RejectRole);
 
-    connect(signAndSendButton, &QPushButton::clicked, [this]() { status = SIGN_AND_SEND; accept(); });
-    connect(signAndSaveButton, &QPushButton::clicked, [this]() { status = SIGN_AND_SAVE; accept(); });
+    connect(signButton, &QPushButton::clicked, [this]() { status = SIGN; accept(); });
     connect(buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttonBox, SIGNAL(rejected()), this, SLOT(reject()));
 
@@ -247,7 +239,7 @@ CreateTxDialog::CreateTxDialog(CoinDB::Vault* vault, const QString& accountName,
     QLabel* feeLabel = new QLabel(tr("Fee") + " (" + currencySymbol + "):");
     feeEdit = new QLineEdit();
     feeEdit->setValidator(new CurrencyValidator(currencyMax, currencyDecimals, this));
-    feeEdit->setText("0.0005"); // TODO: suggest more intelligently
+    feeEdit->setText(getFormattedCurrencyAmount(defaultFee, HIDE_TRAILING_DECIMALS)); // TODO: suggest more intelligently
 
     QHBoxLayout* feeLayout = new QHBoxLayout();
     feeLayout->addWidget(feeLabel);

@@ -1,4 +1,81 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="sqlite" version="1">
+  <changeset version="17">
+    <alter-table name="Tx">
+      <add-column name="propagation_protocol" type="TEXT" null="false"/>
+    </alter-table>
+  </changeset>
+
+  <changeset version="16">
+    <alter-table name="Keychain">
+      <add-column name="seed_ciphertext" type="BLOB" null="false"/>
+      <add-column name="seed_salt" type="INTEGER" null="false"/>
+    </alter-table>
+  </changeset>
+
+  <changeset version="15">
+    <add-table name="User" kind="object">
+      <column name="id" type="INTEGER" null="false"/>
+      <column name="username" type="TEXT" null="false"/>
+      <column name="txoutscript_whitelist_enabled" type="INTEGER" null="false"/>
+      <primary-key auto="true">
+        <column name="id"/>
+      </primary-key>
+      <index name="User_username_i" type="UNIQUE">
+        <column name="username"/>
+      </index>
+    </add-table>
+    <add-table name="User_txoutscript_whitelist" kind="container">
+      <column name="object_id" type="INTEGER" null="false"/>
+      <column name="value" type="BLOB" null="false"/>
+      <foreign-key name="object_id_fk" on-delete="CASCADE">
+        <column name="object_id"/>
+        <references table="User">
+          <column name="id"/>
+        </references>
+      </foreign-key>
+      <index name="User_txoutscript_whitelist_object_id_i">
+        <column name="object_id"/>
+      </index>
+    </add-table>
+    <alter-table name="Tx">
+      <add-column name="user" type="INTEGER" null="true"/>
+      <add-foreign-key name="user_fk" deferrable="DEFERRED">
+        <column name="user"/>
+        <references table="User">
+          <column name="id"/>
+        </references>
+      </add-foreign-key>
+    </alter-table>
+  </changeset>
+
+  <changeset version="14">
+    <alter-table name="Account">
+      <add-column name="compressed_keys" type="INTEGER" null="false"/>
+    </alter-table>
+  </changeset>
+
+  <changeset version="13">
+    <add-table name="Contact" kind="object">
+      <column name="id" type="INTEGER" null="false"/>
+      <column name="username" type="TEXT" null="false"/>
+      <primary-key auto="true">
+        <column name="id"/>
+      </primary-key>
+      <index name="Contact_username_i" type="UNIQUE">
+        <column name="username"/>
+      </index>
+    </add-table>
+    <alter-table name="SigningScript">
+      <add-column name="contact" type="INTEGER" null="true"/>
+      <add-foreign-key name="contact_fk" deferrable="DEFERRED">
+        <column name="contact"/>
+        <references table="Contact">
+          <column name="id"/>
+        </references>
+      </add-foreign-key>
+    </alter-table>
+  </changeset>
+
   <model version="12">
     <table name="Version" kind="object">
       <column name="id" type="INTEGER" null="false"/>

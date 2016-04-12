@@ -1,7 +1,7 @@
 #######################################
-# coinvault.pro
+# mSIGNA.pro
 #
-# Copyright (c) 2013 Eric Lombrozo
+# Copyright (c) 2013-2015 Eric Lombrozo
 #
 # All Rights Reserved.
 
@@ -93,9 +93,13 @@ HEADERS = \
     src/signatureactions.h \
     src/requestpaymentdialog.h \
     src/networksettingsdialog.h \
+    src/wordlistvalidator.h \
+    src/keychainbackupwizard.h \
     src/keychainbackupdialog.h \
     src/viewbip32dialog.h \
     src/importbip32dialog.h \
+    src/viewbip39dialog.h \
+    src/importbip39dialog.h \
     src/passphrasedialog.h \
     src/setpassphrasedialog.h
                 
@@ -146,9 +150,13 @@ SOURCES = \
     src/signatureactions.cpp \
     src/requestpaymentdialog.cpp \
     src/networksettingsdialog.cpp \
+    src/wordlistvalidator.cpp \
+    src/keychainbackupwizard.cpp \
     src/keychainbackupdialog.cpp \
     src/viewbip32dialog.cpp \
     src/importbip32dialog.cpp \
+    src/viewbip39dialog.cpp \
+    src/importbip39dialog.cpp \
     src/passphrasedialog.cpp \
     src/setpassphrasedialog.cpp
 

@@ -51,9 +51,12 @@
     $ sudo make install
     $ cd
 
-6) Build qrencode QR Code C library (libqrencode) for linux
-    $ cd CoinVault/deps/qrencode-3.4.3
-    $ ./configure
+6) Clone mSIGNA repository, in case you haven't done so already:
+    $ git clone https://github.com/ciphrex/mSIGNA.git
+
+7) Build qrencode QR Code C library (libqrencode) for linux
+    $ cd mSIGNA/deps/qrencode-3.4.3
+    $ ./configure --without-tools
     $ make
     $ sudo make install
     $ cd

@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // mainwindow.h
 //
@@ -124,7 +124,8 @@ private slots:
     ////////////////////
     // GLOBAL OPERATIONS
     void selectCurrencyUnit();
-    void selectCurrencyUnit(const QString& prefix);
+    void selectCurrencyUnit(const QString& newCurrencyUnitPrefix);
+    void selectTrailingDecimals(bool newShowTrailingDecimals);
 
     ///////////////////
     // VAULT OPERATIONS
@@ -137,15 +138,17 @@ private slots:
     //////////////////////
     // KEYCHAIN OPERATIONS
     void newKeychain();
-    void unlockKeychain();
-    void lockKeychain();
+    bool unlockKeychain(QString name = QString());
+    void lockKeychain(QString name = QString());
     void lockAllKeychains();
-    void setKeychainPassphrase();
+    int  setKeychainPassphrase(const QString& keychainName = QString());
+    int  makeKeychainBackup(const QString& keychainName = QString());
     void importKeychain(QString fileName = QString());
     void exportKeychain(bool exportPrivate);
     void importBIP32();
     void viewBIP32(bool viewPrivate);
-    void backupKeychain();
+    void importBIP39();
+    void viewBIP39();
 //    void mergeKeychains();
 //    void removeKeychain();
 //    void renameKeychain();
@@ -239,6 +242,7 @@ private:
 
     QString curFile;
     QString currencyUnitPrefix;
+    bool showTrailingDecimals;
 
     //void updateBestHeight(int newHeight);
 
@@ -290,6 +294,7 @@ private:
     QAction* lockKeychainAction;
     QAction* lockAllKeychainsAction;
     QAction* setKeychainPassphraseAction;
+    QAction* makeKeychainBackupAction;
     bool     importPrivate;
     QAction* importPrivateAction;
     QAction* importPublicAction;
@@ -300,7 +305,8 @@ private:
     QAction* importBIP32Action;
     QAction* viewPrivateBIP32Action;
     QAction* viewPublicBIP32Action;
-    QAction* backupKeychainAction;
+    QAction* importBIP39Action;
+    QAction* viewBIP39Action;
 
     // account actions
     QAction* quickNewAccountAction;
@@ -354,6 +360,7 @@ private:
     // currency unit actions
     QActionGroup* currencyUnitGroup;
     QList<QAction*> currencyUnitActions;
+    QAction* showTrailingDecimalsAction;
 
     // about/help actions
     QAction* aboutAction;

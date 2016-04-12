@@ -840,7 +840,7 @@ void NetworkSync::processBlockTx(const Coin::Transaction& tx)
                 notifyMerkleTx(m_currentMerkleBlock, tx, m_currentMerkleTxIndex++, m_currentMerkleTxCount);
                 m_currentMerkleTxHashes.pop();
             }
-            else if (m_lastRequestedBlockHash != m_lastRequestedMerkleBlockHash)
+            else if ((!m_lastRequestedMerkleBlockHash.empty()) && (m_lastRequestedBlockHash != m_lastRequestedMerkleBlockHash))
             {
                 m_bMissingTxs = true;
                 m_lastRequestedBlockHash = m_lastRequestedMerkleBlockHash;
@@ -849,6 +849,7 @@ void NetworkSync::processBlockTx(const Coin::Transaction& tx)
                 try
                 {
                     m_peer.getBlock(m_lastRequestedBlockHash);
+                    LOGGER(debug) << "Got block " << m_lastRequestedBlockHash.getHex() << endl;
                 }
                 catch (const exception& e)
                 {

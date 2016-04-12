@@ -45,9 +45,9 @@ class Vault
 {
 public:
     Vault() : db_(nullptr) { }
-    Vault(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
-    Vault(const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
-    Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
+    Vault(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = false);
+    Vault(const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = false);
+    Vault(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = false);
 
     virtual ~Vault();
 
@@ -62,8 +62,8 @@ public:
     ///////////////////////
     // GLOBAL OPERATIONS //
     ///////////////////////
-    void                                    open(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
-    void                                    open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "");
+    void                                    open(int argc, char** argv, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = false);
+    void                                    open(const std::string& dbuser, const std::string& dbpasswd, const std::string& dbname, bool create = false, uint32_t version = SCHEMA_VERSION, const std::string& network = "", bool migrate = false);
     void                                    close();
 
     const std::string&                      getName() const { return name_; }
@@ -84,6 +84,15 @@ public:
 
     void                                    importVault(const std::string& filepath, bool importprivkeys = true);
 
+    ////////////////////////
+    // CONTACT OPERATIONS //
+    ////////////////////////
+    std::shared_ptr<Contact>                newContact(const std::string& username);
+    std::shared_ptr<Contact>                getContact(const std::string& username) const;
+    ContactVector                           getAllContacts() const;
+    bool                                    contactExists(const std::string& username) const;
+    std::shared_ptr<Contact>                renameContact(const std::string& old_username, const std::string& new_username);
+
     /////////////////////////
     // KEYCHAIN OPERATIONS //
     /////////////////////////
@@ -101,6 +110,7 @@ public:
     std::vector<KeychainView>               getRootKeychainViews(const std::string& account_name = "", bool get_hidden = false) const;
     secure_bytes_t                          exportBIP32(const std::string& keychain_name, bool export_private) const;
     std::shared_ptr<Keychain>               importBIP32(const std::string& keychain_name, const secure_bytes_t& extkey, const secure_bytes_t& lock_key = secure_bytes_t());
+    secure_bytes_t                          exportBIP39(const std::string& keychain_name) const;
 
     // The following methods change the persisted encryption state using the in-memory unlock key map.
     void                                    encryptKeychain(const std::string& keychain_name, const secure_bytes_t& lock_key);
@@ -120,7 +130,7 @@ public:
     void                                    exportAccount(const std::string& account_name, const std::string& filepath, bool exportprivkeys = false) const;
     std::shared_ptr<Account>                importAccount(const std::string& filepath, unsigned int& privkeysimported); // pass privkeysimported = 0 to not inport any private keys.
     bool                                    accountExists(const std::string& account_name) const;
-    void                                    newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size = 25, uint32_t time_created = time(NULL));
+    void                                    newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size = DEFAULT_UNUSED_POOL_SIZE, uint32_t time_created = time(NULL), bool compressed_keys = true);
     //void                                  eraseAccount(const std::string& name) const;
     void                                    renameAccount(const std::string& old_name, const std::string& new_name);
     std::shared_ptr<Account>                getAccount(const std::string& account_name) const;
@@ -128,7 +138,7 @@ public:
     std::vector<AccountInfo>                getAllAccountInfo() const;
     uint64_t                                getAccountBalance(const std::string& account_name, unsigned int min_confirmations = 1, int tx_flags = Tx::ALL) const;
     std::shared_ptr<AccountBin>             addAccountBin(const std::string& account_name, const std::string& bin_name);
-    std::shared_ptr<SigningScript>          issueSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "", uint32_t index = 0);
+    std::shared_ptr<SigningScript>          issueSigningScript(const std::string& account_name, const std::string& bin_name = DEFAULT_BIN_NAME, const std::string& label = "", uint32_t index = 0, const std::string& username = std::string());
     void                                    refillAccountPool(const std::string& account_name);
 
     // empty account_name or bin_name means do not filter on those fields
@@ -160,7 +170,11 @@ public:
     std::shared_ptr<Tx>                     insertMerkleTx(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs = false, bool isCoinbase = false);
     std::shared_ptr<Tx>                     confirmMerkleTx(const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount);
     std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
+    std::shared_ptr<Tx>                     createTx(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1, bool insert = false);
     std::shared_ptr<Tx>                     createTx(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations, bool insert = false); // Pass empty output scripts to generate change outputs.
+    std::shared_ptr<Tx>                     createTx(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations, bool insert = false); // Pass empty output scripts to generate change outputs.
+    txs_t                                   consolidateTxOuts(const std::string& account_name, uint32_t max_tx_size /* in bytes */, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, const bytes_t& txoutscript, uint64_t min_fee, uint32_t min_confirmations, bool insert = false);
+    txs_t                                   consolidateTxOuts(const std::string& username, const std::string& account_name, uint32_t max_tx_size /* in bytes */, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, const bytes_t& txoutscript, uint64_t min_fee, uint32_t min_confirmations, bool insert = false);
     void                                    deleteTx(const bytes_t& tx_hash); // Tries both signed and unsigned hashes. Throws TxNotFoundException.
     void                                    deleteTx(unsigned long tx_id); // Throws TxNotFoundException.
     SigningRequest                          getSigningRequest(const bytes_t& hash, bool include_raw_tx = false) const; // Tries both signed and unsigned hashes. Throws TxNotFoundException.
@@ -183,8 +197,13 @@ public:
     std::string                             exportTx(std::shared_ptr<Tx> tx) const;
     std::shared_ptr<Tx>                     importTx(const std::string& filepath);
     std::shared_ptr<Tx>                     importTxFromString(const std::string& txstr);
-    void                                    exportTxs(const std::string& filepath, uint32_t minheight = 0) const;
-    void                                    importTxs(const std::string& filepath);
+    unsigned int                            exportTxs(const std::string& filepath, uint32_t minheight = 0) const;
+    unsigned int                            importTxs(const std::string& filepath);
+
+    //////////////////////////////
+    // SIGNINGSCRIPT OPERATIONS //
+    //////////////////////////////
+    std::shared_ptr<SigningScript>          getSigningScript(const bytes_t& script) const;
 
     //////////////////////
     // BLOCK OPERATIONS //
@@ -199,6 +218,19 @@ public:
     void                                    exportMerkleBlocks(const std::string& filepath) const;
     void                                    importMerkleBlocks(const std::string& filepath);
 
+    /////////////////////
+    // USER OPERATIONS //
+    /////////////////////
+    std::shared_ptr<User>                   addUser(const std::string& username, bool txoutscript_whitelist_enabled = false);
+    std::shared_ptr<User>                   getUser(const std::string& username) const;
+    const std::set<bytes_t>&                getTxOutScriptWhitelist(const std::string& username) const;
+    std::shared_ptr<User>                   setTxOutScriptWhitelist(const std::string& username, const std::set<bytes_t>& txoutscripts);
+    std::shared_ptr<User>                   addTxOutScriptToWhitelist(const std::string& username, const bytes_t& txoutscript);
+    std::shared_ptr<User>                   removeTxOutScriptFromWhitelist(const std::string& username, const bytes_t& txoutscript);
+    std::shared_ptr<User>                   clearTxOutScriptWhitelist(const std::string& username);
+    std::shared_ptr<User>                   enableTxOutScriptWhitelist(const std::string& username, bool enabled = true);
+    bool                                    isTxOutScriptWhitelistEnabled(const std::string& username) const;
+
     ////////////////////////
     // SLOT SUBSCRIPTIONS //
     ////////////////////////
@@ -207,6 +239,7 @@ public:
 
     Signals::Connection subscribeTxInserted(TxSignal::Slot slot) { return notifyTxInserted.connect(slot); }
     Signals::Connection subscribeTxUpdated(TxSignal::Slot slot) { return notifyTxUpdated.connect(slot); }
+    Signals::Connection subscribeTxDeleted(TxSignal::Slot slot) { return notifyTxDeleted.connect(slot); }
     Signals::Connection subscribeMerkleBlockInserted(MerkleBlockSignal::Slot slot) { return notifyMerkleBlockInserted.connect(slot); }
 
     Signals::Connection subscribeTxInsertionError(TxErrorSignal::Slot slot) { return notifyTxInsertionError.connect(slot); }
@@ -221,6 +254,7 @@ public:
 
         notifyTxInserted.clear();
         notifyTxUpdated.clear();
+        notifyTxDeleted.clear();
         notifyMerkleBlockInserted.clear();
 
         notifyTxInsertionError.clear();
@@ -245,6 +279,15 @@ protected:
     std::vector<bytes_t>                    getLocatorHashes_unwrapped() const;
     Coin::BloomFilter                       getBloomFilter_unwrapped(double falsePositiveRate, uint32_t nTweak, uint32_t nFlags) const;
     hashvector_t                            getIncompleteBlockHashes_unwrapped() const;
+
+    ////////////////////////
+    // CONTACT OPERATIONS //
+    ////////////////////////
+    std::shared_ptr<Contact>                newContact_unwrapped(const std::string& username);
+    std::shared_ptr<Contact>                getContact_unwrapped(const std::string& username) const;
+    ContactVector                           getAllContacts_unwrapped() const;
+    bool                                    contactExists_unwrapped(const std::string& username) const;
+    std::shared_ptr<Contact>                renameContact_unwrapped(const std::string& old_username, const std::string& new_username);
 
     /////////////////////////
     // KEYCHAIN OPERATIONS //
@@ -304,7 +347,10 @@ protected:
     std::shared_ptr<Tx>                     insertMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const Coin::Transaction& cointx, unsigned int txindex, unsigned int txcount, bool verifysigs = false, bool isCoinbase = false);
     std::shared_ptr<Tx>                     confirmMerkleTx_unwrapped(const ChainMerkleBlock& chainmerkleblock, const bytes_t& txhash, unsigned int txindex, unsigned int txcount);
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
+    std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, txouts_t txouts, uint64_t fee, unsigned int maxchangeouts = 1);
     std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations);
+    std::shared_ptr<Tx>                     createTx_unwrapped(const std::string& username, const std::string& account_name, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, txouts_t txouts, uint64_t fee, uint32_t min_confirmations);
+    txs_t                                   consolidateTxOuts_unwrapped(const std::string& account_name, uint32_t max_tx_size /* in bytes */, uint32_t tx_version, uint32_t tx_locktime, ids_t coin_ids, const bytes_t& txoutscript, uint64_t min_fee, uint32_t min_confirmations);
     void                                    deleteTx_unwrapped(std::shared_ptr<Tx> tx);
     void                                    updateTx_unwrapped(std::shared_ptr<Tx> tx);
     SigningRequest                          getSigningRequest_unwrapped(std::shared_ptr<Tx> tx, bool include_raw_tx = false) const;
@@ -315,8 +361,13 @@ protected:
     std::shared_ptr<TxOut>                  setSendingLabel_unwrapped(const bytes_t& outhash, uint32_t outindex, const std::string& label);
     std::shared_ptr<TxOut>                  setReceivingLabel_unwrapped(const bytes_t& outhash, uint32_t outindex, const std::string& label);
 
-    void                                    exportTxs_unwrapped(boost::archive::text_oarchive& oa, uint32_t minheight) const;
-    void                                    importTxs_unwrapped(boost::archive::text_iarchive& ia);
+    unsigned int                            exportTxs_unwrapped(boost::archive::text_oarchive& oa, uint32_t minheight) const;
+    unsigned int                            importTxs_unwrapped(boost::archive::text_iarchive& ia);
+
+    //////////////////////////////
+    // SIGNINGSCRIPT OPERATIONS //
+    //////////////////////////////
+    std::shared_ptr<SigningScript>          getSigningScript_unwrapped(const bytes_t& script) const;
 
     ///////////////////////////
     // BLOCKCHAIN OPERATIONS //
@@ -334,6 +385,12 @@ protected:
     void                                    exportMerkleBlocks_unwrapped(boost::archive::text_oarchive& oa) const;
     void                                    importMerkleBlocks_unwrapped(boost::archive::text_iarchive& ia);
 
+    /////////////////////
+    // USER OPERATIONS //
+    /////////////////////
+    std::shared_ptr<User>                   addUser_unwrapped(const std::string& username, bool txoutscript_whitelist_enabled = false);
+    std::shared_ptr<User>                   getUser_unwrapped(const std::string& username) const;
+
     /////////////
     // SIGNALS //
     /////////////
@@ -344,6 +401,7 @@ protected:
 
     TxSignal                                notifyTxInserted;
     TxSignal                                notifyTxUpdated;
+    TxSignal                                notifyTxDeleted;
     MerkleBlockSignal                       notifyMerkleBlockInserted;
 
     TxErrorSignal                           notifyTxInsertionError;

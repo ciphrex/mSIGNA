@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // txactions.h
 //
@@ -54,10 +54,14 @@ private slots:
     void sendTx();
     void exportTxToFile();
     void importTxFromFile();
+    void importTxFromClipboard();
+    void exportAllTxsToFile();
+    void importTxsFromFile();
     void viewRawTx();
     void copyAddressToClipboard();
     void copyTxHashToClipboard();
     void copyRawTxToClipboard();
+    void insertRawTxFromClipboard();
     void saveRawTxToFile();
     void insertRawTxFromFile();
     void viewTxOnWeb();
@@ -86,10 +90,14 @@ private:
     QAction* sendTxAction;
     QAction* exportTxToFileAction;
     QAction* importTxFromFileAction;
+    QAction* importTxFromClipboardAction;
+    QAction* exportAllTxsToFileAction;
+    QAction* importTxsFromFileAction;
     QAction* viewRawTxAction;
     QAction* copyAddressToClipboardAction;
     QAction* copyTxHashToClipboardAction;
     QAction* copyRawTxToClipboardAction;
+    QAction* insertRawTxFromClipboardAction;
     QAction* saveRawTxToFileAction;
     QAction* insertRawTxFromFileAction;
     QAction* viewTxOnWebAction;

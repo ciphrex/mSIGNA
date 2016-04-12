@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// CoinVault
+// mSIGNA
 //
 // txactions.h
 //
@@ -101,6 +101,10 @@ void TxActions::updateVaultStatus()
     bool bEnabled = (m_accountModel && m_accountModel->isOpen());
     searchTxAction->setEnabled(bEnabled);
     importTxFromFileAction->setEnabled(bEnabled);
+    importTxFromClipboardAction->setEnabled(bEnabled);
+    importTxsFromFileAction->setEnabled(bEnabled);
+    exportAllTxsToFileAction->setEnabled(bEnabled);
+    insertRawTxFromClipboardAction->setEnabled(bEnabled);
     insertRawTxFromFileAction->setEnabled(bEnabled);
 }
 
@@ -239,6 +243,39 @@ void TxActions::exportTxToFile()
     }
 }
 
+void TxActions::exportAllTxsToFile()
+{
+    try {
+        if (!m_synchedVault || !m_synchedVault->isVaultOpen()) throw std::runtime_error("You must create a vault or open an existing vault before exporting transactions.");
+
+        CoinDB::Vault* vault = m_synchedVault->getVault();
+        QString fileName = QString::fromStdString(vault->getName());
+
+        // Strip .vault extension and add .txs extension
+        if (fileName.endsWith(".vault", Qt::CaseInsensitive)) { fileName = fileName.left(fileName.size() - 6); }
+        fileName += ".txs";
+
+        fileName = QFileDialog::getSaveFileName(
+            nullptr,
+            tr("Export All Transactions"),
+            getDocDir() + "/" + fileName,
+            tr("Transaction Set (*.txs)"));
+        if (fileName.isEmpty()) return;
+
+        fileName = QFileInfo(fileName).absoluteFilePath();
+
+        QFileInfo fileInfo(fileName);
+        setDocDir(fileInfo.dir().absolutePath());
+
+        // TODO: emit settings changed signal
+
+        m_accountModel->getVault()->exportTxs(fileName.toStdString()); 
+    }
+    catch (const std::exception& e) {
+        emit error(e.what());
+    }
+}
+
 void TxActions::importTxFromFile()
 {
     try {
@@ -260,6 +297,59 @@ void TxActions::importTxFromFile()
 
         std::shared_ptr<CoinDB::Tx> tx = m_accountModel->getVault()->importTx(fileName.toStdString());
         if (!tx) throw std::runtime_error("Transaction not inserted.");
+        m_accountModel->update();
+        m_txModel->update();
+        m_txView->updateColumns();
+        emit setCurrentWidget(m_txView);
+    }
+    catch (const std::exception& e) {
+        emit error(e.what());
+    } 
+}
+
+void TxActions::importTxFromClipboard()
+{
+    try
+    {
+        if (!m_accountModel || !m_accountModel->isOpen()) throw std::runtime_error("You must create a vault or open an existing vault before importing transactions.");
+
+        QClipboard* clipboard = QApplication::clipboard();
+        std::string serializedTx = clipboard->text().toStdString();
+
+        std::shared_ptr<CoinDB::Tx> tx = m_accountModel->getVault()->importTxFromString(serializedTx);
+        if (!tx) throw std::runtime_error("Transaction not inserted.");
+        m_accountModel->update();
+        m_txModel->update();
+        m_txView->updateColumns();
+        emit setCurrentWidget(m_txView);
+    }
+    catch (const std::exception& e)
+    {
+        emit error(e.what());
+    } 
+}
+
+void TxActions::importTxsFromFile()
+{
+    try
+    {
+        if (!m_accountModel || !m_accountModel->isOpen()) throw std::runtime_error("You must create a vault or open an existing vault before importing transactions.");
+
+        QString fileName = QFileDialog::getOpenFileName(
+            nullptr,
+            tr("Import Transactions"),
+            getDocDir(),
+            tr("Transaction Set (*.txs)"));
+        if (fileName.isEmpty()) return;
+
+        fileName = QFileInfo(fileName).absoluteFilePath();
+
+        QFileInfo fileInfo(fileName);
+        setDocDir(fileInfo.dir().absolutePath());
+
+        // TODO: emit settings changed signal
+
+        if (m_accountModel->getVault()->importTxs(fileName.toStdString()) == 0) throw std::runtime_error("No transactions imported.");
         m_accountModel->update();
         m_txModel->update();
         m_txView->updateColumns();
@@ -345,6 +435,26 @@ void TxActions::saveRawTxToFile()
     catch (const std::exception& e) {
         emit error(e.what());
     }
+}
+
+void TxActions::insertRawTxFromClipboard()
+{
+    try {
+        if (!m_accountModel || !m_accountModel->isOpen()) throw std::runtime_error("You must create a vault or open an existing vault before inserting transactions.");
+
+        QClipboard* clipboard = QApplication::clipboard();
+        std::string rawhex = clipboard->text().toStdString();
+
+        std::shared_ptr<CoinDB::Tx> tx(new CoinDB::Tx());
+        tx->set(uchar_vector(rawhex));
+        tx = m_accountModel->insertTx(tx);
+        m_txModel->update();
+        m_txView->updateColumns();
+        emit setCurrentWidget(m_txView);
+    }
+    catch (const std::exception& e) {
+        emit error(e.what());
+    } 
 }
 
 void TxActions::insertRawTxFromFile()
@@ -437,13 +547,25 @@ void TxActions::createActions()
     sendTxAction->setEnabled(false);
     connect(sendTxAction, SIGNAL(triggered()), this, SLOT(sendTx()));
 
-    exportTxToFileAction = new QAction(tr("Export Transaction To File..."), this);
+    exportTxToFileAction = new QAction(tr("To File..."), this);
     exportTxToFileAction->setEnabled(false);
     connect(exportTxToFileAction, SIGNAL(triggered()), this, SLOT(exportTxToFile()));
 
-    importTxFromFileAction = new QAction(tr("Import Transaction From File..."), this);
+    importTxFromFileAction = new QAction(tr("From File..."), this);
     importTxFromFileAction->setEnabled(false);
     connect(importTxFromFileAction, SIGNAL(triggered()), this, SLOT(importTxFromFile()));
+
+    importTxFromClipboardAction = new QAction(tr("From Clipboard"), this);
+    importTxFromClipboardAction->setEnabled(false);
+    connect(importTxFromClipboardAction, SIGNAL(triggered()), this, SLOT(importTxFromClipboard()));
+
+    exportAllTxsToFileAction = new QAction(tr("All To File..."), this);
+    exportAllTxsToFileAction->setEnabled(false);
+    connect(exportAllTxsToFileAction, SIGNAL(triggered()), this, SLOT(exportAllTxsToFile()));
+
+    importTxsFromFileAction = new QAction(tr("Multiple From File..."), this);
+    importTxsFromFileAction->setEnabled(false);
+    connect(importTxsFromFileAction, SIGNAL(triggered()), this, SLOT(importTxsFromFile()));
 
     viewRawTxAction = new QAction(tr("View Raw Transaction"), this);
     viewRawTxAction->setEnabled(false);
@@ -457,15 +579,19 @@ void TxActions::createActions()
     copyTxHashToClipboardAction->setEnabled(false);
     connect(copyTxHashToClipboardAction, SIGNAL(triggered()), this, SLOT(copyTxHashToClipboard()));
 
-    copyRawTxToClipboardAction = new QAction(tr("Copy Raw Transaction To Clipboard"), this);
+    copyRawTxToClipboardAction = new QAction(tr("To Clipboard (raw)"), this);
     copyRawTxToClipboardAction->setEnabled(false);
     connect(copyRawTxToClipboardAction, SIGNAL(triggered()), this, SLOT(copyRawTxToClipboard()));
 
-    saveRawTxToFileAction = new QAction(tr("Save Raw Transaction To File..."), this);
+    insertRawTxFromClipboardAction = new QAction(tr("From Clipboard (raw)"), this);
+    insertRawTxFromClipboardAction->setEnabled(false);
+    connect(insertRawTxFromClipboardAction, SIGNAL(triggered()), this, SLOT(insertRawTxFromClipboard()));
+
+    saveRawTxToFileAction = new QAction(tr("To File (raw)..."), this);
     saveRawTxToFileAction->setEnabled(false);
     connect(saveRawTxToFileAction, SIGNAL(triggered()), this, SLOT(saveRawTxToFile()));
 
-    insertRawTxFromFileAction = new QAction(tr("Insert Raw Transaction From File..."), this);
+    insertRawTxFromFileAction = new QAction(tr("From File (raw)..."), this);
     insertRawTxFromFileAction->setEnabled(false);
     connect(insertRawTxFromFileAction, SIGNAL(triggered()), this, SLOT(insertRawTxFromFile()));
 
@@ -483,17 +609,43 @@ void TxActions::createMenus()
     menu = new QMenu(tr("&Transactions"));
     menu->addAction(signaturesAction);
     menu->addAction(sendTxAction);
+
     menu->addSeparator();
     //menu->addAction(signTxAction);
-    menu->addAction(exportTxToFileAction);
-    menu->addAction(importTxFromFileAction);
+
+    QMenu* importTxMenu = menu->addMenu(tr("Import Transaction"));
+    importTxMenu->addAction(importTxFromClipboardAction);
+    importTxMenu->addAction(importTxFromFileAction);
+    importTxMenu->addAction(importTxsFromFileAction);
+    importTxMenu->addSeparator();
+    importTxMenu->addAction(insertRawTxFromClipboardAction);
+    importTxMenu->addAction(insertRawTxFromFileAction);
+
+    QMenu* exportTxMenu = menu->addMenu(tr("Export Transaction"));
+    exportTxMenu->addAction(exportTxToFileAction);
+    exportTxMenu->addAction(exportAllTxsToFileAction);
+    exportTxMenu->addSeparator();
+    exportTxMenu->addAction(copyRawTxToClipboardAction);
+    exportTxMenu->addAction(saveRawTxToFileAction);
+
     menu->addSeparator();
+
+    //menu->addAction(exportTxToFileAction);
+    //menu->addAction(importTxFromFileAction);
+    //menu->addAction(importTxFromClipboardAction);
+    //menu->addSeparator();
+    //menu->addAction(exportAllTxsToFileAction);
+    //menu->addAction(importTxsFromFileAction);
+    //menu->addSeparator();
     //menu->addAction(viewRawTxAction);
     menu->addAction(copyAddressToClipboardAction);
     menu->addAction(copyTxHashToClipboardAction);
-    menu->addAction(copyRawTxToClipboardAction);
-    menu->addAction(saveRawTxToFileAction);
-    menu->addAction(insertRawTxFromFileAction);
+    //menu->addAction(copyRawTxToClipboardAction);
+    //menu->addAction(insertRawTxFromClipboardAction);
+    //menu->addSeparator();
+    //menu->addAction(saveRawTxToFileAction);
+    //menu->addAction(insertRawTxFromFileAction);
+    menu->addSeparator();
     menu->addAction(viewTxOnWebAction);
     menu->addSeparator();
     menu->addAction(searchTxAction);
