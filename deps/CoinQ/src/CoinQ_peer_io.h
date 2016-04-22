@@ -64,6 +64,7 @@ public:
         resolver_(io_service),
         socket_(io_service),
         timer_(io_service),
+        keepalive_timer_(io_service),
         host_(host),
         port_(port),
         magic_bytes_(magic_bytes),
@@ -71,14 +72,16 @@ public:
         user_agent_(user_agent),
         start_height_(start_height),
         relay_(relay),
-        bRunning(false)
+        bRunning(false),
+        idle_duration_before_ping_sent(0),
+        bExpectingPong(false)
     {
         magic_bytes_vector_ = uint_to_vch(magic_bytes_, LITTLE_ENDIAN_);
     }
 
     ~Peer() { stop(); }
 
-    void set(const std::string& host, const std::string& port, uint32_t magic_bytes, uint32_t protocol_version, const std::string& user_agent = std::string(), uint32_t start_height = 0, bool relay = true)
+    void set(const std::string& host, const std::string& port, uint32_t magic_bytes, uint32_t protocol_version, const std::string& user_agent = std::string(), uint32_t start_height = 0, bool relay = true, unsigned int keepalive_timeout = 0)
     {
         stop();
         host_ = host;
@@ -90,6 +93,8 @@ public:
         relay_ = relay;
 
         magic_bytes_vector_ = uint_to_vch(magic_bytes_, LITTLE_ENDIAN_);
+
+        idle_duration_before_ping_sent = keepalive_timeout;
     }
 
     void subscribeMessage(peer_message_slot_t slot) { notifyMessage.connect(slot); }
@@ -286,7 +291,8 @@ private:
     tcp::socket socket_;
     tcp::endpoint endpoint_;
     boost::asio::deadline_timer timer_; // for handshakes
- 
+    boost::asio::deadline_timer keepalive_timer_; // for pings
+
     // Peer attributes
     std::string host_;
     std::string port_;
@@ -331,6 +337,12 @@ private:
     unsigned char read_buffer[READ_BUFFER_SIZE];
     std::size_t min_read_bytes;
 
+
+    boost::posix_time::ptime last_data_received_at; // time last successful data was read from peer
+    unsigned int idle_duration_before_ping_sent;   // idle time in seconds after which to disconnect the peer
+    const unsigned int max_ping_response_delay = 3; // seconds allowed for pong response to arrive
+    bool bExpectingPong;
+
     uchar_vector read_message;
     uchar_vector write_message;
     std::queue<boost::shared_ptr<uchar_vector>> sendQueue;
@@ -343,7 +355,32 @@ private:
     void do_handshake();
     void do_stop();
     void do_clearSendQueue();
+    void do_keepaliveCheck();
+};
+
+// Custom completion condition function object which behaves
+// exactly as the boost::detail::transfer_at_least_t
+// In addition it records time of each successful bytes transferred operation
+class transfer_at_least_t
+{
+public:
+
+    explicit transfer_at_least_t(std::size_t minimum, boost::posix_time::ptime * last_received_at = nullptr) :
+        minimum_(minimum),
+        last_received_at_(last_received_at) {
+    }
+
+    std::size_t operator()(const boost::system::error_code& err, std::size_t bytes_transferred) {
+        if((err == boost::asio::error::eof || !err ) && last_received_at_){
+            *last_received_at_ = boost::posix_time::second_clock::local_time();
+        }
+
+        return (!!err || bytes_transferred >= minimum_) ? 0 : boost::asio::detail::default_max_transfer_size;
+    }
+
+private:
+    std::size_t minimum_;
+    boost::posix_time::ptime *last_received_at_;
 };
 
 }
-

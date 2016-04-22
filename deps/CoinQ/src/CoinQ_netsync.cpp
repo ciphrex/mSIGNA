@@ -605,7 +605,7 @@ void NetworkSync::insertMerkleBlock(const Coin::MerkleBlock& merkleBlock, const 
     }
 }
 
-void NetworkSync::start(const std::string& host, const std::string& port)
+void NetworkSync::start(const std::string& host, const std::string& port, unsigned int keepalive_timeout)
 {
     {
         if (m_bStarted) throw runtime_error("NetworkSync - already started.");
@@ -619,7 +619,7 @@ void NetworkSync::start(const std::string& host, const std::string& port)
         m_bStarted = true;
 
         std::string port_ = port.empty() ? m_coinParams.default_port() : port;
-        m_peer.set(host, port_, m_coinParams.magic_bytes(), m_coinParams.protocol_version(), "Wallet v0.1", 0, false);
+        m_peer.set(host, port_, m_coinParams.magic_bytes(), m_coinParams.protocol_version(), "Wallet v0.1", 0, false, keepalive_timeout);
 
         LOGGER(trace) << "Starting peer " << host << ":" << port_ << "..." << endl;
         m_peer.start();
@@ -629,11 +629,11 @@ void NetworkSync::start(const std::string& host, const std::string& port)
     notifyStarted();
 }
 
-void NetworkSync::start(const std::string& host, int port)
+void NetworkSync::start(const std::string& host, int port, unsigned int keepalive_timeout)
 {
     std::stringstream ssport;
     ssport << port;
-    start(host, ssport.str());
+    start(host, ssport.str(), keepalive_timeout);
 }
 
 void NetworkSync::stop()

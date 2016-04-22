@@ -45,12 +45,50 @@ void Peer::do_handshake()
     });
 }
 
+void Peer::do_keepaliveCheck()
+{
+    if (!bRunning || idle_duration_before_ping_sent == 0) return;
+
+    boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+    boost::posix_time::time_duration diff = now - last_data_received_at;
+    long idle_time = diff.total_seconds();
+
+    //LOGGER(trace) << "Keep Alive Handler - last data received " << idle_time << " seconds ago." << std::endl;
+
+    if(idle_time >= idle_duration_before_ping_sent) {
+        // If no response to ping we previously sent.. disconnect peer
+        if(bExpectingPong) {
+            LOGGER(trace) << "Keep Alive Handler - No response to ping." << std::endl;
+            do_stop();
+            notifyTimeout(*this);
+            return;
+        }
+
+        // Send a ping after idle timeout is reached
+        Coin::PingMessage pingMessage;
+        Coin::CoinNodeMessage msg(magic_bytes_, &pingMessage);
+        LOGGER(trace) << "Keep Alive Handler - Sending ping message." << std::endl;
+        do_send(msg);
+
+        bExpectingPong = true;
+        keepalive_timer_.expires_from_now(boost::posix_time::seconds(max_ping_response_delay));
+
+    } else {
+        keepalive_timer_.expires_from_now(boost::posix_time::seconds(idle_duration_before_ping_sent - idle_time));
+    }
+
+    keepalive_timer_.async_wait([this](const boost::system::error_code& ec) {
+        if (!bRunning) return;
+        if (ec == boost::asio::error::operation_aborted) return;
+        strand_.post(boost::bind(&Peer::do_keepaliveCheck, this));
+    });
+}
+
 void Peer::do_read()
 {
     LOGGER(trace) << "Peer::do_read() - waiting for " << min_read_bytes << " bytes..." << endl;
     boost::asio::async_read(socket_, boost::asio::buffer(read_buffer, READ_BUFFER_SIZE),
-        //boost::asio::transfer_at_least(MIN_MESSAGE_HEADER_SIZE),
-        boost::asio::transfer_at_least(min_read_bytes),
+        transfer_at_least_t(min_read_bytes, &last_data_received_at),
     strand_.wrap([this](const boost::system::error_code& ec, std::size_t bytes_read) {
         if (!bRunning) return;
 
@@ -132,6 +170,8 @@ void Peer::do_read()
                     lock.unlock();
                     bWriteReady = true;
                     notifyOpen(*this);
+                    bExpectingPong = false;
+                    do_keepaliveCheck();
                 }
                 else if (command == "version")
                 {
@@ -192,6 +232,11 @@ void Peer::do_read()
                     Coin::PongMessage pongMessage(pPing->nonce);
                     Coin::CoinNodeMessage msg(magic_bytes_, &pongMessage);
                     do_send(msg);
+                }
+                else if (command == "pong")
+                {
+                    LOGGER(trace) << "Peer read handler - PONG" << std::endl;
+                    bExpectingPong = false;
                 }
                 else
                 {
@@ -345,6 +390,7 @@ void Peer::stop()
         if (!bRunning) return;
 
         bRunning = false;
+        keepalive_timer_.cancel();
 
         boost::system::error_code ec;
         socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);

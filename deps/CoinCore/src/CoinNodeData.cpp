@@ -2031,7 +2031,7 @@ std::string FilterAddMessage::toIndentedString(uint spaces) const
 //
 PingMessage::PingMessage()
 {
-    nonce = 0; // TODO: set to random value
+    nonce = (((uint64_t) rand() <<  0) & 0x00000000FFFFFFFFull) | (((uint64_t) rand() << 32) & 0xFFFFFFFF00000000ull);
 }
 
 uchar_vector PingMessage::getSerialized() const

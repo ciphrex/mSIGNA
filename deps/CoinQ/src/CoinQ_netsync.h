@@ -72,8 +72,8 @@ public:
     void stop();
     bool isStarted() const { return m_bPeerStarted; }
 */
-    void start(const std::string& host, const std::string& port = "");
-    void start(const std::string& host, int port);
+    void start(const std::string& host, const std::string& port = "", unsigned int keepalive_timeout = 0);
+    void start(const std::string& host, int port, unsigned int keepalive_timeout = 0);
     void stop();
     bool connected() const { return m_bConnected; }
 
