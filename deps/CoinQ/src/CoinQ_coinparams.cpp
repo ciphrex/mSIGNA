@@ -24,6 +24,7 @@ NetworkSelector::NetworkSelector(const std::string& network_name)
     network_map_.insert(NetworkPair("segnet", getSegnetParams()));
     network_map_.insert(NetworkPair("segnet2", getSegnet2Params()));
     network_map_.insert(NetworkPair("segnet3", getSegnet3Params()));
+    network_map_.insert(NetworkPair("segnet4", getSegnet4Params()));
     network_map_.insert(NetworkPair("litecoin", getLitecoinParams()));
     network_map_.insert(NetworkPair("quarkcoin", getQuarkcoinParams()));
 
@@ -199,6 +200,33 @@ const CoinParams segnet3Params(
     )
 );
 const CoinParams& getSegnet3Params() { return segnet3Params; }
+
+const CoinParams segnet4Params(
+    0xc4a1abdcul,
+    70001,
+    "28901",
+    30,
+    50,
+    6,
+    40,
+    "Segnet4",
+    "segnet4",
+    100000000,
+    "seg4BTC",
+    21000000,
+    50000,
+    &sha256_2,
+    &sha256_2,
+    Coin::CoinBlockHeader(
+        1,
+        1452831101,
+        0x1e01ffff,
+        0,
+        uchar_vector(32, 0),
+        uchar_vector("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")
+    )
+);
+const CoinParams& getSegnet4Params() { return segnet4Params; }
 
 const CoinParams litecoinParams(
     0xdbb6c0fbul,
