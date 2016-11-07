@@ -193,6 +193,13 @@ void Peer::do_read()
                     Coin::CoinNodeMessage msg(magic_bytes_, &pongMessage);
                     do_send(msg);
                 }
+                else if (command == "reject")
+                {
+                  LOGGER(trace) << "Peer read handler - REJECT" << std::endl;
+                  Coin::RejectMessage* pRejectMessage = static_cast<Coin::RejectMessage*>(peerMessage.getPayload());
+                  LOGGER(trace) << "Peer read handler - REJECT " << pRejectMessage->toString() << std::endl;
+                  notifyReject(*this, *pRejectMessage);
+                }
                 else
                 {
                     LOGGER(error) << "Peer read handler - command not implemented: " << command << std::endl;

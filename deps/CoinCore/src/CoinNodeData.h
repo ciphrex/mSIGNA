@@ -966,5 +966,26 @@ public:
     std::string toIndentedString(uint spaces = 0) const;
 };
 
-} // namespace Coin
+class RejectMessage : public CoinNodeStructure
+{
+  public:
+    std::string message;
+    char code;
+    std::string reason;
+    uchar_vector extraData;
 
+    RejectMessage();
+    RejectMessage(const uchar_vector& bytes) { setSerialized(bytes); }
+
+    const char* getCommand() const { return "reject"; }
+    uint64_t getSize() const;
+
+    uchar_vector getSerialized() const;
+    void setSerialized(const uchar_vector& bytes);
+
+    std::string toString() const;
+    std::string toIndentedString(uint spaces = 0) const;
+
+};
+
+} // namespace Coin

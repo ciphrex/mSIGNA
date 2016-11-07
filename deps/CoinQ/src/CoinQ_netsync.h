@@ -46,6 +46,7 @@ namespace CoinQ
 
 typedef std::function<void(const ChainMerkleBlock&, const Coin::Transaction&, unsigned int /*txindex*/, unsigned int /*txcount*/)> merkle_tx_slot_t;
 typedef std::function<void(const ChainMerkleBlock&, const bytes_t& /*txhash*/ , unsigned int /*txindex*/, unsigned int /*txcount*/)> tx_confirmed_slot_t;
+typedef std::function<void(const Coin::RejectMessage&)> reject_slot_t;
 
 class NetworkSync
 {
@@ -128,6 +129,7 @@ public:
     void subscribeRemoveBestChain(chain_header_slot_t slot) { notifyRemoveBestChain.connect(slot); }
     void subscribeBlockTreeChanged(void_slot_t slot) { notifyBlockTreeChanged.connect(slot); }
 
+    void subscribeReject(reject_slot_t slot) { notifyReject.connect(slot); }
 private:
     CoinQ::CoinParams m_coinParams;
     bool m_bCheckProofOfWork;
@@ -212,8 +214,9 @@ private:
     CoinQSignal<const ChainHeader&> notifyAddBestChain;
     CoinQSignal<const ChainHeader&> notifyRemoveBestChain;
     CoinQSignal<void> notifyBlockTreeChanged;
+
+    CoinQSignal<const Coin::RejectMessage&> notifyReject;
 };
 
     }
 }
-

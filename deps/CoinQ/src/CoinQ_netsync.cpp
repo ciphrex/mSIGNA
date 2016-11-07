@@ -424,6 +424,10 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
             notifyProtocolError(e.what(), -1);
         }
     });
+
+    m_peer.subscribeReject([&](CoinQ::Peer& /*peer*/, const Coin::RejectMessage& rejectMessage) {
+        notifyReject(rejectMessage);
+    });
 }
 
 NetworkSync::~NetworkSync()

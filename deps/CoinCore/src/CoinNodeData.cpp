@@ -487,6 +487,11 @@ void CoinNodeMessage::setMessage(uint32_t magic, CoinNodeStructure* pPayload)
         PongMessage* pMessage = static_cast<PongMessage*>(pPayload);
         this->pPayload = new PongMessage(*pMessage);
     }
+    else if (command == "reject") {
+        this->header = MessageHeader(magic, command.c_str(), pPayload->getSize(), pPayload->getChecksum());
+        RejectMessage* pMessage = static_cast<RejectMessage*>(pPayload);
+        this->pPayload = new RejectMessage(*pMessage);
+    }
     else {
         string error_msg = "Unrecognized command: ";
         error_msg += command;
@@ -600,6 +605,10 @@ void CoinNodeMessage::setSerialized(const uchar_vector& bytes)
     else if (command == "pong") {
         this->pPayload =
             new PongMessage(uchar_vector(bytes.begin() + header.getSize(), bytes.begin() + header.getSize() + header.length));
+    }
+    else if(command == "reject") {
+        this->pPayload =
+            new RejectMessage(uchar_vector(bytes.begin() + header.getSize(), bytes.begin() + header.getSize() + header.length));
     }
     else {
         string error_msg = "Unrecognized command: ";
@@ -2086,3 +2095,84 @@ std::string PongMessage::toIndentedString(uint spaces) const
     return "";
 }
 
+void RejectMessage::setSerialized(const uchar_vector& bytes) {
+  uint pos = 0;
+  VarInt messageCount(uchar_vector(bytes.begin(), bytes.end()));
+  pos += messageCount.getSize();
+  if(messageCount.value + pos > bytes.size())
+    throw std::runtime_error("Invalid data - RejectMessage too small.");
+
+  message = std::string(bytes.begin()+pos, bytes.begin()+pos+messageCount.value);
+  pos += messageCount.value;
+
+  if(pos > bytes.size())
+    throw std::runtime_error("Invalid data - RejectMessage too small.");
+
+  code = *(bytes.begin() + pos);
+  pos++;
+
+  VarInt reasonCount(uchar_vector(bytes.begin()+pos, bytes.end()));
+  pos += reasonCount.getSize();
+
+  if(reasonCount.value + pos > bytes.size())
+    throw std::runtime_error("Invalid data - RejectMessage too small.");
+
+  reason = std::string(bytes.begin()+pos, bytes.begin()+pos+reasonCount.value);
+
+  pos += reasonCount.value;
+
+  if(bytes.size() > pos) {
+    extraData = uchar_vector(bytes.begin()+pos, bytes.end());
+    if(extraData.size() != 32)
+      throw std::runtime_error("Invalid data - RejectMessage invalid extra data");
+  }
+}
+
+uchar_vector RejectMessage::getSerialized() const {
+  uchar_vector serialized;
+
+  serialized += VarInt(message.size()).getSerialized();
+  serialized += uchar_vector(message.begin(), message.end());
+  serialized.push_back(code);
+  serialized += VarInt(reason.size()).getSerialized();
+  serialized += uchar_vector(reason.begin(), reason.end());
+  serialized += extraData;
+
+  return serialized;
+}
+
+std::string RejectMessage::toString() const {
+  std::stringstream ss;
+
+  ss << " code: " << (int)code;
+  ss << ", message: " << message;
+  ss << ", reason: " << reason;
+  if(extraData.size()) {
+      uchar_vector hash(extraData.rbegin(), extraData.rend());
+      ss << ", data: " << hash.getHex();
+  }
+
+  return ss.str();
+}
+
+std::string RejectMessage::toIndentedString(uint spaces) const {
+    return blankSpaces(spaces) + toString();
+}
+
+uint64_t RejectMessage::getSize() const {
+  uint64_t size = 0;
+  // message
+  size += VarInt(message.size()).getSize();
+  size += message.size();
+  // code
+  size += 1;
+
+  // reason
+  size += VarInt(reason.size()).getSize();
+  size += reason.size();
+
+  //extra data
+  size += extraData.size();
+
+  return size;
+}

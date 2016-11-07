@@ -52,7 +52,8 @@ typedef std::function<void(Peer&, const Coin::CoinBlock&)>          peer_block_s
 typedef std::function<void(Peer&, const Coin::MerkleBlock&)>        peer_merkle_block_slot_t;
 typedef std::function<void(Peer&, const Coin::Transaction&)>        peer_tx_slot_t;
 typedef std::function<void(Peer&, const Coin::AddrMessage&)>        peer_addr_slot_t;
-typedef std::function<void(Peer&, const Coin::Inventory&)>          peer_inv_slot_t; 
+typedef std::function<void(Peer&, const Coin::Inventory&)>          peer_inv_slot_t;
+typedef std::function<void(Peer&, const Coin::RejectMessage&)>      peer_reject_slot_t;
 
 
 class Peer
@@ -99,6 +100,7 @@ public:
     void subscribeTx(peer_tx_slot_t slot) { notifyTx.connect(slot); }
     void subscribeAddr(peer_addr_slot_t slot) { notifyAddr.connect(slot); }
     void subscribeInv(peer_inv_slot_t slot) { notifyInv.connect(slot); }
+    void subscribeReject(peer_reject_slot_t slot) { notifyReject.connect(slot); }
     void subscribeProtocolError(peer_error_slot_t slot) { notifyProtocolError.connect(slot); }
 
     void subscribeStart(peer_slot_t slot) { notifyStart.connect(slot); }
@@ -317,6 +319,7 @@ private:
     CoinQSignal<Peer&, const Coin::Transaction&>        notifyTx;
     CoinQSignal<Peer&, const Coin::AddrMessage&>        notifyAddr;
     CoinQSignal<Peer&, const Coin::Inventory&>          notifyInv;
+    CoinQSignal<Peer&, const Coin::RejectMessage&>      notifyReject;
     CoinQSignal<Peer&, const std::string&, int>         notifyProtocolError;
 
     CoinQSignal<Peer&>                                  notifyStart;
