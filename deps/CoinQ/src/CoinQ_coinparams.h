@@ -131,9 +131,6 @@ private:
 // Individual accessors
 const CoinParams& getBitcoinParams();
 const CoinParams& getTestnet3Params();
-const CoinParams& getSegnetParams();
-const CoinParams& getSegnet2Params();
-const CoinParams& getSegnet3Params();
 const CoinParams& getLitecoinParams();
 const CoinParams& getQuarkcoinParams();
 

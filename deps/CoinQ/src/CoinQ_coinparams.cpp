@@ -21,9 +21,6 @@ NetworkSelector::NetworkSelector(const std::string& network_name)
 {
     network_map_.insert(NetworkPair("bitcoin", getBitcoinParams()));
     network_map_.insert(NetworkPair("testnet3", getTestnet3Params()));
-    network_map_.insert(NetworkPair("segnet", getSegnetParams()));
-    network_map_.insert(NetworkPair("segnet2", getSegnet2Params()));
-    network_map_.insert(NetworkPair("segnet3", getSegnet3Params()));
     network_map_.insert(NetworkPair("litecoin", getLitecoinParams()));
     network_map_.insert(NetworkPair("quarkcoin", getQuarkcoinParams()));
 
@@ -118,87 +115,6 @@ const CoinParams testnet3Params(
     )
 );
 const CoinParams& getTestnet3Params() { return testnet3Params; }
-
-const CoinParams segnetParams(
-    0x88e46155ul,
-    70001,
-    "28333",
-    30,
-    50,
-    6,
-    40,
-    "Segnet",
-    "segnet",
-    100000000,
-    "segBTC",
-    21000000,
-    50000,
-    &sha256_2,
-    &sha256_2,
-    Coin::CoinBlockHeader(
-        1,
-        1451529527,
-        0x1d00ffff,
-        414098458,
-        uchar_vector(32, 0),
-        uchar_vector("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")
-    )
-);
-const CoinParams& getSegnetParams() { return segnetParams; }
-
-const CoinParams segnet2Params(
-    0x99f57166ul,
-    70001,
-    "28333",
-    30,
-    50,
-    6,
-    40,
-    "Segnet2",
-    "segnet2",
-    100000000,
-    "seg2BTC",
-    21000000,
-    50000,
-    &sha256_2,
-    &sha256_2,
-    Coin::CoinBlockHeader(
-        1,
-        1452368293,
-        0x1d00ffff,
-        0,
-        uchar_vector(32, 0),
-        uchar_vector("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")
-    )
-);
-const CoinParams& getSegnet2Params() { return segnet2Params; }
-
-const CoinParams segnet3Params(
-    0xcaea962eul,
-    70001,
-    "28333",
-    30,
-    50,
-    6,
-    40,
-    "Segnet3",
-    "segnet3",
-    100000000,
-    "seg3BTC",
-    21000000,
-    50000,
-    &sha256_2,
-    &sha256_2,
-    Coin::CoinBlockHeader(
-        1,
-        1452831101,
-        0x1d00ffff,
-        0,
-        uchar_vector(32, 0),
-        uchar_vector("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")
-    )
-);
-const CoinParams& getSegnet3Params() { return segnet3Params; }
 
 const CoinParams litecoinParams(
     0xdbb6c0fbul,
