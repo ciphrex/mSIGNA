@@ -1,27 +1,46 @@
 <changelog xmlns="http://www.codesynthesis.com/xmlns/odb/changelog" database="sqlite" version="1">
-  <changeset version="22"/>
-
-  <changeset version="21">
+  <changeset version="22">
     <alter-table name="Account">
+      <add-column name="use_witness" type="INTEGER" null="false"/>
+      <add-column name="redeempattern" type="BLOB" null="false"/>
       <add-column name="use_witness_p2sh" type="INTEGER" null="false"/>
+    </alter-table>
+    <alter-table name="SigningScript">
+      <add-column name="redeemscript" type="BLOB" null="false"/>
+    </alter-table>
+    <add-table name="TxIn_scriptwitnessstack" kind="container">
+      <column name="object_id" type="INTEGER" null="false"/>
+      <column name="index" type="INTEGER" null="false"/>
+      <column name="value" type="BLOB" null="false"/>
+      <foreign-key name="object_id_fk" on-delete="CASCADE">
+        <column name="object_id"/>
+        <references table="TxIn">
+          <column name="id"/>
+        </references>
+      </foreign-key>
+      <index name="TxIn_scriptwitnessstack_object_id_i">
+        <column name="object_id"/>
+      </index>
+      <index name="TxIn_scriptwitnessstack_index_i">
+        <column name="index"/>
+      </index>
+    </add-table>
+  </changeset>
+
+  <changeset version="17">
+    <alter-table name="Tx">
+      <add-column name="propagation_protocol" type="TEXT" null="false"/>
     </alter-table>
   </changeset>
 
-  <changeset version="20">
-    <add-table name="Version" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="version" type="INTEGER" null="false"/>
-      <primary-key auto="true">
-        <column name="id"/>
-      </primary-key>
-    </add-table>
-    <add-table name="Network" kind="object">
-      <column name="id" type="INTEGER" null="false"/>
-      <column name="network" type="TEXT" null="false"/>
-      <primary-key auto="true">
-        <column name="id"/>
-      </primary-key>
-    </add-table>
+  <changeset version="16">
+    <alter-table name="Keychain">
+      <add-column name="seed_ciphertext" type="BLOB" null="false"/>
+      <add-column name="seed_salt" type="INTEGER" null="false"/>
+    </alter-table>
+  </changeset>
+
+  <changeset version="15">
     <add-table name="User" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="username" type="TEXT" null="false"/>
@@ -46,6 +65,24 @@
         <column name="object_id"/>
       </index>
     </add-table>
+    <alter-table name="Tx">
+      <add-column name="user" type="INTEGER" null="true"/>
+      <add-foreign-key name="user_fk" deferrable="DEFERRED">
+        <column name="user"/>
+        <references table="User">
+          <column name="id"/>
+        </references>
+      </add-foreign-key>
+    </alter-table>
+  </changeset>
+
+  <changeset version="14">
+    <alter-table name="Account">
+      <add-column name="compressed_keys" type="INTEGER" null="false"/>
+    </alter-table>
+  </changeset>
+
+  <changeset version="13">
     <add-table name="Contact" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="username" type="TEXT" null="false"/>
@@ -56,7 +93,33 @@
         <column name="username"/>
       </index>
     </add-table>
-    <add-table name="Keychain" kind="object">
+    <alter-table name="SigningScript">
+      <add-column name="contact" type="INTEGER" null="true"/>
+      <add-foreign-key name="contact_fk" deferrable="DEFERRED">
+        <column name="contact"/>
+        <references table="Contact">
+          <column name="id"/>
+        </references>
+      </add-foreign-key>
+    </alter-table>
+  </changeset>
+
+  <model version="12">
+    <table name="Version" kind="object">
+      <column name="id" type="INTEGER" null="false"/>
+      <column name="version" type="INTEGER" null="false"/>
+      <primary-key auto="true">
+        <column name="id"/>
+      </primary-key>
+    </table>
+    <table name="Network" kind="object">
+      <column name="id" type="INTEGER" null="false"/>
+      <column name="network" type="TEXT" null="false"/>
+      <primary-key auto="true">
+        <column name="id"/>
+      </primary-key>
+    </table>
+    <table name="Keychain" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="name" type="TEXT" null="false"/>
       <column name="depth" type="INTEGER" null="false"/>
@@ -66,8 +129,6 @@
       <column name="chain_code" type="BLOB" null="false"/>
       <column name="privkey_ciphertext" type="BLOB" null="false"/>
       <column name="privkey_salt" type="INTEGER" null="false"/>
-      <column name="seed_ciphertext" type="BLOB" null="false"/>
-      <column name="seed_salt" type="INTEGER" null="false"/>
       <column name="parent" type="INTEGER" null="true"/>
       <column name="hash" type="BLOB" null="false"/>
       <column name="hidden" type="INTEGER" null="false"/>
@@ -83,8 +144,8 @@
       <index name="Keychain_name_i" type="UNIQUE">
         <column name="name"/>
       </index>
-    </add-table>
-    <add-table name="Keychain_derivation_path" kind="container">
+    </table>
+    <table name="Keychain_derivation_path" kind="container">
       <column name="object_id" type="INTEGER" null="false"/>
       <column name="index" type="INTEGER" null="false"/>
       <column name="value" type="INTEGER" null="false"/>
@@ -100,8 +161,8 @@
       <index name="Keychain_derivation_path_index_i">
         <column name="index"/>
       </index>
-    </add-table>
-    <add-table name="Key" kind="object">
+    </table>
+    <table name="Key" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="root_keychain" type="INTEGER" null="true"/>
       <column name="index" type="INTEGER" null="false"/>
@@ -116,8 +177,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="Key_derivation_path" kind="container">
+    </table>
+    <table name="Key_derivation_path" kind="container">
       <column name="object_id" type="INTEGER" null="false"/>
       <column name="index" type="INTEGER" null="false"/>
       <column name="value" type="INTEGER" null="false"/>
@@ -133,8 +194,8 @@
       <index name="Key_derivation_path_index_i">
         <column name="index"/>
       </index>
-    </add-table>
-    <add-table name="AccountBin" kind="object">
+    </table>
+    <table name="AccountBin" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="account" type="INTEGER" null="true"/>
       <column name="index" type="INTEGER" null="false"/>
@@ -155,8 +216,8 @@
       <index name="AccountBin_hash_i" type="UNIQUE">
         <column name="hash"/>
       </index>
-    </add-table>
-    <add-table name="AccountBin_script_label_map" kind="container">
+    </table>
+    <table name="AccountBin_script_label_map" kind="container">
       <column name="object_id" type="INTEGER" null="false"/>
       <column name="key" type="INTEGER" null="false"/>
       <column name="value" type="TEXT" null="false"/>
@@ -169,8 +230,8 @@
       <index name="AccountBin_script_label_map_object_id_i">
         <column name="object_id"/>
       </index>
-    </add-table>
-    <add-table name="AccountBin_keychains" kind="container">
+    </table>
+    <table name="AccountBin_keychains" kind="container">
       <column name="object_id" type="INTEGER" null="false"/>
       <column name="value" type="INTEGER" null="false"/>
       <foreign-key name="object_id_fk" on-delete="CASCADE">
@@ -188,17 +249,14 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="Account" kind="object">
+    </table>
+    <table name="Account" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="name" type="TEXT" null="false"/>
       <column name="minsigs" type="INTEGER" null="false"/>
       <column name="unused_pool_size" type="INTEGER" null="false"/>
       <column name="time_created" type="INTEGER" null="false"/>
       <column name="hash" type="BLOB" null="false"/>
-      <column name="compressed_keys" type="INTEGER" null="false"/>
-      <column name="use_witness" type="INTEGER" null="false"/>
-      <column name="redeempattern" type="BLOB" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
@@ -208,8 +266,8 @@
       <index name="Account_hash_i" type="UNIQUE">
         <column name="hash"/>
       </index>
-    </add-table>
-    <add-table name="Account_keychains" kind="container">
+    </table>
+    <table name="Account_keychains" kind="container">
       <column name="object_id" type="INTEGER" null="false"/>
       <column name="value" type="INTEGER" null="false"/>
       <foreign-key name="object_id_fk" on-delete="CASCADE">
@@ -227,18 +285,16 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="SigningScript" kind="object">
+    </table>
+    <table name="SigningScript" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="account" type="INTEGER" null="true"/>
       <column name="account_bin" type="INTEGER" null="true"/>
       <column name="index" type="INTEGER" null="false"/>
       <column name="label" type="TEXT" null="false"/>
       <column name="status" type="INTEGER" null="false"/>
-      <column name="redeemscript" type="BLOB" null="false"/>
       <column name="txinscript" type="BLOB" null="false"/>
       <column name="txoutscript" type="BLOB" null="false"/>
-      <column name="contact" type="INTEGER" null="true"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
@@ -254,14 +310,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-      <foreign-key name="contact_fk" deferrable="DEFERRED">
-        <column name="contact"/>
-        <references table="Contact">
-          <column name="id"/>
-        </references>
-      </foreign-key>
-    </add-table>
-    <add-table name="SigningScript_keys" kind="container">
+    </table>
+    <table name="SigningScript_keys" kind="container">
       <column name="object_id" type="INTEGER" null="false"/>
       <column name="index" type="INTEGER" null="false"/>
       <column name="value" type="INTEGER" null="true"/>
@@ -283,8 +333,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="BlockHeader" kind="object">
+    </table>
+    <table name="BlockHeader" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="hash" type="BLOB" null="false"/>
       <column name="height" type="INTEGER" null="false"/>
@@ -303,8 +353,8 @@
       <index name="BlockHeader_height_i" type="UNIQUE">
         <column name="height"/>
       </index>
-    </add-table>
-    <add-table name="MerkleBlock" kind="object">
+    </table>
+    <table name="MerkleBlock" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="blockheader" type="INTEGER" null="false"/>
       <column name="txcount" type="INTEGER" null="false"/>
@@ -319,8 +369,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="MerkleBlock_hashes" kind="container">
+    </table>
+    <table name="MerkleBlock_hashes" kind="container">
       <column name="object_id" type="INTEGER" null="false"/>
       <column name="index" type="INTEGER" null="false"/>
       <column name="value" type="BLOB" null="false"/>
@@ -336,8 +386,8 @@
       <index name="MerkleBlock_hashes_index_i">
         <column name="index"/>
       </index>
-    </add-table>
-    <add-table name="TxIn" kind="object">
+    </table>
+    <table name="TxIn" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="outhash" type="BLOB" null="false"/>
       <column name="outindex" type="INTEGER" null="false"/>
@@ -361,25 +411,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="TxIn_scriptwitnessstack" kind="container">
-      <column name="object_id" type="INTEGER" null="false"/>
-      <column name="index" type="INTEGER" null="false"/>
-      <column name="value" type="BLOB" null="false"/>
-      <foreign-key name="object_id_fk" on-delete="CASCADE">
-        <column name="object_id"/>
-        <references table="TxIn">
-          <column name="id"/>
-        </references>
-      </foreign-key>
-      <index name="TxIn_scriptwitnessstack_object_id_i">
-        <column name="object_id"/>
-      </index>
-      <index name="TxIn_scriptwitnessstack_index_i">
-        <column name="index"/>
-      </index>
-    </add-table>
-    <add-table name="TxOut" kind="object">
+    </table>
+    <table name="TxOut" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="value" type="INTEGER" null="false"/>
       <column name="script" type="BLOB" null="false"/>
@@ -432,8 +465,8 @@
           <column name="id"/>
         </references>
       </foreign-key>
-    </add-table>
-    <add-table name="Tx" kind="object">
+    </table>
+    <table name="Tx" kind="object">
       <column name="id" type="INTEGER" null="false"/>
       <column name="hash" type="BLOB" null="false"/>
       <column name="unsigned_hash" type="BLOB" null="false"/>
@@ -447,8 +480,6 @@
       <column name="txout_total" type="INTEGER" null="false"/>
       <column name="blockheader" type="INTEGER" null="true"/>
       <column name="blockindex" type="INTEGER" null="true"/>
-      <column name="user" type="INTEGER" null="true"/>
-      <column name="propagation_protocol" type="TEXT" null="false"/>
       <primary-key auto="true">
         <column name="id"/>
       </primary-key>
@@ -458,17 +489,9 @@
           <column name="id"/>
         </references>
       </foreign-key>
-      <foreign-key name="user_fk" deferrable="DEFERRED">
-        <column name="user"/>
-        <references table="User">
-          <column name="id"/>
-        </references>
-      </foreign-key>
       <index name="Tx_unsigned_hash_i" type="UNIQUE">
         <column name="unsigned_hash"/>
       </index>
-    </add-table>
-  </changeset>
-
-  <model version="12"/>
+    </table>
+  </model>
 </changelog>
