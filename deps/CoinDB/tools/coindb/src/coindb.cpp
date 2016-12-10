@@ -33,8 +33,9 @@
 
 #include <boost/algorithm/string.hpp>
 
-const std::string COINDB_VERSION = "v0.7.5";
-const std::string DEFAULT_NETWORK = "testnet3";
+const std::string COINDB_VERSION = "v0.8.0";
+const std::string DEFAULT_NETWORK = "bitcoin";
+const bool USE_WITNESS_P2SH = true;
 
 using namespace std;
 using namespace odb::core;
@@ -411,7 +412,9 @@ cli::result_t cmd_newaccount(const cli::params_t& params)
         keychain_names.push_back(params[i]);
 
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
-    vault.newAccount(params[1], minsigs, keychain_names, 25, time(NULL));
+    CoinQ::NetworkSelector networkSelector(vault.getNetwork());
+    const CoinQ::CoinParams& coinParams = networkSelector.getCoinParams();
+    vault.newAccount(coinParams.segwit_enabled(), USE_WITNESS_P2SH, params[1], minsigs, keychain_names, 25, time(NULL));
 
     stringstream ss;
     ss << "Added account " << params[1] << " to vault " << params[0] << ".";
@@ -430,7 +433,9 @@ cli::result_t cmd_newuncompressedaccount(const cli::params_t& params)
         keychain_names.push_back(params[i]);
 
     Vault vault(g_dbuser, g_dbpasswd, params[0], false);
-    vault.newAccount(params[1], minsigs, keychain_names, 25, time(NULL), false);
+    CoinQ::NetworkSelector networkSelector(vault.getNetwork());
+    const CoinQ::CoinParams& coinParams = networkSelector.getCoinParams();
+    vault.newAccount(coinParams.segwit_enabled(), USE_WITNESS_P2SH, params[1], minsigs, keychain_names, 25, time(NULL), false);
 
     stringstream ss;
     ss << "Added account " << params[1] << " to vault " << params[0] << ".";
