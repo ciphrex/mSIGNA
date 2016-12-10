@@ -5,8 +5,11 @@
 // viewbip39dialog.cpp
 //
 // Copyright (c) 2015 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "viewbip39dialog.h"
 
