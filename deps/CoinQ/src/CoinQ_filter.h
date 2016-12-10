@@ -3,8 +3,11 @@
 // CoinQ_filter.h
 //
 // Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #ifndef _COINQ_FILTER_H_
 #define _COINQ_FILTER_H_
