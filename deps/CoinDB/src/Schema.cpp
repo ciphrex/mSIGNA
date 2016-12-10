@@ -411,7 +411,7 @@ void Account::initScriptPatterns()
     using namespace CoinQ::Script;
 
     use_witness_ = true;
-    use_witness_p2sh_ = false;
+    use_witness_p2sh_ = true;
 
     uchar_vector redeempattern;
     redeempattern << (OP_1_OFFSET + minsigs_);

@@ -803,7 +803,7 @@ private:
             initScriptPatterns();
         }
 
-        use_witness_p2sh_ = false;
+        use_witness_p2sh_ = true;
         if (version >= 4)
         {
             ar & use_witness_p2sh_;
