@@ -23,7 +23,9 @@
 #include <boost/asio.hpp>
 
 #include <CoinCore/CoinNodeData.h> // TODO: Move flags into separate include file
-const uint32_t DEFAULT_INV_FLAGS = MSG_WITNESS_FLAG;
+
+// TODO: Support flags for segregated witness
+const uint32_t DEFAULT_INV_FLAGS = 0; // MSG_WITNESS_FLAG;
 
 inline uint64_t getRandomNonce64()
 {
