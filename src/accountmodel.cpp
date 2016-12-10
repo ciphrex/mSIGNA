@@ -13,6 +13,7 @@
 
 #include "accountmodel.h"
 
+#include <CoinQ/CoinQ_coinparams.h>
 #include <CoinQ/CoinQ_script.h>
 #include <CoinQ/CoinQ_netsync.h>
 
@@ -24,6 +25,8 @@
 #include <QFile>
 
 #include "severitylogger.h"
+
+const bool USE_WITNESS_P2SH = true; // only used if segregated witness is enabled
 
 using namespace CoinDB;
 using namespace CoinQ::Script;
@@ -124,7 +127,7 @@ void AccountModel::newAccount(const QString& name, unsigned int minsigs, const Q
     for (auto& name: keychainNames) { keychain_names.push_back(name.toStdString()); }
 
     uint64_t secsSinceEpoch = (uint64_t)msecsSinceEpoch / 1000;
-    vault->newAccount(name.toStdString(), minsigs, keychain_names, unusedPoolSize, secsSinceEpoch);
+    vault->newAccount(getCoinParams().segwit_enabled(), USE_WITNESS_P2SH, name.toStdString(), minsigs, keychain_names, unusedPoolSize, secsSinceEpoch);
     update();
 }
 
