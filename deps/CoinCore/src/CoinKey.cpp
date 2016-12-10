@@ -3,15 +3,16 @@
 // CoinKey.cpp
 //
 // Copyright (c) 2011-2012 Eric Lombrozo
-//
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
 // This code was adapted from the satoshi bitcoin client, source file key.h
 //   - https://github.com/bitcoin/bitcoin/blob/master/src/key.h
 //
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2011 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
-// file license.txt or http://www.opensource.org/licenses/mit-license.php.
+// Copyright (c) 2011-2016 The Bitcoin developers
+//
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 //
 
 #include "Base58Check.h"
