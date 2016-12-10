@@ -38,7 +38,8 @@ public:
         uint64_t default_fee,
         Coin::hashfunc_t block_header_hash_function,
         Coin::hashfunc_t block_header_pow_hash_function,
-        const Coin::CoinBlockHeader& genesis_block) :
+        const Coin::CoinBlockHeader& genesis_block,
+        bool segwit_enabled = false) :
     magic_bytes_(magic_bytes),
     protocol_version_(protocol_version),
     default_port_(default_port),
@@ -54,7 +55,8 @@ public:
     default_fee_(default_fee),
     block_header_hash_function_(block_header_hash_function),
     block_header_pow_hash_function_(block_header_pow_hash_function),
-    genesis_block_(genesis_block)
+    genesis_block_(genesis_block),
+    segwit_enabled_(segwit_enabled)
     {
         address_versions_[0] = pay_to_pubkey_hash_version_;
         address_versions_[1] = pay_to_script_hash_version_;
@@ -86,6 +88,7 @@ public:
     Coin::hashfunc_t                block_header_hash_function() const { return block_header_hash_function_; }
     Coin::hashfunc_t                block_header_pow_hash_function() const { return block_header_pow_hash_function_; }
     const Coin::CoinBlockHeader&    genesis_block() const { return genesis_block_; }
+    bool                            segwit_enabled() const { return segwit_enabled_; }
 
 private:
     uint32_t                magic_bytes_;
@@ -106,6 +109,7 @@ private:
     Coin::hashfunc_t        block_header_hash_function_;
     Coin::hashfunc_t        block_header_pow_hash_function_;
     Coin::CoinBlockHeader   genesis_block_;
+    bool                    segwit_enabled_;
 };
 
 typedef std::pair<std::string, const CoinParams&> NetworkPair;
