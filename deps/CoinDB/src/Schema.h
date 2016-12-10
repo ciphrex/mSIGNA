@@ -650,7 +650,8 @@ class Account : public std::enable_shared_from_this<Account>
 {
 public:
     Account();
-    Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = DEFAULT_UNUSED_POOL_SIZE, uint32_t time_created = time(NULL), bool compressed_keys = true);
+    Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = DEFAULT_UNUSED_POOL_SIZE, uint32_t time_created = time(NULL), bool compressed_keys = true, bool use_witness = false, bool use_witness_p2sh = false);
+    Account(bool use_witness, bool use_witness_p2sh, const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size = DEFAULT_UNUSED_POOL_SIZE, uint32_t time_created = time(NULL), bool compressed_keys = true) : Account(name, minsigs, keychains, unused_pool_size, time_created, compressed_keys, use_witness, use_witness_p2sh) { }
 
     void updateHash();
 
@@ -803,7 +804,7 @@ private:
             initScriptPatterns();
         }
 
-        use_witness_p2sh_ = true;
+        use_witness_p2sh_ = false;
         if (version >= 4)
         {
             ar & use_witness_p2sh_;

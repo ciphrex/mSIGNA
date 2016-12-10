@@ -130,7 +130,8 @@ public:
     void                                    exportAccount(const std::string& account_name, const std::string& filepath, bool exportprivkeys = false) const;
     std::shared_ptr<Account>                importAccount(const std::string& filepath, unsigned int& privkeysimported); // pass privkeysimported = 0 to not inport any private keys.
     bool                                    accountExists(const std::string& account_name) const;
-    void                                    newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size = DEFAULT_UNUSED_POOL_SIZE, uint32_t time_created = time(NULL), bool compressed_keys = true);
+    void                                    newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size = DEFAULT_UNUSED_POOL_SIZE, uint32_t time_created = time(NULL), bool compressed_keys = true, bool use_witness = false, bool use_witness_p2sh = false);
+    void                                    newAccount(bool use_witness, bool use_witness_p2sh, const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size = DEFAULT_UNUSED_POOL_SIZE, uint32_t time_created = time(NULL), bool compressed_keys = true);
     //void                                  eraseAccount(const std::string& name) const;
     void                                    renameAccount(const std::string& old_name, const std::string& new_name);
     std::shared_ptr<Account>                getAccount(const std::string& account_name) const;

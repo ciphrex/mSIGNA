@@ -1482,9 +1482,9 @@ std::string Vault::getNextAvailableAccountName_unwrapped(const std::string& desi
     return ss.str();
 }
 
-void Vault::newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size, uint32_t time_created, bool compressed_keys)
+void Vault::newAccount(const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size, uint32_t time_created, bool compressed_keys, bool use_witness, bool use_witness_p2sh)
 {
-    LOGGER(trace) << "Vault::newAccount(" << account_name << ", " << minsigs << " of [" << stdutils::delimited_list(keychain_names, ", ") << "], " << unused_pool_size << ", " << time_created << ")" << std::endl;
+    LOGGER(trace) << "Vault::newAccount(" << account_name << ", " << minsigs << " of [" << stdutils::delimited_list(keychain_names, ", ") << "], " << unused_pool_size << ", " << time_created << (use_witness ? "true" : "false") << ", " << (use_witness_p2sh ? "true" : "false") << ")" << std::endl;
 
     boost::lock_guard<boost::mutex> lock(mutex);
     odb::core::session s;
@@ -1500,7 +1500,7 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
         keychains.insert(r.begin().load());
     }
 
-    std::shared_ptr<Account> account(new Account(account_name, minsigs, keychains, unused_pool_size, time_created, compressed_keys));
+    std::shared_ptr<Account> account(new Account(account_name, minsigs, keychains, unused_pool_size, time_created, compressed_keys, use_witness, use_witness_p2sh));
     r = db_->query<Account>(odb::query<Account>::hash == account->hash());
     if (!r.empty()) throw AccountAlreadyExistsException(account->name());
     db_->persist(account);
@@ -1527,6 +1527,11 @@ void Vault::newAccount(const std::string& account_name, unsigned int minsigs, co
     db_->update(defaultAccountBin);
     db_->update(account);
     t.commit();
+}
+
+void Vault::newAccount(bool use_witness, bool use_witness_p2sh, const std::string& account_name, unsigned int minsigs, const std::vector<std::string>& keychain_names, uint32_t unused_pool_size, uint32_t time_created, bool compressed_keys)
+{
+    newAccount(account_name, minsigs, keychain_names, unused_pool_size, time_created, compressed_keys, use_witness, use_witness_p2sh);
 }
 
 void Vault::renameAccount(const std::string& old_name, const std::string& new_name)
