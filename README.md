@@ -4,7 +4,7 @@ Copyright (c) 2013-2016 Ciphrex Corporation
 
 
 mSIGNA is an interactive desktop application for transacting on the bitcoin network
-supporting m-of-n signature policies, multiuser/multidevice account management,
+featuring m-of-n signature policies, multiuser/multidevice account management,
 and multiple blockchain support.
 
 Bitcoin mainnet is used as the default blockchain. To select a different supported
