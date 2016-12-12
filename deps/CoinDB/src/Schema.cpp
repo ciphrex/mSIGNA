@@ -446,7 +446,7 @@ AccountInfo Account::accountInfo() const
         }
     }
 
-    return AccountInfo(id_, name_, minsigs_, keychain_names, issued_script_count, unused_pool_size_, time_created_, bin_names, compressed_keys_);
+    return AccountInfo(id_, name_, minsigs_, keychain_names, issued_script_count, unused_pool_size_, time_created_, bin_names, compressed_keys_, use_witness_, use_witness_p2sh_);
 }
 
 std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
