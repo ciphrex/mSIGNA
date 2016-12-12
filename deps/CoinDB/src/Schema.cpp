@@ -404,6 +404,11 @@ void Account::updateHash()
     for (auto& keychain_hash: keychain_hashes) { data += keychain_hash; }
 
     if (!compressed_keys_) { data.push_back(0x00); }
+    if (use_witness_)
+    {
+        if (use_witness_p2sh_)  { data.push_back(0x03); }
+        else                    { data.push_back(0x01); }
+    }
 
     hash_ = ripemd160(sha256(data));
 }
