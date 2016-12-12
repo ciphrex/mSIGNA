@@ -381,6 +381,8 @@ Account::Account()
 Account::Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size, uint32_t time_created, bool compressed_keys, bool use_witness, bool use_witness_p2sh)
     : name_(name), minsigs_(minsigs), keychains_(keychains), unused_pool_size_(unused_pool_size), time_created_(time_created), compressed_keys_(compressed_keys), use_witness_(use_witness), use_witness_p2sh_(use_witness_p2sh)
 {
+    if (!use_witness_) { use_witness_p2sh_ = false; }
+
     scripttemplatesloaded_ = false;
 
     // TODO: Use exception classes
