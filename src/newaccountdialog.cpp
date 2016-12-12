@@ -12,6 +12,7 @@
 //
 
 #include "newaccountdialog.h"
+#include "coinparams.h"
 
 #include <QtAlgorithms>
 #include <QDialogButtonBox>
@@ -102,6 +103,11 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& allKeychains, const QLi
     creationTimeLayout->addWidget(creationTimeLabel);
     creationTimeLayout->addWidget(creationTimeEdit);
 
+    // Segwit Support
+    const bool segwitEnabled = getCoinParams().segwit_enabled();
+    segwitCheckBox = new QCheckBox(segwitEnabled ? tr("Use Seg&wit") : tr("Use Seg&wit (not active on this blockchain)"), this);
+    if (!segwitEnabled) { segwitCheckBox->setEnabled(false); }
+
     // Main Layout 
     QVBoxLayout *mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
@@ -111,6 +117,7 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& allKeychains, const QLi
     mainLayout->addLayout(minSigLayout);
     mainLayout->addLayout(creationTimeLayout);
     mainLayout->addWidget(buttonBox);
+    mainLayout->addWidget(segwitCheckBox);
     setLayout(mainLayout);
 }
 
@@ -132,6 +139,11 @@ int NewAccountDialog::getMinSigs() const
 qint64 NewAccountDialog::getCreationTime() const
 {
     return creationTimeEdit->dateTime().toMSecsSinceEpoch();
+}
+
+bool NewAccountDialog::getUseSegwit() const
+{
+    return segwitCheckBox->isChecked();
 }
 
 void NewAccountDialog::updateSelection(const QString& keychain, int state)

@@ -1465,7 +1465,7 @@ void MainWindow::newAccount()
         }
         NewAccountDialog dlg(allKeychains, keychainView->getSelectedKeychains(), this);
         if (dlg.exec()) {
-            accountModel->newAccount(dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames(), dlg.getCreationTime());
+            accountModel->newAccount(dlg.getUseSegwit(), true, dlg.getName(), dlg.getMinSigs(), dlg.getKeychainNames(), dlg.getCreationTime());
             accountView->updateColumns();
             selectAccount(dlg.getName());
             tabWidget->setCurrentWidget(accountView);

@@ -19,6 +19,7 @@ class QComboBox;
 class QDateTimeEdit;
 class QCalendarWidget;
 class QPushButton;
+class QCheckBox;
 
 #include <QDialog>
 #include <QSet>
@@ -39,6 +40,8 @@ public:
 
     qint64 getCreationTime() const;
 
+    bool getUseSegwit() const;
+
 private:
     void updateSelection(const QString& keychain, int state);
     void updateMinSigs();
@@ -53,6 +56,8 @@ private:
 
     QDateTimeEdit* creationTimeEdit;
     QCalendarWidget* calendarWidget;
+
+    QCheckBox* segwitCheckBox;
 
     QPushButton* okButton;
 };

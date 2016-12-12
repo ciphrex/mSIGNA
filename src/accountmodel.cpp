@@ -121,6 +121,11 @@ CoinDB::Vault* AccountModel::getVault() const
 
 void AccountModel::newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch, unsigned int unusedPoolSize)
 {
+    newAccount(getCoinParams().segwit_enabled(), true, name, minsigs, keychainNames, msecsSinceEpoch, unusedPoolSize);
+}
+
+void AccountModel::newAccount(bool enableSegwit, bool useSegwitP2SH, const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch, unsigned int unusedPoolSize)
+{
     CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
@@ -130,7 +135,7 @@ void AccountModel::newAccount(const QString& name, unsigned int minsigs, const Q
     for (auto& name: keychainNames) { keychain_names.push_back(name.toStdString()); }
 
     uint64_t secsSinceEpoch = (uint64_t)msecsSinceEpoch / 1000;
-    vault->newAccount(getCoinParams().segwit_enabled(), USE_WITNESS_P2SH, name.toStdString(), minsigs, keychain_names, unusedPoolSize, secsSinceEpoch);
+    vault->newAccount(enableSegwit && getCoinParams().segwit_enabled(), useSegwitP2SH, name.toStdString(), minsigs, keychain_names, unusedPoolSize, secsSinceEpoch);
     update();
 }
 
