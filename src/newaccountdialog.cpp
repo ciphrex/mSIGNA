@@ -104,9 +104,16 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& allKeychains, const QLi
     creationTimeLayout->addWidget(creationTimeEdit);
 
     // Segwit Support
-    const bool segwitEnabled = getCoinParams().segwit_enabled();
-    segwitCheckBox = new QCheckBox(segwitEnabled ? tr("Use Seg&wit") : tr("Use Seg&wit (not active on this blockchain)"), this);
-    if (!segwitEnabled) { segwitCheckBox->setEnabled(false); }
+    if (getCoinParams().segwit_enabled())
+    {
+        segwitCheckBox = new QCheckBox(tr("Use Seg&wit"), this);
+        segwitCheckBox->setChecked(true);
+    }
+    else
+    {
+        segwitCheckBox = new QCheckBox(tr("Use Seg&wit (not active on this blockchain)"), this);
+        segwitCheckBox->setEnabled(false);
+    }
 
     // Main Layout 
     QVBoxLayout *mainLayout = new QVBoxLayout();
