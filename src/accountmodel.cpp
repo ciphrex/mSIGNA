@@ -52,7 +52,7 @@ void AccountModel::setColumns()
     QDateTime dateTime(QDateTime::currentDateTime());
 
     QStringList columns;
-    columns << tr("Account") << (tr("Confirmed") + " (" + currencySymbol + ")") << (tr("Pending") + " (" + currencySymbol + ")") << (tr("Total") + " (" + currencySymbol + ")") << tr("Policy") << (tr("Creation Time") + " (" + dateTime.timeZoneAbbreviation() + ")");// << "";
+    columns << tr("Account") << tr("") << (tr("Confirmed") + " (" + currencySymbol + ")") << (tr("Pending") + " (" + currencySymbol + ")") << (tr("Total") + " (" + currencySymbol + ")") << tr("Policy") << (tr("Creation Time") + " (" + dateTime.timeZoneAbbreviation() + ")");// << "";
     setHorizontalHeaderLabels(columns);
 }
 /*
@@ -98,8 +98,20 @@ void AccountModel::update()
 
         accountNames << accountName;
 
+        QStandardItem* segwitItem = new QStandardItem();
+        if (account.use_witness())
+        {
+            segwitItem->setIcon(QIcon(":/icons/segwit_64x64.png"));
+            segwitItem->setData(true, Qt::UserRole);
+        }
+        else
+        {
+            segwitItem->setData(false, Qt::UserRole);
+        }
+        
         QList<QStandardItem*> row;
         row.append(new QStandardItem(accountName));
+        row.append(segwitItem);
         row.append(new QStandardItem(confirmedBalance));
         row.append(new QStandardItem(pendingBalance));
         row.append(new QStandardItem(totalBalance));
@@ -426,7 +438,7 @@ QVariant AccountModel::data(const QModelIndex& index, int role) const
     if (role == Qt::TextAlignmentRole)
     {
         // Right-align numeric fields
-        if (index.column() >= 1 && index.column() <= 3) return Qt::AlignRight;
+        if (index.column() >= 2 && index.column() <= 4) return Qt::AlignRight;
     }
     else if (role == Qt::FontRole)
     {
