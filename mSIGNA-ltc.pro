@@ -9,7 +9,7 @@
 RC_FILE = res/mSIGNA_ltc.rc
 
 # Application icons for mac
-ICON = res/icons/app_icons/osx.icns
+ICON = res/icons/app_icons/osx-ltc.icns
 
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE DATABASE_SQLITE
 DEFINES += DEFAULT_NETWORK_LITECOIN
