@@ -17,6 +17,8 @@
 
 #include <QStringList>
 
+QString getDefaultNetwork();
+
 CoinQ::NetworkSelector& getNetworkSelector();
 
 const CoinQ::CoinParams& getCoinParams(const std::string& network_name = "");

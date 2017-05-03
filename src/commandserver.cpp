@@ -21,12 +21,13 @@
 #include <QFile>
 
 #include "settings.h"
+#include "coinparams.h"
 
 #include "severitylogger.h"
 
 const int COMMAND_SERVER_TIMEOUT = 500;
-const QString COMMAND_SERVER_NAME("VaultCommandServer");
-const QString COMMAND_SERVER_URL_PREFIX("bitcoin:");
+const QString COMMAND_SERVER_NAME(QString("mSIGNA_") + getDefaultNetwork() + "_CommandServer");
+const QString COMMAND_SERVER_URL_PREFIX(getDefaultNetwork() + ":");
 
 CommandServer::CommandServer(QObject* parent)
     : QObject(parent), server(NULL)

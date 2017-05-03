@@ -15,7 +15,13 @@
 
 #include <stdexcept>
 
+#ifdef DEFAULT_NETWORK_LITECOIN
+#define DEFAULT_NETWORK "litecoin"
+#else
 #define DEFAULT_NETWORK "bitcoin"
+#endif
+
+QString getDefaultNetwork() { return DEFAULT_NETWORK; }
 
 CoinQ::NetworkSelector selector(DEFAULT_NETWORK);
 CoinQ::NetworkSelector& getNetworkSelector() { return selector; }
