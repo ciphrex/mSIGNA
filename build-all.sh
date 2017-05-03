@@ -167,6 +167,12 @@ then
     rm build/$BUILD_TYPE/obj/coinparams.o
 fi
 
+# Always recompile main
+if [[ -e build/$BUILD_TYPE/obj/main.o ]]
+then
+    rm build/$BUILD_TYPE/obj/main.o
+fi
+
 # For OS X, remove any existing instance of the app bundle
 if [[ "$OS" == "osx" ]]
 then

@@ -68,7 +68,11 @@ int main(int argc, char* argv[])
 {
     secure_random_bytes(32);
 
-    Q_INIT_RESOURCE(coinvault);
+#ifdef DEFAULT_NETWORK_LITECOIN
+    Q_INIT_RESOURCE(mSIGNA_ltc);
+#else
+    Q_INIT_RESOURCE(mSIGNA);
+#endif
 
     QApplication app(argc, argv);
     app.setOrganizationName("Ciphrex");
