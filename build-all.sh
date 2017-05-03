@@ -167,6 +167,12 @@ then
     rm build/$BUILD_TYPE/obj/coinparams.o
 fi
 
+# Always recompile splashscreen
+if [[ -e build/$BUILD_TYPE/obj/splashscreen.o ]]
+then
+    rm build/$BUILD_TYPE/obj/splashscreen.o
+fi
+
 # Always recompile main
 if [[ -e build/$BUILD_TYPE/obj/main.o ]]
 then

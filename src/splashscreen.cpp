@@ -17,7 +17,12 @@
 
 #include <QPainter>
 
-const QString SPLASHSCREENFILENAME(":/images/splash.png");
+#ifdef DEFAULT_NETWORK_LITECOIN
+const QString SPLASHSCREENFILENAME(":/images/splash_ltc.png");
+#else
+const QString SPLASHSCREENFILENAME(":/images/splash_btc.png");
+#endif
+
 const QColor TEXTCOLOR(225, 225, 225);
 
 const int VERSIONPADDINGRIGHT = 20;
