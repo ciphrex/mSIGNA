@@ -139,6 +139,7 @@ private:
 const CoinParams& getBitcoinParams();
 const CoinParams& getTestnet3Params();
 const CoinParams& getLitecoinParams();
+const CoinParams& getLtcTestnet4Params();
 const CoinParams& getQuarkcoinParams();
 
 }

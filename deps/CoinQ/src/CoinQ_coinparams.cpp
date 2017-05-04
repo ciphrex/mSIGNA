@@ -25,6 +25,7 @@ NetworkSelector::NetworkSelector(const std::string& network_name)
     network_map_.insert(NetworkPair("bitcoin", getBitcoinParams()));
     network_map_.insert(NetworkPair("testnet3", getTestnet3Params()));
     network_map_.insert(NetworkPair("litecoin", getLitecoinParams()));
+    network_map_.insert(NetworkPair("ltctestnet4", getLtcTestnet4Params()));
     network_map_.insert(NetworkPair("quarkcoin", getQuarkcoinParams()));
 
     if (!network_name.empty()) { select(network_name); }
@@ -146,6 +147,33 @@ const CoinParams litecoinParams(
     )
 );
 const CoinParams& getLitecoinParams() { return litecoinParams; }
+
+const CoinParams ltcTestnet4Params(
+    0xf1c8d2fdul,
+    70002,
+    "19335",
+    111,
+    196,
+    4,
+    10,
+    "LtcTestnet4",
+    "ltctestnet4",
+    100000000,
+    "tLTC",
+    84000000,
+    100000,
+    &sha256_2,
+    &scrypt_1024_1_1_256,
+    Coin::CoinBlockHeader(
+        1,
+        1486949366,
+        0x1e0ffff0,
+        293345,
+        uchar_vector(32, 0),
+        uchar_vector("97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9")
+    )
+);
+const CoinParams& getLtcTestnet4Params() { return ltcTestnet4Params; }
 
 const CoinParams quarkcoinParams(
     0xdd03a5feul,
