@@ -1600,7 +1600,7 @@ uchar_vector Transaction::getSigHash(uint32_t hashType, uint index, const uchar_
             if (index == i) { copy.inputs[i].scriptSig = script; }
             else            { copy.inputs[i].scriptSig.clear();  }
         }
-        return sha256_2(getSerialized(false) + uint_to_vch(hashType, LITTLE_ENDIAN_));
+        return sha256_2(copy.getSerialized(false) + uint_to_vch(hashType, LITTLE_ENDIAN_));
     }
 
     if (hashPrevouts.empty())
