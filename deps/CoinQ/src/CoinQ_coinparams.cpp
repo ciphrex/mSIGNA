@@ -104,7 +104,7 @@ const CoinParams testnet3Params(
     "Testnet3",
     "testnet3",
     100000000,
-    "testBTC",
+    "tBTC",
     21000000,
     0,
     &sha256_2,
