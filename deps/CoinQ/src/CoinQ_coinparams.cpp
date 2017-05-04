@@ -153,7 +153,7 @@ const CoinParams ltcTestnet4Params(
     70002,
     "19335",
     111,
-    196,
+    58,
     4,
     10,
     "LtcTestnet4",
