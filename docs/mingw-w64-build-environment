@@ -20,18 +20,7 @@
 
     (-Wno-unused-local-typedefs -Wno-unused-parameter to suppress warnings)
 
-/*
-4) Build zlib for windows (required by Qt5)
-    $ wget http://zlib.net/zlib-1.2.8.tar.gz
-    $ tar -xzvf zlib-1.2.8.tar.gz
-    $ cd zlib-1.2.8
-    $ CC=x86_64-w64-mingw32-gcc AR=x86_64-w64-mingw32-ar RANLIB=x86_64-w64-mingw32-ranlib ./configure --prefix=/usr/x86_64-w64-mingw32 --static
-    $ make
-    $ sudo make install
-    $ cd
-*/
-
-5) Build Qt5 for windows (version 5.8.0 doesn't work)
+4) Build Qt5 for windows (version 5.8.0 doesn't work)
     $ wget http://download.qt.io/official_releases/qt/5.7/5.7.1/single/qt-everywhere-opensource-src-5.7.1.tar.gz
     $ tar -xzvf qt-everywhere-opensource-src-5.7.1.tar.gz
 
@@ -61,7 +50,7 @@
     You will need to set the path to find the appropriate qmake, i.e.:
     $ export PATH=/usr/x86_64-w64-mingw32/host/bin:$PATH
 
-6) Build OpenSSL for windows (version 1.1.x doesn't work)
+5) Build OpenSSL for windows (version 1.1.x doesn't work)
     $ wget https://www.openssl.org/source/openssl-1.0.2k.tar.gz
     $ tar -xzvf openssl-1.0.2k.tar.gz
     $ cp -R openssl-1.0.2k openssl-win64-build
@@ -73,7 +62,7 @@
 
     (-Wno-unused-function to suppress warnings)
 
-7) Build SQLite for windows
+6) Build SQLite for windows
     $ wget https://www.sqlite.org/2017/sqlite-autoconf-3180000.tar.gz
     $ tar -xzvf sqlite-autoconf-3180000.tar.gz
     $ mkdir sqlite-win64-build
@@ -83,7 +72,7 @@
     $ sudo make install
     $ cd
 
-8) Install ODB compiler and library
+7) Install ODB compiler and library
     $ mkdir odb
     $ cd odb
 
@@ -107,7 +96,7 @@
     $ sudo make install
     $ cd ..
 
-9) Build ODB Common Runtime Library (libodb) for windows
+8) Build ODB Common Runtime Library (libodb) for windows
     $ wget http://codesynthesis.com/download/odb/2.4/libodb-2.4.0.tar.bz2
     $ tar -xjvf libodb-2.4.0.tar.bz2
     $ mkdir libodb-win64-build
@@ -118,7 +107,7 @@
     $ sudo make install
     $ cd ..
 
-10) Build ODB Database Runtime Library for sqlite (libodb-sqlite) for windows
+9) Build ODB Database Runtime Library for sqlite (libodb-sqlite) for windows
     $ wget http://codesynthesis.com/download/odb/2.4/libodb-sqlite-2.4.0.tar.bz2
     $ tar -xjvf libodb-sqlite-2.4.0.tar.bz2
     $ mkdir libodb-sqlite-win64-build
@@ -129,7 +118,7 @@
     $ sudo make install
     $ cd
 
-11) ODB will, by default, use the linux headers. We want this behavior for system libraries, but we want to override it for
+10) ODB will, by default, use the linux headers. We want this behavior for system libraries, but we want to override it for
     nonsystem libraries. To do this, we create symlinks.
     $ cd /usr/x86_64-w64-mingw32
     $ sudo mkdir -p local/include
@@ -141,10 +130,10 @@
     $ sudo ln -s ../../include/sqlite3ext.h sqlite3ext.h
     $ cd
 
-12) Clone mSIGNA repository, in case you haven't done so already:
+11) Clone mSIGNA repository, in case you haven't done so already:
     $ git clone https://github.com/ciphrex/mSIGNA.git
 
-13) Build qrencode QR Code C library (libqrencode) for windows
+12) Build qrencode QR Code C library (libqrencode) for windows
     $ cd mSIGNA/deps/qrencode-3.4.3
     $ ./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --without-tools --enable-static --disable-shared
     $ make
