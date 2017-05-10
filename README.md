@@ -1,6 +1,6 @@
                                  m S I G N A (TM)
 ===============================================================================
-Copyright (c) 2013-2016 Ciphrex Corporation
+Copyright (c) 2013-2017 Ciphrex Corporation
 
 
 mSIGNA is an interactive desktop application for transacting on the bitcoin network
