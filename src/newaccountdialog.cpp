@@ -123,8 +123,8 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& allKeychains, const QLi
     mainLayout->addWidget(keychainListWidget);
     mainLayout->addLayout(minSigLayout);
     mainLayout->addLayout(creationTimeLayout);
-    mainLayout->addWidget(buttonBox);
     mainLayout->addWidget(segwitCheckBox);
+    mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
 }
 
