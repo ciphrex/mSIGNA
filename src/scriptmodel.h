@@ -25,6 +25,8 @@ public:
     ScriptModel(QObject* parent = NULL);
     ScriptModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent = NULL);
 
+    void setBase58Versions();
+
     void setVault(CoinDB::Vault* vault);
     void setAccount(const QString& accountName);
     void update();
@@ -38,5 +40,7 @@ private:
 
     CoinDB::Vault* vault;
     QString accountName; // empty when not loaded
+
+    unsigned char base58_versions[2];
 };
 

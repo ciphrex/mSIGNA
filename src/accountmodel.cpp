@@ -38,13 +38,21 @@ using namespace std;
 AccountModel::AccountModel(CoinDB::SynchedVault& synchedVault)
     : m_synchedVault(synchedVault), numAccounts(0)
 {
-    base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
-    base58_versions[1] = getCoinParams().pay_to_script_hash_version();
-    base58_versions[2] = getCoinParams().pay_to_witness_pubkey_hash_version();
-    base58_versions[3] = getCoinParams().pay_to_witness_script_hash_version();
-
+    setBase58Versions();
     currencySymbol = getCurrencySymbol();
     setColumns();
+}
+
+void AccountModel::setBase58Versions()
+{
+    base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    base58_versions[1] = getUseOldAddressVersions() ? getCoinParams().old_pay_to_script_hash_version() : getCoinParams().pay_to_script_hash_version();
+#else
+    base58_versions[1] = getCoinParams().pay_to_script_hash_version();
+#endif
+    base58_versions[2] = getCoinParams().pay_to_witness_pubkey_hash_version();
+    base58_versions[3] = getCoinParams().pay_to_witness_script_hash_version();
 }
 
 void AccountModel::setColumns()
@@ -63,6 +71,8 @@ void AccountModel::setVault(CoinDB::Vault* vault)
 */
 void AccountModel::update()
 {
+    setBase58Versions();
+
     QString newCurrencySymbol = getCurrencySymbol();
     if (newCurrencySymbol != currencySymbol)
     {

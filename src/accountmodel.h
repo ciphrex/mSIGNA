@@ -52,6 +52,9 @@ public:
 
     static const unsigned int DEFAULT_LOOKAHEAD = 25;
 
+    // UI operations
+    void setBase58Versions();
+
     // Account operations
     void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch = QDateTime::currentDateTime().toMSecsSinceEpoch(), unsigned int unusedPoolSize = DEFAULT_LOOKAHEAD);
     void newAccount(bool enableSegwit, bool useSegwitP2SH, const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch = QDateTime::currentDateTime().toMSecsSinceEpoch(), unsigned int unusedPoolSize = DEFAULT_LOOKAHEAD);

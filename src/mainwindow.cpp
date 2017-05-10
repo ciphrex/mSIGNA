@@ -266,6 +266,12 @@ MainWindow::MainWindow() :
         refreshAccounts();
     });
 
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    connect(this, &MainWindow::signal_addressVersionsChanged, [this]() {
+        refreshAccounts();
+    });
+#endif
+
     setAcceptDrops(true);
 
     updateFonts(fontSize);
@@ -487,6 +493,19 @@ void MainWindow::selectTrailingDecimals(bool newShowTrailingDecimals)
         emit signal_currencyUnitChanged();
     }
 }
+
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+void MainWindow::selectAddressVersions(bool newUseOldAddressVersions)
+{
+    if (newUseOldAddressVersions != useOldAddressVersions)
+    {
+        useOldAddressVersions = newUseOldAddressVersions;
+        saveSettings();
+        setAddressVersions(useOldAddressVersions);
+        emit signal_addressVersionsChanged();
+    }
+}
+#endif
 
 void MainWindow::newVault(QString fileName)
 {
@@ -2432,6 +2451,15 @@ void MainWindow::createActions()
     connect(showTrailingDecimalsAction, &QAction::toggled, [this]() { selectTrailingDecimals(showTrailingDecimalsAction->isChecked()); });
     showTrailingDecimalsAction->setChecked(showTrailingDecimals);
 
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    // address version actions
+    useOldAddressVersionsAction = new QAction(tr("Use Old Address Versions"), this);
+    useOldAddressVersionsAction->setCheckable(true);
+    useOldAddressVersionsAction->setStatusTip(tr("Use old address versions"));
+    connect(useOldAddressVersionsAction, &QAction::toggled, [this]() { selectAddressVersions(useOldAddressVersionsAction->isChecked()); });
+    useOldAddressVersionsAction->setChecked(useOldAddressVersions);
+#endif
+
     // about/help actions
     aboutAction = new QAction(tr("About..."), this);
     aboutAction->setStatusTip(tr("About ") + getDefaultSettings().getAppName());
@@ -2543,9 +2571,14 @@ void MainWindow::createMenus()
     currencyUnitMenu->addSeparator();
     currencyUnitMenu->addAction(showTrailingDecimalsAction);
 
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    addressVersionsMenu = menuBar()->addMenu(tr("Address Versions"));
+    addressVersionsMenu->addSeparator()->setText("Addresses Versions");
+    addressVersionsMenu->addAction(useOldAddressVersionsAction); 
+#endif
+
     menuBar()->addSeparator();
 
-    
     helpMenu = menuBar()->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAction);
 }
@@ -2618,6 +2651,10 @@ void MainWindow::loadSettings()
         host = settings.value("host", "localhost").toString();
         port = settings.value("port", getCoinParams().default_port()).toInt();
         autoConnect = settings.value("autoconnect", false).toBool();
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+        useOldAddressVersions = settings.value("useoldaddressversions", false).toBool();
+        setAddressVersions(useOldAddressVersions);
+#endif
 
         setDocDir(settings.value("lastvaultdir", getDefaultSettings().getDocumentDir()).toString());
     }
@@ -2640,6 +2677,9 @@ void MainWindow::saveSettings()
         settings.setValue("host", host);
         settings.setValue("port", port);
         settings.setValue("autoconnect", autoConnect);
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+        settings.setValue("useoldaddressversions", useOldAddressVersions);
+#endif
         settings.setValue("lastvaultdir", getDocDir());
     }
 }

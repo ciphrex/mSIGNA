@@ -161,6 +161,7 @@ fi
 
 cd $CURRENT_DIR
 
+#TODO: Automatically detect whether the following units need recompilation
 # Always recompile coinparams
 if [[ -e build/$BUILD_TYPE/obj/coinparams.o ]]
 then
@@ -178,6 +179,13 @@ if [[ -e build/$BUILD_TYPE/obj/main.o ]]
 then
     rm build/$BUILD_TYPE/obj/main.o
 fi
+
+# The following units also need to be recompiled
+#   accountmodel.o
+#   createtxdialog.o
+#   mainwindow.o
+#   scriptmodel.o
+#   txmodel.o
 
 # For OS X, remove any existing instance of the app bundle
 if [[ "$OS" == "osx" ]]

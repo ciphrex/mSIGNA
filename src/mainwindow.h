@@ -101,6 +101,11 @@ signals:
 
     void signal_currencyUnitChanged();
 
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    void signal_addressVersionsChanged();
+#endif
+
+
     void unsignedTx();
 
 public slots:
@@ -129,6 +134,9 @@ private slots:
     void selectCurrencyUnit();
     void selectCurrencyUnit(const QString& newCurrencyUnitPrefix);
     void selectTrailingDecimals(bool newShowTrailingDecimals);
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    void selectAddressVersions(bool useOld);
+#endif
 
     ///////////////////
     // VAULT OPERATIONS
@@ -268,6 +276,9 @@ private:
     QMenu* networkMenu;
     QMenu* fontsMenu;
     QMenu* currencyUnitMenu;
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    QMenu* addressVersionsMenu;
+#endif
     QMenu* helpMenu;
 
     // toolbars
@@ -364,6 +375,12 @@ private:
     QActionGroup* currencyUnitGroup;
     QList<QAction*> currencyUnitActions;
     QAction* showTrailingDecimalsAction;
+
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    // address version actions
+    bool useOldAddressVersions;
+    QAction* useOldAddressVersionsAction;
+#endif
 
     // about/help actions
     QAction* aboutAction;

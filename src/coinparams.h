@@ -36,3 +36,8 @@ const QString& getCurrencySymbol();
 int getCurrencyDecimals();
 uint64_t getCurrencyMax();
 uint64_t getDefaultFee();
+
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+void setAddressVersions(bool useOld = false);
+bool getUseOldAddressVersions();
+#endif

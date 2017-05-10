@@ -129,3 +129,17 @@ uint64_t getDefaultFee()
 {
     return getCoinParams().default_fee();
 }
+
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+static bool useOldAddressVersions = false;
+
+void setAddressVersions(bool useOld)
+{
+    useOldAddressVersions = useOld;
+}
+
+bool getUseOldAddressVersions()
+{
+    return useOldAddressVersions;
+}
+#endif

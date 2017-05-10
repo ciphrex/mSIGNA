@@ -32,6 +32,8 @@ public:
     TxModel(QObject* parent = nullptr);
     TxModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent = nullptr);
 
+    void setBase58Versions();
+
     void setVault(CoinDB::Vault* vault);
     CoinDB::Vault* getVault() const { return vault; }
     void setAccount(const QString& accountName);

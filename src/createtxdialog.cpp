@@ -44,7 +44,11 @@ TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol
 {
     // Base58 version bytes
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    base58_versions[1] = getUseOldAddressVersions() ? getCoinParams().old_pay_to_script_hash_version() : getCoinParams().pay_to_script_hash_version();
+#else
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
+#endif
 
     // Coin parameters
     this->currencyDivisor = currencyDivisor;
