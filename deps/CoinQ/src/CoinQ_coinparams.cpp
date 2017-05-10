@@ -80,7 +80,7 @@ const CoinParams bitcoinParams(
     100000000,
     "BTC",
     21000000,
-    50000,
+    100000,
     &sha256_2,
     &sha256_2,
     Coin::CoinBlockHeader(
