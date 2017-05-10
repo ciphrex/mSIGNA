@@ -106,12 +106,12 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& allKeychains, const QLi
     // Segwit Support
     if (getCoinParams().segwit_enabled())
     {
-        segwitCheckBox = new QCheckBox(tr("Use Seg&wit"), this);
+        segwitCheckBox = new QCheckBox(tr("Use Seg&Wit"), this);
         segwitCheckBox->setChecked(true);
     }
     else
     {
-        segwitCheckBox = new QCheckBox(tr("Use Seg&wit (not active on this blockchain)"), this);
+        segwitCheckBox = new QCheckBox(tr("Use Seg&Wit (not active on this blockchain)"), this);
         segwitCheckBox->setEnabled(false);
     }
 
