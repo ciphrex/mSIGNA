@@ -31,6 +31,7 @@ public:
         const char* default_port,
         uint8_t pay_to_pubkey_hash_version,
         uint8_t pay_to_script_hash_version,
+        uint8_t old_pay_to_script_hash_version,
         uint8_t pay_to_witness_pubkey_hash_version,
         uint8_t pay_to_witness_script_hash_version,
         const char* network_name,
@@ -48,6 +49,7 @@ public:
     default_port_(default_port),
     pay_to_pubkey_hash_version_(pay_to_pubkey_hash_version),
     pay_to_script_hash_version_(pay_to_script_hash_version),
+    old_pay_to_script_hash_version_(old_pay_to_script_hash_version),
     pay_to_witness_pubkey_hash_version_(pay_to_witness_pubkey_hash_version),
     pay_to_witness_script_hash_version_(pay_to_witness_script_hash_version),
     network_name_(network_name),
@@ -78,6 +80,7 @@ public:
     const char*                     default_port() const { return default_port_; }
     uint8_t                         pay_to_pubkey_hash_version() const { return pay_to_pubkey_hash_version_; }
     uint8_t                         pay_to_script_hash_version() const { return pay_to_script_hash_version_; }
+    uint8_t                         old_pay_to_script_hash_version() const { return old_pay_to_script_hash_version_; }
     uint8_t                         pay_to_witness_pubkey_hash_version() const { return pay_to_witness_pubkey_hash_version_; }
     uint8_t                         pay_to_witness_script_hash_version() const { return pay_to_witness_script_hash_version_; }
     const unsigned char*            address_versions() const { return address_versions_; }
@@ -99,6 +102,7 @@ private:
     const char*             default_port_;
     uint8_t                 pay_to_pubkey_hash_version_;
     uint8_t                 pay_to_script_hash_version_;
+    uint8_t                 old_pay_to_script_hash_version_;
     uint8_t                 pay_to_witness_pubkey_hash_version_;
     uint8_t                 pay_to_witness_script_hash_version_;
     unsigned char           address_versions_[2];
