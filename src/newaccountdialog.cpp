@@ -107,7 +107,7 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& allKeychains, const QLi
     if (getCoinParams().segwit_enabled())
     {
         segwitCheckBox = new QCheckBox(tr("Use Seg&Wit"), this);
-        segwitCheckBox->setChecked(true);
+        segwitCheckBox->setChecked(false);
     }
     else
     {
