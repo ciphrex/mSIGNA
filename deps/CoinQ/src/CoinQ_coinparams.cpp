@@ -147,7 +147,8 @@ const CoinParams litecoinParams(
         2084524493,
         uchar_vector(32, 0),
         uchar_vector("97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9")
-    )
+    ),
+    true
 );
 const CoinParams& getLitecoinParams() { return litecoinParams; }
 
