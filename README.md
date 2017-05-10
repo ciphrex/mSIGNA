@@ -16,7 +16,7 @@ source files and submit a pull request:
     deps/CoinQ/src/CoinQ_coinparams.cpp
 
 
-New in 0.10.0: Segregated witness support. Only supported on blockchains that
+New since 0.10.0: Segregated witness support. Only supported on blockchains that
 currently support it.
 
 
