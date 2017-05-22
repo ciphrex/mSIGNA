@@ -176,7 +176,6 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
                         err << "Block tree insertion error for block " << item.hash().getHex() << ": " << e.what(); // TODO: localization
                         LOGGER(error) << err.str() << std::endl;
                         // TODO: propagate code
-                        notifyBlockTreeError(err.str(), -1);
                         throw e;
                     }
                 }
@@ -222,6 +221,7 @@ NetworkSync::NetworkSync(const CoinQ::CoinParams& coinParams, bool bCheckProofOf
         catch (const std::exception& e)
         {
             LOGGER(error) << "block tree exception: " << e.what() << std::endl;
+            notifyBlockTreeError(e.what(), -1);
         }
     });
 
