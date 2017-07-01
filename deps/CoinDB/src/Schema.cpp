@@ -628,6 +628,7 @@ SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t i
 
     account_->loadScriptTemplates();
     redeemscript_ = account_->redeemtemplate().script(pubkeys);
+    if (redeemscript_.empty()) throw std::runtime_error("SigningScript::SigningScript() - redeemscript is empty.");
 
     using namespace CoinQ::Script;
 
