@@ -217,6 +217,7 @@ void Vault::open(int argc, char** argv, bool create, uint32_t version, const std
                 for (auto& account: db_->query<Account>())
                 {
                     account.compressed_keys(true);
+                    account.initScriptPatterns(); // redeemscript must be initialized
                     db_->update(account);
                 }
             }
@@ -296,6 +297,7 @@ void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const s
                 for (auto& account: db_->query<Account>())
                 {
                     account.compressed_keys(true);
+                    account.initScriptPatterns(); // redeemscript must be initialized
                     db_->update(account);
                 }
             }

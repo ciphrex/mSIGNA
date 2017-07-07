@@ -698,6 +698,8 @@ public:
     bool use_witness_p2sh() const { return use_witness_p2sh_; }
     const CoinQ::Script::ScriptTemplate& redeemtemplate() const { return redeemtemplate_; }
 
+    void initScriptPatterns();
+
 private:
     friend class odb::access;
 
@@ -727,8 +729,6 @@ private:
     bytes_t redeempattern_;
 
     bool use_witness_p2sh_;
-
-    void initScriptPatterns();
 
     #pragma db transient
     bool scripttemplatesloaded_;
@@ -812,6 +812,7 @@ private:
         {
             ar & use_witness_;
             ar & redeempattern_;
+            initScriptPatterns(); // redeempattern should always be initialized
         }
         else
         {
