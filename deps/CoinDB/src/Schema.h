@@ -699,6 +699,7 @@ public:
     const CoinQ::Script::ScriptTemplate& redeemtemplate() const { return redeemtemplate_; }
 
     void initScriptPatterns();
+    bool redeempattern_set() const { return !redeempattern_.empty(); }
 
 private:
     friend class odb::access;

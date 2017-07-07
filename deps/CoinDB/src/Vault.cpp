@@ -224,6 +224,15 @@ void Vault::open(int argc, char** argv, bool create, uint32_t version, const std
                 
             t.commit();
         }
+
+        {
+            odb::core::session s;
+            for (auto& account: db_->query<Account>())
+            {
+                if (!account.redeempattern_set())
+                    throw std::runtime_error("Error in vault file. Please export accounts and reimport into a new vault file.");
+            }
+        }
     }
 }
 
@@ -305,6 +314,14 @@ void Vault::open(const std::string& dbuser, const std::string& dbpasswd, const s
             t.commit();
         }
 
+        {
+            odb::core::session s;
+            for (auto& account: db_->query<Account>())
+            {
+                if (!account.redeempattern_set())
+                    throw std::runtime_error("Error in vault file. Please export accounts and reimport into a new vault file.");
+            }
+        }
     }
 }
 
