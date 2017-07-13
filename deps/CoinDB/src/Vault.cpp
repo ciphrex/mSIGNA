@@ -2655,6 +2655,7 @@ std::shared_ptr<Tx> Vault::insertNewTx(const Coin::Transaction& cointx, std::sha
 
 std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx, std::shared_ptr<BlockHeader> blockheader, bool verifysigs, bool isCoinbase)
 {
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: entered." << std::endl;
     try
     {
         using namespace CoinQ::Script;
@@ -2663,6 +2664,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
         tx->set(cointx, blockheader ? blockheader->timestamp() : time(NULL), Tx::PROPAGATED);
 
         // If we already have it but it is unsent update to propagated and update confirmations.
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: If we already have it but it is unsent update to propagated and update confirmations." << std::endl;
         odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == tx->hash() || odb::query<Tx>::unsigned_hash == tx->unsigned_hash()));
         if (!r.empty())
         {
@@ -2704,7 +2706,10 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
             return nullptr;
         }
 
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: tx->blockheader(blockheader)" << std::endl;
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: tx: " << (tx ? "Not null" : "Null") << std::endl; 
         tx->blockheader(blockheader);
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: tx->blockheader(blockheader) returned" << std::endl;
 
         std::set<std::shared_ptr<SigningScript>>    updated_scripts;
         std::set<std::shared_ptr<TxIn>>             updated_txins;
@@ -2713,14 +2718,18 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
 
         std::shared_ptr<Account> sending_account;
 
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: isCoinbase: " << (isCoinbase ? "TRUE" : "FALSE") << std::endl;
         if (!isCoinbase)
         {
             for (auto& txin: tx->txins())
             {
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: Checking txin" << std::endl;
                 bytes_t unsigned_script;
                 try
                 {
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: txin->unsigned_script()" << std::endl;
                     unsigned_script = txin->unsigned_script();
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: txin->unsigned_script() returned" << std::endl;
                 }
                 catch (const std::exception& e)
                 {
@@ -2740,6 +2749,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
                     sending_account = signingscript->account();
 
                     // Search for outpoint it spends
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: Search for outpoint it spends" << std::endl;
                     odb::result<TxOut> txout_r(db_->query<TxOut>(odb::query<TxOut>::tx->hash == txin->outhash() && odb::query<TxOut>::txindex == txin->outindex()));
                     if (!txout_r.empty())
                     {
@@ -2757,6 +2767,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
         bool receive = false;
         for (auto& txout: tx->txouts())
         {
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: Checking txout" << std::endl;
             txout->sending_account(sending_account);
 
             odb::result<SigningScript> r(db_->query<SigningScript>(odb::query<SigningScript>::txoutscript == txout->script()));
@@ -2771,6 +2782,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
                 txout->signingscript(signingscript);
 
                 // Search for an input that claims it (to support out-of-order insertion)
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: Search for an input that claims it" << std::endl;
                 odb::result<TxIn> txin_r(db_->query<TxIn>(odb::query<TxIn>::outhash == tx->hash() && odb::query<TxIn>::outindex == txout->txindex()));
                 if (!txin_r.empty())
                 {
@@ -2787,6 +2799,7 @@ std::shared_ptr<Tx> Vault::insertNewTx_unwrapped(const Coin::Transaction& cointx
         if (sending_account || receive)
         {
             // TODO: better tx status update method
+//LOGGER(trace) << "Vault::insertNewTx_unwrapped: update tx" << std::endl;
             if (!sending_account) { tx->status(Tx::PROPAGATED); tx->hash(tx->toCoinCore().hash()); }
             for (auto& script:  updated_scripts)
             {
@@ -2840,6 +2853,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
         bytes_t txhash = cointx.hash();
 
         // Instantiate merkleblock
+//LOGGER(trace) << "Vault::insertMerkleTx_unwrapped: Instantiate merkleblock" << std::endl;
         std::shared_ptr<MerkleBlock> merkleblock;
         {
             odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader.is_not_null() && odb::query<MerkleBlock>::blockheader->hash == blockhash));
@@ -2850,6 +2864,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
             else
             {
                 // Connect to chain
+//LOGGER(trace) << "Vault::insertMerkleTx_unwrapped: Connect to chain" << std::endl;
                 if (txindex != 0) throw MerkleTxBadInsertionOrderException(blockhash, chainmerkleblock.height, txhash, txindex, txcount);
 
                 odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->hash == chainmerkleblock.prevBlockHash()));
@@ -2866,6 +2881,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
 
                 {
                     // Unconfirm any transactions with equal or larger height
+//LOGGER(trace) << "Vault::insertMerkleTx_unwrapped: Unconfirm any transactions with equal or larger height" << std::endl;
                     odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::blockheader->height >= (unsigned int)chainmerkleblock.height));
                     for (odb::result<Tx>::iterator it = r.begin(); it != r.end(); ++it)
                     {
@@ -2878,12 +2894,14 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
 
                 {
                     // Delete any merkleblocks with equal or larger height
+//LOGGER(trace) << "Vault::insertMerkleTx_unwrapped: Delete any merkleblocks with equal or larger height" << std::endl;
                     odb::result<MerkleBlock> r(db_->query<MerkleBlock>(odb::query<MerkleBlock>::blockheader->height >= (unsigned int)chainmerkleblock.height));
                     for (auto& merkleblock: r) { db_->erase(merkleblock); }
                 }
 
                 {
                     // Delete any blockheaders with equal or larger height
+//LOGGER(trace) << "Vault::insertMerkleTx_unwrapped: Delete any blockheaders with equal or larger height" << std::endl;
                     odb::result<BlockHeader> r(db_->query<BlockHeader>(odb::query<BlockHeader>::height >= (unsigned int)chainmerkleblock.height));
                     for (auto& blockheader: r) { db_->erase(blockheader); }
                 }
@@ -2892,6 +2910,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
                 //deleteMerkleBlock_unwrapped((uint32_t)chainmerkleblock.height);
 
                 // Instantiate the new merkle block and store
+//LOGGER(trace) << "Vault::insertMerkleTx_unwrapped: Instantiate the new merkle block and store" << std::endl;
                 merkleblock = std::make_shared<MerkleBlock>(chainmerkleblock);
                 db_->persist(merkleblock->blockheader());
                 db_->persist(merkleblock);
@@ -2899,6 +2918,7 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
         }
 
         // If we already have the transaction, just update it.
+//LOGGER(trace) << "Vault::insertMerkleTx_unwrapped: If we already have the transaction, just update it." << std::endl;
         std::shared_ptr<Tx> tx;
         {
             odb::result<Tx> r(db_->query<Tx>(odb::query<Tx>::hash == txhash));
@@ -2952,11 +2972,14 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
         }
 
         // We've never seen this transaction before - treat it as a new transaction
+//LOGGER(trace) << "Vault::insertMerkleTx_unwrapped: We've never seen this transaction before - treat it as a new transaction." << std::endl;
         if (!tx)
         {
             try
             {
+//LOGGER(trace) << "Vault::insertMerkleTx_unrapped: calling insertNewTx_unwrapped" << std::endl;
                 tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader(), verifysigs, isCoinbase);
+//LOGGER(trace) << "Vault::insertMerkleTx_unrapped: returned from insertNewTx_unwrapped" << std::endl;
             }
             catch (const std::runtime_error& e)
             {

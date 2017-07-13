@@ -20,7 +20,7 @@
 #include <CoinCore/aes.h>
 #include <CoinCore/random.h>
 
-#include <logger/logger.h>
+//#include <logger/logger.h>
 
 // support for boost serialization
 #include <boost/archive/text_oarchive.hpp>
@@ -812,8 +812,11 @@ bytes_t TxIn::unsigned_script() const
 {
     using namespace CoinQ::Script;
 
+//LOGGER(trace) << "TxIn::unsigned_script: Calling SignableTxIn constructor" << std::endl;
     SignableTxIn signabletxin(tx()->toCoinCore(), txindex_, outpoint() ? outpoint()->value() : 0);
+//LOGGER(trace) << "TxIn::unsigned_script: Calling signabletxin.clearsigs()" << std::endl;
     signabletxin.clearsigs();
+//LOGGER(trace) << "TxIn::unsigned_script: Returning signabletxin.txinscript()" << std::endl;
     return signabletxin.txinscript();
 }
 
