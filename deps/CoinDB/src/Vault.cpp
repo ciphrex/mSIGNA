@@ -535,18 +535,6 @@ Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint
         odb::result<SigningScript> r(db_->query<SigningScript>());
         for (auto& script: r)
         {
-/*
-            // Add input script element
-            if (r.account()->use_witness())
-            {
-                WitnessProgram_P2WSH wp(view.redeemscript);
-                elements.push_back(wp.script());
-            }
-            else
-            {
-                elements.push_back(view.redeemscript);
-            }
-*/
 
             // Add script elements
             if (script.account()->use_witness())
@@ -561,6 +549,7 @@ Coin::BloomFilter Vault::getBloomFilter_unwrapped(double falsePositiveRate, uint
             else
             {
                 elements.push_back(getScriptPubKeyPayee(script.txoutscript()).second);
+                elements.push_back(script.redeemscript());
             }
         }
     }
