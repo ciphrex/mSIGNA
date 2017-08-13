@@ -2968,6 +2968,12 @@ std::shared_ptr<Tx> Vault::insertMerkleTx_unwrapped(const ChainMerkleBlock& chai
             {
 //LOGGER(trace) << "Vault::insertMerkleTx_unrapped: calling insertNewTx_unwrapped" << std::endl;
                 tx = insertNewTx_unwrapped(cointx, merkleblock->blockheader(), verifysigs, isCoinbase);
+                if (tx)
+                {
+                    tx->status(Tx::CONFIRMED);
+                    db_->update(tx);
+                    signalQueue.push(notifyTxUpdated.bind(tx));
+                }
 //LOGGER(trace) << "Vault::insertMerkleTx_unrapped: returned from insertNewTx_unwrapped" << std::endl;
             }
             catch (const std::runtime_error& e)
