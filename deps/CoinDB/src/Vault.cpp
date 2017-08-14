@@ -3839,7 +3839,7 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
         if (key_r.empty()) continue;
 
         // Compute hash to sign
-        bytes_t signingHash = coin_tx.getSigHash(SIGHASH_ALL, txin->txindex(), signableTxIn.redeemscript(), outpointvalue);
+        bytes_t signingHash = coin_tx.getSigHash(SIGHASH_ALL | SIGHASH_FORKID, txin->txindex(), signableTxIn.redeemscript(), outpointvalue);
         LOGGER(debug) << "Vault::signTx_unwrapped - computed signing hash " << uchar_vector(signingHash).getHex() << " for input " << txin->txindex() << std::endl;
 
         for (auto& key: key_r)
@@ -3861,7 +3861,7 @@ unsigned int Vault::signTx_unwrapped(std::shared_ptr<Tx> tx, std::vector<std::st
             if (signingKey.getPubKey() != key.pubkey() && signingKey.getPubKey(false) != key.pubkey()) throw KeychainInvalidPrivateKeyException(key.root_keychain()->name(), key.pubkey());
 
             bytes_t signature = secp256k1_sign(signingKey, signingHash);
-            signature.push_back(SIGHASH_ALL);
+            signature.push_back(SIGHASH_ALL | SIGHASH_FORKID);
             signableTxIn.addsig(key.pubkey(), signature);
             LOGGER(debug) << "Vault::signTx_unwrapped - PUBLIC KEY: " << uchar_vector(key.pubkey()).getHex() << " SIGNATURE: " << uchar_vector(signature).getHex() << std::endl;
             keychains_signed.insert(key.root_keychain());
