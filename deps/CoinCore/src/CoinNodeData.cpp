@@ -1588,10 +1588,10 @@ uchar_vector Transaction::getSigHash(uint32_t hashType, uint index, const uchar_
         throw runtime_error("Index out of range.");
 
     // TODO: Add other hashtype support
-    if (hashType != SIGHASH_ALL)
+    if ((hashType & ~SIGHASH_FORKID) != SIGHASH_ALL)
         throw runtime_error("Unsupported hash type.");
 
-    if (inputs[index].scriptWitness.isEmpty())
+    if (inputs[index].scriptWitness.isEmpty() && !(hashType & SIGHASH_FORKID))
     {
         // Old sighash
         Transaction copy(*this);
