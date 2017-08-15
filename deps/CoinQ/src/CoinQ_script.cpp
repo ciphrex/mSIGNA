@@ -644,7 +644,7 @@ Script::Script(const bytes_t& txinscript, const bytes_t& signinghash, bool clear
                 else
                 {
                     // TODO: add support for other hash types.
-                    if (sigs[iSig].back() != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
+                    if ((sigs[iSig].back() & ~SIGHASH_FORKID) != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
 
                     // Remove hash type byte.
                     bytes_t signature(sigs[iSig].begin(), sigs[iSig].end() - 1);
@@ -900,7 +900,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         const bytes_t& sig = objects[0];
 
         // TODO: add support for other hash types.
-        if (sig.empty() || sig.back() != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
+        if (sig.empty() || (sig.back() & ~SIGHASH_FORKID) != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
 
         // Remove hash type byte.
 //LOGGER(trace) << "SignableTxIn::setTxIn: Remove hash type byte" << std::endl;
@@ -910,7 +910,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
 //LOGGER(trace) << "SignableTxIn::setTxIn: Verify signature" << std::endl;
         uchar_vector txoutscript;
         txoutscript << OP_DUP << OP_HASH160 << pushStackItem(hash160(pubkeys_.back())) << OP_EQUALVERIFY << OP_CHECKSIG;
-        bytes_t sighash = tx.getSigHash(SIGHASH_ALL, nIn, txoutscript, outpointamount);
+        bytes_t sighash = tx.getSigHash(SIGHASH_ALL | SIGHASH_FORKID, nIn, txoutscript, outpointamount);
         secp256k1_key key;
         key.setPubKey(pubkeys_.back());
         if (secp256k1_verify(key, sighash, signature))
@@ -990,13 +990,13 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         else
         {
             // TODO: add support for other hash types.
-            if (sigs[iSig].empty() || sigs[iSig].back() != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
+            if (sigs[iSig].empty() || (sigs[iSig].back() & ~SIGHASH_FORKID) != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
 
             // Remove hash type byte.
             bytes_t signature(sigs[iSig].begin(), sigs[iSig].end() - 1);
 
             // Verify signature.
-            bytes_t sighash = tx.getSigHash(SIGHASH_ALL, nIn, redeemscript_, outpointamount);
+            bytes_t sighash = tx.getSigHash(SIGHASH_ALL | SIGHASH_FORKID, nIn, redeemscript_, outpointamount);
             secp256k1_key key;
             key.setPubKey(pubkey);
             if (secp256k1_verify(key, sighash, signature))
