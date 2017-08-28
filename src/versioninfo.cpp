@@ -19,7 +19,7 @@
 #include <openssl/opensslv.h>
 
 // Definitions
-const QString VERSIONTEXT("0.10.6");
+const QString VERSIONTEXT("0.11.0");
 
 const QString commitHash(COMMIT_HASH);
 const QString shortCommitHash(QString(COMMIT_HASH).left(7));
