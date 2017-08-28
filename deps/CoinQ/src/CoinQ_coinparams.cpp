@@ -90,7 +90,8 @@ const CoinParams bitcoinParams(
         2083236893,
         uchar_vector(32, 0),
         uchar_vector("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")
-    )
+    ),
+    true
 );
 const CoinParams& getBitcoinParams() { return bitcoinParams; }
 
