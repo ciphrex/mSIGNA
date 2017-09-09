@@ -14,7 +14,7 @@
     $ ./bootstrap.sh --without-icu
     $ echo "using gcc : mingw32 : x86_64-w64-mingw32-g++ : <rc>x86_64-w64-mingw32-windres <archiver>x86_64-w64-mingw32-ar <ranlib>x86_64-w64-mingw32-ranlib ;" > user-config.jam
     $ sudo ./b2 toolset=gcc address-model=64 target-os=windows variant=release threading=multi threadapi=win32 \
-        link=static runtime-link=static --prefix=/usr/x86_64-w64-mingw32 --user-config=user-config.jam \
+        link=static runtime-link=static --prefix=/usr/local/x86_64-w64-mingw32 --user-config=user-config.jam \
         --without-mpi --without-python -sNO_BZIP2=1 --layout=tagged install
     $ cd
 
@@ -29,7 +29,7 @@
         ~/qt-everywhere-opensource-src-5.7.1/qtbase/src/gui/kernel/qplatformsessionmanager.h \
         ~/qt-everywhere-opensource-src-5.7.1/qtbase/src/gui/kernel/qsessionmanager.h
 
-    $ export INSTALLPREFIX=/usr/x86_64-w64-mingw32
+    $ export INSTALLPREFIX=/usr/local/x86_64-w64-mingw32
     $ mkdir qt5-win64-build
     $ cd qt5-win64-build
     $ ../qt-everywhere-opensource-src-5.7.1/configure -prefix $INSTALLPREFIX -hostprefix $INSTALLPREFIX/host -plugindir $INSTALLPREFIX/plugins \
@@ -43,19 +43,19 @@
     (-Wno-strict-overflow -Wno-strict-aliasing -Wno-unused-parameters to suppress warnings)
 
     Patch Qt5 to work with cmake for static build. Windows uses library naming convention name.lib, MinGW uses libname.a. So we must replace the names:
-    $ cd /usr/x86_64-w64-mingw32/lib/cmake
+    $ cd /usr/local/x86_64-w64-mingw32/lib/cmake
     $ sudo sed -i -e 's/\/\([^\.]*\)\.lib/\/lib\1\.a/g' $(find * -type f)
     $ cd
 
     You will need to set the path to find the appropriate qmake, i.e.:
-    $ export PATH=/usr/x86_64-w64-mingw32/host/bin:$PATH
+    $ export PATH=/usr/local/x86_64-w64-mingw32/host/bin:$PATH
 
 5) Build OpenSSL for windows (version 1.1.x doesn't work)
     $ wget https://www.openssl.org/source/openssl-1.0.2k.tar.gz
     $ tar -xzvf openssl-1.0.2k.tar.gz
     $ cp -R openssl-1.0.2k openssl-win64-build
     $ cd openssl-win64-build
-    $ CROSS_COMPILE="x86_64-w64-mingw32-" ./Configure mingw64 no-asm no-shared --prefix=/usr/x86_64-w64-mingw32
+    $ CROSS_COMPILE="x86_64-w64-mingw32-" ./Configure mingw64 no-asm no-shared --prefix=/usr/local/x86_64-w64-mingw32
     $ make
     $ sudo make install_sw
     $ cd
@@ -67,7 +67,7 @@
     $ tar -xzvf sqlite-autoconf-3180000.tar.gz
     $ mkdir sqlite-win64-build
     $ cd sqlite-win64-build
-    $ ../sqlite-autoconf-3180000/configure --host=x86_64-w64-mingw32 --target=windows --prefix=/usr/x86_64-w64-mingw32 CFLAGS=-DSQLITE_ENABLE_UNLOCK_NOTIFY
+    $ ../sqlite-autoconf-3180000/configure --host=x86_64-w64-mingw32 --target=windows --prefix=/usr/local/x86_64-w64-mingw32 CFLAGS=-DSQLITE_ENABLE_UNLOCK_NOTIFY
     $ make
     $ sudo make install
     $ cd
@@ -101,8 +101,8 @@
     $ tar -xjvf libodb-2.4.0.tar.bz2
     $ mkdir libodb-win64-build
     $ cd libodb-win64-build 
-    $ ../libodb-2.4.0/configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --enable-threads=win32 \
-        CPPFLAGS="-I/usr/x86_64-w64-mingw32/include -DLIBODB_STATIC_LIB" --disable-shared LDFLAGS=-L/usr/x86_64-w64-mingw32/lib
+    $ ../libodb-2.4.0/configure --host=x86_64-w64-mingw32 --prefix=/usr/local/x86_64-w64-mingw32 --enable-threads=win32 \
+        CPPFLAGS="-I/usr/local/x86_64-w64-mingw32/include -DLIBODB_STATIC_LIB" --disable-shared LDFLAGS=-L/usr/local/x86_64-w64-mingw32/lib
     $ make
     $ sudo make install
     $ cd ..
@@ -112,15 +112,15 @@
     $ tar -xjvf libodb-sqlite-2.4.0.tar.bz2
     $ mkdir libodb-sqlite-win64-build
     $ cd libodb-sqlite-win64-build
-    $ ../libodb-sqlite-2.4.0/configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --enable-threads=win32 \
-        CPPFLAGS="-I/usr/x86_64-w64-mingw32/include -DLIBODB_STATIC_LIB" --disable-shared LDFLAGS=-L/usr/x86_64-w64-mingw32/lib
+    $ ../libodb-sqlite-2.4.0/configure --host=x86_64-w64-mingw32 --prefix=/usr/local/x86_64-w64-mingw32 --enable-threads=win32 \
+        CPPFLAGS="-I/usr/local/x86_64-w64-mingw32/include -DLIBODB_STATIC_LIB" --disable-shared LDFLAGS=-L/usr/local/x86_64-w64-mingw32/lib
     $ make
     $ sudo make install
     $ cd
 
 10) ODB will, by default, use the linux headers. We want this behavior for system libraries, but we want to override it for
     nonsystem libraries. To do this, we create symlinks.
-    $ cd /usr/x86_64-w64-mingw32
+    $ cd /usr/local/x86_64-w64-mingw32
     $ sudo mkdir -p local/include
     $ cd local/include
     $ sudo ln -s ../../include/odb/ odb
@@ -135,7 +135,7 @@
 
 12) Build qrencode QR Code C library (libqrencode) for windows
     $ cd mSIGNA/deps/qrencode-3.4.3
-    $ ./configure --host=x86_64-w64-mingw32 --prefix=/usr/x86_64-w64-mingw32 --without-tools --enable-static --disable-shared
+    $ ./configure --host=x86_64-w64-mingw32 --prefix=/usr/local/x86_64-w64-mingw32 --without-tools --enable-static --disable-shared
     $ make
     $ sudo make install
     $ cd

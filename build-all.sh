@@ -66,7 +66,7 @@ fi
 # Set target platform parameters
 if [ $mingw64 ]
 then
-    if [[ -z "$QMAKE_PATH" ]]; then QMAKE_PATH="/usr/x86_64-w64-mingw32/host/bin/"; fi
+    if [[ -z "$QMAKE_PATH" ]]; then QMAKE_PATH="/usr/local/x86_64-w64-mingw32/host/bin/"; fi
     SPEC="-spec win32-g++"
 fi
 

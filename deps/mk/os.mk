@@ -22,12 +22,12 @@ ifeq ($(OS), linux)
 else ifeq ($(OS), mingw64)
     CXX =  x86_64-w64-mingw32-g++
     CC =  x86_64-w64-mingw32-gcc
-    CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -fvisibility=hidden -fvisibility-inlines-hidden -DBOOST_SYSTEM_NOEXCEPT=""
+    CXX_FLAGS += -Wno-unknown-pragmas -Wno-strict-aliasing -std=c++0x -fvisibility=hidden -fvisibility-inlines-hidden -DBOOST_SYSTEM_NOEXCEPT="" -I/usr/local/x86_64-w64-mingw32/include -L/usr/local/x86_64-w64-mingw32/lib
     ARCHIVER = x86_64-w64-mingw32-ar
     EXE_EXT = .exe
 
-    LOCAL_SYSROOT = /usr/x86_64-w64-mingw32/local
-    GLOBAL_SYSROOT = /usr/x86_64-w64-mingw32
+    LOCAL_SYSROOT = /usr/local/x86_64-w64-mingw32/local
+    GLOBAL_SYSROOT = /usr/local/x86_64-w64-mingw32
 
     PLATFORM_LIBS += \
         -static-libgcc -static-libstdc++ \
@@ -67,4 +67,3 @@ endif
 ifneq ($(wildcard $(SYSROOT)/lib),)
     LIB_PATH += -L$(SYSROOT)/lib
 endif
-
