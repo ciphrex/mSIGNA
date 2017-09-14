@@ -1406,6 +1406,29 @@ uint64_t Transaction::getSize(bool bWithWitness) const
     return count;
 }
 
+uint64_t Transaction::getVSize() const
+{
+    uint64_t count = 8; // version + locktime
+    count += VarInt(inputs.size()).getSize();
+    count += VarInt(outputs.size()).getSize();
+
+    uint64_t i;
+    for (i = 0; i < inputs.size(); i++)
+        count += inputs[i].getSize();
+
+    for (i = 0; i < outputs.size(); i++)
+        count += outputs[i].getSize();
+
+    if (hasWitness())
+    {
+//        count += 2; // mask + flags
+        uint64_t witnessCount = 0;
+        for (auto& input: inputs) { witnessCount += input.scriptWitness.getSize(); }
+        count += (witnessCount + 3) / 4;
+    }
+
+    return count;
+}
 uchar_vector Transaction::getSerialized(bool bWithWitness) const
 {
     bWithWitness = bWithWitness && hasWitness();

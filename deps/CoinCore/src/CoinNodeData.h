@@ -687,6 +687,7 @@ public:
 
     uint64_t getSize() const { return this->getSize(true); }
     uint64_t getSize(bool bWithWitness) const;
+    uint64_t getVSize() const;
 
     uchar_vector getSerialized() const { return this->getSerialized(true); }
     uchar_vector getSerialized(bool bWithWitness) const;
