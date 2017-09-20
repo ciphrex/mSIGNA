@@ -12,11 +12,13 @@
 //
 
 #include "quicknewaccountdialog.h"
+#include "coinparams.h"
 
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLineEdit>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QLabel>
 #include <QDateTimeEdit>
@@ -80,12 +82,24 @@ QuickNewAccountDialog::QuickNewAccountDialog(QWidget* parent)
     creationTimeLayout->addWidget(creationTimeLabel);
     creationTimeLayout->addWidget(creationTimeEdit);
 
+    // Segwit Support
+    if (getCoinParams().segwit_enabled())
+    {
+        segwitCheckBox = new QCheckBox(tr("Use Seg&Wit"), this);
+        segwitCheckBox->setChecked(false);
+    }
+    else
+    {
+        segwitCheckBox = new QCheckBox(tr("Use Seg&Wit (not active on this blockchain)"), this);
+        segwitCheckBox->setEnabled(false);
+    }
     // Main Layout 
     QVBoxLayout *mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
     mainLayout->addLayout(nameLayout);
     mainLayout->addLayout(policyLayout);
     mainLayout->addLayout(creationTimeLayout);
+    mainLayout->addWidget(segwitCheckBox);
     mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
 }
@@ -113,4 +127,9 @@ int QuickNewAccountDialog::getMaxSigs() const
 qint64 QuickNewAccountDialog::getCreationTime() const
 {
     return creationTimeEdit->dateTime().toMSecsSinceEpoch();
+}
+
+bool QuickNewAccountDialog::getUseSegwit() const
+{
+    return segwitCheckBox->isChecked();
 }

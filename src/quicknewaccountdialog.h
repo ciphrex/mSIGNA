@@ -17,6 +17,7 @@ class QLineEdit;
 class QComboBox;
 class QDateTimeEdit;
 class QCalendarWidget;
+class QCheckBox;
 
 #include <QDialog>
 
@@ -32,6 +33,7 @@ public:
     int getMinSigs() const;
     int getMaxSigs() const;
     qint64 getCreationTime() const;
+    bool getUseSegwit() const;
 
 private:
     QLineEdit* nameEdit;
@@ -39,5 +41,6 @@ private:
     QComboBox* maxSigComboBox;
     QDateTimeEdit* creationTimeEdit;
     QCalendarWidget* calendarWidget;
+    QCheckBox* segwitCheckBox;
 };
 

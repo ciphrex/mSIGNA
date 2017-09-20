@@ -1451,7 +1451,7 @@ void MainWindow::quickNewAccount()
                     synchedVault.getVault()->newKeychain(keychainName.toStdString(), keychainSeed);
                 }
 
-                accountModel->newAccount(accountName, dlg.getMinSigs(), keychainNames, dlg.getCreationTime());
+                accountModel->newAccount(dlg.getUseSegwit(), true, accountName, dlg.getMinSigs(), keychainNames, dlg.getCreationTime());
             }
 
             accountModel->update();
