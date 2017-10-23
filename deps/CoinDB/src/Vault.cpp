@@ -3160,7 +3160,8 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
     for (auto& utxoview: utxoviews)
     {
         total += utxoview.value;
-        std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+        //std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+        std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0));
         if (account->use_witness())
         {
             using namespace CoinQ::Script;
@@ -3292,7 +3293,8 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
         odb::result<TxOutView> utxoview_r(db_->query<TxOutView>(base_query && query_t::TxOut::id.in_range(coin_ids.begin(), coin_ids.end())));
         for (auto& utxoview: utxoview_r)
         {
-            std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+            //std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+            std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0));
             if (account->use_witness())
             {
                 using namespace CoinQ::Script;
@@ -3320,7 +3322,8 @@ std::shared_ptr<Tx> Vault::createTx_unwrapped(const std::string& account_name, u
 
         for (auto& utxoview: utxoviews)
         {
-            std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+            //std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+            std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0));
             if (account->use_witness())
             {
                 using namespace CoinQ::Script;
@@ -3503,7 +3506,8 @@ txs_t Vault::consolidateTxOuts_unwrapped(const std::string& account_name, uint32
     txouts.push_back(txout);
     for (auto& utxoview: utxoviews)
     {
-        std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+        //std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0xffffffff));
+        std::shared_ptr<TxIn> txin(new TxIn(utxoview.tx_hash, utxoview.tx_index, utxoview.signingscript_txinscript, 0));
         if (account->use_witness())
         {
             using namespace CoinQ::Script;
