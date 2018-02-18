@@ -119,6 +119,7 @@ public:
     explicit VaultWrongNetworkException(const std::string& vault_name, const std::string& network) : VaultException("Wrong network.", VAULT_WRONG_NETWORK, vault_name), network_(network) { }
 
     const std::string&  network() const { return network_; }
+    ~VaultWrongNetworkException() throw() { }
 
 private:
     std::string network_;
@@ -130,6 +131,7 @@ public:
     explicit VaultFailedToOpenDatabaseException(const std::string& vault_name, const std::string& dberror) : VaultException("Failed to open database.", VAULT_FAILED_TO_OPEN_DATABASE, vault_name), dberror_(dberror) { }
 
     const std::string&  dberror() const { return dberror_; }
+    ~VaultFailedToOpenDatabaseException() throw() { }
 
 private:
     std::string dberror_;
@@ -141,6 +143,7 @@ public:
     explicit VaultMissingTxsException(const std::string& vault_name, const hashvector_t& txhashes) : VaultException("Vault is missing transactions.", VAULT_MISSING_TXS, vault_name), txhashes_(txhashes) { }
 
     const hashvector_t& txhashes() const { return txhashes_; }
+    ~VaultMissingTxsException() throw() { }
 
 private:
     hashvector_t txhashes_;
@@ -295,6 +298,7 @@ public:
     uint64_t available() const { return available_; }
     const std::string& username() const { return username_; }
     void username(const std::string& username) { username_ = username; }
+    ~AccountInsufficientFundsException() throw() { }
 
 private:
     uint64_t requested_;
@@ -405,6 +409,7 @@ public:
     explicit TxOutputScriptNotInUserWhitelistException(const std::string& username, const bytes_t& txoutscript) : TxException("Transaction output script is not in user whitelist.", TX_OUTPUT_SCRIPT_NOT_IN_USER_WHITELIST, bytes_t()), username_(username), txoutscript_(txoutscript) { }
     const std::string& username() const { return username_; }
     const bytes_t& txoutscript() const { return txoutscript_; }
+    ~TxOutputScriptNotInUserWhitelistException() throw() { }
 
 protected:
     std::string username_;
