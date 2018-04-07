@@ -2,11 +2,14 @@
 //
 // mSIGNA
 //
-// signatureactions.h
+// signatureactions.cpp
 //
 // Copyright (c) 2013-2014 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "signatureactions.h"
 
@@ -95,14 +98,27 @@ void SignatureActions::addSignature()
         }
 
         QString currentKeychain = m_currentKeychain;
-        if (vault->isKeychainLocked(m_currentKeychain.toStdString()) && !unlockKeychain()) return;
+        bool bKeychainLocked = vault->isKeychainLocked(m_currentKeychain.toStdString());
+        if (bKeychainLocked && !unlockKeychain(false)) return;
 
         std::vector<std::string> keychainNames;
         keychainNames.push_back(currentKeychain.toStdString());
 
         seedEntropySource(false, &m_dialog);
         bytes_t txhash = m_dialog.getModel()->getTxHash();
-        vault->signTx(txhash, keychainNames, true);
+        try
+        {
+            vault->signTx(txhash, keychainNames, true);
+        }
+        catch (const std::exception& e)
+        {
+            if (bKeychainLocked) lockKeychain();
+            throw;
+        }
+
+LOGGER(debug) << "calling lockKeychain()" << std::endl;
+        if (bKeychainLocked) lockKeychain(); // Relock keychain if it was locked prior to adding this signature.
+LOGGER(debug) << "lockKeychain() returned" << std::endl;
 
         if (keychainNames.empty())
         {
@@ -136,7 +152,7 @@ void SignatureActions::addSignature()
     }
 }
 
-bool SignatureActions::unlockKeychain()
+bool SignatureActions::unlockKeychain(bool bUpdateKeychains)
 {
     try
     {
@@ -161,7 +177,7 @@ bool SignatureActions::unlockKeychain()
 
         vault->unlockKeychain(keychainName, lockKey);
         refreshCurrentKeychain();
-        m_dialog.updateKeychains();
+        if (bUpdateKeychains) m_dialog.updateKeychains();
     }
     catch (const CoinDB::KeychainPrivateKeyUnlockFailedException& e)
     {

@@ -3,8 +3,10 @@
 // Schema.h
 //
 // Copyright (c) 2013-2014 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 //
 
 // odb compiler complains about #pragma once
@@ -580,7 +582,9 @@ public:
         uint32_t unused_pool_size,
         uint32_t time_created,
         const std::vector<std::string>& bin_names,
-        bool compressed_keys = true
+        bool compressed_keys = true,
+        bool use_witness = false,
+        bool use_witness_p2sh = false
     ) :
         id_(id),
         name_(name),
@@ -590,7 +594,9 @@ public:
         unused_pool_size_(unused_pool_size),
         time_created_(time_created),
         bin_names_(bin_names),
-        compressed_keys_(compressed_keys)
+        compressed_keys_(compressed_keys),
+        use_witness_(use_witness),
+        use_witness_p2sh_(use_witness_p2sh)
     {
         std::sort(keychain_names_.begin(), keychain_names_.end());
     }
@@ -604,7 +610,9 @@ public:
         unused_pool_size_(source.unused_pool_size_),
         time_created_(source.time_created_),
         bin_names_(source.bin_names_),
-        compressed_keys_(source.compressed_keys_)
+        compressed_keys_(source.compressed_keys_),
+        use_witness_(source.use_witness_),
+        use_witness_p2sh_(source.use_witness_p2sh_)
     { }
 
     AccountInfo& operator=(const AccountInfo& source)
@@ -618,6 +626,8 @@ public:
         time_created_ = source.time_created_;
         bin_names_ = source.bin_names_;
         compressed_keys_ = source.compressed_keys_;
+        use_witness_ = source.use_witness_;
+        use_witness_p2sh_ = source.use_witness_p2sh_;
         return *this;
     }
 
@@ -630,6 +640,8 @@ public:
     uint32_t                            time_created() const { return time_created_; }
     const std::vector<std::string>&     bin_names() const { return bin_names_; }
     bool                                compressed_keys() const { return compressed_keys_; }
+    bool                                use_witness() const { return use_witness_; }
+    bool                                use_witness_p2sh() const { return use_witness_p2sh_; }
 
 private:
     unsigned long               id_;
@@ -641,6 +653,8 @@ private:
     uint32_t                    time_created_;
     std::vector<std::string>    bin_names_;
     bool                        compressed_keys_;
+    bool                        use_witness_;
+    bool                        use_witness_p2sh_;
 };
 
 const uint32_t DEFAULT_UNUSED_POOL_SIZE = 25;
@@ -684,6 +698,9 @@ public:
     bool use_witness_p2sh() const { return use_witness_p2sh_; }
     const CoinQ::Script::ScriptTemplate& redeemtemplate() const { return redeemtemplate_; }
 
+    void initScriptPatterns();
+    bool redeempattern_set() const { return !redeempattern_.empty(); }
+
 private:
     friend class odb::access;
 
@@ -713,8 +730,6 @@ private:
     bytes_t redeempattern_;
 
     bool use_witness_p2sh_;
-
-    void initScriptPatterns();
 
     #pragma db transient
     bool scripttemplatesloaded_;
@@ -798,6 +813,7 @@ private:
         {
             ar & use_witness_;
             ar & redeempattern_;
+            initScriptPatterns(); // redeempattern should always be initialized
         }
         else
         {

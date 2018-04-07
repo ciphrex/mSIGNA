@@ -5,12 +5,16 @@
 // scriptmodel.cpp
 //
 // Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "scriptmodel.h"
 
 #include "settings.h"
+#include "coinparams.h"
 
 #include <CoinQ/CoinQ_script.h>
 
@@ -24,14 +28,26 @@ ScriptModel::ScriptModel(QObject* parent)
     : QStandardItemModel(parent)
 {
     initColumns();
+    setBase58Versions();
 }
 
 ScriptModel::ScriptModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent)
     : QStandardItemModel(parent)
 {
     initColumns();
+    setBase58Versions();
     setVault(vault);
     setAccount(accountName);
+}
+
+void ScriptModel::setBase58Versions()
+{
+    base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    base58_versions[1] = getUseOldAddressVersions() ? getCoinParams().old_pay_to_script_hash_version() : getCoinParams().pay_to_script_hash_version();
+#else
+    base58_versions[1] = getCoinParams().pay_to_script_hash_version();
+#endif
 }
 
 void ScriptModel::initColumns()
@@ -69,7 +85,7 @@ void ScriptModel::update()
     std::vector<SigningScriptView> scripts = vault->getSigningScriptViews(accountName.toStdString(), "", SigningScript::CHANGE | SigningScript::ISSUED | SigningScript::USED);
     for (auto& script: scripts) {
         QList<QStandardItem*> row;
-        QString address = QString::fromStdString(getAddressForTxOutScript(script.txoutscript, getDefaultSettings().getBase58Versions()));
+        QString address = QString::fromStdString(getAddressForTxOutScript(script.txoutscript, base58_versions));
 
         QString type;
         switch (script.status) {

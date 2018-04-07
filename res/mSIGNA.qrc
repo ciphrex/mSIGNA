@@ -1,0 +1,29 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>icons/newvault.png</file>
+    <file>icons/openvault.png</file>
+    <file>icons/open_recent_32x32.png</file>
+    <file>icons/closevault.png</file>
+    <file>icons/right-arrow-icon.png</file>
+    <file>icons/left-arrow-icon.png</file>
+    <file>icons/glossy-black-signature_32x32.png</file>
+    <file>icons/search_32x32.png</file>
+    <file>icons/send_32x32.png</file>
+    <file>icons/magicwand.png</file>
+    <file>icons/keypair.png</file>
+    <file>icons/account_32x32.png</file>
+    <file>icons/cashregister.png</file>
+    <file>icons/payment.png</file>
+    <file>icons/connect.png</file>
+    <file>icons/disconnect.png</file>
+    <file>icons/locked.png</file>
+    <file>icons/unlocked.png</file>
+    <file>icons/shared.png</file>
+    <file>icons/encrypted.png</file>
+    <file>icons/segwit_64x64.png</file>
+    <file>images/splash_btc.png</file>
+    <file>icons/vault_status_icons/36x22/nc-icon-36x22.gif</file>
+    <file>icons/vault_status_icons/36x22/synching-icon-animated-36x22.gif</file>
+    <file>icons/vault_status_icons/36x22/synched-icon-36x22.gif</file>
+</qresource>
+</RCC>

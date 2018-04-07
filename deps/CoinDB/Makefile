@@ -14,6 +14,10 @@ PROJECT_SYSROOT = ../../sysroot
 
 include ../mk/os.mk ../mk/cxx_flags.mk ../mk/boost_suffix.mk ../mk/odb.mk
 
+ifeq ($(OS), mingw64)
+    CXX_FLAGS += -DLIBODB_STATIC_LIB
+endif
+
 LIBS = \
     -lCoinDB \
     -lCoinQ \

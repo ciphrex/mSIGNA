@@ -5,8 +5,11 @@
 // main.cpp
 //
 // Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "settings.h"
 #include "versioninfo.h"
@@ -65,7 +68,11 @@ int main(int argc, char* argv[])
 {
     secure_random_bytes(32);
 
-    Q_INIT_RESOURCE(coinvault);
+#ifdef DEFAULT_NETWORK_LITECOIN
+    Q_INIT_RESOURCE(mSIGNA_ltc);
+#else
+    Q_INIT_RESOURCE(mSIGNA);
+#endif
 
     QApplication app(argc, argv);
     app.setOrganizationName("Ciphrex");

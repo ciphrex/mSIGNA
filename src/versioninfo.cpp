@@ -5,8 +5,11 @@
 // versioninfo.cpp
 //
 // Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "versioninfo.h"
 #include "../BuildInfo.h"
@@ -16,7 +19,7 @@
 #include <openssl/opensslv.h>
 
 // Definitions
-const QString VERSIONTEXT("0.9.7 beta");
+const QString VERSIONTEXT("0.11.1");
 
 const QString commitHash(COMMIT_HASH);
 const QString shortCommitHash(QString(COMMIT_HASH).left(7));

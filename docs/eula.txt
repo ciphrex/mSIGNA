@@ -28,8 +28,8 @@ BY CLICKING "I accept the agreement" YOU AGREE TO BE BOUND BY THE TERMS OF THIS 
 
 9. ENTIRE AGREEMENT. This EULA (including any addendum or amendment to this EULA which is included with the Ciphrex Corporation Product) is the entire agreement between you and Ciphrex Corporation relating to the Software Product and it supersedes all prior or contemporaneous oral or written communications, proposals and representations with respect to the Software Product or any other subject matter covered by this EULA.  To the extent the terms of any Ciphrex Corporation policies or programs for support services conflict with the terms of this EULA, the terms of this EULA shall control.  In the event of a conflict between the English and any non-English versions of this EULA, the English version shall govern.  If any provision of this EULA is held by a court of competent jurisdiction to be contrary to law, such provision will be changed and interpreted so as to best accomplish the objectives of the original provision to the fullest extent allowed by law and the remaining provision of the EULA will remain in force and effect.
 
-(c)2013-2015 Ciphrex Corporation.
+(c)2013-2017 Ciphrex Corporation.
 
 The information contained herein is subject to change without notice. The only warranties for Ciphrex Corporation Products and services are set forth in the express warranty statements accompanying such products and services. Nothing herein should be construed as constituting an additional warranty. Ciphrex Corporation shall not be liable for technical or editorial errors or omissions contained herein.  Portions of the Software Product include technology used under license (c)Digia, (c)CodeSynthesis.  All rights reserved.
 
-Rev. 01/02
+Rev. 01/04

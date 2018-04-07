@@ -5,8 +5,11 @@
 // createtxdialogview.cpp
 //
 // Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "createtxdialog.h"
 #include "unspenttxoutmodel.h"
@@ -41,7 +44,11 @@ TxOutLayout::TxOutLayout(uint64_t currencyDivisor, const QString& currencySymbol
 {
     // Base58 version bytes
     base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    base58_versions[1] = getUseOldAddressVersions() ? getCoinParams().old_pay_to_script_hash_version() : getCoinParams().pay_to_script_hash_version();
+#else
     base58_versions[1] = getCoinParams().pay_to_script_hash_version();
+#endif
 
     // Coin parameters
     this->currencyDivisor = currencyDivisor;

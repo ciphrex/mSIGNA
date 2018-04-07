@@ -1,20 +1,35 @@
                                  m S I G N A (TM)
 ===============================================================================
-Copyright (c) 2013-2015 Ciphrex Corporation, All Rights Reserved.
+Copyright (c) 2013-2017 Ciphrex Corporation
 
 
 mSIGNA is an interactive desktop application for transacting on the bitcoin network
-supporting m-of-n signature policies and multiuser/multidevice account management.
-While the current release builds only support bitcoin, it is possible to compile it 
-to support other bitcoin-like blockchain-based cryptocurrencies. 
+featuring m-of-n signature policies, multiuser/multidevice account management,
+and multiple blockchain support.
 
-It is built atop three custom libraries, CoinCore, CoinQ, and CoinDB, which provide
-all core functionality for managing bitcoin data structures, connecting to peers, and
-handling persistent storage.
+Bitcoin mainnet is used as the default blockchain. To select a different supported
+blockchain, start mSIGNA with the command line parameter "select". To add support
+for an unsupported compatible blockchain, please add your parameters to the following
+source files and submit a pull request:
 
-    -CoinCore is licensed under the MIT license.
+    deps/CoinQ/src/CoinQ_coinparams.h
+    deps/CoinQ/src/CoinQ_coinparams.cpp
 
-    -CoinQ and CoinDB are licensed under the AGPLv3 license.
+
+New since 0.10.0: Segregated witness support. Only supported on blockchains that
+currently support it.
+
+
+mSIGNA depends on several libraries also included in this repository including:
+
+    CoinCore
+    CoinQ
+    CoinDB
+
+These libraries provide all core functionality for managing bitcoin data structures,
+connecting to peers, and handling persistent storage.
+
+They are licensed under the MIT license. See accompanying file LICENSE for details
 
 
 In addition, mSIGNA depends on the following:

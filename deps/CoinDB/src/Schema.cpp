@@ -3,8 +3,10 @@
 // Schema.cpp
 //
 // Copyright (c) 2013-2014 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 //
 
 #include "Schema.h"
@@ -18,7 +20,7 @@
 #include <CoinCore/aes.h>
 #include <CoinCore/random.h>
 
-#include <logger/logger.h>
+//#include <logger/logger.h>
 
 // support for boost serialization
 #include <boost/archive/text_oarchive.hpp>
@@ -379,6 +381,8 @@ Account::Account()
 Account::Account(const std::string& name, unsigned int minsigs, const KeychainSet& keychains, uint32_t unused_pool_size, uint32_t time_created, bool compressed_keys, bool use_witness, bool use_witness_p2sh)
     : name_(name), minsigs_(minsigs), keychains_(keychains), unused_pool_size_(unused_pool_size), time_created_(time_created), compressed_keys_(compressed_keys), use_witness_(use_witness), use_witness_p2sh_(use_witness_p2sh)
 {
+    if (!use_witness_) { use_witness_p2sh_ = false; }
+
     scripttemplatesloaded_ = false;
 
     // TODO: Use exception classes
@@ -402,6 +406,11 @@ void Account::updateHash()
     for (auto& keychain_hash: keychain_hashes) { data += keychain_hash; }
 
     if (!compressed_keys_) { data.push_back(0x00); }
+    if (use_witness_)
+    {
+        if (use_witness_p2sh_)  { data.push_back(0x03); }
+        else                    { data.push_back(0x01); }
+    }
 
     hash_ = ripemd160(sha256(data));
 }
@@ -444,7 +453,7 @@ AccountInfo Account::accountInfo() const
         }
     }
 
-    return AccountInfo(id_, name_, minsigs_, keychain_names, issued_script_count, unused_pool_size_, time_created_, bin_names, compressed_keys_);
+    return AccountInfo(id_, name_, minsigs_, keychain_names, issued_script_count, unused_pool_size_, time_created_, bin_names, compressed_keys_, use_witness_, use_witness_p2sh_);
 }
 
 std::shared_ptr<AccountBin> Account::addBin(const std::string& name)
@@ -619,6 +628,7 @@ SigningScript::SigningScript(std::shared_ptr<AccountBin> account_bin, uint32_t i
 
     account_->loadScriptTemplates();
     redeemscript_ = account_->redeemtemplate().script(pubkeys);
+    if (redeemscript_.empty()) throw std::runtime_error("SigningScript::SigningScript() - redeemscript is empty.");
 
     using namespace CoinQ::Script;
 
@@ -802,8 +812,11 @@ bytes_t TxIn::unsigned_script() const
 {
     using namespace CoinQ::Script;
 
+//LOGGER(trace) << "TxIn::unsigned_script: Calling SignableTxIn constructor" << std::endl;
     SignableTxIn signabletxin(tx()->toCoinCore(), txindex_, outpoint() ? outpoint()->value() : 0);
+//LOGGER(trace) << "TxIn::unsigned_script: Calling signabletxin.clearsigs()" << std::endl;
     signabletxin.clearsigs();
+//LOGGER(trace) << "TxIn::unsigned_script: Returning signabletxin.txinscript()" << std::endl;
     return signabletxin.txinscript();
 }
 

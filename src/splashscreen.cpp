@@ -5,8 +5,11 @@
 // splashscreen.cpp
 //
 // Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "versioninfo.h"
 #include "copyrightinfo.h"
@@ -14,7 +17,12 @@
 
 #include <QPainter>
 
-const QString SPLASHSCREENFILENAME(":/images/splash.png");
+#ifdef DEFAULT_NETWORK_LITECOIN
+const QString SPLASHSCREENFILENAME(":/images/splash_ltc.png");
+#else
+const QString SPLASHSCREENFILENAME(":/images/splash_btc.png");
+#endif
+
 const QColor TEXTCOLOR(225, 225, 225);
 
 const int VERSIONPADDINGRIGHT = 20;

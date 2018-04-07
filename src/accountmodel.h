@@ -5,8 +5,11 @@
 // accountmodel.h
 //
 // Copyright (c) 2013-2014 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #pragma once
 
@@ -49,8 +52,12 @@ public:
 
     static const unsigned int DEFAULT_LOOKAHEAD = 25;
 
+    // UI operations
+    void setBase58Versions();
+
     // Account operations
     void newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch = QDateTime::currentDateTime().toMSecsSinceEpoch(), unsigned int unusedPoolSize = DEFAULT_LOOKAHEAD);
+    void newAccount(bool enableSegwit, bool useSegwitP2SH, const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch = QDateTime::currentDateTime().toMSecsSinceEpoch(), unsigned int unusedPoolSize = DEFAULT_LOOKAHEAD);
     bool accountExists(const QString& name) const;
     void exportAccount(const QString& name, const QString& filePath, bool shared) const;
     QString importAccount(const QString& filePath);

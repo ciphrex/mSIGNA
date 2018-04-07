@@ -3,24 +3,11 @@
 // CoinNodeData.cpp
 //
 // Copyright (c) 2011-2014 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 //
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
 
 #include "CoinNodeData.h"
 #include "numericdata.h"
@@ -1419,6 +1406,29 @@ uint64_t Transaction::getSize(bool bWithWitness) const
     return count;
 }
 
+uint64_t Transaction::getVSize() const
+{
+    uint64_t count = 8; // version + locktime
+    count += VarInt(inputs.size()).getSize();
+    count += VarInt(outputs.size()).getSize();
+
+    uint64_t i;
+    for (i = 0; i < inputs.size(); i++)
+        count += inputs[i].getSize();
+
+    for (i = 0; i < outputs.size(); i++)
+        count += outputs[i].getSize();
+
+    if (hasWitness())
+    {
+//        count += 2; // mask + flags
+        uint64_t witnessCount = 0;
+        for (auto& input: inputs) { witnessCount += input.scriptWitness.getSize(); }
+        count += (witnessCount + 3) / 4;
+    }
+
+    return count;
+}
 uchar_vector Transaction::getSerialized(bool bWithWitness) const
 {
     bWithWitness = bWithWitness && hasWitness();
@@ -1613,7 +1623,7 @@ uchar_vector Transaction::getSigHash(uint32_t hashType, uint index, const uchar_
             if (index == i) { copy.inputs[i].scriptSig = script; }
             else            { copy.inputs[i].scriptSig.clear();  }
         }
-        return sha256_2(getSerialized(false) + uint_to_vch(hashType, LITTLE_ENDIAN_));
+        return sha256_2(copy.getSerialized(false) + uint_to_vch(hashType, LITTLE_ENDIAN_));
     }
 
     if (hashPrevouts.empty())

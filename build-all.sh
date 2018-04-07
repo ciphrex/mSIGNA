@@ -33,6 +33,11 @@ do
         BUILD_TYPE=release
     ;;
 
+    litecoin)
+        if [[ ! -z "$TARGET_NAME" ]]; then echo "Target name cannot be set twice"; exit 2; fi
+        TARGET_NAME=mSIGNA-ltc
+    ;;
+
     libs_only)
         libs_only=true
     ;;
@@ -61,7 +66,7 @@ fi
 # Set target platform parameters
 if [ $mingw64 ]
 then
-    if [[ -z "$QMAKE_PATH" ]]; then QMAKE_PATH="/usr/x86_64-w64-mingw32/host/bin/"; fi
+    if [[ -z "$QMAKE_PATH" ]]; then QMAKE_PATH="/usr/local/x86_64-w64-mingw32/host/bin/"; fi
     SPEC="-spec win32-g++"
 fi
 
@@ -69,6 +74,12 @@ fi
 if [[ -z "$BUILD_TYPE" ]]
 then
     BUILD_TYPE=release
+fi
+
+# Use mSIGNA as default target name
+if [[ -z "$TARGET_NAME" ]]
+then
+    TARGET_NAME=mSIGNA
 fi
 
 if [[ -z $(git diff --shortstat) ]]
@@ -150,22 +161,48 @@ fi
 
 cd $CURRENT_DIR
 
+#TODO: Automatically detect whether the following units need recompilation
+# Always recompile coinparams
+if [[ -e build/$BUILD_TYPE/obj/coinparams.o ]]
+then
+    rm build/$BUILD_TYPE/obj/coinparams.o
+fi
+
+# Always recompile splashscreen
+if [[ -e build/$BUILD_TYPE/obj/splashscreen.o ]]
+then
+    rm build/$BUILD_TYPE/obj/splashscreen.o
+fi
+
+# Always recompile main
+if [[ -e build/$BUILD_TYPE/obj/main.o ]]
+then
+    rm build/$BUILD_TYPE/obj/main.o
+fi
+
+# The following units also need to be recompiled
+#   accountmodel.o
+#   createtxdialog.o
+#   mainwindow.o
+#   scriptmodel.o
+#   txmodel.o
+
 # For OS X, remove any existing instance of the app bundle
 if [[ "$OS" == "osx" ]]
 then
-    if [[ -e build/$BUILD_TYPE/mSIGNA.app ]]
+    if [[ -e build/$BUILD_TYPE/$TARGET_NAME.app ]]
     then
-        rm -rf build/$BUILD_TYPE/mSIGNA.app
+        rm -rf build/$BUILD_TYPE/$TARGET_NAME.app
     fi
 fi
 
-${QMAKE_PATH}qmake $SPEC CONFIG+=$BUILD_TYPE && make $OPTIONS
+${QMAKE_PATH}qmake $SPEC CONFIG+=$BUILD_TYPE $TARGET_NAME.pro && make $OPTIONS
 
 if [[ "$OS" == "osx" ]]
 then
-    if [[ -e build/$BUILD_TYPE/mSIGNA.app/Contents/Resources/qt.conf ]]
+    if [[ -e build/$BUILD_TYPE/$TARGET_NAME.app/Contents/Resources/qt.conf ]]
     then
-        rm build/$BUILD_TYPE/mSIGNA.app/Contents/Resources/qt.conf
+        rm build/$BUILD_TYPE/$TARGET_NAME.app/Contents/Resources/qt.conf
     fi
-    ${MACDEPLOYQT_PATH}macdeployqt $(find ./build/$BUILD_TYPE -name *.app)
+    ${MACDEPLOYQT_PATH}macdeployqt $(find ./build/$BUILD_TYPE -name $TARGET_NAME.app)
 fi

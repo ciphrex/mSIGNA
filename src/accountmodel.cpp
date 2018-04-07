@@ -5,8 +5,11 @@
 // accountmodel.cpp
 //
 // Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "settings.h"
 #include "coinparams.h"
@@ -35,13 +38,21 @@ using namespace std;
 AccountModel::AccountModel(CoinDB::SynchedVault& synchedVault)
     : m_synchedVault(synchedVault), numAccounts(0)
 {
-    base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
-    base58_versions[1] = getCoinParams().pay_to_script_hash_version();
-    base58_versions[2] = getCoinParams().pay_to_witness_pubkey_hash_version();
-    base58_versions[3] = getCoinParams().pay_to_witness_script_hash_version();
-
+    setBase58Versions();
     currencySymbol = getCurrencySymbol();
     setColumns();
+}
+
+void AccountModel::setBase58Versions()
+{
+    base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    base58_versions[1] = getUseOldAddressVersions() ? getCoinParams().old_pay_to_script_hash_version() : getCoinParams().pay_to_script_hash_version();
+#else
+    base58_versions[1] = getCoinParams().pay_to_script_hash_version();
+#endif
+    base58_versions[2] = getCoinParams().pay_to_witness_pubkey_hash_version();
+    base58_versions[3] = getCoinParams().pay_to_witness_script_hash_version();
 }
 
 void AccountModel::setColumns()
@@ -49,7 +60,7 @@ void AccountModel::setColumns()
     QDateTime dateTime(QDateTime::currentDateTime());
 
     QStringList columns;
-    columns << tr("Account") << (tr("Confirmed") + " (" + currencySymbol + ")") << (tr("Pending") + " (" + currencySymbol + ")") << (tr("Total") + " (" + currencySymbol + ")") << tr("Policy") << (tr("Creation Time") + " (" + dateTime.timeZoneAbbreviation() + ")");// << "";
+    columns << tr("Account") << tr("") << (tr("Confirmed") + " (" + currencySymbol + ")") << (tr("Pending") + " (" + currencySymbol + ")") << (tr("Total") + " (" + currencySymbol + ")") << tr("Policy") << (tr("Creation Time") + " (" + dateTime.timeZoneAbbreviation() + ")");// << "";
     setHorizontalHeaderLabels(columns);
 }
 /*
@@ -60,6 +71,8 @@ void AccountModel::setVault(CoinDB::Vault* vault)
 */
 void AccountModel::update()
 {
+    setBase58Versions();
+
     QString newCurrencySymbol = getCurrencySymbol();
     if (newCurrencySymbol != currencySymbol)
     {
@@ -95,8 +108,20 @@ void AccountModel::update()
 
         accountNames << accountName;
 
+        QStandardItem* segwitItem = new QStandardItem();
+        if (account.use_witness())
+        {
+            segwitItem->setIcon(QIcon(":/icons/segwit_64x64.png"));
+            segwitItem->setData(true, Qt::UserRole);
+        }
+        else
+        {
+            segwitItem->setData(false, Qt::UserRole);
+        }
+        
         QList<QStandardItem*> row;
         row.append(new QStandardItem(accountName));
+        row.append(segwitItem);
         row.append(new QStandardItem(confirmedBalance));
         row.append(new QStandardItem(pendingBalance));
         row.append(new QStandardItem(totalBalance));
@@ -118,6 +143,11 @@ CoinDB::Vault* AccountModel::getVault() const
 
 void AccountModel::newAccount(const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch, unsigned int unusedPoolSize)
 {
+    newAccount(getCoinParams().segwit_enabled(), true, name, minsigs, keychainNames, msecsSinceEpoch, unusedPoolSize);
+}
+
+void AccountModel::newAccount(bool enableSegwit, bool useSegwitP2SH, const QString& name, unsigned int minsigs, const QList<QString>& keychainNames, qint64 msecsSinceEpoch, unsigned int unusedPoolSize)
+{
     CoinDB::Vault* vault = m_synchedVault.getVault();
     if (!vault) {
         throw std::runtime_error("No vault is loaded.");
@@ -127,7 +157,7 @@ void AccountModel::newAccount(const QString& name, unsigned int minsigs, const Q
     for (auto& name: keychainNames) { keychain_names.push_back(name.toStdString()); }
 
     uint64_t secsSinceEpoch = (uint64_t)msecsSinceEpoch / 1000;
-    vault->newAccount(getCoinParams().segwit_enabled(), USE_WITNESS_P2SH, name.toStdString(), minsigs, keychain_names, unusedPoolSize, secsSinceEpoch);
+    vault->newAccount(enableSegwit && getCoinParams().segwit_enabled(), useSegwitP2SH, name.toStdString(), minsigs, keychain_names, unusedPoolSize, secsSinceEpoch);
     update();
 }
 
@@ -418,7 +448,7 @@ QVariant AccountModel::data(const QModelIndex& index, int role) const
     if (role == Qt::TextAlignmentRole)
     {
         // Right-align numeric fields
-        if (index.column() >= 1 && index.column() <= 3) return Qt::AlignRight;
+        if (index.column() >= 2 && index.column() <= 4) return Qt::AlignRight;
     }
     else if (role == Qt::FontRole)
     {

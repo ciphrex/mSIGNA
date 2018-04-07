@@ -3,8 +3,11 @@
 // CoinQ_script.cpp
 //
 // Copyright (c) 2013-2016 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "CoinQ_script.h"
 
@@ -832,6 +835,7 @@ unsigned int Script::mergesigs(const Script& other)
 
 void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_t outpointamount, const bytes_t& txoutscript)
 {
+//LOGGER(trace) << "SignableTxIn::setTxIn(" << tx.getHashLittleEndian().getHex() << ", " << nIn << ", " << outpointamount << ", " << uchar_vector(txoutscript).getHex() << ")" << std::endl;
     redeemscript_.clear();
     pubkeys_.clear();
     sigs_.clear();
@@ -840,9 +844,11 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         throw std::runtime_error("SignableTxIn::setTxIn() - nIn out of range.");
 
     // TODO: Clean the script stuff up.
+//LOGGER(trace) << "SignableTxIn::setTxIn: tx.inputs[nIn].scriptSig.empty() = " << (tx.inputs[nIn].scriptSig.empty() ? "TRUE" : "FALSE") << std::endl;
     const bytes_t& txinscript = tx.inputs[nIn].scriptSig.empty()
         ? pushStackItem(txoutscript)
         : tx.inputs[nIn].scriptSig;
+//LOGGER(trace) << "SignableTxIn::setTxIn: txinscript = " << uchar_vector(txinscript).getHex() << std::endl;
 
     const std::vector<uchar_vector>& stack = tx.inputs[nIn].scriptWitness.stack;
     std::vector<bytes_t> objects;
@@ -860,6 +866,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
     WitnessProgramType wpType = WITNESS_NONE;
     std::vector<bytes_t> sigs;
     type_ = UNKNOWN;
+//LOGGER(trace) << "SignableTxIn::setTxIn: objects.size() = " << objects.size() << std::endl;
     if (objects.size() == 1)
     {
         uint pos = 0;
@@ -885,17 +892,22 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
     else if (objects.size() == 2)
     {
         type_ = PAY_TO_PUBKEY_HASH;
+//LOGGER(trace) << "SignableTxIn::setTxIn: objects[0] = " << uchar_vector(objects[0]).getHex() << std::endl;
+//LOGGER(trace) << "SignableTxIn::setTxIn: objects[1] = " << uchar_vector(objects[1]).getHex() << std::endl;
         pubkeys_.push_back(objects[1]);
+//LOGGER(trace) << "SignableTxIn::setTxIn: pubkeys_push_back(objects[1]) returned" << std::endl;
         minsigs_ = 1;
         const bytes_t& sig = objects[0];
 
         // TODO: add support for other hash types.
-        if (sig.back() != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
+        if (sig.empty() || sig.back() != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
 
         // Remove hash type byte.
+//LOGGER(trace) << "SignableTxIn::setTxIn: Remove hash type byte" << std::endl;
         bytes_t signature(sig.begin(), sig.end() - 1);
 
         // Verify signature.
+//LOGGER(trace) << "SignableTxIn::setTxIn: Verify signature" << std::endl;
         uchar_vector txoutscript;
         txoutscript << OP_DUP << OP_HASH160 << pushStackItem(hash160(pubkeys_.back())) << OP_EQUALVERIFY << OP_CHECKSIG;
         bytes_t sighash = tx.getSigHash(SIGHASH_ALL, nIn, txoutscript, outpointamount);
@@ -904,11 +916,13 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         if (secp256k1_verify(key, sighash, signature))
         {
             // Signature is valid. Keep it.
+//LOGGER(trace) << "SignableTxIn::setTxIn: Signature is valid. Keep it." << std::endl;
             sigs_.push_back(sig);
         }
         else
         {
             // Signature is invalid. Add placeholder for this pubkey and test it for next pubkey
+//LOGGER(trace) << "SignableTxIn::setTxIn: Signature is invalid. Add placeholder for this pubkey and test it for next pubkey." << std::endl;
             sigs_.push_back(bytes_t());
         }
     }
@@ -918,6 +932,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         for (std::size_t i = 1; i < objects.size() - 1; i++) { sigs.push_back(objects[i]); }
     }
 
+//LOGGER(trace) << "SignableTxIn::setTxIn: redeemscript_.size() = " << redeemscript_.size() << std::endl;
     if (redeemscript_.size() >= 3)
     {
         // Parse redeemscript
@@ -975,7 +990,7 @@ void SignableTxIn::setTxIn(const Coin::Transaction& tx, std::size_t nIn, uint64_
         else
         {
             // TODO: add support for other hash types.
-            if (sigs[iSig].back() != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
+            if (sigs[iSig].empty() || sigs[iSig].back() != SIGHASH_ALL) throw std::runtime_error("Unsupported hash type.");
 
             // Remove hash type byte.
             bytes_t signature(sigs[iSig].begin(), sigs[iSig].end() - 1);

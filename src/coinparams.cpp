@@ -5,14 +5,23 @@
 // coinparams.cpp
 //
 // Copyright (c) 2013-2014 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "coinparams.h"
 
 #include <stdexcept>
 
+#ifdef DEFAULT_NETWORK_LITECOIN
+#define DEFAULT_NETWORK "litecoin"
+#else
 #define DEFAULT_NETWORK "bitcoin"
+#endif
+
+QString getDefaultNetwork() { return DEFAULT_NETWORK; }
 
 CoinQ::NetworkSelector selector(DEFAULT_NETWORK);
 CoinQ::NetworkSelector& getNetworkSelector() { return selector; }
@@ -120,3 +129,17 @@ uint64_t getDefaultFee()
 {
     return getCoinParams().default_fee();
 }
+
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+static bool useOldAddressVersions = false;
+
+void setAddressVersions(bool useOld)
+{
+    useOldAddressVersions = useOld;
+}
+
+bool getUseOldAddressVersions()
+{
+    return useOldAddressVersions;
+}
+#endif

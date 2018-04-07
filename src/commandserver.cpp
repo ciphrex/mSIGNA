@@ -5,8 +5,11 @@
 // commandserver.cpp
 //
 // Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "commandserver.h"
 
@@ -18,12 +21,13 @@
 #include <QFile>
 
 #include "settings.h"
+#include "coinparams.h"
 
 #include "severitylogger.h"
 
 const int COMMAND_SERVER_TIMEOUT = 500;
-const QString COMMAND_SERVER_NAME("VaultCommandServer");
-const QString COMMAND_SERVER_URL_PREFIX("bitcoin:");
+const QString COMMAND_SERVER_NAME(QString("mSIGNA_") + getDefaultNetwork() + "_CommandServer");
+const QString COMMAND_SERVER_URL_PREFIX(getDefaultNetwork() + ":");
 
 CommandServer::CommandServer(QObject* parent)
     : QObject(parent), server(NULL)

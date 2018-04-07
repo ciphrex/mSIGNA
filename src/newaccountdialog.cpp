@@ -5,10 +5,14 @@
 // newaccountdialog.cpp
 //
 // Copyright (c) 2013 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "newaccountdialog.h"
+#include "coinparams.h"
 
 #include <QtAlgorithms>
 #include <QDialogButtonBox>
@@ -99,6 +103,18 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& allKeychains, const QLi
     creationTimeLayout->addWidget(creationTimeLabel);
     creationTimeLayout->addWidget(creationTimeEdit);
 
+    // Segwit Support
+    if (getCoinParams().segwit_enabled())
+    {
+        segwitCheckBox = new QCheckBox(tr("Use Seg&Wit"), this);
+        segwitCheckBox->setChecked(false);
+    }
+    else
+    {
+        segwitCheckBox = new QCheckBox(tr("Use Seg&Wit (not active on this blockchain)"), this);
+        segwitCheckBox->setEnabled(false);
+    }
+
     // Main Layout 
     QVBoxLayout *mainLayout = new QVBoxLayout();
     mainLayout->setSizeConstraint(QLayout::SetNoConstraint);
@@ -107,6 +123,7 @@ NewAccountDialog::NewAccountDialog(const QList<QString>& allKeychains, const QLi
     mainLayout->addWidget(keychainListWidget);
     mainLayout->addLayout(minSigLayout);
     mainLayout->addLayout(creationTimeLayout);
+    mainLayout->addWidget(segwitCheckBox);
     mainLayout->addWidget(buttonBox);
     setLayout(mainLayout);
 }
@@ -129,6 +146,11 @@ int NewAccountDialog::getMinSigs() const
 qint64 NewAccountDialog::getCreationTime() const
 {
     return creationTimeEdit->dateTime().toMSecsSinceEpoch();
+}
+
+bool NewAccountDialog::getUseSegwit() const
+{
+    return segwitCheckBox->isChecked();
 }
 
 void NewAccountDialog::updateSelection(const QString& keychain, int state)

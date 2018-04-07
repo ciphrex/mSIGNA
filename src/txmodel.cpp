@@ -5,8 +5,11 @@
 // txmodel.cpp
 //
 // Copyright (c) 2014 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "txmodel.h"
 
@@ -32,9 +35,7 @@ using namespace std;
 TxModel::TxModel(QObject* parent)
     : QStandardItemModel(parent)
 {
-    base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
-    base58_versions[1] = getCoinParams().pay_to_script_hash_version();
-
+    setBase58Versions();
     currencySymbol = getCurrencySymbol();
 
     setColumns();
@@ -43,14 +44,22 @@ TxModel::TxModel(QObject* parent)
 TxModel::TxModel(CoinDB::Vault* vault, const QString& accountName, QObject* parent)
     : QStandardItemModel(parent)
 {
-    base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
-    base58_versions[1] = getCoinParams().pay_to_script_hash_version();
-
+    setBase58Versions();
     currencySymbol = getCurrencySymbol();
 
     setColumns();
     setVault(vault);
     setAccount(accountName);
+}
+
+void TxModel::setBase58Versions()
+{
+    base58_versions[0] = getCoinParams().pay_to_pubkey_hash_version();
+#ifdef SUPPORT_OLD_ADDRESS_VERSIONS
+    base58_versions[1] = getUseOldAddressVersions() ? getCoinParams().old_pay_to_script_hash_version() : getCoinParams().pay_to_script_hash_version();
+#else
+    base58_versions[1] = getCoinParams().pay_to_script_hash_version();
+#endif
 }
 
 void TxModel::setColumns()
@@ -65,7 +74,9 @@ void TxModel::setColumns()
         << (tr("Balance") + " (" + getCurrencySymbol() + ")")
         << tr("Confirmations")
         << tr("Address")
-        << tr("Transaction Hash");
+        << tr("Transaction Hash")
+        << tr("Size")
+        << tr("VSize");
     setHorizontalHeaderLabels(columns);
 }
 
@@ -113,6 +124,8 @@ private:
 
 void TxModel::update()
 {
+    setBase58Versions();
+
     QString newCurrencySymbol = getCurrencySymbol();
     if (newCurrencySymbol != currencySymbol)
     {
@@ -226,6 +239,16 @@ void TxModel::update()
         QStandardItem* hashItem = new QStandardItem(hash);
         hashItem->setData(item.tx_index, Qt::UserRole);
         row.append(hashItem);
+
+        // Add size and vsize
+        std::shared_ptr<Tx> tx = vault->getTx(item.tx_id);
+        Coin::Transaction core_tx = tx->toCoinCore();
+LOGGER(trace) << "Size: " << core_tx.getSize(true) << endl;
+LOGGER(trace) << "VSize: " << core_tx.getVSize() << endl;
+        QStandardItem* sizeItem = new QStandardItem(QString::number(core_tx.getSize(true)));
+        QStandardItem* vsizeItem = new QStandardItem(QString::number(core_tx.getVSize()));
+        row.append(sizeItem);
+        row.append(vsizeItem);
 
         rows.append(SortableRow(row, item.tx_status, nConfirmations, value, item.tx_index));
     }

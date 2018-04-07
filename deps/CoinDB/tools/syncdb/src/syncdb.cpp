@@ -3,8 +3,10 @@
 // syncdb.cpp
 //
 // Copyright (c) 2014 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 //
 // Utility for synchronizing a coin database with p2p network
 //

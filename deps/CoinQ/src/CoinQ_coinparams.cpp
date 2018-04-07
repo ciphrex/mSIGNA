@@ -3,8 +3,11 @@
 // CoinQ_coinparams.cpp
 //
 // Copyright (c) 2012-2014 Eric Lombrozo
+// Copyright (c) 2011-2016 Ciphrex Corp.
 //
-// All Rights Reserved.
+// Distributed under the MIT software license, see the accompanying
+// file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+//
 
 #include "CoinQ_coinparams.h"
 
@@ -22,6 +25,7 @@ NetworkSelector::NetworkSelector(const std::string& network_name)
     network_map_.insert(NetworkPair("bitcoin", getBitcoinParams()));
     network_map_.insert(NetworkPair("testnet3", getTestnet3Params()));
     network_map_.insert(NetworkPair("litecoin", getLitecoinParams()));
+    network_map_.insert(NetworkPair("ltctestnet4", getLtcTestnet4Params()));
     network_map_.insert(NetworkPair("quarkcoin", getQuarkcoinParams()));
 
     if (!network_name.empty()) { select(network_name); }
@@ -68,14 +72,16 @@ const CoinParams bitcoinParams(
     "8333",
     0,
     5,
+    5,
     4,
-    10, 
+    10,
+    128,
     "Bitcoin",
     "bitcoin",
     100000000,
     "BTC",
     21000000,
-    50000,
+    100000,
     &sha256_2,
     &sha256_2,
     Coin::CoinBlockHeader(
@@ -85,7 +91,8 @@ const CoinParams bitcoinParams(
         2083236893,
         uchar_vector(32, 0),
         uchar_vector("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b")
-    )
+    ),
+    true
 );
 const CoinParams& getBitcoinParams() { return bitcoinParams; }
 
@@ -95,12 +102,14 @@ const CoinParams testnet3Params(
     "18333",
     0x6f,
     0xc4,
+    0xc4,
     6,
     40,
+    239,
     "Testnet3",
     "testnet3",
     100000000,
-    "testBTC",
+    "tBTC",
     21000000,
     0,
     &sha256_2,
@@ -121,10 +130,12 @@ const CoinParams litecoinParams(
     0xdbb6c0fbul,
     70002,
     "9333",
-    0x30,
-    0x05,
+    48,
+    50,
+    5,
     4,
     10,
+    176,
     "Litecoin",
     "litecoin",
     100000000,
@@ -140,9 +151,39 @@ const CoinParams litecoinParams(
         2084524493,
         uchar_vector(32, 0),
         uchar_vector("97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9")
-    )
+    ),
+    true
 );
 const CoinParams& getLitecoinParams() { return litecoinParams; }
+
+const CoinParams ltcTestnet4Params(
+    0xf1c8d2fdul,
+    70002,
+    "19335",
+    111,
+    58,
+    196,
+    4,
+    10,
+    239,
+    "LtcTestnet4",
+    "ltctestnet4",
+    100000000,
+    "tLTC",
+    84000000,
+    100000,
+    &sha256_2,
+    &scrypt_1024_1_1_256,
+    Coin::CoinBlockHeader(
+        1,
+        1486949366,
+        0x1e0ffff0,
+        293345,
+        uchar_vector(32, 0),
+        uchar_vector("97ddfbbae6be97fd6cdf3e7ca13232a3afff2353e29badfab7f73011edd4ced9")
+    )
+);
+const CoinParams& getLtcTestnet4Params() { return ltcTestnet4Params; }
 
 const CoinParams quarkcoinParams(
     0xdd03a5feul,
@@ -150,8 +191,10 @@ const CoinParams quarkcoinParams(
     "11973",
     0x3a,
     0x09,
+    0x09,
     4,
     10,
+    128,
     "Quarkcoin",
     "quarkcoin",
     100000,
